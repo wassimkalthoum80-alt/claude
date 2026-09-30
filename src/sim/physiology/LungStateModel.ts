@@ -1,6 +1,7 @@
 import type { PatientState } from '../state/PatientState';
 import type { VentilatorState } from '../state/VentilatorState';
 import { GAS, LUNG_PRESETS, type LungParameters } from './parameters';
+import { airwayComplianceFactor, airwayShunt, alveolarFraction } from './obstruction';
 import { approach, clamp } from './shapes';
 
 /** What the ventilator device reports about the real lung (not just its own sensors). */
@@ -124,7 +125,12 @@ export class LungStateModel {
     // SIM-ASSUMPTION: overdistended units are ventilated but poorly perfused (+1 % dead space per cmH2O).
     const alveolarDeadSpace = clamp(l.alveolarDeadSpace + 0.01 * hl.overdistension, 0, 0.95);
     patient.gas.alveolarDeadSpace = alveolarDeadSpace;
-    patient.gas.shunt = this.shunt(l, hl.recruitment, patient.fluid.derived.lungWaterRatio);
+    patient.gas.shunt = clamp(
+      this.shunt(l, hl.recruitment, patient.fluid.derived.lungWaterRatio) +
+        airwayShunt(patient.airway, patient.conditions),
+      0,
+      0.9,
+    );
     patient.gas.lungGasVolume = approach(
       patient.gas.lungGasVolume,
       this.gasVolume(patient, l, lung.endExpiratoryPressure),
@@ -138,8 +144,11 @@ export class LungStateModel {
       this.seenBreaths = lung.completedBreaths;
       this.breathInterval = clamp(t - this.lastBreathTime, 1, 30);
       this.lastBreathTime = t;
+      // Only the part of the tidal volume that passes the airway device reaches the alveoli (leak, oesophageal tube).
       const alveolarL =
-        (Math.max(0, lung.lastTidalVolume - resp.deadSpace) * (1 - alveolarDeadSpace)) / 1000;
+        (Math.max(0, lung.lastTidalVolume * alveolarFraction(patient.airway) - resp.deadSpace) *
+          (1 - alveolarDeadSpace)) /
+        1000;
       this.vaTarget = (alveolarL * 60) / this.breathInterval;
     } else if (t - this.lastBreathTime > 1.5 * this.breathInterval + 1) {
       this.vaTarget = 0;
@@ -165,7 +174,9 @@ export class LungStateModel {
       this.overdistensionFactor *
       lungWaterComplianceFactor(patient.fluid.derived.lungWaterRatio) *
       // SIM-ASSUMPTION: opioid chest-wall rigidity stiffens the respiratory system by up to 60 %.
-      (1 - 0.6 * patient.pharmacology.effects.rigidity);
+      (1 - 0.6 * patient.pharmacology.effects.rigidity) *
+      // One-lung ventilation, pneumothorax, gastric distension.
+      airwayComplianceFactor(patient.airway, patient.conditions);
     // Bronchodilators remove part of the BRONCHOSPASTIC resistance only (the excess over a normal airway);
     // they do not touch compliance or shunt (an ARDS shunt does not disappear after salbutamol).
     const relief =

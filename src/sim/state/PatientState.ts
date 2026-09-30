@@ -1,9 +1,13 @@
 import type { CerebralState, PatientFactors } from './BrainState';
 import type { BodyFluidState, FluidFactors } from './BodyFluidState';
 import type { PharmacologyState } from './PharmacologyState';
+import type { AirwayState, MyocardialArrestState, PatientConditions } from './ResuscitationState';
 
 /** Cardiac rhythms known to the rhythm registry. Extend here and in src/sim/rhythms. */
-export type RhythmId = 'sinus' | 'vf' | 'asystole' | 'pea';
+export type RhythmId = 'sinus' | 'vf' | 'vt' | 'asystole' | 'pea';
+
+/** Shockable rhythms: ventricular fibrillation and pulseless ventricular tachycardia (ERC). */
+export const SHOCKABLE_RHYTHMS: readonly RhythmId[] = ['vf', 'vt'];
 
 export type AirwayDevice = 'none' | 'mask' | 'sga' | 'ett';
 
@@ -206,7 +210,11 @@ export interface PatientState {
   brain: CerebralState;
   /** patient factors for drug sensitivity and the EEG (age is in demographics) */
   factors: PatientFactors;
-  airway: { device: AirwayDevice };
+  airway: AirwayState;
+  /** reversible causes (tension pneumothorax, tamponade) and vascular access */
+  conditions: PatientConditions;
+  /** myocardial arrest state that decides defibrillation outcomes (hidden model values) */
+  myocardium: MyocardialArrestState;
   /** return of spontaneous circulation after an arrest in this run */
   rosc: boolean;
 }

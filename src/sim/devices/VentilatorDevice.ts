@@ -57,6 +57,7 @@ export class VentilatorDevice {
   private endExpiratoryPressure = 5;
 
   reset(vent: VentilatorState, resp: RespState, t: number): void {
+    this.leakFraction = 0;
     this.lung.reset(vent.settings.peep, resp.compliance);
     this.nextMandatory = t;
     this.completedBreaths = 0;
@@ -95,6 +96,9 @@ export class VentilatorDevice {
     vent.mode = mode;
     vent.apnea = false;
   }
+
+  /** 0..1 — fraction of each breath lost through the airway-device leak (mask, supraglottic airway) */
+  leakFraction = 0;
 
   setCircuit(vent: VentilatorState, connected: boolean): void {
     vent.circuitConnected = connected;
@@ -297,8 +301,9 @@ export class VentilatorDevice {
     this.completedBreaths += 1;
     this.lastTidalVolume = Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000);
     this.endExpiratoryPressure = (endVolume * 1000) / resp.compliance;
+    // A leak around a mask or supraglottic airway: the gas does not return to the expiratory sensor (VTe < VTi).
     const vte = this.connectedThroughBreath
-      ? Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000)
+      ? Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000) * (1 - this.leakFraction)
       : 0;
     m.vte = Math.round(vte);
     this.vteHistory.push(vte);

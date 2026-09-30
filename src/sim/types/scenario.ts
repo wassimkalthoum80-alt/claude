@@ -5,6 +5,7 @@ import type { EcgLeadSet } from '../state/MonitorState';
 import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
 import type { FluidInit } from '../fluid/init';
+import type { PatientConditions } from '../state/ResuscitationState';
 
 export interface PatientInit {
   sex: 'male' | 'female';
@@ -77,6 +78,10 @@ export interface ScenarioDefinition {
   objectives: ScenarioObjective[];
   /** body-fluid state and fluid processes at the start (default: normal, no losses) */
   fluid?: FluidInit;
+  /** reversible causes present at the start (tension pneumothorax, tamponade, no IV access) */
+  conditions?: Partial<PatientConditions>;
+  /** defibrillator pads already applied at the start */
+  padsAttached?: boolean;
   /** end the run (and show the summary) this many seconds after arrest onset */
   endAfterArrestS?: number;
 }

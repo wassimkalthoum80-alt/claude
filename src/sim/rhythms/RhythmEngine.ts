@@ -19,6 +19,11 @@ export class RhythmEngine {
     return this.current;
   }
 
+  /** s — time of the last QRS complex (organised rhythms), null if none */
+  get lastBeatTime(): number | null {
+    return this.current.organised ? this.lastBeat : null;
+  }
+
   isPerfusing(id: RhythmId): boolean {
     return this.registry[id].perfusing;
   }

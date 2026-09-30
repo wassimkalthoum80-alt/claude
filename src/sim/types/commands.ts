@@ -1,4 +1,5 @@
 import type { TimeScale } from '../core/Clock';
+import type { DoseUnit } from '../pharmacology/units';
 import type { BisSensorFault, PatientFactors, StimulusKind } from '../state/BrainState';
 import type { CatheterState, FluidFactors } from '../state/BodyFluidState';
 import type { CprQualityPreset } from '../state/CPRState';
@@ -10,6 +11,18 @@ import type {
 } from '../state/PatientState';
 import type { AlarmLimitBound, AlarmLimitParam, EcgLeadSet } from '../state/MonitorState';
 import type { VentMode } from '../state/VentilatorState';
+import type { AirwayPosition, DefibMode, Side } from '../state/ResuscitationState';
+import type { AirwayDevice } from '../state/PatientState';
+
+/** What the trainee concluded at the end of a rhythm check. */
+export type RhythmCheckAssessment = 'shockable' | 'nonShockable' | 'pulse';
+
+/** Bedside examinations; the finding is derived from the state by the UI and the examination is logged. */
+export type AssessmentKind = 'auscultation' | 'pocusCardiac' | 'pocusLung' | 'epigastrium';
+
+/** Bedside procedures. */
+export type ProcedureKind =
+  'needleDecompression' | 'chestDrain' | 'pericardiocentesis' | 'ioAccess' | 'gastricTube';
 
 export type VentSettingKey =
   | 'vt'
@@ -103,6 +116,35 @@ export type Command =
   | { type: 'FLUID_DRAIN'; source: 'ascites' | 'pleural'; volumeMl: number }
   /** mL — surgical irrigation into the field (not an IV input; absorbed only by the explicit fraction) */
   | { type: 'IRRIGATION'; volumeMl: number }
+  /** stop compressions for a rhythm (and pulse) check — hands off */
+  | { type: 'RHYTHM_CHECK_START' }
+  /** end the check with the trainee's assessment; `resumeCpr` restarts compressions */
+  | { type: 'RHYTHM_CHECK_END'; assessment?: RhythmCheckAssessment; resumeCpr?: boolean }
+  /** palpate a central pulse (finding logged) */
+  | { type: 'PULSE_CHECK' }
+  | { type: 'DEFIB_PADS'; attached: boolean }
+  | { type: 'DEFIB_MODE'; mode: DefibMode }
+  /** J */
+  | { type: 'DEFIB_ENERGY'; joules: number }
+  | { type: 'DEFIB_SYNC'; on: boolean }
+  | { type: 'DEFIB_CHARGE' }
+  | { type: 'DEFIB_DISARM' }
+  | { type: 'DEFIB_SHOCK' }
+  | { type: 'AED_ANALYSE' }
+  /** IV/IO push of a formulary product (dose in `unit`), followed by a 20 mL flush */
+  | { type: 'DRUG_PUSH'; productId: string; dose: number; unit: DoseUnit }
+  /** place an airway device; `position` (instructor/scenario only) forces where a tube ends up */
+  | { type: 'AIRWAY_INSERT'; device: Exclude<AirwayDevice, 'none'>; position?: AirwayPosition }
+  | { type: 'AIRWAY_REMOVE' }
+  /** cm — pull the tracheal tube back (corrects an endobronchial position) */
+  | { type: 'TUBE_WITHDRAW'; cm: number }
+  | { type: 'ASSESS'; kind: AssessmentKind }
+  | { type: 'PROCEDURE'; kind: ProcedureKind; side?: Side }
+  /** instructor/scenario: reversible causes */
+  | { type: 'SET_PNEUMOTHORAX'; side: Side | null; tension?: number }
+  /** mL, mL/min — pericardial fluid and bleeding rate */
+  | { type: 'SET_TAMPONADE'; volumeMl: number; rateMlMin?: number }
+  | { type: 'SET_IV_ACCESS'; access: 'iv' | 'io' | 'none' }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }
   | { type: 'RESET' };
@@ -144,7 +186,34 @@ export type ClinicalEventType =
   /** a urine measurement was charted (detail: "mL|mL/kg/h") */
   | 'URINE_MEASURED'
   /** balance action: bag emptied, catheter kinked/released, drain started/finished, irrigation (detail) */
-  | 'BALANCE_ACTION';
+  | 'BALANCE_ACTION'
+  /** rhythm check ended (detail: "assessment|actual|correct|handsOff s") */
+  | 'RHYTHM_ASSESSED'
+  /** a hands-off interval exceeded the guideline limit (detail: "s") */
+  | 'HANDS_OFF_EXCEEDED'
+  /** central pulse palpated (detail: absent|weak|present) */
+  | 'PULSE_CHECKED'
+  /** a shock was delivered (detail: "n|J|rhythm→outcome|pre-shock pause s|pTerm|pRosc") */
+  | 'SHOCK_DELIVERED'
+  /** a shock could not be delivered (detail: reason) */
+  | 'SHOCK_NOT_DELIVERED'
+  /** safety: shock delivered while compressions were running / on a patient with a pulse (detail) */
+  | 'SHOCK_SAFETY'
+  /** AED: analysis result or interruption (detail) */
+  | 'AED_ANALYSIS'
+  /** VF returned after a successful shock */
+  | 'VF_RECURRENCE'
+  /** an airway device is in place (detail: "device|position") */
+  | 'AIRWAY_PLACED'
+  | 'AIRWAY_REMOVED'
+  /** gastric distension led to regurgitation (detail: mL of gastric air) */
+  | 'REGURGITATION'
+  /** a bedside examination was performed (detail: kind) */
+  | 'ASSESSMENT'
+  /** a procedure was performed (detail: "kind|side|result") */
+  | 'PROCEDURE_DONE'
+  /** a needle decompression stopped working (re-tension) */
+  | 'NEEDLE_FAILED';
 
 export interface CommandLogEntry {
   seq: number;

@@ -2,6 +2,7 @@ import type { HeartLungState, PatientState } from '../state/PatientState';
 import type { HeartLungCalibration } from '../state/SimulationState';
 import { ECG, LUNG_PRESETS, OXYGEN } from './parameters';
 import { approach, clamp } from './shapes';
+import { obstructiveFilling } from './obstruction';
 
 /** mL O2/dL — arterial O2 content of the baseline patient (reference for coronary O2 supply) */
 const REFERENCE_CAO2 = 19;
@@ -164,11 +165,10 @@ export class HeartLungModel {
     // SIM-ASSUMPTION: Ppl = offset + (Crs/Ccw)·Palv − Pmus (single compartment, no gravitational gradient).
     const pleural = l.pleuralOffset + l.pleuralTransmission * alveolarElastic - pmus;
     hl.pleuralPressure = approach(hl.pleuralPressure, pleural, dt, k.pleuralFilterTauS);
-    hl.preloadFactor = fillingFactor(
-      hl.pleuralPressure - hl.pleuralReference,
-      effectiveVolumeStatus(patient),
-      k,
-    );
+    // Obstructive causes (tamponade, tension pneumothorax) limit filling whatever the volume status.
+    hl.preloadFactor =
+      fillingFactor(hl.pleuralPressure - hl.pleuralReference, effectiveVolumeStatus(patient), k) *
+      obstructiveFilling(patient.conditions);
     patient.cardio.preload = hl.preloadFactor;
   }
 
@@ -275,7 +275,10 @@ export class HeartLungModel {
     const betaHr = 1 - 0.7 * clamp(patient.factors.betaBlockade, 0, 1);
     hl.sympatheticStress = stress;
     hl.hrDirect = this.baselineHeartRate * drugs.chronotropy;
-    hl.hrReflex = 55 * stress * reserves.sympatheticResponse * betaHr - 35 * highPressure;
+    // The vagal (high-pressure) slowing is blocked by atropine.
+    hl.hrReflex =
+      55 * stress * reserves.sympatheticResponse * betaHr -
+      35 * highPressure * (1 - drugs.vagolysis);
     hl.heartRateTarget = clamp((hl.hrDirect + hl.hrReflex) * bradyFactor, 15, 190);
     cardio.heartRate = approach(cardio.heartRate, hl.heartRateTarget, dt, k.heartRateTauS);
 

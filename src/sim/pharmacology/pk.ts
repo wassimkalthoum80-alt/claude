@@ -123,6 +123,12 @@ export const CONCENTRATION_MODELS = {
   salbutamol: { vLKg: 2, halfLifeMin: 240, ke0: 0.15 },
   naloxone: { vLKg: 2, halfLifeMin: 60, ke0: 0.5 },
   calcium: { vLKg: 0.2, halfLifeMin: 30, ke0: 0.5 },
+  // SIM-ASSUMPTION: atropine — V 2 L/kg, t½ 2.5 h, ke0 1/min (IV onset 1–2 min, Medi Know Notfallmedikamente).
+  atropine: { vLKg: 2, halfLifeMin: 150, ke0: 1 },
+  // SIM-ASSUMPTION: amiodarone — an educational early-phase model: V 1 L/kg and an apparent t½ of 60 min stand for
+  // the rapid redistribution after an IV bolus (terminal t½ is weeks); ke0 0.2/min gives the onset in 2–5 min and
+  // the maximum at ≈ 15 min (Medi Know Notfallmedikamente).
+  amiodarone: { vLKg: 1, halfLifeMin: 60, ke0: 0.2 },
 } as const;
 
 /**
@@ -248,7 +254,9 @@ export function pkParams(
     case 'vasopressin':
     case 'salbutamol':
     case 'naloxone':
-    case 'calcium': {
+    case 'calcium':
+    case 'atropine':
+    case 'amiodarone': {
       const m = CONCENTRATION_MODELS[moiety];
       return concentrationModel(m.vLKg, m.halfLifeMin, m.ke0, abw);
     }

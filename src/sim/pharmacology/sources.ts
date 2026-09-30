@@ -91,6 +91,15 @@ export const SOURCES = {
     kind: 'textbook',
     review: 'unreviewed',
   },
+  mediknowNotfall: {
+    id: 'mediknowNotfall',
+    citation:
+      'Medi Know Notfallmedikamente (owner-supplied study script, docs/reference): Amiodaron 300 mg IV nach dem 3. Schock, 150 mg nach dem 5.; Wirkbeginn 2–5 min, Maximum ≈ 15 min; Hypotonie, Bradykardie, QT-Verlängerung. Atropin 0.5 mg IV, max. 3 mg; Wirkbeginn 1–2 min, Dauer 1–2 h; wenig wirksam bei AV-Block II Mobitz / III.',
+    year: 2024,
+    jurisdiction: 'DE',
+    kind: 'textbook',
+    review: 'unreviewed',
+  },
   smpcNoradrenaline: {
     id: 'smpcNoradrenaline',
     citation:
@@ -128,7 +137,7 @@ export const SOURCES = {
   erc2025: {
     id: 'erc2025',
     citation:
-      'European Resuscitation Council Guidelines 2025 — Adult Advanced Life Support (adrenaline 1 mg IV every 3–5 min).',
+      'European Resuscitation Council Guidelines 2025 — Adult Advanced Life Support (Soar J et al., Resuscitation 2025): adrenaline 1 mg IV every 3–5 min; amiodarone 300 mg after 3 shocks, 150 mg after 5; first biphasic shock ≥ 150 J.',
     year: 2025,
     jurisdiction: 'EU',
     kind: 'guideline',

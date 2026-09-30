@@ -65,9 +65,18 @@ export class CardiovascularModel {
   }
 
   /** A chest compression: schedule CPR forward flow. Priming has already been updated by the CPR engine. */
-  onCompression(ev: CompressionEvent, primingFactor: number): void {
+  /**
+   * @param fillingFactor 0..1 — obstructed filling (tamponade, tension pneumothorax): compressions cannot eject
+   *   blood that does not return to the heart
+   */
+  onCompression(ev: CompressionEvent, primingFactor: number, fillingFactor = 1): void {
     const duration = compressionDuration(ev.intervalS);
-    const sv = CPR.maxStrokeVolume * primingFactor * compressionFlowFactor(ev);
+    // SIM-ASSUMPTION: CPR stroke volume × (0.2 + 0.8 × obstructive filling factor).
+    const sv =
+      CPR.maxStrokeVolume *
+      primingFactor *
+      compressionFlowFactor(ev) *
+      (0.2 + 0.8 * Math.min(1, Math.max(0, fillingFactor)));
     this.pulses.push({ start: ev.t, duration, volume: sv, shape: halfSineUnitArea });
     // SIM-ASSUMPTION: transmitted thoracic pulse scales with depth, slightly reduced by leaning.
     this.thoracicAmplitude =

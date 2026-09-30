@@ -42,6 +42,8 @@ export const TREND_MOIETIES: readonly MoietyId[] = [
   'naloxone',
   'calcium',
   'furosemide',
+  'atropine',
+  'amiodarone',
 ];
 
 /**

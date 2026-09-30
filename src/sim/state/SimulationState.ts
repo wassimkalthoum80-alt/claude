@@ -6,6 +6,7 @@ import type { MonitorState } from './MonitorState';
 import type { PatientState } from './PatientState';
 import type { LineState, PumpState } from './PharmacologyState';
 import type { VentilatorState } from './VentilatorState';
+import type { DefibrillatorState, ResuscitationState } from './ResuscitationState';
 
 /**
  * Heart–lung interaction calibration (heuristic, author-selected; defaults in physiology/parameters.ts).
@@ -69,8 +70,10 @@ export interface SimulationState {
     bis: BisState;
     /** urine catheter, bag, suction, irrigation and the charted balance (the ledger lives in the engine) */
     balance: BalanceChartState;
+    /** monitor-defibrillator (manual / AED) */
+    defib: DefibrillatorState;
   };
-  interventions: { cpr: CPRState };
+  interventions: { cpr: CPRState; resus: ResuscitationState };
   timers: ArrestTimers;
   scenario: { id: string; seed: number; ended: boolean };
   control: { paused: boolean; timeScale: TimeScale };

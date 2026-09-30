@@ -44,6 +44,39 @@ export interface GuidelineSet {
     /** breaths/min with an advanced airway and continuous compressions */
     rrWithAdvancedAirway: number;
   };
+  /** ALS loop: rhythm-check interval */
+  alsCycle: {
+    /** s — CPR between rhythm checks */
+    cprIntervalS: number;
+  };
+  defibrillation: {
+    /** J — first biphasic shock (truncated exponential / rectilinear: at least this) */
+    firstShockJ: number;
+    /** J — suggested energies for shock 1, 2, 3+ (escalate if the device allows) */
+    escalationJ: number[];
+    /** J — highest energy the simulated manual defibrillator offers */
+    maxJ: number;
+    /** J — fixed AED energy */
+    aedJ: number;
+  };
+  /** drug timing in the ALS algorithm */
+  arrestDrugs: {
+    /** mg — adrenaline IV/IO bolus */
+    adrenalineMg: number;
+    /** shocks after which the first adrenaline is given in a shockable rhythm */
+    adrenalineAfterShock: number;
+    /** min — repeat interval window */
+    adrenalineIntervalMinMin: number;
+    adrenalineIntervalMaxMin: number;
+    /** mg — first / second amiodarone bolus and the shock counts after which they are given */
+    amiodaroneFirstMg: number;
+    amiodaroneFirstAfterShock: number;
+    amiodaroneSecondMg: number;
+    amiodaroneSecondAfterShock: number;
+    /** mg — lidocaine alternative (first / second) */
+    lidocaineFirstMg: number;
+    lidocaineSecondMg: number;
+  };
   /** lung-protective ventilation reference used for VT/kg PBW feedback (anaesthesia practice) */
   lungProtective: {
     /** mL/kg PBW */

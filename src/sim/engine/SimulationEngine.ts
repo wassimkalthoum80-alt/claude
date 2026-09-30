@@ -46,6 +46,8 @@ import { ECG } from '../physiology/parameters';
 import { clamp } from '../physiology/shapes';
 import { RespiratoryDriveModel } from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
+import { obstructiveFilling } from '../physiology/obstruction';
+import { isResusCommand, ResuscitationController } from './ResuscitationController';
 import { ArterialWaveformGenerator } from '../signals/ArterialWaveformGenerator';
 import { CapnographyGenerator } from '../signals/CapnographyGenerator';
 import { ECGGenerator } from '../signals/ECGGenerator';
@@ -115,6 +117,7 @@ export class SimulationEngine {
   private readonly cpr: CPREngine;
   private readonly monitor = new MonitorDevice();
   private readonly alarms = new AlarmEngine();
+  private readonly resus: ResuscitationController;
 
   private readonly ecgGen = new ECGGenerator();
   private readonly artGen = new ArterialWaveformGenerator();
@@ -139,7 +142,34 @@ export class SimulationEngine {
     this.seed = options.seed ?? options.scenario.seed;
     this.calibration = { ...options.calibration };
     this.cpr = new CPREngine(options.guidelines);
-    this.state = createInitialState(this.scenarioDef, this.seed, this.calibration);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- the controller acts on the engine's state via this host
+    const engine = this;
+    this.resus = new ResuscitationController({
+      get state() {
+        return engine.state;
+      },
+      get rng() {
+        return engine.rng;
+      },
+      guidelines: options.guidelines,
+      setRhythm: (id) => engine.setRhythm(id),
+      logEvent: (e, t, detail) => engine.logEvent(e, t, detail),
+      startCpr: () => engine.cpr.start(engine.state.interventions.cpr, engine.state.time),
+      stopCpr: () => engine.cpr.stop(engine.state.interventions.cpr),
+      setCircuit: (connected) =>
+        engine.ventilator.setCircuit(engine.state.devices.ventilator, connected),
+      setLeak: (f) => {
+        engine.ventilator.leakFraction = f;
+      },
+      lastBeatTime: () => engine.rhythm.lastBeatTime,
+      relaxationPressure: () => engine.cardio.relaxationPressure,
+    });
+    this.state = createInitialState(
+      this.scenarioDef,
+      this.seed,
+      this.calibration,
+      options.guidelines.defibrillation.firstShockJ,
+    );
     this.snapshot = this.state;
     this.rng = new SeededRng(this.seed);
     this.baselineHeartRate = this.scenarioDef.patient.heartRate;
@@ -221,6 +251,7 @@ export class SimulationEngine {
       for (const beat of this.rhythm.advance(t, cardioState, this.rng)) {
         this.cardio.onBeat(beat, cardioState);
         this.monitor.onBeat(beat);
+        this.resus.onBeat(beat);
         this.emit({ type: 'beat', t: beat });
       }
 
@@ -230,7 +261,11 @@ export class SimulationEngine {
           s.timers.firstCompressionTime = ev.t;
           this.logEvent('FIRST_COMPRESSION', ev.t);
         }
-        this.cardio.onCompression(ev, cprState.primingFactor);
+        this.cardio.onCompression(
+          ev,
+          cprState.primingFactor,
+          obstructiveFilling(s.patient.conditions),
+        );
         this.emit({ type: 'compression', t: ev.t, depthCm: ev.depthCm });
       }
 
@@ -307,6 +342,7 @@ export class SimulationEngine {
       TICK_S,
     );
     if (transition) this.applyTransition(transition);
+    this.resus.update(TICK_S);
     this.cerebral.update(s.patient, this.pharmacology.exposures(s.patient), TICK_S);
     this.updateTimers(TICK_S);
     this.monitor.update(s, this.bank, TICK_S);
@@ -390,7 +426,12 @@ export class SimulationEngine {
 
   private load(scenario: ScenarioDefinition, seed: number): void {
     this.rng = new SeededRng(seed);
-    this.state = createInitialState(scenario, seed, this.calibration);
+    this.state = createInitialState(
+      scenario,
+      seed,
+      this.calibration,
+      this.guidelines.defibrillation.firstShockJ,
+    );
     this.baselineHeartRate = scenario.patient.heartRate;
     this.substep = 0;
     this.timelineIndex = 0;
@@ -420,6 +461,7 @@ export class SimulationEngine {
       s.devices.monitor.numerics.spo2 = Math.round(s.patient.gas.spo2);
     this.drive.reset();
     this.cpr.reset(s.interventions.cpr);
+    this.resus.reset();
     this.monitor.reset(s.devices.monitor.numerics, s.patient.gas.spo2);
     for (const g of [
       this.ecgGen,
@@ -435,8 +477,15 @@ export class SimulationEngine {
 
   private apply(command: Command, source: CommandSource): void {
     const s = this.state;
+    if (isResusCommand(command)) {
+      this.resus.apply(command, source);
+      return;
+    }
     switch (command.type) {
       case 'CPR_START':
+        // Resuming compressions ends a running rhythm check (without an assessment).
+        if (s.interventions.resus.rhythmCheck)
+          this.resus.apply({ type: 'RHYTHM_CHECK_END' }, source);
         this.cpr.start(s.interventions.cpr, s.time);
         break;
       case 'CPR_STOP':
@@ -602,6 +651,7 @@ export class SimulationEngine {
         s.patient.resp.spontaneousBreathing = command.drive !== 'none';
         break;
       case 'SET_RHYTHM':
+        s.patient.myocardium.refibrillationAt = null;
         this.setRhythm(command.rhythm);
         break;
       case 'SET_PAUSED':
@@ -626,6 +676,8 @@ export class SimulationEngine {
     if (perfusing) c.heartRate = this.baselineHeartRate;
     // PEA keeps an electrical rate: the current (bradycardic) rate, or 40/min when set out of the blue.
     else if (id === 'pea') c.heartRate = c.heartRate > 8 && c.heartRate < 60 ? c.heartRate : 40;
+    // SIM-ASSUMPTION: pulseless monomorphic VT at 180/min.
+    else if (id === 'vt') c.heartRate = 180;
     else c.heartRate = 0;
     this.rhythm.setRhythm(id, s.time, c, this.rng);
 
@@ -650,6 +702,7 @@ export class SimulationEngine {
       this.heartLung.onCirculationRestored(s.patient, s.model.calibration);
       this.logEvent('CIRCULATION_RESTORED', s.time);
     }
+    this.resus.onRhythmChanged();
   }
 
   /** A rhythm change requested by the heart–lung model: applied and written to the event log. */

@@ -1,0 +1,581 @@
+import type { SeededRng } from '../core/rng';
+import {
+  chargeTimeS,
+  DEFIB,
+  shockOutcome,
+  updateMyocardium,
+  viability,
+} from '../interventions/defibrillation';
+import {
+  AIRWAY_INSERTION_S,
+  assessmentCorrect,
+  classifyRhythm,
+  drawAirwayPosition,
+  NEEDLE_FAILURE,
+  PERICARDIOCENTESIS_ML,
+  pulseFinding,
+} from '../interventions/resuscitation';
+import { getProduct } from '../pharmacology/formulary/products';
+import { doseToMl, type DoseUnit } from '../pharmacology/units';
+import {
+  airwayLeak,
+  gastricInsufflation,
+  obstructiveFilling,
+  updateConditions,
+} from '../physiology/obstruction';
+import { clamp } from '../physiology/shapes';
+import type { MoietyId } from '../state/PharmacologyState';
+import type { RhythmId } from '../state/PatientState';
+import type { Side } from '../state/ResuscitationState';
+import type { SimulationState } from '../state/SimulationState';
+import type { ClinicalEventType, Command, CommandSource } from '../types/commands';
+import type { GuidelineSet } from '../types/guidelines';
+
+/** What the controller needs from the engine (the engine stays the only owner of the state). */
+export interface ResuscitationHost {
+  readonly state: SimulationState;
+  readonly rng: SeededRng;
+  readonly guidelines: GuidelineSet;
+  setRhythm(id: RhythmId): void;
+  logEvent(event: ClinicalEventType, t: number, detail?: string): void;
+  startCpr(): void;
+  stopCpr(): void;
+  setCircuit(connected: boolean): void;
+  setLeak(fraction: number): void;
+  /** s — last QRS of the current organised rhythm */
+  lastBeatTime(): number | null;
+  /** mmHg — arterial Windkessel (diastolic) pressure */
+  relaxationPressure(): number;
+}
+
+type ResusCommand = Extract<
+  Command,
+  {
+    type:
+      | 'RHYTHM_CHECK_START'
+      | 'RHYTHM_CHECK_END'
+      | 'PULSE_CHECK'
+      | 'DEFIB_PADS'
+      | 'DEFIB_MODE'
+      | 'DEFIB_ENERGY'
+      | 'DEFIB_SYNC'
+      | 'DEFIB_CHARGE'
+      | 'DEFIB_DISARM'
+      | 'DEFIB_SHOCK'
+      | 'AED_ANALYSE'
+      | 'DRUG_PUSH'
+      | 'AIRWAY_INSERT'
+      | 'AIRWAY_REMOVE'
+      | 'TUBE_WITHDRAW'
+      | 'ASSESS'
+      | 'PROCEDURE'
+      | 'SET_PNEUMOTHORAX'
+      | 'SET_TAMPONADE'
+      | 'SET_IV_ACCESS';
+  }
+>;
+
+const RESUS_TYPES = new Set<Command['type']>([
+  'RHYTHM_CHECK_START',
+  'RHYTHM_CHECK_END',
+  'PULSE_CHECK',
+  'DEFIB_PADS',
+  'DEFIB_MODE',
+  'DEFIB_ENERGY',
+  'DEFIB_SYNC',
+  'DEFIB_CHARGE',
+  'DEFIB_DISARM',
+  'DEFIB_SHOCK',
+  'AED_ANALYSE',
+  'DRUG_PUSH',
+  'AIRWAY_INSERT',
+  'AIRWAY_REMOVE',
+  'TUBE_WITHDRAW',
+  'ASSESS',
+  'PROCEDURE',
+  'SET_PNEUMOTHORAX',
+  'SET_TAMPONADE',
+  'SET_IV_ACCESS',
+]);
+
+export function isResusCommand(c: Command): c is ResusCommand {
+  return RESUS_TYPES.has(c.type);
+}
+
+/** mL — flush after every resuscitation drug push (ERC: 20 mL). */
+const PUSH_FLUSH_ML = 20;
+/** s — a synchronised discharge waits at most this long for an R wave */
+const SYNC_TIMEOUT_S = 3;
+/** mL — gastric air at which regurgitation occurs */
+const REGURGITATION_ML = 1500;
+/** s — obstructed flow resumes this long after the obstruction is relieved (pseudo-PEA) */
+const OBSTRUCTION_RELIEF_S = 5;
+
+/**
+ * ALS actions: rhythm check, defibrillator (manual/AED, synchronised), resuscitation drug pushes, airway
+ * devices, procedures and the reversible causes. Owned and called by the SimulationEngine (the only owner of the
+ * state); every command reaching here has already been logged by the engine.
+ */
+export class ResuscitationController {
+  private syncPendingSince: number | null = null;
+  private lastBreathCount = 0;
+  private reliefAt: number | null = null;
+  private regurgitated = false;
+
+  constructor(private readonly host: ResuscitationHost) {}
+
+  reset(): void {
+    this.syncPendingSince = null;
+    this.lastBreathCount = this.host.state.devices.ventilator.breathCount;
+    this.reliefAt = null;
+    this.regurgitated = false;
+  }
+
+  // ───────────────────────────── commands ─────────────────────────────
+
+  apply(c: ResusCommand, source: CommandSource): void {
+    const h = this.host;
+    const s = h.state;
+    const t = s.time;
+    const resus = s.interventions.resus;
+    const defib = s.devices.defib;
+    const G = h.guidelines;
+    switch (c.type) {
+      case 'RHYTHM_CHECK_START':
+        if (resus.rhythmCheck) return;
+        h.stopCpr();
+        resus.rhythmCheck = { startedAt: t };
+        return;
+      case 'RHYTHM_CHECK_END': {
+        const check = resus.rhythmCheck;
+        if (!check) return;
+        const handsOff = t - check.startedAt;
+        const actual = classifyRhythm(
+          s.patient.cardio.rhythm,
+          s.patient.cardio.spontaneousCirculation,
+        );
+        const a = c.assessment;
+        h.logEvent(
+          'RHYTHM_ASSESSED',
+          t,
+          `${a ?? 'none'}|${actual}|${a ? assessmentCorrect(a, actual) : 'n/a'}|${handsOff.toFixed(1)}`,
+        );
+        if (handsOff > G.pauses.maxHandsOffS)
+          h.logEvent('HANDS_OFF_EXCEEDED', t, handsOff.toFixed(1));
+        resus.rhythmCheck = null;
+        resus.lastRhythmCheckEnd = t;
+        resus.rhythmChecks += 1;
+        if (c.resumeCpr) h.startCpr();
+        return;
+      }
+      case 'PULSE_CHECK':
+        h.logEvent('PULSE_CHECKED', t, pulseFinding(s.patient));
+        return;
+      case 'DEFIB_PADS':
+        defib.padsAttached = c.attached;
+        if (!c.attached) this.disarm();
+        return;
+      case 'DEFIB_MODE':
+        if (c.mode !== defib.mode) {
+          defib.mode = c.mode === 'aed' ? 'aed' : 'manual';
+          defib.sync = false;
+          defib.aed = { phase: 'idle', phaseEndsAt: null };
+          this.disarm();
+        }
+        return;
+      case 'DEFIB_ENERGY':
+        if (Number.isFinite(c.joules) && c.joules >= 1 && c.joules <= G.defibrillation.maxJ) {
+          defib.energyJ = Math.round(c.joules);
+          // Changing the energy of a charged device dumps the charge (as real devices do).
+          if (defib.charge !== 'idle') this.disarm();
+        }
+        return;
+      case 'DEFIB_SYNC':
+        if (defib.mode === 'manual') defib.sync = c.on;
+        return;
+      case 'DEFIB_CHARGE':
+        if (!defib.padsAttached) {
+          h.logEvent('SHOCK_NOT_DELIVERED', t, 'no-pads');
+          return;
+        }
+        if (defib.mode === 'aed') return; // the AED charges itself after "shock advised"
+        this.startCharge(defib.energyJ);
+        return;
+      case 'DEFIB_DISARM':
+        this.disarm();
+        return;
+      case 'DEFIB_SHOCK':
+        this.requestShock();
+        return;
+      case 'AED_ANALYSE':
+        if (!defib.padsAttached) {
+          h.logEvent('AED_ANALYSIS', t, 'no-pads');
+          return;
+        }
+        if (defib.mode !== 'aed') return;
+        this.disarm();
+        if (s.interventions.cpr.active) {
+          defib.aed = { phase: 'motion', phaseEndsAt: null };
+          h.logEvent('AED_ANALYSIS', t, 'motion');
+          return;
+        }
+        defib.aed = { phase: 'analysing', phaseEndsAt: t + DEFIB.aedAnalysisS };
+        return;
+      case 'DRUG_PUSH':
+        this.pushDrug(c.productId, c.dose, c.unit);
+        return;
+      case 'AIRWAY_INSERT': {
+        const air = s.patient.airway;
+        if (air.insertion) return;
+        const forced = source === 'instructor' || source === 'scenario' ? c.position : undefined;
+        const position = forced ?? drawAirwayPosition(c.device, h.rng);
+        air.device = 'none';
+        air.position = 'correct';
+        air.insertion = {
+          device: c.device,
+          position,
+          completesAt: t + AIRWAY_INSERTION_S[c.device],
+        };
+        h.setCircuit(false);
+        return;
+      }
+      case 'AIRWAY_REMOVE': {
+        const air = s.patient.airway;
+        if (air.device === 'none' && !air.insertion) return;
+        h.logEvent('AIRWAY_REMOVED', t, air.device);
+        air.device = 'none';
+        air.position = 'correct';
+        air.insertion = null;
+        h.setCircuit(false);
+        return;
+      }
+      case 'TUBE_WITHDRAW': {
+        const air = s.patient.airway;
+        if (air.device !== 'ett' || !Number.isFinite(c.cm) || c.cm <= 0) return;
+        // SIM-ASSUMPTION: pulling back 1–3 cm brings an endobronchial tube into the trachea; an oesophageal tube
+        // stays oesophageal (it must be removed and replaced).
+        if (air.position === 'endobronchial' && c.cm >= 1) air.position = 'correct';
+        h.logEvent('PROCEDURE_DONE', t, `tubeWithdraw|${c.cm} cm|${air.position}`);
+        return;
+      }
+      case 'ASSESS':
+        if (c.kind === 'pocusCardiac' || c.kind === 'pocusLung') resus.lastPocusAt = t;
+        h.logEvent('ASSESSMENT', t, c.kind);
+        return;
+      case 'PROCEDURE':
+        this.procedure(c.kind, c.side);
+        return;
+      case 'SET_PNEUMOTHORAX':
+        s.patient.conditions.pneumothorax =
+          c.side === null
+            ? null
+            : {
+                side: c.side === 'right' ? 'right' : 'left',
+                tension: clamp(c.tension ?? 0, 0, 1),
+                decompressed: 'none',
+                needleFailsAt: null,
+              };
+        return;
+      case 'SET_TAMPONADE':
+        if (Number.isFinite(c.volumeMl))
+          s.patient.conditions.pericardialMl = clamp(c.volumeMl, 0, 1000);
+        if (c.rateMlMin !== undefined && Number.isFinite(c.rateMlMin))
+          s.patient.conditions.pericardialRateMlMin = clamp(c.rateMlMin, 0, 200);
+        return;
+      case 'SET_IV_ACCESS':
+        s.patient.conditions.ivAccess = c.access;
+        return;
+    }
+  }
+
+  // ───────────────────────────── 10 Hz update ─────────────────────────────
+
+  update(dt: number): void {
+    const h = this.host;
+    const s = h.state;
+    const t = s.time;
+    const p = s.patient;
+    const defib = s.devices.defib;
+    const vent = s.devices.ventilator;
+
+    // Capacitor and AED state machine.
+    if (defib.charge === 'charging' && defib.chargeReadyAt !== null && t >= defib.chargeReadyAt) {
+      defib.charge = 'charged';
+      defib.chargeReadyAt = null;
+      defib.disarmAt = t + DEFIB.autoDisarmS;
+    }
+    if (defib.charge === 'charged' && defib.disarmAt !== null && t >= defib.disarmAt) {
+      h.logEvent('SHOCK_NOT_DELIVERED', t, 'auto-disarm');
+      this.disarm();
+    }
+    if (defib.aed.phase === 'analysing') {
+      if (s.interventions.cpr.active) {
+        defib.aed = { phase: 'motion', phaseEndsAt: null };
+        h.logEvent('AED_ANALYSIS', t, 'motion');
+      } else if (defib.aed.phaseEndsAt !== null && t >= defib.aed.phaseEndsAt) {
+        const shockable = p.cardio.rhythm === 'vf' || p.cardio.rhythm === 'vt';
+        defib.aed = { phase: shockable ? 'shockAdvised' : 'noShockAdvised', phaseEndsAt: null };
+        h.logEvent('AED_ANALYSIS', t, shockable ? 'shock-advised' : 'no-shock-advised');
+        if (shockable) this.startCharge(h.guidelines.defibrillation.aedJ);
+      }
+    }
+    if (this.syncPendingSince !== null && t - this.syncPendingSince > SYNC_TIMEOUT_S) {
+      this.syncPendingSince = null;
+      h.logEvent('SHOCK_NOT_DELIVERED', t, 'sync-no-r-wave');
+    }
+
+    // Hands-off bookkeeping for the pre-shock pause.
+    const resus = s.interventions.resus;
+    if (s.interventions.cpr.active) resus.handsOffSince = null;
+    else if (resus.handsOffSince === null && s.timers.arrestStartTime !== null)
+      resus.handsOffSince = t;
+
+    // Myocardium: ischaemic time, coronary perfusion, recurrence, VT degeneration.
+    const m = p.myocardium;
+    updateMyocardium(
+      m,
+      !p.cardio.spontaneousCirculation,
+      s.interventions.cpr.active,
+      h.relaxationPressure(),
+      p.cardio.rhythm,
+      dt,
+    );
+    if (m.refibrillationAt !== null && t >= m.refibrillationAt) {
+      m.refibrillationAt = null;
+      if (p.cardio.rhythm === 'sinus' || p.cardio.rhythm === 'pea') {
+        h.setRhythm('vf');
+        h.logEvent('VF_RECURRENCE', t);
+      }
+    }
+    if (p.cardio.rhythm === 'vt' && m.vtTime >= DEFIB.vtDegenerationS) {
+      h.setRhythm('vf');
+      h.logEvent('VF_ONSET', t, 'vtDegeneration');
+    }
+
+    // Airway: insertion, leak, gastric insufflation.
+    const air = p.airway;
+    if (air.insertion && t >= air.insertion.completesAt) {
+      air.device = air.insertion.device;
+      air.position = air.insertion.position;
+      air.insertion = null;
+      h.setCircuit(true);
+      h.logEvent('AIRWAY_PLACED', t, `${air.device}|${air.position}`);
+    }
+    const connected = vent.circuitConnected && air.device !== 'none';
+    air.leakFraction = connected ? airwayLeak(air, vent.measured.ppeak) : 0;
+    air.exhaledCo2Fraction =
+      air.device === 'ett' && air.position === 'oesophageal' ? 0 : 1 - air.leakFraction;
+    h.setLeak(air.leakFraction);
+    if (vent.breathCount !== this.lastBreathCount) {
+      this.lastBreathCount = vent.breathCount;
+      if (connected) {
+        air.gastricAirMl += gastricInsufflation(air, vent.measured.ppeak, vent.active.vt);
+        if (!this.regurgitated && air.gastricAirMl >= REGURGITATION_ML) {
+          this.regurgitated = true;
+          h.logEvent('REGURGITATION', t, `${Math.round(air.gastricAirMl)}`);
+        }
+      }
+    }
+
+    // Reversible causes.
+    if (updateConditions(p.conditions, connected, t, dt)) h.logEvent('NEEDLE_FAILED', t);
+    // Obstructive PEA: once the obstruction is relieved, the (still beating) heart ejects again — only while
+    // the myocardium is viable.
+    if (
+      p.cardio.rhythm === 'pea' &&
+      m.obstructiveArrest &&
+      obstructiveFilling(p.conditions) > 0.7 &&
+      viability(m) > 0.35
+    ) {
+      this.reliefAt ??= t + OBSTRUCTION_RELIEF_S;
+      if (t >= this.reliefAt) {
+        this.reliefAt = null;
+        m.obstructiveArrest = false;
+        h.setRhythm('sinus');
+      }
+    } else {
+      this.reliefAt = null;
+    }
+  }
+
+  /** A QRS complex occurred (organised rhythms): a pending synchronised shock discharges on it. */
+  onBeat(t: number): void {
+    if (this.syncPendingSince === null) return;
+    this.syncPendingSince = null;
+    this.deliverShock(t, true);
+  }
+
+  /** The engine applied a model- or instructor-driven rhythm change. */
+  onRhythmChanged(): void {
+    const p = this.host.state.patient;
+    p.myocardium.obstructiveArrest =
+      p.cardio.rhythm === 'pea' && obstructiveFilling(p.conditions) < 0.6;
+  }
+
+  // ───────────────────────────── internals ─────────────────────────────
+
+  private startCharge(joules: number): void {
+    const d = this.host.state.devices.defib;
+    d.charge = 'charging';
+    d.chargedJ = joules;
+    d.chargeReadyAt = this.host.state.time + chargeTimeS(joules);
+    d.disarmAt = null;
+  }
+
+  private disarm(): void {
+    const d = this.host.state.devices.defib;
+    d.charge = 'idle';
+    d.chargeReadyAt = null;
+    d.chargedJ = 0;
+    d.disarmAt = null;
+    this.syncPendingSince = null;
+  }
+
+  private requestShock(): void {
+    const h = this.host;
+    const s = h.state;
+    const d = s.devices.defib;
+    if (!d.padsAttached) return h.logEvent('SHOCK_NOT_DELIVERED', s.time, 'no-pads');
+    if (d.charge !== 'charged') return h.logEvent('SHOCK_NOT_DELIVERED', s.time, 'not-charged');
+    if (d.mode === 'aed' && d.aed.phase !== 'shockAdvised')
+      return h.logEvent('SHOCK_NOT_DELIVERED', s.time, 'not-advised');
+    if (d.mode === 'manual' && d.sync) {
+      // The discharge waits for the next R wave; without organised complexes it never comes.
+      if (h.lastBeatTime() === null && s.patient.cardio.rhythm !== 'sinus') {
+        return h.logEvent('SHOCK_NOT_DELIVERED', s.time, 'sync-no-r-wave');
+      }
+      this.syncPendingSince = s.time;
+      return;
+    }
+    this.deliverShock(s.time, false);
+  }
+
+  private deliverShock(t: number, synchronised: boolean): void {
+    const h = this.host;
+    const s = h.state;
+    const d = s.devices.defib;
+    const p = s.patient;
+    const joules = d.chargedJ;
+    const before = p.cardio.rhythm;
+    const resus = s.interventions.resus;
+    const cprActive = s.interventions.cpr.active;
+    const preShockPause = cprActive || resus.handsOffSince === null ? 0 : t - resus.handsOffSince;
+    const last = h.lastBeatTime();
+    const drugs = p.pharmacology.effects;
+    const result = shockOutcome({
+      rhythm: before,
+      joules,
+      myocardium: p.myocardium,
+      antiarrhythmic: drugs.antiarrhythmic,
+      catecholamineDrive:
+        Math.max(0, drugs.direct.inotropy - 1) + Math.max(0, drugs.direct.chronotropy - 1),
+      sinceLastBeat: last === null ? null : t - last,
+      rrInterval: p.cardio.heartRate > 0 ? 60 / p.cardio.heartRate : null,
+      synchronised,
+      rng: h.rng,
+    });
+    d.shocks += 1;
+    d.lastShockTime = t;
+    d.lastShockJ = joules;
+    this.disarm();
+    if (d.mode === 'aed') d.aed = { phase: 'idle', phaseEndsAt: null };
+    if (cprActive) h.logEvent('SHOCK_SAFETY', t, 'during-compressions');
+    if (p.cardio.spontaneousCirculation) h.logEvent('SHOCK_SAFETY', t, 'patient-has-pulse');
+    h.logEvent(
+      'SHOCK_DELIVERED',
+      t,
+      [
+        d.shocks,
+        `${joules} J${synchronised ? ' sync' : ''}`,
+        `${before}→${result.outcome}`,
+        preShockPause.toFixed(1),
+        result.terminationProbability.toFixed(2),
+        result.roscProbability.toFixed(2),
+      ].join('|'),
+    );
+    if (preShockPause > h.guidelines.pauses.maxPreShockPauseS)
+      h.logEvent('HANDS_OFF_EXCEEDED', t, `pre-shock ${preShockPause.toFixed(1)}`);
+    if (result.rhythm !== before) h.setRhythm(result.rhythm);
+    p.myocardium.refibrillationAt =
+      result.refibrillateAfterS === null ? null : t + result.refibrillateAfterS;
+  }
+
+  private pushDrug(productId: string, dose: number, unit: DoseUnit): void {
+    const h = this.host;
+    const s = h.state;
+    const product = getProduct(productId);
+    const reject = (why: string) => h.logEvent('COMMAND_REJECTED', s.time, why);
+    if (!product || product.status !== 'executable' || !product.moiety || !product.concentration)
+      return reject('no-product');
+    if (s.patient.conditions.ivAccess === 'none') return reject('no-access');
+    if (!Number.isFinite(dose) || dose <= 0) return reject('bolus-invalid');
+    let ml: number;
+    try {
+      ml = doseToMl({ value: dose, unit }, product.concentration, s.patient.demographics.weightKg);
+    } catch {
+      return reject('unit-mismatch');
+    }
+    // Never block a clinically possible dose (the simulator shows the consequences); only absurd volumes.
+    if (!Number.isFinite(ml) || ml <= 0 || ml > 100) return reject('bolus-invalid');
+    const line = s.devices.line;
+    const moiety: MoietyId = product.moiety;
+    line.common[moiety] = (line.common[moiety] ?? 0) + ml * product.concentration.value;
+    // SIM-ASSUMPTION: the push volume is counted with the 20 mL NaCl flush (balance), injected at the cannula.
+    line.flushRemainingMl += PUSH_FLUSH_ML + ml;
+    s.interventions.resus.drugs.push({ productId, dose, unit, t: s.time });
+    h.logEvent('BOLUS_GIVEN', s.time, `push|${product.genericName}|${dose} ${unit}`);
+  }
+
+  private procedure(kind: ProcedureArg, side?: Side): void {
+    const h = this.host;
+    const s = h.state;
+    const c = s.patient.conditions;
+    const t = s.time;
+    let result = 'done';
+    switch (kind) {
+      case 'needleDecompression':
+      case 'chestDrain': {
+        const ptx = c.pneumothorax;
+        const hit = ptx !== null && side === ptx.side;
+        if (!ptx || !hit) {
+          // SIM-ASSUMPTION: decompressing a side without a pneumothorax has no physiological effect here
+          // (iatrogenic pneumothorax is not modelled) — it is logged for the debriefing.
+          result = 'no-air';
+          break;
+        }
+        if (kind === 'chestDrain') {
+          ptx.decompressed = 'drain';
+          ptx.needleFailsAt = null;
+          result = 'drain-placed';
+        } else if (ptx.decompressed !== 'drain') {
+          ptx.decompressed = 'needle';
+          const u = h.rng.next();
+          const v = h.rng.next();
+          ptx.needleFailsAt =
+            u < NEEDLE_FAILURE.probability
+              ? t + NEEDLE_FAILURE.minS + v * (NEEDLE_FAILURE.maxS - NEEDLE_FAILURE.minS)
+              : null;
+          result = 'air-released';
+        }
+        break;
+      }
+      case 'pericardiocentesis': {
+        const removed = Math.min(c.pericardialMl, PERICARDIOCENTESIS_ML);
+        c.pericardialMl -= removed;
+        result = removed > 5 ? `${Math.round(removed)} mL` : 'dry-tap';
+        break;
+      }
+      case 'ioAccess':
+        if (c.ivAccess === 'none') c.ivAccess = 'io';
+        result = c.ivAccess;
+        break;
+      case 'gastricTube':
+        result = `${Math.round(s.patient.airway.gastricAirMl)} mL`;
+        s.patient.airway.gastricAirMl = 0;
+        break;
+    }
+    h.logEvent('PROCEDURE_DONE', t, `${kind}|${side ?? '-'}|${result}`);
+  }
+}
+
+type ProcedureArg = Extract<Command, { type: 'PROCEDURE' }>['kind'];

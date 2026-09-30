@@ -21,6 +21,8 @@ const MOIETY: Record<MoietyId, { name: string; amount: string; conc: string }> =
   ketamine: { name: 'Ketamine', amount: 'mg', conc: 'µg/mL' },
   esketamine: { name: 'Esketamine', amount: 'mg', conc: 'µg/mL' },
   furosemide: { name: 'Furosemide', amount: 'mg', conc: 'µg/mL' },
+  atropine: { name: 'Atropine', amount: 'µg', conc: 'ng/mL' },
+  amiodarone: { name: 'Amiodarone', amount: 'mg', conc: 'µg/mL' },
 };
 
 const OPIOIDS: MoietyId[] = ['sufentanil', 'remifentanil'];

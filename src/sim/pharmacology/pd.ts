@@ -172,6 +172,23 @@ export const PD = {
   // SIM-ASSUMPTION: calcium — ionised fraction 0.5 of the Δ total calcium; inotropy +15 % and SVR +10 % at most
   // (EC50 0.3 mmol/L ionised). No effect on potassium.
   calcium: { ionisedFraction: 0.5, inotropyMax: 0.15, svrMax: 0.1, ec50: 0.3 },
+  // SIM-ASSUMPTION: atropine (ng/mL) — muscarinic block Hill(C, 4 ng/mL, 1.5): 0.5 mg ≈ 40 %, 1 mg ≈ 65 %, 3 mg
+  // ≈ 90 % in 80 kg. Full vagolysis raises the heart rate by (0.6 − 0.005·age) (vagal tone falls with age:
+  // +30 % at 60 years) and removes the vagal share of opioid (all) and dexmedetomidine (half) bradycardia and of
+  // the high-pressure baroreflex. The paradoxical slowing of doses < 0.5 mg is not modelled.
+  atropine: { ec50: 4, hill: 1.5, chronoYoung: 0.6, chronoPerYear: 0.005 },
+  // SIM-ASSUMPTION: amiodarone (µg/mL) — antiarrhythmic Emax(C, 1 µg/mL); IV bolus vasodilation (−25 % SVR, EC50
+  // 3), bradycardia (−15 %, EC50 2) and mild negative inotropy (−10 %, EC50 3) — hypotension and bradycardia are the
+  // listed acute adverse effects (Medi Know Notfallmedikamente).
+  amiodarone: {
+    antiarrhythmicEc50: 1,
+    svrMax: 0.25,
+    svrEc50: 3,
+    chronoMax: 0.15,
+    chronoEc50: 2,
+    inotropyMax: 0.1,
+    inotropyEc50: 3,
+  },
   // SIM-ASSUMPTION: β-blocked phenotype (patient factor 0–1) removes up to 80 % of the β-mediated drug effects.
   betaBlockade: { maxBlock: 0.8 },
 } as const;
@@ -248,6 +265,9 @@ export function haemodynamics(
   const mid = e.midazolam ?? 0;
   const dex = e.dexmedetomidine ?? 0;
   const ketU = ketamineUnits(e);
+  const vagolysis = atropineVagolysis(e);
+  const am = e.amiodarone ?? 0;
+  const AM = PD.amiodarone;
   const M = PD.midazolam;
   const X = PD.dexmedetomidine;
   const K = PD.ketamine;
@@ -265,7 +285,8 @@ export function haemodynamics(
     (1 - beta * emax(dob, D.svrMax, D.svrEc50)) *
     (1 + emax(vp, V.svrMax, V.ec50)) *
     (1 - beta * emax(sal, S.svrMax, S.chronoEc50)) *
-    (1 + emax(ca, C.svrMax, C.ec50));
+    (1 + emax(ca, C.svrMax, C.ec50)) *
+    (1 - emax(am, AM.svrMax, AM.svrEc50));
   const venousTone =
     -emax(mid, M.venousMax, M.c50) -
     emax(p, P.venousMax, P.venousCe50) -
@@ -279,10 +300,13 @@ export function haemodynamics(
     (1 + beta * emax(na, N.inotropyMax, N.inoEc50)) *
     (1 + beta * emax(ad, A.inotropyMax, A.inoEc50)) *
     (1 + beta * emax(dob, D.inotropyMax, D.inoEc50)) *
-    (1 + emax(ca, C.inotropyMax, C.ec50));
+    (1 + emax(ca, C.inotropyMax, C.ec50)) *
+    (1 - emax(am, AM.inotropyMax, AM.inotropyEc50));
   const chronotropy =
-    (1 - emax(dex, X.chronoMax, X.chronoC50)) *
-    (1 - emax(opioid, O.bradyMax, O.bradyC50)) *
+    (1 - emax(dex, X.chronoMax, X.chronoC50) * (1 - 0.5 * vagolysis)) *
+    (1 - emax(opioid, O.bradyMax, O.bradyC50) * (1 - vagolysis)) *
+    (1 + vagolysis * atropineChronoMax(ageYears)) *
+    (1 - emax(am, AM.chronoMax, AM.chronoEc50)) *
     (1 + beta * emax(na, N.chronoMax, N.chronoEc50)) *
     (1 + beta * emax(ad, A.chronoMax, A.chronoEc50)) *
     (1 + beta * emax(dob, D.chronoMax, D.chronoEc50)) *
@@ -293,6 +317,17 @@ export function haemodynamics(
     (1 - emax(opioid, 0.2, 0.5)) *
     (1 - emax(dex, X.baroMax, X.chronoC50));
   return { svr, venousTone, inotropy, chronotropy, baroreflex, sympatheticDrive };
+}
+
+/** 0..1 — muscarinic block by atropine. */
+export function atropineVagolysis(e: Exposures): number {
+  return hill(e.atropine ?? 0, PD.atropine.ec50, PD.atropine.hill);
+}
+
+/** Heart-rate rise at full vagolysis (vagal tone falls with age). */
+export function atropineChronoMax(ageYears: number): number {
+  const A = PD.atropine;
+  return Math.min(0.45, Math.max(0.15, A.chronoYoung - A.chronoPerYear * ageYears));
 }
 
 /** Ketamine exposure in racemic-equivalent µg/mL (esketamine counts twice). */
@@ -458,6 +493,8 @@ export function drugEffects(
       beta * emax(ad, A.lactateMax, A.lactateEc50) + beta * emax(sal, S.lactateMax, S.chronoEc50),
     beta2Metabolic: beta * (hill(ad, A.metabolicEc50, 1) + emax(sal, S.metabolicMax, S.chronoEc50)),
     rigidity,
+    vagolysis: atropineVagolysis(e),
+    antiarrhythmic: emax(e.amiodarone ?? 0, 1, PD.amiodarone.antiarrhythmicEc50),
   };
 }
 
@@ -495,4 +532,6 @@ export const NO_DRUG_EFFECTS: DrugEffects = {
   lactateProduction: 0,
   beta2Metabolic: 0,
   rigidity: 0,
+  vagolysis: 0,
+  antiarrhythmic: 0,
 };

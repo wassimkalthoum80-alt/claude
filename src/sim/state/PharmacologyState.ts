@@ -15,11 +15,13 @@ export type MoietyId =
   | 'dexmedetomidine'
   | 'ketamine'
   | 'esketamine'
-  | 'furosemide';
+  | 'furosemide'
+  | 'atropine'
+  | 'amiodarone';
 
 /**
- * Amounts are in the moiety's model unit: mg (propofol, rocuronium, midazolam, ketamine, furosemide), µg (opioids,
- * catecholamines, dexmedetomidine, salbutamol, naloxone), IU (vasopressin), mmol (calcium). Cp and Ce are
+ * Amounts are in the moiety's model unit: mg (propofol, rocuronium, midazolam, ketamine, furosemide, amiodarone), µg
+ * (opioids, catecholamines, dexmedetomidine, salbutamol, naloxone, atropine), IU (vasopressin), mmol (calcium). Cp and Ce are
  * concentrations in that unit per L (mg/L = µg/mL; µg/L = ng/mL; IU/L; mmol/L) for every moiety.
  */
 export interface DrugKinetics {
@@ -128,6 +130,10 @@ export interface DrugEffects {
   beta2Metabolic: number;
   /** 0..1 — opioid chest-wall rigidity */
   rigidity: number;
+  /** 0..1 — muscarinic (vagal) block at the sinus and AV node (atropine) */
+  vagolysis: number;
+  /** 0..1 — antiarrhythmic effect (amiodarone): less recurrent VF after termination */
+  antiarrhythmic: number;
 }
 
 export interface PharmacologyState {

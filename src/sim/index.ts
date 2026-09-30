@@ -176,3 +176,34 @@ export {
   type PhysioChannel,
   type ReadonlyPhysioTrends,
 } from './devices/PhysioTrends';
+// Resuscitation: rhythm check, defibrillator, airway, procedures, reversible causes
+export type {
+  DefibrillatorState,
+  DefibMode,
+  AedPhase,
+  ResuscitationState,
+  ResusDrugGiven,
+  MyocardialArrestState,
+  AirwayState,
+  AirwayPosition,
+  PatientConditions,
+  Side,
+  ShockOutcome,
+} from './state/ResuscitationState';
+export { SHOCKABLE_RHYTHMS } from './state/PatientState';
+export type { RhythmCheckAssessment, AssessmentKind, ProcedureKind } from './types/commands';
+export {
+  DEFIB,
+  chargeTimeS,
+  energyEfficacy,
+  viability,
+  shockReadiness,
+  suggestedEnergy,
+} from './interventions/defibrillation';
+export {
+  classifyRhythm,
+  pulseFinding,
+  AIRWAY_INSERTION_S,
+  type RhythmClass,
+} from './interventions/resuscitation';
+export { tamponadeFilling, obstructiveFilling, lungCollapse } from './physiology/obstruction';

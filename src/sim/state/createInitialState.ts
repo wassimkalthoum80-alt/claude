@@ -12,12 +12,15 @@ import type { HeartLungCalibration } from './SimulationState';
 import type { ScenarioDefinition } from '../types/scenario';
 import { predictedBodyWeight } from './PatientState';
 import type { SimulationState } from './SimulationState';
+import type { DefibrillatorState } from './ResuscitationState';
 
 /** Build the t = 0 state for a scenario. Pure: same scenario → same state. */
 export function createInitialState(
   scenario: ScenarioDefinition,
   seed: number,
   calibration: Partial<HeartLungCalibration> = {},
+  /** J — defibrillator energy preselected at the start (guideline first shock) */
+  guidelineFirstShockJ = 150,
 ): SimulationState {
   const p = scenario.patient;
   const lungPreset = p.lungPreset ?? 'normal';
@@ -137,7 +140,28 @@ export function createInitialState(
       fluidFactors: { ...defaultFluidFactors(), ...scenario.fluid?.factors },
       brain: initialCerebralState(),
       factors: { ...defaultPatientFactors(p.ageYears), ...p.factors },
-      airway: { device: p.airway },
+      airway: {
+        device: p.airway,
+        position: 'correct',
+        insertion: null,
+        gastricAirMl: 0,
+        leakFraction: 0,
+        exhaledCo2Fraction: 1,
+      },
+      conditions: {
+        pneumothorax: null,
+        pericardialMl: 0,
+        pericardialRateMlMin: 0,
+        ivAccess: 'iv',
+        ...scenario.conditions,
+      },
+      myocardium: {
+        ischaemicTime: 0,
+        coronaryPerfusion: 0,
+        refibrillationAt: null,
+        vtTime: 0,
+        obstructiveArrest: false,
+      },
       rosc: false,
     },
     devices: {
@@ -186,6 +210,7 @@ export function createInitialState(
       },
       pumps: initialPumps(scenario),
       line: { extensionMl: 0.5, commonMl: 2, extension: {}, common: {}, flushRemainingMl: 0 },
+      defib: initialDefibrillator(guidelineFirstShockJ, scenario.padsAttached ?? false),
     },
     interventions: {
       cpr: {
@@ -201,6 +226,14 @@ export function createInitialState(
         primingFactor: 0,
         source: 'auto',
         quality: null,
+      },
+      resus: {
+        rhythmCheck: null,
+        lastRhythmCheckEnd: null,
+        rhythmChecks: 0,
+        handsOffSince: null,
+        drugs: [],
+        lastPocusAt: null,
       },
     },
     timers: {
@@ -248,4 +281,21 @@ export function initialPumps(scenario: ScenarioDefinition): PumpState[] {
       overridden: false,
     };
   });
+}
+
+export function initialDefibrillator(energyJ: number, padsAttached: boolean): DefibrillatorState {
+  return {
+    mode: 'manual',
+    padsAttached,
+    energyJ,
+    sync: false,
+    charge: 'idle',
+    chargeReadyAt: null,
+    chargedJ: 0,
+    disarmAt: null,
+    shocks: 0,
+    lastShockTime: null,
+    lastShockJ: null,
+    aed: { phase: 'idle', phaseEndsAt: null },
+  };
 }

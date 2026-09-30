@@ -26,7 +26,11 @@ export class CapnographyGenerator {
       // Phase II: dead-space gas leaves first (~150 ms), then alveolar gas arrives.
       const rise = 1 / (1 + Math.exp(-(te - 0.16) / 0.035));
       // Phase III: slight upslope, reaching EtCO2 at end expiration.
-      const plateau = ctx.patient.gas.etco2 * (0.92 + 0.08 * Math.min(1, te / expiratoryTime));
+      // The airway device decides how much alveolar gas reaches the sensor (0 through an oesophageal tube).
+      const plateau =
+        ctx.patient.gas.etco2 *
+        ctx.patient.airway.exhaledCo2Fraction *
+        (0.92 + 0.08 * Math.min(1, te / expiratoryTime));
       target = plateau * rise;
       tau = 0.025;
     }
