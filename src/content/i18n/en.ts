@@ -159,6 +159,57 @@ export const en = {
   'ph.beta2': 'β2 metabolic (K⁺, glucose)',
   'ph.effectsNote':
     'Modifiers: direct drug effect vs no drug · Δ since scenario start (the calibrated model uses Δ). Educational calibration.',
+  'dr.title': 'Drug response (model decomposition)',
+  'dr.note':
+    'True model values, not bedside measurements. Baseline = scenario start (incl. running infusions); drug = direct change since then; reflex = baro-/chemo-/volume reflexes and physiology; net = current value.',
+  'dr.baseline': 'Baseline',
+  'dr.drug': 'Drug',
+  'dr.reflex': 'Reflex / physiology',
+  'dr.net': 'Net',
+  'dr.hr': 'Heart rate',
+  'dr.svr': 'Vascular resistance',
+  'dr.contractility': 'Contractility',
+  'dr.filling': 'Effective filling',
+  'dr.exposure': 'Exposure row',
+  'dr.span': 'Span',
+  'dr.m.bolus': 'bolus',
+  'dr.m.infusion': 'rate change / start / stop',
+  'dr.m.flush': 'line flush',
+  'dr.confidence':
+    'Model confidence: educational calibration — qualitative behaviour tested, numbers not validated.',
+  'dr.why.arrestDelivery':
+    'Cardiac arrest: injected drug is waiting at the injection site — it reaches the heart only with CPR-generated flow. No drug restarts the heart by itself.',
+  'dr.why.mapUpTone': 'MAP rose because vascular tone increased.',
+  'dr.why.mapDownTone': 'MAP fell because vascular tone decreased (vasodilation).',
+  'dr.why.coDownAfterload':
+    'CO fell: the higher afterload exceeded what this ventricle can sustain — a higher MAP is not better perfusion.',
+  'dr.why.coUpInotropy': 'CO rose with increased contractility (β-mediated inotropy).',
+  'dr.why.coUpMapFlat':
+    'CO rose while MAP stayed flat or fell: vascular resistance fell at the same time.',
+  'dr.why.hrDownBaro': 'Heart rate fell: baroreflex response to the higher pressure.',
+  'dr.why.hrDownDirect':
+    'Heart rate fell from a direct negative chronotropic drug effect (sympatholysis / opioid).',
+  'dr.why.hrUpReflex':
+    'Heart rate rose with sympathetic reflex drive (low pressure, low filling, stimulation or central stimulation).',
+  'dr.why.ketamineSympathetic':
+    'Ketamine adds central sympathetic drive: HR and pressure rise if sympathetic reserve allows.',
+  'dr.why.ketamineDepleted':
+    'Ketamine with depleted sympathetic reserve: its direct myocardial depression is unmasked — pressure and CO fall.',
+  'dr.why.lactateBeta':
+    'Lactate {lac} mmol/L rises from β2 aerobic glycolysis, not from oxygen debt (no delivery deficit).',
+  'dr.why.lactateVasoconstriction':
+    'Excessive vasoconstriction: regional hypoperfusion adds lactate although MAP is high.',
+  'dr.why.plethVasoconstriction':
+    'Small pleth from peripheral vasoconstriction — the arterial saturation itself is unchanged.',
+  'dr.why.rigidity':
+    'Opioid chest-wall rigidity: compliance falls and ventilation pressures rise; neuromuscular block relieves it.',
+  'dr.why.beta2':
+    'β2 stimulation shifts potassium into cells (K⁺ {k} mmol/L) and raises glucose — no potassium is removed.',
+  'dr.why.dexPeripheral':
+    'Dexmedetomidine plasma peak: peripheral α2B vasoconstriction precedes central sympatholysis — transient hypertension with reflex bradycardia.',
+  'dr.why.betaBlocked': 'β-blockade blunts β-mediated drug effects and the reflex tachycardia.',
+  'dr.why.spontaneousDepression':
+    'Spontaneous breathing with a depressed drive: ventilation falls and PaCO₂ rises (the ventilator only backs up after apnoea).',
   'ph.lungWater': 'Lung water (rel.)',
   'ph.hb': 'Hb',
   'ph.interactions': 'Interactions and warnings',
@@ -331,8 +382,8 @@ export const en = {
   'hl.ppv': 'PPV',
   'hl.co': 'Cardiac output',
   'hl.oxygenDebt': 'Oxygen debt',
-  'hl.lowFlow': 'Low-flow timer',
-  'hl.asystoleDose': 'PEA → asystole',
+  'hl.lowFlow': 'Low-flow burden (model)',
+  'hl.asystoleDose': 'PEA → asystole (model deficit dose, not a timer)',
   'hl.cause': 'Arrest cause',
   'hl.cause.lowFlow': 'sustained low flow',
   'hl.cause.oxygenDebt': 'oxygen debt',

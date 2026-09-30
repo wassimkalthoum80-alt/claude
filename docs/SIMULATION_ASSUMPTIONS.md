@@ -205,10 +205,12 @@ converted, never inferred. The dosing weight comes from the protocol's `weightBa
 | Sufentanil | Gepts 1995, 3 compartments; ke0 0.112 /min | published |
 | Remifentanil | Minto 1997, 3 compartments + ke0 | published |
 | Rocuronium | 2 compartments per kg ideal weight + ke0 0.17 /min, calibrated to label onset (≈ 1.5–2 min) and recovery (TOF ratio 0.9 ≈ 50–70 min after 0.6 mg/kg) | **educational** |
-| Noradrenaline, adrenaline, dobutamine, vasopressin, salbutamol, naloxone | one-compartment *exposure* (V1 = 1/k10: Cp equals the steady-state input rate) with t½ 2.5 / 2 / 2 / 15 / 240 / 60 min and a delayed effect | **educational** (textbook half-lives) |
-| Calcium chloride / gluconate | accounting only (amount and ion load recorded, no effect yet) | — |
+| Noradrenaline, adrenaline, dobutamine, vasopressin, salbutamol, naloxone, calcium | one-compartment **concentration** models (`pk.ts → CONCENTRATION_MODELS`, adjusted body weight): V 0.126 / 0.101 / 0.2 / 0.144 / 2 / 2 / 0.2 L/kg, t½ 2.5 / 2 / 2 / 10 / 240 / 60 / 30 min (clearance 0.035 / 0.035 / 0.069 / 0.010 L/kg/min for the catecholamines and vasopressin); Cp/Ce in ng/mL, IU/L (vasopressin shown as mU/L to PD), Δ total calcium mmol/L | **educational** (textbook half-lives) |
+| Midazolam, dexmedetomidine, ketamine/esketamine, furosemide | educational 2-compartment models (see the processed-EEG and fluid sections) | **educational** |
+| Venous depot (all moieties) | delivered drug enters a depot at the cannula and moves to the central compartment at 6/min × relative cardiac output (τ ≈ 10 s at normal flow). Without flow (untreated arrest) the drug stays; CPR-level flow delays it. Amount conserved (`bodyAmount` includes it) | **educational** |
 
-All compartments integrate with RK4 in the 4 ms physiology sub-step.
+All compartments integrate with RK4 in the 4 ms physiology sub-step. Cp and Ce are concentrations for every moiety
+and are never forced equal (effect compartment ke0).
 
 ### Pharmacodynamics (all educational)
 
@@ -217,10 +219,10 @@ All compartments integrate with RK4 in the 4 ms physiology sub-step.
 | Hypnosis | Hill on U = Up + 0.4·Uo + 0.5·Up·Uo, Up = Ce(propofol)/3.4 µg/mL, Uo = sufentanil-eq./1 ng/mL, γ 3 |
 | Analgesia | Hill on sufentanil-equivalent Ce, C50 0.2 ng/mL, γ 2 (remifentanil ≈ 1/10 of sufentanil) |
 | Respiratory drive | Greco-type surface: drive = 1 / (1 + (Uo + Up + Uo·Up)²), opioid C50 0.3 ng/mL, propofol 3 µg/mL; slows the rate (factor^0.7) more than it weakens each effort (factor^0.3) |
-| Naloxone | competitive antagonist, K = 0.5 µg/kg of effect-delayed naloxone; shorter-acting than long opioids (re-narcotisation) |
+| Naloxone | competitive antagonist, K = 0.25 ng/mL effect-site naloxone; shorter-acting than long opioids (re-narcotisation) |
 | Neuromuscular block | Hill on Ce(rocuronium), Ce50 1.0 µg/mL, γ 4.5; diaphragm needs 1.7× the concentration; TOF count loses T4/T3/T2/T1 above 75/80/85/95 % block, ratio (1 − block)^2.2 |
 | Haemodynamics | propofol (Ce50 8 µg/mL, above the maintenance range so a top-up bolus still acts): SVR −60 % max, venous tone −1.4 volume-status units max (venodilation dominates, so preload-dependent patients fall most), inotropy −30 % max (Ce50 10), sympatholysis sigmoidal −95 % max (Ce50 6, γ 3: modest at maintenance, strong at bolus peaks); age: all haemodynamic Ce50s × (1 − 0.01·(age − 60)), 0.6–1.3; opioids: bradycardia, small vasodilation, reflexes −20 %; noradrenaline SVR +120 % max; adrenaline β1/β2/α; dobutamine inotropy; vasopressin SVR |
-| Calibration | haemodynamic effects are **relative to the exposures at scenario start** (the baseline patient is calibrated under the running TIVA); hypnosis, analgesia, drive and block are absolute |
+| Calibration | haemodynamic effects enter the heart–lung model **relative to the exposures at scenario start** (the baseline patient is calibrated under the running TIVA); hypnosis, analgesia, drive and block are absolute. The **direct** drug effect against "no drug" is computed as well (`effects.direct`) and displayed next to the change since the start — a drug running from the start shows its direct effect with Δ ×1.00 |
 | Bronchodilation | salbutamol removes up to the bronchospasm preset's *excess* resistance only |
 | Lactate | β2 agonists (adrenaline, salbutamol) add aerobic lactate production without an O₂-delivery deficit |
 | Arterial baroreflex around the set point (`HeartLungModel.ts`) | below MAP 82 mmHg sympathetic tone rises linearly (0.6 at MAP 57), on top of the stronger term below MAP 65; blunted, not abolished, by anaesthetics. A propofol top-up of 100 mg (≈ 1.3 mg/kg) under TIVA gives ≈ −15 % MAP with HR +15/min, recovering within ≈ 10 min |
@@ -230,6 +232,27 @@ All compartments integrate with RK4 in the 4 ms physiology sub-step.
 | Propofol 100 mg top-up under TIVA (calibration check, unit-tested) | fall of mean ART: 35 y ≈ 20 %, 58 y ≈ 24 %, 80 y ≈ 29 %; at volume status 0.6: 35 y ≈ 34 %, 58 y ≈ 39 %, 80 y ≈ 45 % (MAP ≈ 42, pleth lost, recovers); at 0.5 and 80 y: circulatory collapse → PEA if untreated |
 | Rate-related ST change (`myocardialIschaemia`) | ST depression ∝ min(0.2, 1 − supply/demand) even while the coronary reserve covers demand: ≤ 0.3 mm in II and ≤ 0.6 mm in V5 (tachycardia + hypotension); larger changes need a reduced coronary reserve |
 | Low-pressure reflex (`HeartLungModel.ts`) | a preload deficit adds sympathetic tone: 0.6 at volume status 0.5, linear to 0 at 1.0; blunted by anaesthetics like the baroreflex — so a hypovolaemic patient is compensated awake and decompensates on induction |
+
+### Drug → physiology coupling (milestone 5, `docs/prompts/milestone-05-drug-coupling.md`)
+
+| Mechanism | Model and value (educational) |
+|---|---|
+| Catecholamine potencies | converted from the earlier rate calibration at the model clearances, so steady states are unchanged: noradrenaline SVR EC50 3.4 ng/mL (0.1 µg/kg/min ≈ 2.9 ng/mL), adrenaline β1 1.7, β2 0.57, α 4.3 ng/mL, dobutamine inotropy 87 ng/mL, vasopressin 25 mU/L |
+| Noradrenaline | α: SVR +120 % max, venous tone +0.15; β1: inotropy +10 %, chronotropy +8 % (EC50 4.3 ng/mL). Net HR set by the baroreflex (high-pressure bradycardia) |
+| Adrenaline | graded β1/β2/α, no threshold; bronchodilation up to 80 %; lactate production and β2 metabolic drive (EC50 2.9 ng/mL) |
+| β2 metabolic | K⁺ shift into cells −0.8 mmol/L at full drive (τ 10 min, reversible, no K⁺ removed); glycogenolysis 0.02 mmol/kg/min glucose at full drive (fluid model) |
+| Dobutamine | inotropy +60 %, chronotropy +25 %, β2 SVR −20 % max |
+| Vasopressin | V1 SVR +60 %, venous tone +0.05; no inotropy, chronotropy or bronchodilation; V2 antidiuresis EC50 6 mU/L in the kidney model |
+| Dexmedetomidine | central sympatholysis (baroreflex −20 %, chronotropy −30 %, low-dose SVR −15 %) follows the **effect site**; peripheral α2B vasoconstriction (+50 % max, C50 3 ng/mL, Hill 2) follows the **plasma** concentration → a rapid load gives transient hypertension with reflex bradycardia |
+| Ketamine / esketamine | central sympathetic drive +0.6 max (EC50 1 µg/mL racemic-equivalent) added to the reflex model's stress term — so it is blunted by anaesthetics and scaled by sympathetic reserve and β-blockade; direct negative inotropy −30 % max (EC50 2 µg/mL); bronchodilation 40 % max. Esketamine counts twice (potency) |
+| Opioid rigidity | Hill on sufentanil-equivalent Ce, C50 1 ng/mL, Hill 4, × (1 − neuromuscular block); respiratory-system compliance × (1 − 0.6·rigidity). Exposure-driven (the speed of injection acts through the Ce peak) |
+| Calcium | ionised = 0.5 × Δ total; inotropy +15 %, SVR +10 % max (EC50 0.3 mmol/L); no potassium effect |
+| β-blocked phenotype | patient factor 0–1: removes up to 80 % of β-mediated drug effects and up to 70 % of the sympathetic heart-rate response |
+| Myocardial O₂ demand | ∝ HR × MAP × (0.7 + 0.3 × drug inotropy) — β-agonists raise ischaemia |
+| Excessive vasoconstriction | total SVR factor above 1.8 adds regional-hypoperfusion lactate (≤ 0.0015 mmol/L/s at 2.8); pleth amplitude × 1/(1 + 1.5·(SVR factor − 1.2)) — perfusion index falls while SaO₂ is unchanged |
+| Reflex bookkeeping | `heartLung.hrDirect` (baseline × drug chronotropy) + `hrReflex` (sympathetic − high-pressure) = HR target; SVR target = `svrReflexFactor` × `svrDrugFactor` — displayed as baseline / drug / reflex / net |
+| Bolus policy (owner decision) | no clinically possible bolus is blocked: a push of an infusion-only drug is a soft limit (confirm, logged); consequences come from the model, up to arrest |
+| "PEA → asystole" | a model-derived deficit dose that accumulates with the delivery deficit and recovers with delivery — labelled as such, not a timer; never reset by a drug |
 
 Paralysis does not cause apnoea directly on a controlled ventilator; it removes spontaneous effort (diaphragm
 block), so breathing stops only where the patient depended on it.
@@ -264,8 +287,8 @@ does not change the order).
 - All PD constants and the educational PK models above; the relative-calibration approach itself.
 - Reference-only products (≈ 50, including midazolam, etomidate, ketamine racemate vs esketamine kept separate,
   fentanyl, succinylcholine, amiodarone, atropine, blood products, coagulation factors, sugammadex).
-- Calcium effect, electrolytes and acid–base, blood products and haemostasis, anaphylaxis, arrhythmogenicity,
-  cardiac-arrest drug effects (adrenaline in CPR has no ROSC effect: **no automatic ROSC**).
+- Anaphylaxis, arrhythmogenicity (tachyarrhythmia, ectopy), dynamic outflow obstruction, histamine release,
+  cardiac-arrest drug effects on ROSC (adrenaline in CPR has no ROSC effect: **no automatic ROSC**).
 - Renal/hepatic/age covariates beyond those inside the published PK models.
 
 ## Processed EEG — "Simulated BIS" (`src/sim/brain`, `signals/EEGGenerator.ts`, `devices/BisMonitor.ts`)

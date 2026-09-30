@@ -30,6 +30,7 @@ import {
   type ReadonlyFluidLedger,
 } from '../fluid/ledger';
 import type { FluidFactors } from '../state/BodyFluidState';
+import { PhysioTrends, type ReadonlyPhysioTrends } from '../devices/PhysioTrends';
 import type { PatientFactors } from '../state/BrainState';
 import {
   bolusProtocolOf,
@@ -107,6 +108,7 @@ export class SimulationEngine {
   private readonly trendBank = new BisTrends();
   private readonly fluidModel = new FluidModel();
   private readonly ledger = new FluidLedger();
+  private readonly physio = new PhysioTrends();
   /** EEG has its own seeded stream (derived from the scenario seed) so it cannot perturb the other signals */
   private readonly eegGen = new EEGGenerator(0, SUBSTEP_S);
   private readonly drive = new RespiratoryDriveModel();
@@ -157,6 +159,11 @@ export class SimulationEngine {
   /** 1 Hz trends of the processed-EEG monitor (read by the trend display). */
   get trends(): ReadonlyBisTrends {
     return this.trendBank;
+  }
+
+  /** 1 Hz trends of the integrated drug response (true model values, instructor view). */
+  get physioTrends(): ReadonlyPhysioTrends {
+    return this.physio;
   }
 
   /** Fluid-balance ledger: every external input/output, recorded once, in per-minute bins. */
@@ -304,6 +311,8 @@ export class SimulationEngine {
     this.updateTimers(TICK_S);
     this.monitor.update(s, this.bank, TICK_S);
     this.bisMonitor.update(s, this.bank, this.trendBank);
+    this.physio.accumulate(s);
+    while (this.physio.count < Math.floor(s.time + 1e-9)) this.physio.record(s);
     this.alarms.update(s);
     this.checkScenarioEnd();
     this.version += 1;
@@ -392,6 +401,7 @@ export class SimulationEngine {
     this.bank.reset();
     this.trendBank.reset();
     this.ledger.reset();
+    this.physio.reset();
     this.bisMonitor.reset();
     this.eegGen.reset((seed ^ 0x5eedee6) >>> 0);
     const s = this.state;

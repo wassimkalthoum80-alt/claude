@@ -138,6 +138,17 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   kinetics, osmotic shifts, a kidney that depends on perfusion, congestion, ADH, injury and diuretics — so the
   same bolus acts differently in hypovolaemia, capillary leak, heart failure and ARDS. Eight fluid teaching
   scenarios are in the scenario list; the instructor panel has the true values and all fluid processes.
+- **Drug → physiology coupling.** Every executable drug acts through delivery → concentration (Cp/Ce in real
+  concentration units) → direct effects → reflexes → the integrated circulation, lungs, kidney and monitor
+  signals. Examples: noradrenaline raises MAP in vasoplegia while CO can fall in a failing ventricle; excess
+  vasoconstriction shrinks the pleth and adds lactate; dobutamine raises CO while MAP may stay low; adrenaline
+  raises lactate, glucose and shifts K⁺ without O₂ debt; vasopressin constricts without inotropy;
+  dexmedetomidine gives bradycardia, and transient hypertension after a rapid load; ketamine stimulates only with
+  sympathetic reserve (β-blocked or depleted patients fall); fast high-dose opioids cause chest-wall rigidity;
+  drugs given in arrest wait for CPR flow. **No clinically possible bolus is blocked** — an infusion-only drug
+  can be pushed after a confirmation, and the model shows what happens. Instructor → *Drug response* shows
+  baseline / drug / reflex / net, model-generated explanations and aligned trends with bolus, rate and flush
+  markers.
 - The same bolus acts **much more strongly in hypovolaemia and in the elderly** (instructor panel → heart–lung
   model: *Age* slider, *Volume status*). An 80-year-old at volume status 0.6 falls to ≈ 53/33 with loss of the
   pleth signal; at 0.5 the circulation collapses unless you treat it (vasopressor, fluid bolus). Reason in the

@@ -15,6 +15,7 @@ import { HeartLungPanel } from './HeartLungPanel';
 import { PharmacologyPanel } from './PharmacologyPanel';
 import { BrainPanel } from './BrainPanel';
 import { FluidPanel } from './FluidPanel';
+import { DrugResponsePanel } from './DrugResponsePanel';
 import styles from './InstructorPanel.module.css';
 
 const RHYTHMS: { id: RhythmId; key: I18nKey; hotkey: string }[] = [
@@ -236,6 +237,7 @@ export function InstructorPanel() {
 
       <HeartLungPanel />
       <PharmacologyPanel />
+      <DrugResponsePanel />
       <BrainPanel />
       <FluidPanel />
 

@@ -170,3 +170,9 @@ export type {
   CatheterState,
 } from './state/BodyFluidState';
 export type { FluidInit } from './fluid/init';
+export {
+  PHYSIO_CHANNELS,
+  TREND_MOIETIES,
+  type PhysioChannel,
+  type ReadonlyPhysioTrends,
+} from './devices/PhysioTrends';

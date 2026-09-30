@@ -161,6 +161,57 @@ export const de: Record<I18nKey, string> = {
   'ph.beta2': 'β2-metabolisch (K⁺, Glukose)',
   'ph.effectsNote':
     'Modifikatoren: direkte Wirkung vs. ohne Medikament · Δ seit Szenariobeginn (das kalibrierte Modell nutzt Δ). Lehrkalibrierung.',
+  'dr.title': 'Medikamentenwirkung (Modellzerlegung)',
+  'dr.note':
+    'Wahre Modellwerte, keine Messwerte am Bett. Ausgang = Szenariobeginn (inkl. laufender Infusionen); Medikament = direkte Änderung seitdem; Reflex = Baro-/Chemo-/Volumenreflexe und Physiologie; netto = aktueller Wert.',
+  'dr.baseline': 'Ausgang',
+  'dr.drug': 'Medikament',
+  'dr.reflex': 'Reflex / Physiologie',
+  'dr.net': 'Netto',
+  'dr.hr': 'Herzfrequenz',
+  'dr.svr': 'Gefäßwiderstand',
+  'dr.contractility': 'Kontraktilität',
+  'dr.filling': 'Effektive Füllung',
+  'dr.exposure': 'Expositionszeile',
+  'dr.span': 'Zeitraum',
+  'dr.m.bolus': 'Bolus',
+  'dr.m.infusion': 'Laufratenänderung / Start / Stopp',
+  'dr.m.flush': 'Leitungsspülung',
+  'dr.confidence':
+    'Modellvertrauen: Lehrkalibrierung — qualitatives Verhalten getestet, Zahlen nicht validiert.',
+  'dr.why.arrestDelivery':
+    'Kreislaufstillstand: Das injizierte Medikament wartet an der Injektionsstelle — es erreicht das Herz nur mit dem durch HLW erzeugten Fluss. Kein Medikament startet das Herz von selbst.',
+  'dr.why.mapUpTone': 'Der MAD stieg, weil der Gefäßtonus zunahm.',
+  'dr.why.mapDownTone': 'Der MAD fiel, weil der Gefäßtonus abnahm (Vasodilatation).',
+  'dr.why.coDownAfterload':
+    'Das HZV fiel: Die höhere Nachlast überstieg die Reserve dieses Ventrikels — ein höherer MAD ist keine bessere Perfusion.',
+  'dr.why.coUpInotropy': 'Das HZV stieg mit der Kontraktilität (β-vermittelte Inotropie).',
+  'dr.why.coUpMapFlat':
+    'Das HZV stieg, der MAD blieb gleich oder fiel: Der Gefäßwiderstand sank gleichzeitig.',
+  'dr.why.hrDownBaro': 'Die Herzfrequenz fiel: Barorezeptorreflex auf den höheren Druck.',
+  'dr.why.hrDownDirect':
+    'Die Herzfrequenz fiel durch eine direkte negativ chronotrope Wirkung (Sympathikolyse / Opioid).',
+  'dr.why.hrUpReflex':
+    'Die Herzfrequenz stieg durch sympathischen Reflexantrieb (niedriger Druck, geringe Füllung, Stimulation oder zentrale Stimulation).',
+  'dr.why.ketamineSympathetic':
+    'Ketamin erhöht den zentralen Sympathikusantrieb: HF und Druck steigen, wenn die sympathische Reserve es erlaubt.',
+  'dr.why.ketamineDepleted':
+    'Ketamin bei erschöpfter sympathischer Reserve: Die direkte myokardiale Depression wird demaskiert — Druck und HZV fallen.',
+  'dr.why.lactateBeta':
+    'Laktat {lac} mmol/L steigt durch β2-aerobe Glykolyse, nicht durch Sauerstoffschuld (kein Angebotsdefizit).',
+  'dr.why.lactateVasoconstriction':
+    'Übermäßige Vasokonstriktion: Regionale Minderperfusion erhöht das Laktat trotz hohem MAD.',
+  'dr.why.plethVasoconstriction':
+    'Kleine Pleth-Kurve durch periphere Vasokonstriktion — die arterielle Sättigung selbst ist unverändert.',
+  'dr.why.rigidity':
+    'Opioid-Thoraxrigidität: Die Compliance sinkt, Beatmungsdrücke steigen; Muskelrelaxation hebt sie auf.',
+  'dr.why.beta2':
+    'β2-Stimulation verschiebt Kalium in die Zellen (K⁺ {k} mmol/L) und erhöht die Glukose — Kalium wird nicht entfernt.',
+  'dr.why.dexPeripheral':
+    'Dexmedetomidin-Plasmaspitze: Periphere α2B-Vasokonstriktion geht der zentralen Sympathikolyse voraus — vorübergehende Hypertonie mit Reflexbradykardie.',
+  'dr.why.betaBlocked': 'Die β-Blockade dämpft β-vermittelte Wirkungen und die Reflextachykardie.',
+  'dr.why.spontaneousDepression':
+    'Spontanatmung mit gedämpftem Atemantrieb: Die Ventilation sinkt, der PaCO₂ steigt (das Gerät hilft erst nach Apnoe aus).',
   'ph.lungWater': 'Lungenwasser (rel.)',
   'ph.hb': 'Hb',
   'ph.interactions': 'Interaktionen und Warnungen',
@@ -332,8 +383,8 @@ export const de: Record<I18nKey, string> = {
   'hl.ppv': 'PPV',
   'hl.co': 'Herzzeitvolumen',
   'hl.oxygenDebt': 'Sauerstoffschuld',
-  'hl.lowFlow': 'Low-Flow-Timer',
-  'hl.asystoleDose': 'PEA → Asystolie',
+  'hl.lowFlow': 'Low-Flow-Last (Modell)',
+  'hl.asystoleDose': 'PEA → Asystolie (Modell-Defizitdosis, kein Timer)',
   'hl.cause': 'Ursache',
   'hl.cause.lowFlow': 'anhaltend niedriger Fluss',
   'hl.cause.oxygenDebt': 'Sauerstoffschuld',

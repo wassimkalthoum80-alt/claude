@@ -150,6 +150,17 @@ The UI imports the simulation only through `src/sim/index.ts`.
  LungStateModel (bronchodilation) · BloodGasModel (Hb)
 ```
 
+- **Delivery → exposure → effect.** `stepDelivery` returns the patient-received amount; `stepKinetics` moves it
+  through a venous depot (transfer ∝ cardiac output) into the compartments; `pd.drugEffects` computes the
+  direct effect against "no drug" (`effects.direct`) and the change since the scenario start (what the
+  calibrated heart–lung model consumes). Dexmedetomidine's peripheral vasoconstriction reads plasma
+  concentrations (`plasmaExposures`). Ketamine's sympathomimetic effect is `effects.sympatheticDrive`, added to
+  the reflex model's stress term. Reflex parts are kept in `heartLung` (`hrDirect`, `hrReflex`,
+  `svrReflexFactor`, `svrDrugFactor`) for the instructor decomposition.
+- `PhysioTrends` (engine-owned, outside the snapshot, 1 s means) records HR, MAP, CO, SVR, preload, contractility,
+  DO₂, SvO₂, lactate, respiratory drive, PaCO₂, EtCO₂, urine and BIS, plus the effect-site exposure of every
+  moiety, for the instructor "Drug response" section (`InstructorPanel/DrugResponsePanel`,
+  `adapters/drugResponseViewModel.ts`).
 - Pumps and the line are **device state**; drug amounts in the body and the effects are **patient state**. Only
   `PharmacologyModel` writes `patient.pharmacology`; `FluidModel` writes `patient.fluid` and `gas.hb`.
 - The formulary separates clinical reference (shown), protocols (validation and display), models (executed) and
