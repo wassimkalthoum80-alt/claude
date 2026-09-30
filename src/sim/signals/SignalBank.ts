@@ -13,7 +13,11 @@ export type SignalChannel =
   /** mL — lung volume above PEEP volume (drives chest rise in the scene) */
   | 'lungVolume'
   /** cm — sternal displacement by compressions (drives the compression animation) */
-  | 'chest';
+  | 'chest'
+  /** µV — frontal EEG as measured by the processed-EEG sensor */
+  | 'eeg'
+  /** 0/1 — ground truth: cortex in a suppressed interval (tests and instructor view, never the device) */
+  | 'eegSuppressed';
 
 /** Units of each channel, for renderers and tests. */
 export const SIGNAL_UNITS: Record<SignalChannel, string> = {
@@ -26,6 +30,8 @@ export const SIGNAL_UNITS: Record<SignalChannel, string> = {
   flow: 'L/min',
   lungVolume: 'mL',
   chest: 'cm',
+  eeg: 'µV',
+  eegSuppressed: '0/1',
 };
 
 const HISTORY_S = 30;
@@ -41,6 +47,8 @@ export class SignalBank {
   readonly flow = new RingBuffer(SLOW_SIGNAL_HZ, HISTORY_S);
   readonly lungVolume = new RingBuffer(SLOW_SIGNAL_HZ, HISTORY_S);
   readonly chest = new RingBuffer(SLOW_SIGNAL_HZ, HISTORY_S);
+  readonly eeg = new RingBuffer(SUBSTEP_HZ, HISTORY_S);
+  readonly eegSuppressed = new RingBuffer(SUBSTEP_HZ, HISTORY_S);
 
   channel(id: SignalChannel): RingBuffer {
     return this[id];
@@ -57,6 +65,8 @@ export class SignalBank {
       this.flow,
       this.lungVolume,
       this.chest,
+      this.eeg,
+      this.eegSuppressed,
     ]) {
       b.reset();
     }

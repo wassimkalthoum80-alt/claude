@@ -1,3 +1,4 @@
+import type { CerebralState, PatientFactors } from './BrainState';
 import type { PharmacologyState } from './PharmacologyState';
 
 /** Cardiac rhythms known to the rhythm registry. Extend here and in src/sim/rhythms. */
@@ -176,6 +177,10 @@ export interface PatientState {
   reserves: PhysiologyReserves;
   /** drugs received, their kinetics and effects; infused fluids */
   pharmacology: PharmacologyState;
+  /** cerebral state (drug effect, arousal, cerebral O2, EEG bands) — true model values */
+  brain: CerebralState;
+  /** patient factors for drug sensitivity and the EEG (age is in demographics) */
+  factors: PatientFactors;
   airway: { device: AirwayDevice };
   /** return of spontaneous circulation after an arrest in this run */
   rosc: boolean;

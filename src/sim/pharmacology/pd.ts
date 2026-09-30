@@ -1,3 +1,4 @@
+import type { PatientFactors } from '../state/BrainState';
 import type { DrugEffects, MoietyId } from '../state/PharmacologyState';
 
 /**
@@ -27,6 +28,47 @@ export const PD = {
     baroCe50: 6,
     baroGamma: 3,
   },
+  // SIM-ASSUMPTION (educational, not validated): hypnotic potencies of the drugs added for the BIS module, as the
+  // effect-site concentration giving 1 educational unit of hypnotic depth (≈ loss of responsiveness alone):
+  // midazolam 0.12 µg/mL, dexmedetomidine 1 ng/mL, racemic ketamine 1 µg/mL (esketamine twice as potent).
+  midazolam: {
+    hypnosisC50: 0.12,
+    respC50: 0.15,
+    svrMax: 0.15,
+    venousMax: 0.2,
+    c50: 0.3,
+    /** extra potency at renal function 0 (active metabolite α-hydroxymidazolam) */
+    renalMetabolite: 0.3,
+  },
+  dexmedetomidine: {
+    hypnosisC50: 1,
+    /** weight of dexmedetomidine in the respiratory response surface (little respiratory depression) */
+    respWeight: 0.1,
+    chronoMax: 0.3,
+    chronoC50: 1,
+    // biphasic vascular effect: central sympatholysis lowers SVR at low Ce, α2B vasoconstriction at high Ce
+    svrLowMax: 0.15,
+    svrLowC50: 0.8,
+    svrHighMax: 0.5,
+    svrHighC50: 3,
+    baroMax: 0.2,
+    analgesiaMax: 0.2,
+  },
+  ketamine: {
+    hypnosisC50: 1,
+    esketaminePotency: 2,
+    /** hypnotic units at which half-maximal cortical activation (gamma) appears */
+    activationU50: 0.5,
+    chronoMax: 0.25,
+    svrMax: 0.2,
+    /** hypnotic units for half the sympathomimetic effect */
+    sympathomimeticU50: 1,
+    analgesiaMax: 0.6,
+    analgesiaU50: 0.3,
+  },
+  // SIM-ASSUMPTION: age changes hypnotic potency by 0.5 %/year around 60 years (0.8–1.25), frailty adds up to
+  // +30 %, hypothermia +5 % per °C below 37 °C; individual sensitivity multiplies (educational).
+  hypnoticModifiers: { agePerYear: 0.005, frailty: 0.3, perDegreeBelow37: 0.05 },
   // SIM-ASSUMPTION: age sensitivity of the haemodynamic propofol effects — Ce50 × (1 − 0.01 · (age − 60)),
   // limited to 0.6–1.3 (80 y: 0.8, 35 y: 1.25); elderly patients need about a third less propofol.
   ageSensitivity: { referenceAge: 60, perYear: 0.01, min: 0.6, max: 1.3 },
@@ -122,7 +164,16 @@ function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodyn
   const D = PD.dobutamine;
   const V = PD.vasopressin;
   const S = PD.salbutamol;
+  const mid = e.midazolam ?? 0;
+  const dex = e.dexmedetomidine ?? 0;
+  const ketU = ketamineUnits(e);
+  const M = PD.midazolam;
+  const X = PD.dexmedetomidine;
+  const K = PD.ketamine;
   const svr =
+    (1 - emax(mid, M.svrMax, M.c50)) *
+    (1 - emax(dex, X.svrLowMax, X.svrLowC50) + X.svrHighMax * hill(dex, X.svrHighC50, 2)) *
+    (1 + emax(ketU, K.svrMax, K.sympathomimeticU50)) *
     (1 - emax(p, P.svrMax, P.svrCe50)) *
     (1 - emax(opioid, O.svrMax, O.bradyC50)) *
     (1 + emax(na, N.svrMax, N.ec50)) *
@@ -131,7 +182,8 @@ function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodyn
     (1 + emax(vp, V.svrMax, V.ec50)) *
     (1 - emax(sal, S.svrMax, S.chronoEc50));
   const venousTone =
-    -emax(p, P.venousMax, P.venousCe50) -
+    -emax(mid, M.venousMax, M.c50) -
+    emax(p, P.venousMax, P.venousCe50) -
     emax(opioid, O.venousMax, O.bradyC50) +
     emax(na, N.venousMax, N.ec50) +
     emax(ad, A.venousMax, A.alphaEc50) +
@@ -142,13 +194,88 @@ function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodyn
     (1 + emax(ad, A.inotropyMax, A.inoEc50)) *
     (1 + emax(dob, D.inotropyMax, D.inoEc50));
   const chronotropy =
+    (1 - emax(dex, X.chronoMax, X.chronoC50)) *
+    (1 + emax(ketU, K.chronoMax, K.sympathomimeticU50)) *
     (1 - emax(opioid, O.bradyMax, O.bradyC50)) *
     (1 + emax(ad, A.chronoMax, A.chronoEc50)) *
     (1 + emax(dob, D.chronoMax, D.chronoEc50)) *
     (1 + emax(sal, S.chronoMax, S.chronoEc50));
   const baroreflex =
-    (1 - P.baroMax * hill(p, P.baroCe50, P.baroGamma)) * (1 - emax(opioid, 0.2, 0.5));
+    (1 - P.baroMax * hill(p, P.baroCe50, P.baroGamma)) *
+    (1 - emax(opioid, 0.2, 0.5)) *
+    (1 - emax(dex, X.baroMax, X.chronoC50));
   return { svr, venousTone, inotropy, chronotropy, baroreflex };
+}
+
+/** Ketamine exposure in racemic-equivalent µg/mL (esketamine counts twice). */
+export function ketamineUnits(e: Exposures): number {
+  return (e.ketamine ?? 0) + PD.ketamine.esketaminePotency * (e.esketamine ?? 0);
+}
+
+/** Patient factors assumed when none are given (typical adult). */
+export const TYPICAL_FACTORS: Pick<
+  PatientFactors,
+  'frailty' | 'hypnoticSensitivity' | 'temperatureC' | 'renalFunction'
+> = { frailty: 0, hypnoticSensitivity: 1, temperatureC: 37, renalFunction: 1 };
+
+/** Multiplier on hypnotic potency from age, frailty, temperature and individual sensitivity. */
+export function hypnoticPotency(
+  ageYears: number,
+  f: Pick<PatientFactors, 'frailty' | 'hypnoticSensitivity' | 'temperatureC'>,
+): number {
+  const H = PD.hypnoticModifiers;
+  const age = Math.min(1.25, Math.max(0.8, 1 + H.agePerYear * (ageYears - 60)));
+  const cold = 1 + H.perDegreeBelow37 * Math.max(0, 37 - f.temperatureC);
+  return age * (1 + H.frailty * f.frailty) * cold * f.hypnoticSensitivity;
+}
+
+/** Normalised hypnotic contributions (educational units) and the depths derived from them. */
+export interface HypnoticComponents {
+  /** propofol, midazolam, dexmedetomidine, ketamine (racemic-equivalent), opioid (sufentanil-equivalent) */
+  up: number;
+  um: number;
+  ux: number;
+  uk: number;
+  uo: number;
+  /** combined hypnotic depth (1 ≈ loss of responsiveness) — drives `hypnosis` */
+  hypnoticDepth: number;
+  /** GABAergic depth (propofol, midazolam, opioid synergy): the part that can suppress the cortex */
+  gabaDepth: number;
+  /** cortical slowing that shapes the EEG */
+  eegDepth: number;
+}
+
+/**
+ * SIM-ASSUMPTION (educational response surface): hypnotic depth = Up + Um + 0.5·Up·Um + Ux + 0.9·Uk + 0.4·Uo
+ * + 0.5·(Up + Um + Ux)·Uo. Opioids alone add little hypnosis but strongly potentiate hypnotics; ketamine
+ * contributes to unconsciousness but activates the EEG; only GABAergic depth (with opioid synergy) suppresses.
+ */
+export function hypnoticComponents(
+  e: Exposures,
+  weightKg: number,
+  ageYears = 60,
+  factors: Pick<
+    PatientFactors,
+    'frailty' | 'hypnoticSensitivity' | 'temperatureC' | 'renalFunction'
+  > = TYPICAL_FACTORS,
+): HypnoticComponents {
+  const k = hypnoticPotency(ageYears, factors);
+  const M = PD.midazolam;
+  const up = ((e.propofol ?? 0) / PD.propofol.hypnosisCe50) * k;
+  const um =
+    ((e.midazolam ?? 0) / M.hypnosisC50) *
+    k *
+    (1 + M.renalMetabolite * (1 - factors.renalFunction));
+  const ux = ((e.dexmedetomidine ?? 0) / PD.dexmedetomidine.hypnosisC50) * k;
+  const uk = (ketamineUnits(e) / PD.ketamine.hypnosisC50) * k;
+  const uo = opioidEffect(e, weightKg) / PD.hypnosisInteraction.opioidC50;
+  const hi = PD.hypnosisInteraction;
+  const gaba = up + um + 0.5 * up * um;
+  const hypnoticDepth =
+    gaba + ux + 0.9 * uk + hi.opioidWeight * uo + hi.synergy * (up + um + ux) * uo;
+  const gabaDepth = gaba + hi.synergy * (up + um) * uo;
+  const eegDepth = gabaDepth + 0.15 * uo + 0.8 * ux + 0.3 * uk;
+  return { up, um, ux, uk, uo, hypnoticDepth, gabaDepth, eegDepth };
 }
 
 /** Sufentanil-equivalent opioid effect (ng/mL), reduced by competitive naloxone antagonism. */
@@ -170,6 +297,10 @@ export function drugEffects(
   reference: Exposures,
   weightKg: number,
   ageYears = 60,
+  factors: Pick<
+    PatientFactors,
+    'frailty' | 'hypnoticSensitivity' | 'temperatureC' | 'renalFunction'
+  > = TYPICAL_FACTORS,
 ): DrugEffects {
   const opioid = opioidEffect(e, weightKg);
   const opioidRef = opioidEffect(reference, weightKg);
@@ -177,13 +308,20 @@ export function drugEffects(
   const ref = haemodynamics(reference, opioidRef, ageYears);
 
   const P = PD.propofol;
-  const hi = PD.hypnosisInteraction;
-  const hp = (e.propofol ?? 0) / P.hypnosisCe50;
-  const ho = opioid / hi.opioidC50;
-  const hypnosis = hill(hp + hi.opioidWeight * ho + hi.synergy * hp * ho, 1, P.hypnosisGamma);
-  const analgesia = hill(opioid, PD.opioid.analgesiaC50, PD.opioid.analgesiaGamma);
+  const hc = hypnoticComponents(e, weightKg, ageYears, factors);
+  const hypnosis = hill(hc.hypnoticDepth, 1, P.hypnosisGamma);
+  // Analgesia: opioid, plus ketamine (NMDA) and a small dexmedetomidine contribution.
+  const analgesia =
+    1 -
+    (1 - hill(opioid, PD.opioid.analgesiaC50, PD.opioid.analgesiaGamma)) *
+      (1 - emax(hc.uk, PD.ketamine.analgesiaMax, PD.ketamine.analgesiaU50)) *
+      (1 - emax(hc.ux, PD.dexmedetomidine.analgesiaMax, 1));
   const uo = opioid / PD.opioid.respC50;
-  const up = (e.propofol ?? 0) / P.respCe50;
+  // Ketamine spares the respiratory drive; dexmedetomidine depresses it little; midazolam behaves like propofol.
+  const up =
+    (e.propofol ?? 0) / P.respCe50 +
+    (e.midazolam ?? 0) / PD.midazolam.respC50 +
+    PD.dexmedetomidine.respWeight * hc.ux;
   const { synergy, gamma } = PD.respInteraction;
   const respiratoryDrive = 1 / (1 + (uo + up + synergy * uo * up) ** gamma);
 

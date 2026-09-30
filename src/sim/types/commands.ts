@@ -1,4 +1,5 @@
 import type { TimeScale } from '../core/Clock';
+import type { BisSensorFault, PatientFactors, StimulusKind } from '../state/BrainState';
 import type { CprQualityPreset } from '../state/CPRState';
 import type {
   LungPreset,
@@ -38,6 +39,16 @@ export type Command =
   | { type: 'SET_RESP_DRIVE'; drive: RespiratoryDrive }
   | { type: 'SET_RHYTHM'; rhythm: RhythmId }
   | { type: 'SET_RESERVES'; reserves: Partial<PhysiologyReserves> }
+  /** processed-EEG sensor applied/removed (history restarts on reconnection) */
+  | { type: 'BIS_CONNECT'; connected: boolean }
+  /** s — display averaging period of the processed index */
+  | { type: 'BIS_SET_SMOOTHING'; seconds: 10 | 15 | 30 }
+  /** instructor: condition of the measured EEG signal (artifacts are separate from the brain) */
+  | { type: 'BIS_SENSOR_FAULT'; fault: BisSensorFault }
+  /** noxious stimulation (laryngoscopy, incision, tetanic stimulus) or ongoing surgery on/off */
+  | { type: 'STIMULUS'; kind: StimulusKind }
+  /** instructor: frailty, drug sensitivity, temperature, organ function, EEG amplitude */
+  | { type: 'SET_PATIENT_FACTORS'; factors: Partial<PatientFactors> }
   /** years (18–100) — instructor: patient age (PK covariates, age sensitivity of drugs and reflexes) */
   | { type: 'SET_PATIENT_AGE'; ageYears: number }
   | { type: 'SET_ARREST_MODEL'; enabled: boolean }
@@ -102,7 +113,15 @@ export type ClinicalEventType =
   /** a medication order above a soft limit (protocol maximum, bolus time) was confirmed by the user */
   | 'SOFT_LIMIT_CONFIRMED'
   /** a syringe/bag ran empty */
-  | 'PUMP_EMPTY';
+  | 'PUMP_EMPTY'
+  /** a bolus started (detail: "pumpId|drug|volume") — trend marker */
+  | 'BOLUS_GIVEN'
+  /** an infusion rate changed, started or stopped (detail: "pumpId|drug|rate") — trend marker */
+  | 'INFUSION_CHANGED'
+  /** noxious stimulation (detail: kind) — trend marker */
+  | 'STIMULUS_APPLIED'
+  /** processed-EEG sensor connected/removed or signal condition changed (detail) — trend marker */
+  | 'BIS_SIGNAL';
 
 export interface CommandLogEntry {
   seq: number;

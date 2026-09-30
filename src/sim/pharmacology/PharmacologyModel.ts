@@ -31,13 +31,13 @@ export class PharmacologyModel {
   private paramsFor(patient: PatientState, m: MoietyId): MammillaryParams {
     let p = this.params.get(m);
     if (!p) {
-      p = pkParams(m, patient.demographics);
+      p = pkParams(m, patient.demographics, patient.factors);
       this.params.set(m, p);
     }
     return p;
   }
 
-  /** Age/size changed: PK parameters are recomputed (drug amounts in the body stay). */
+  /** Age/size/organ function changed: PK parameters are recomputed (drug amounts in the body stay). */
   onDemographicsChanged(): void {
     this.params.clear();
   }
@@ -65,6 +65,7 @@ export class PharmacologyModel {
       ph.reference,
       patient.demographics.weightKg,
       patient.demographics.ageYears,
+      patient.factors,
     );
     patient.gas.hb = OXYGEN.hemoglobin;
     return steadyStateLine(pumps, getProduct);
@@ -92,6 +93,7 @@ export class PharmacologyModel {
       ph.reference,
       w,
       patient.demographics.ageYears,
+      patient.factors,
     );
   }
 

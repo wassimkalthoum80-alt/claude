@@ -981,30 +981,241 @@ function ref(
   };
 }
 
+/** Educational model card for the drugs added with the processed-EEG module. */
+const eduSedative = (name: string, pk: string, eeg: string): ModelInfo => ({
+  kind: 'educational',
+  description: `${name}: EDUCATIONAL two-compartment PK (${pk}) with an effect compartment; hypnotic, EEG, respiratory and haemodynamic effects are author calibration. EEG: ${eeg}.`,
+  population: 'Adult; illustrative only.',
+  uncertainty:
+    'Not a published population PK/PD model. Parameters are mid-range textbook values; potency and EEG mapping are author-selected. Not validated.',
+});
+
+/** Midazolam, dexmedetomidine, ketamine and esketamine — executable for the processed-EEG module. */
+export const SEDATIVES: Product[] = [
+  {
+    id: 'midazolam-1',
+    genericName: 'Midazolam',
+    brandNames: ['Dormicum'],
+    aliases: ['midazolam 1 mg/mL'],
+    category: 'Hypnotika / Sedativa',
+    status: 'executable',
+    moiety: 'midazolam',
+    formulationLabel: '1 mg/mL, 50 mL',
+    concentration: { value: 1, unit: 'mg' },
+    containerMl: 50,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'sedation-bolus',
+        indication: 'Sedierung — titrierte Boli (Sedation, titrated boluses)',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 0.03, typical: 0.05, max: 0.3, unit: 'mg/kg' },
+          durationS: { min: 20, typical: 30 },
+        },
+        notes: 'Titrate in small increments; elderly and frail patients need much less.',
+        sources: ['smpcMidazolam'],
+      },
+      {
+        id: 'icu-sedation',
+        indication: 'Sedierung Intensivmedizin (ICU sedation infusion)',
+        route: 'IV',
+        weightBasis: 'actual',
+        infusion: { rate: { min: 0.03, typical: 0.1, max: 0.2, unit: 'mg/kg/h' } },
+        notes:
+          'Accumulates with prolonged infusion, in hepatic failure and (active metabolite) renal failure.',
+        sources: ['smpcMidazolam'],
+      },
+    ],
+    reference: {
+      indications: ['Sedation', 'Premedication', 'Seizures (other routes/doses)'],
+      contraindications: [
+        'Known hypersensitivity to benzodiazepines',
+        'Severe respiratory insufficiency (without ventilation)',
+      ],
+      interactions: [
+        'Opioids and propofol: synergistic sedation and respiratory depression',
+        'CYP3A4 inhibitors prolong the effect',
+      ],
+      adverseEffects: [
+        'Respiratory depression',
+        'Hypotension',
+        'Paradoxical agitation',
+        'Prolonged recovery after infusion',
+      ],
+      considerations: {
+        hepatic: 'Clearance reduced — accumulation',
+        renal: 'Active metabolite accumulates',
+        age: 'Elderly: much more sensitive, slower recovery',
+      },
+      onsetOffset:
+        'Peak effect after several minutes; context-sensitive half-time rises with infusion duration.',
+    },
+    model: eduSedative(
+      'Midazolam',
+      'V 1.25 L/kg, CL 7.5 mL/kg/min × hepatic function, t½β ≈ 2.3 h, ke0 0.15/min',
+      'benzodiazepine beta activity at light depth, slowing with depth; suppression only at high GABAergic depth',
+    ),
+    sources: ['smpcMidazolam', 'textbookPk', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'dexmedetomidine-4',
+    genericName: 'Dexmedetomidin',
+    brandNames: ['Dexdor'],
+    aliases: ['dexmedetomidine 4 µg/mL', 'Precedex'],
+    category: 'Alpha-2-Agonisten',
+    status: 'executable',
+    moiety: 'dexmedetomidine',
+    formulationLabel: '4 µg/mL (200 µg / 50 mL)',
+    concentration: { value: 4, unit: 'microgram' },
+    containerMl: 50,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'icu-sedation',
+        indication: 'Sedierung Intensivmedizin (ICU sedation, RASS 0 to −3)',
+        route: 'IV',
+        weightBasis: 'actual',
+        infusion: { rate: { min: 0.2, typical: 0.7, max: 1.4, unit: 'microgram/kg/h' } },
+        notes:
+          'No loading dose (label). Patients remain arousable; the processed index does not mean the same as under propofol.',
+        sources: ['smpcDexmedetomidine'],
+      },
+    ],
+    reference: {
+      indications: ['Light to moderate ICU sedation (arousable)'],
+      contraindications: [
+        'AV block II–III without pacemaker',
+        'Uncontrolled hypotension',
+        'Acute cerebrovascular event',
+      ],
+      interactions: ['Additive with hypnotics and opioids; little respiratory depression'],
+      adverseEffects: [
+        'Bradycardia',
+        'Hypotension (low doses) / hypertension (high doses, bolus)',
+        'Dry mouth',
+      ],
+      considerations: { hepatic: 'Reduced clearance', age: 'Elderly: more hypotension' },
+      onsetOffset: 'Slow onset (≈ 15 min to steady effect); t½ ≈ 2 h.',
+    },
+    model: eduSedative(
+      'Dexmedetomidine',
+      'V 1.45 L/kg, CL 10 mL/kg/min × hepatic function, t½β ≈ 2 h, ke0 0.08/min',
+      'slow waves and 12–15 Hz spindles, little frontal alpha; readily reversed by stimulation',
+    ),
+    sources: ['smpcDexmedetomidine', 'textbookPk', 'akeju2014', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'ketamine-racemic',
+    genericName: 'Ketamin (Razemat)',
+    brandNames: ['Ketanest', 'Ketalar'],
+    aliases: ['ketamine', 'ketamine 10 mg/mL'],
+    category: 'Hypnotika / Sedativa',
+    status: 'executable',
+    moiety: 'ketamine',
+    formulationLabel: '10 mg/mL, 20 mL',
+    concentration: { value: 10, unit: 'mg' },
+    containerMl: 20,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'induction',
+        indication: 'Narkoseeinleitung (Induction)',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 1, typical: 2, max: 4.5, unit: 'mg/kg' },
+          durationS: { min: 60, typical: 60 },
+        },
+        notes:
+          'Racemate — kept separate from esketamine (≈ half the potency). The processed index can rise despite anaesthesia.',
+        sources: ['labelKetamine'],
+      },
+    ],
+    reference: {
+      indications: ['Induction in haemodynamic instability', 'Analgesia (sub-anaesthetic doses)'],
+      contraindications: [
+        'Conditions where a rise in blood pressure is dangerous',
+        'Eclampsia/pre-eclampsia (label)',
+      ],
+      interactions: [
+        'Hypnotics attenuate emergence phenomena',
+        'Sympathomimetic effect adds to catecholamines',
+      ],
+      adverseEffects: ['Hypertension, tachycardia', 'Emergence reactions', 'Hypersalivation'],
+      considerations: { hepatic: 'Hepatic metabolism (norketamine)' },
+      onsetOffset: 'Onset < 1 min IV; anaesthesia 10–15 min after an induction dose.',
+    },
+    model: eduSedative(
+      'Ketamine (racemic)',
+      'V 3 L/kg, CL 15 mL/kg/min × hepatic function, t½α ≈ 6 min, t½β ≈ 3 h, ke0 0.5/min',
+      'fast beta/gamma activity with slow waves — raises the processed index; no burst suppression',
+    ),
+    sources: ['labelKetamine', 'textbookPk', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'esketamine',
+    genericName: 'Esketamin',
+    brandNames: ['Ketanest S'],
+    aliases: ['S-ketamine', 'esketamine 5 mg/mL'],
+    category: 'Hypnotika / Sedativa',
+    status: 'executable',
+    moiety: 'esketamine',
+    formulationLabel: '5 mg/mL, 50 mL',
+    concentration: { value: 5, unit: 'mg' },
+    containerMl: 50,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'induction',
+        indication: 'Narkoseeinleitung (Induction)',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 0.5, typical: 0.5, max: 1, unit: 'mg/kg' },
+          durationS: { min: 30, typical: 60 },
+        },
+        notes:
+          'S-enantiomer — about twice as potent as the racemate; kept separate. Administration time: educational default, check the label.',
+        sources: ['smpcEsketamine'],
+      },
+      {
+        id: 'maintenance',
+        indication: 'Aufrechterhaltung (Maintenance infusion)',
+        route: 'IV',
+        weightBasis: 'actual',
+        infusion: { rate: { min: 0.5, typical: 1, max: 3, unit: 'mg/kg/h' } },
+        sources: ['smpcEsketamine'],
+      },
+    ],
+    reference: {
+      indications: ['Induction and maintenance of anaesthesia', 'Analgesia'],
+      contraindications: ['Conditions where a rise in blood pressure is dangerous'],
+      interactions: ['Hypnotics attenuate emergence phenomena'],
+      adverseEffects: ['Hypertension, tachycardia', 'Emergence reactions'],
+      considerations: { hepatic: 'Hepatic metabolism' },
+      onsetOffset: 'Onset < 1 min IV.',
+    },
+    model: eduSedative(
+      'Esketamine',
+      'same educational PK as the racemate, twice the potency',
+      'fast beta/gamma activity with slow waves — raises the processed index; no burst suppression',
+    ),
+    sources: ['smpcEsketamine', 'textbookPk', 'educational'],
+    review: 'unreviewed',
+  },
+];
+
 export const REFERENCE_ONLY: Product[] = [
-  ref('midazolam', 'Midazolam', 'Hypnotika / Sedativa', ['Dormicum']),
   ref('etomidate', 'Etomidat', 'Hypnotika / Sedativa', ['Hypnomidate', 'Etomidat-Lipuro']),
-  ref(
-    'ketamine-racemic',
-    'Ketamin (Razemat)',
-    'Hypnotika / Sedativa',
-    ['Ketanest'],
-    ['ketamine'],
-    'Racemic ketamine — kept separate from esketamine (potency ≈ half). Phase D.',
-  ),
-  ref(
-    'esketamine',
-    'Esketamin',
-    'Hypnotika / Sedativa',
-    ['Ketanest S'],
-    ['S-ketamine'],
-    'Esketamine — separate product from racemic ketamine. Phase D.',
-  ),
   ref('thiopental', 'Thiopental', 'Hypnotika / Sedativa', ['Trapanal']),
   ref('fentanyl', 'Fentanyl', 'Opioidanalgetika', ['Fentanyl-Janssen']),
   ref('morphine', 'Morphin', 'Opioidanalgetika', ['MSI']),
   ref('piritramide', 'Piritramid', 'Opioidanalgetika', ['Dipidolor']),
-  ref('dexmedetomidine', 'Dexmedetomidin', 'Alpha-2-Agonisten', ['Dexdor']),
   ref('clonidine', 'Clonidin', 'Alpha-2-Agonisten', ['Catapresan']),
   ref(
     'succinylcholine',
@@ -1146,7 +1357,7 @@ export const REFERENCE_ONLY: Product[] = [
   ),
 ];
 
-export const FORMULARY: readonly Product[] = [...EXECUTABLE, ...REFERENCE_ONLY];
+export const FORMULARY: readonly Product[] = [...EXECUTABLE, ...SEDATIVES, ...REFERENCE_ONLY];
 
 const BY_ID = new Map(FORMULARY.map((p) => [p.id, p]));
 

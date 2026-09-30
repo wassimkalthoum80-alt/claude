@@ -16,6 +16,10 @@ const MOIETY: Record<MoietyId, { name: string; amount: string; conc: string }> =
   salbutamol: { name: 'Salbutamol', amount: 'µg', conc: 'µg/min eq' },
   naloxone: { name: 'Naloxone', amount: 'µg', conc: 'µg/min eq' },
   calcium: { name: 'Calcium', amount: 'mmol', conc: 'mmol/L' },
+  midazolam: { name: 'Midazolam', amount: 'mg', conc: 'µg/mL' },
+  dexmedetomidine: { name: 'Dexmedetomidine', amount: 'µg', conc: 'ng/mL' },
+  ketamine: { name: 'Ketamine', amount: 'mg', conc: 'µg/mL' },
+  esketamine: { name: 'Esketamine', amount: 'mg', conc: 'µg/mL' },
 };
 
 const OPIOIDS: MoietyId[] = ['sufentanil', 'remifentanil'];

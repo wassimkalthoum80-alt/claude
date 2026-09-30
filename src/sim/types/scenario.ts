@@ -2,6 +2,7 @@ import type { CprQualityPreset } from '../state/CPRState';
 import type { AirwayDevice, LungPreset, PhysiologyReserves, RhythmId } from '../state/PatientState';
 import type { VentSettings } from '../state/VentilatorState';
 import type { EcgLeadSet } from '../state/MonitorState';
+import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
 
 export interface PatientInit {
@@ -26,6 +27,8 @@ export interface PatientInit {
   /** mL */
   deadSpace: number;
   airway: AirwayDevice;
+  /** frailty, drug sensitivity, temperature, organ function, EEG amplitude; defaults from age */
+  factors?: Partial<PatientFactors>;
 }
 
 export interface ScenarioPump {
@@ -67,7 +70,7 @@ export interface ScenarioDefinition {
    */
   pumps?: ScenarioPump[];
   /** monitor configuration at the start (default: 3-electrode ECG) */
-  monitor?: { ecgLeads: EcgLeadSet };
+  monitor?: { ecgLeads: EcgLeadSet; bis?: boolean };
   /** scripted commands, fired by the engine with source "scenario" */
   timeline: ScenarioEvent[];
   objectives: ScenarioObjective[];

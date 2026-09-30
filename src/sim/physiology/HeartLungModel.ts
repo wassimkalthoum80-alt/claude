@@ -218,7 +218,13 @@ export class HeartLungModel {
     // patient loses the tone that held the blood pressure, while a normovolaemic patient keeps a reflex tachycardia.
     const stress =
       clamp(
-        (hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress + setPointStress) *
+        // SIM-ASSUMPTION: the autonomic response to noxious stimulation (after analgesic attenuation, from the
+        // cerebral model) adds sympathetic drive: tachycardia and hypertension under light analgesia.
+        (hypoxicStress +
+          0.4 * co2Stress +
+          0.8 * pressureStress +
+          setPointStress +
+          0.9 * patient.brain.autonomicResponse) *
           drugs.baroreflex +
           volumeStress * drugs.baroreflex ** 2,
         0,

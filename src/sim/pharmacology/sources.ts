@@ -9,7 +9,7 @@ export interface Source {
   /** year of the document / publication */
   year: number;
   jurisdiction: 'international' | 'EU' | 'DE' | 'UK' | 'US';
-  kind: 'pk-model' | 'guideline' | 'label' | 'textbook' | 'review';
+  kind: 'pk-model' | 'guideline' | 'label' | 'textbook' | 'review' | 'study' | 'device';
   review: 'unreviewed' | 'reviewed';
 }
 
@@ -184,6 +184,87 @@ export const SOURCES = {
     year: 2010,
     jurisdiction: 'international',
     kind: 'review',
+    review: 'unreviewed',
+  },
+  smpcMidazolam: {
+    id: 'smpcMidazolam',
+    citation:
+      'Fachinformation Midazolam (Dormicum®) — ICU sedation: initial 0.03–0.3 mg/kg in increments, maintenance 0.03–0.2 mg/kg/h. Transcribed without access to the current document in this session.',
+    year: 2023,
+    jurisdiction: 'DE',
+    kind: 'label',
+    review: 'unreviewed',
+  },
+  smpcDexmedetomidine: {
+    id: 'smpcDexmedetomidine',
+    citation:
+      'Fachinformation Dexmedetomidin (Dexdor®) — ICU sedation 0.2–1.4 µg/kg/h (start 0.7 µg/kg/h); loading dose not recommended. Transcribed without access to the current document in this session.',
+    year: 2023,
+    jurisdiction: 'EU',
+    kind: 'label',
+    review: 'unreviewed',
+  },
+  labelKetamine: {
+    id: 'labelKetamine',
+    citation:
+      'Ketamine hydrochloride label (Ketalar®) — IV induction 1–4.5 mg/kg (2 mg/kg typical), injected over about 60 s. Transcribed without access to the current document in this session.',
+    year: 2022,
+    jurisdiction: 'US',
+    kind: 'label',
+    review: 'unreviewed',
+  },
+  smpcEsketamine: {
+    id: 'smpcEsketamine',
+    citation:
+      'Fachinformation Esketamin (Ketanest S®) — IV induction 0.5–1 mg/kg, maintenance infusion 0.5–3 mg/kg/h. Transcribed without access to the current document in this session.',
+    year: 2022,
+    jurisdiction: 'DE',
+    kind: 'label',
+    review: 'unreviewed',
+  },
+  textbookPk: {
+    id: 'textbookPk',
+    citation:
+      'Textbook pharmacokinetic ranges (volume of distribution, clearance, half-lives) as summarised in standard anaesthesia pharmacology texts; mid-range values chosen for an educational model.',
+    year: 2020,
+    jurisdiction: 'international',
+    kind: 'textbook',
+    review: 'unreviewed',
+  },
+  medtronicBis: {
+    id: 'medtronicBis',
+    citation:
+      'Medtronic. BIS™ monitoring system — product and clinical information (BIS, SQI, EMG, suppression ratio over 63 s, trends). https://www.medtronic.com/en-us/healthcare-professionals/products/patient-monitoring/brain-monitoring/brain-channel-monitoring/bis-monitoring-system.html (not reachable from this session; details not re-verified).',
+    year: 2024,
+    jurisdiction: 'US',
+    kind: 'device',
+    review: 'unreviewed',
+  },
+  akeju2014: {
+    id: 'akeju2014',
+    citation:
+      'Akeju O, et al. A comparison of propofol- and dexmedetomidine-induced electroencephalogram dynamics using spectral and coherence analysis. Anesthesiology 2014;121:978-89. PMID 25187999 (title/authors from memory; PubMed not reachable from this session).',
+    year: 2014,
+    jurisdiction: 'international',
+    kind: 'study',
+    review: 'unreviewed',
+  },
+  propofolSufentanilEeg: {
+    id: 'propofolSufentanilEeg',
+    citation:
+      'Propofol–sufentanil interaction and processed EEG. PMID 29945431 (supplied as a starting reference; citation details not verified — PubMed not reachable from this session).',
+    year: 2018,
+    jurisdiction: 'international',
+    kind: 'study',
+    review: 'unreviewed',
+  },
+  schuller2015: {
+    id: 'schuller2015',
+    citation:
+      'Schuller PJ, et al. Response of bispectral index to neuromuscular block in awake volunteers. Br J Anaesth 2015;115 Suppl 1:i95-i103. PMID 26174308 (from memory; PubMed not reachable from this session).',
+    year: 2015,
+    jurisdiction: 'international',
+    kind: 'study',
     review: 'unreviewed',
   },
   educational: {

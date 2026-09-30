@@ -3,6 +3,8 @@ import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS, OXYGEN } from '../physiol
 import { CPR_PRESETS } from '../interventions/cprQuality';
 import { defaultAlarmLimits } from '../devices/alarmLimits';
 import { emptyPharmacology } from '../pharmacology/PharmacologyModel';
+import { defaultPatientFactors, initialCerebralState } from '../brain/CerebralModel';
+import { initialBisState } from '../devices/BisMonitor';
 import { getProduct } from '../pharmacology/formulary/products';
 import type { PumpState } from './PharmacologyState';
 import type { HeartLungCalibration } from './SimulationState';
@@ -112,6 +114,8 @@ export function createInitialState(
         ...p.reserves,
       },
       pharmacology: emptyPharmacology(),
+      brain: initialCerebralState(),
+      factors: { ...defaultPatientFactors(p.ageYears), ...p.factors },
       airway: { device: p.airway },
       rosc: false,
     },
@@ -134,6 +138,7 @@ export function createInitialState(
         ecgLeads: scenario.monitor?.ecgLeads ?? 3,
         alarmLimits: defaultAlarmLimits(),
       },
+      bis: initialBisState(scenario.monitor?.bis ?? true),
       ventilator: {
         mode: 'VCV',
         settings: { ...scenario.ventilator },

@@ -1,6 +1,7 @@
 import type { Demographics } from '../state/PatientState';
 import type { DrugKinetics, MoietyId } from '../state/PharmacologyState';
-import { idealBodyWeight, leanBodyMassJames } from './bodySize';
+import type { PatientFactors } from '../state/BrainState';
+import { adjustedBodyWeight, idealBodyWeight, leanBodyMassJames } from './bodySize';
 
 /**
  * Linear mammillary model with an effect compartment (time in minutes, volumes in L):
@@ -96,9 +97,83 @@ export function rocuroniumEducational(weightKg: number): MammillaryParams {
   return fromVolumes(0.045 * w, 0.16 * w, 0, 0.0036 * w, 0.012 * w, 0, 0.17, 'educational');
 }
 
+/**
+ * EDUCATIONAL two-compartment model from per-kg textbook values (not a published population model):
+ * volumes scale with `wV` kg, clearances with `wCl` kg — each drug states its own weight scalar.
+ * @param v1 L/kg @param v2 L/kg @param cl mL/kg/min @param q mL/kg/min @param ke0 1/min
+ */
+export function twoCompartmentEducational(
+  v1: number,
+  v2: number,
+  cl: number,
+  q: number,
+  ke0: number,
+  wV: number,
+  wCl: number,
+): MammillaryParams {
+  return fromVolumes(
+    v1 * wV,
+    v2 * wV,
+    0,
+    (cl / 1000) * wCl,
+    (q / 1000) * wCl,
+    0,
+    ke0,
+    'educational',
+  );
+}
+
+/** Normal organ function (used when no patient factors are given). */
+const NORMAL_ORGANS = { hepaticFunction: 1, renalFunction: 1 };
+
 /** PK parameters of each moiety for a patient. */
-export function pkParams(moiety: MoietyId, d: Demographics): MammillaryParams {
+export function pkParams(
+  moiety: MoietyId,
+  d: Demographics,
+  factors: Pick<PatientFactors, 'hepaticFunction' | 'renalFunction'> = NORMAL_ORGANS,
+): MammillaryParams {
+  const ibw = Math.min(d.weightKg, idealBodyWeight(d.sex, d.heightCm));
+  const abw = adjustedBodyWeight(d.sex, d.weightKg, d.heightCm);
   switch (moiety) {
+    // SIM-ASSUMPTION: educational 2-compartment PK from textbook ranges (Vss, clearance, half-lives), mid-range
+    // values; hepatic function scales the clearance of hepatically metabolised drugs.
+    // Midazolam: V1 0.35 + V2 0.9 L/kg (actual weight), CL 7.5 mL/kg/min (ideal weight) → t½β ≈ 2.3 h;
+    // ke0 0.15/min (peak effect ≈ 5 min).
+    case 'midazolam':
+      return twoCompartmentEducational(
+        0.35,
+        0.9,
+        7.5 * factors.hepaticFunction,
+        20,
+        0.15,
+        d.weightKg,
+        ibw,
+      );
+    // Dexmedetomidine: V1 0.25 + V2 1.2 L/kg (actual), CL 10 mL/kg/min (adjusted) → t½ distribution ≈ 4 min,
+    // t½β ≈ 2 h; slow effect onset, ke0 0.08/min.
+    case 'dexmedetomidine':
+      return twoCompartmentEducational(
+        0.25,
+        1.2,
+        10 * factors.hepaticFunction,
+        30,
+        0.08,
+        d.weightKg,
+        abw,
+      );
+    // Ketamine (racemic) and esketamine: V1 0.5 + V2 2.5 L/kg (actual), CL 15 mL/kg/min (adjusted) → t½α ≈ 6 min,
+    // t½β ≈ 3 h; fast onset, ke0 0.5/min. Esketamine: same PK, twice the potency (pd.ts).
+    case 'ketamine':
+    case 'esketamine':
+      return twoCompartmentEducational(
+        0.5,
+        2.5,
+        15 * factors.hepaticFunction,
+        40,
+        0.5,
+        d.weightKg,
+        abw,
+      );
     case 'propofol':
       return schnider(d);
     case 'sufentanil':

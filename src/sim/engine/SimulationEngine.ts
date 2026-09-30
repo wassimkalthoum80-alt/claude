@@ -13,6 +13,15 @@ import { HeartLungModel, type HeartLungTransition } from '../physiology/HeartLun
 import { LungStateModel } from '../physiology/LungStateModel';
 import { getProduct } from '../pharmacology/formulary/products';
 import { PharmacologyModel } from '../pharmacology/PharmacologyModel';
+import { applyStimulus, CerebralModel } from '../brain/CerebralModel';
+import {
+  BisMonitor,
+  BisTrends,
+  SENSOR_IMPEDANCE,
+  type ReadonlyBisTrends,
+} from '../devices/BisMonitor';
+import { EEGGenerator } from '../signals/EEGGenerator';
+import type { PatientFactors } from '../state/BrainState';
 import {
   bolusProtocolOf,
   bolusRateMlH,
@@ -84,6 +93,11 @@ export class SimulationEngine {
   private readonly bloodGas = new BloodGasModel();
   private readonly heartLung = new HeartLungModel();
   private readonly pharmacology = new PharmacologyModel();
+  private readonly cerebral = new CerebralModel();
+  private readonly bisMonitor = new BisMonitor();
+  private readonly trendBank = new BisTrends();
+  /** EEG has its own seeded stream (derived from the scenario seed) so it cannot perturb the other signals */
+  private readonly eegGen = new EEGGenerator(0, SUBSTEP_S);
   private readonly drive = new RespiratoryDriveModel();
   private readonly cpr: CPREngine;
   private readonly monitor = new MonitorDevice();
@@ -127,6 +141,11 @@ export class SimulationEngine {
 
   get signals(): ReadonlySignalBank {
     return this.bank;
+  }
+
+  /** 1 Hz trends of the processed-EEG monitor (read by the trend display). */
+  get trends(): ReadonlyBisTrends {
+    return this.trendBank;
   }
 
   get eventLog(): readonly LogEntry[] {
@@ -215,6 +234,15 @@ export class SimulationEngine {
         arterialPressure,
         breath: this.ventilator.timing,
       };
+      const bis = s.devices.bis;
+      const eeg = this.eegGen.sample({
+        t,
+        brain: s.patient.brain,
+        connected: bis.connected,
+        fault: bis.fault,
+      });
+      this.bank.eeg.push(eeg.measured);
+      this.bank.eegSuppressed.push(eeg.suppressed ? 1 : 0);
       this.bank.ecg.push(this.ecgGen.sample(ctx));
       this.bank.ecgV.push(this.ecgGen.sampleV(ctx));
       if (this.substep % 2 === 0) {
@@ -245,11 +273,34 @@ export class SimulationEngine {
       TICK_S,
     );
     if (transition) this.applyTransition(transition);
+    this.cerebral.update(s.patient, this.pharmacology.exposures(s.patient), TICK_S);
     this.updateTimers(TICK_S);
     this.monitor.update(s, this.bank, TICK_S);
+    this.bisMonitor.update(s, this.bank, this.trendBank);
     this.alarms.update(s);
     this.checkScenarioEnd();
     this.version += 1;
+  }
+
+  /**
+   * Replay: a fresh engine with the same options re-applies the logged commands at their original ticks
+   * (scenario timeline commands fire again by themselves and are skipped). Deterministic: the same seed and
+   * command log give the same trajectory.
+   */
+  static replay(
+    options: EngineOptions,
+    log: readonly LogEntry[],
+    untilTime: number,
+  ): SimulationEngine {
+    const e = new SimulationEngine(options);
+    for (const entry of log) {
+      if (entry.kind !== 'command' || entry.source === 'scenario') continue;
+      while (e.state.tick < entry.tick) e.tick();
+      e.dispatch(entry.command, entry.source);
+    }
+    while (e.state.time < untilTime - 1e-9) e.tick();
+    e.notify();
+    return e;
   }
 
   /** Run `seconds` of simulation synchronously (tests, fast-forward). */
@@ -312,6 +363,9 @@ export class SimulationEngine {
     this.clock.timeScale = 1;
     this.log.clear();
     this.bank.reset();
+    this.trendBank.reset();
+    this.bisMonitor.reset();
+    this.eegGen.reset((seed ^ 0x5eedee6) >>> 0);
     const s = this.state;
     this.rhythm.reset(s.patient.cardio.rhythm, 0, s.patient.cardio, this.rng);
     s.devices.line = this.pharmacology.reset(s.patient, s.devices.pumps);
@@ -367,6 +421,32 @@ export class SimulationEngine {
         break;
       case 'SET_RESERVES':
         s.patient.reserves = { ...s.patient.reserves, ...validReserves(command.reserves) };
+        break;
+      case 'BIS_CONNECT':
+        if (s.devices.bis.connected !== command.connected) {
+          s.devices.bis.connected = command.connected;
+          s.devices.bis.connectedSince = s.time;
+          this.bisMonitor.onConnect();
+          this.logEvent('BIS_SIGNAL', s.time, command.connected ? 'connected' : 'removed');
+        }
+        break;
+      case 'BIS_SET_SMOOTHING':
+        if ([10, 15, 30].includes(command.seconds)) s.devices.bis.smoothingS = command.seconds;
+        break;
+      case 'BIS_SENSOR_FAULT':
+        if (s.devices.bis.fault !== command.fault) {
+          s.devices.bis.fault = command.fault;
+          s.devices.bis.impedanceKOhm = SENSOR_IMPEDANCE[command.fault];
+          this.logEvent('BIS_SIGNAL', s.time, command.fault);
+        }
+        break;
+      case 'STIMULUS':
+        applyStimulus(s.patient.brain, command.kind);
+        this.logEvent('STIMULUS_APPLIED', s.time, command.kind);
+        break;
+      case 'SET_PATIENT_FACTORS':
+        s.patient.factors = { ...s.patient.factors, ...validFactors(command.factors) };
+        this.pharmacology.onDemographicsChanged();
         break;
       case 'SET_PATIENT_AGE':
         if (
@@ -599,6 +679,11 @@ export class SimulationEngine {
           demographics,
         );
         if (!accept(v, command.override, command.confirm)) return;
+        this.logEvent(
+          'INFUSION_CHANGED',
+          s.time,
+          `${pump.id}|${product?.genericName ?? ''}|${pump.rateMlH}→${command.rateMlH} mL/h`,
+        );
         pump.rateMlH = command.rateMlH;
         pump.ordered = command.ordered ?? null;
         pump.overridden = v.errors.length > 0;
@@ -607,9 +692,17 @@ export class SimulationEngine {
       case 'PUMP_START':
         if (!product || pump.remainingMl <= 0)
           return reject({ errors: ['pump-empty'], warnings: [] });
+        if (!pump.running)
+          this.logEvent('INFUSION_CHANGED', s.time, `${pump.id}|${product.genericName}|start`);
         pump.running = true;
         return;
       case 'PUMP_STOP':
+        if (pump.running)
+          this.logEvent(
+            'INFUSION_CHANGED',
+            s.time,
+            `${pump.id}|${product?.genericName ?? ''}|stop`,
+          );
         pump.running = false;
         pump.bolus = null;
         return;
@@ -624,6 +717,11 @@ export class SimulationEngine {
         );
         if (!accept(v, command.override, command.confirm)) return;
         if (v.errors.length > 0) pump.overridden = true;
+        this.logEvent(
+          'BOLUS_GIVEN',
+          s.time,
+          `${pump.id}|${product?.genericName ?? ''}|${command.volumeMl.toFixed(1)} mL/${command.durationS} s`,
+        );
         pump.bolus = {
           remainingMl: command.volumeMl,
           rateMlH: bolusRateMlH(command.volumeMl, command.durationS),
@@ -754,4 +852,23 @@ function deepFreeze<T>(value: T): T {
     Object.freeze(value);
   }
   return value;
+}
+
+/** Instructor patient factors, limited to their documented ranges (invalid values are ignored). */
+function validFactors(patch: Partial<PatientFactors>): Partial<PatientFactors> {
+  const ranges: Record<keyof PatientFactors, [number, number]> = {
+    frailty: [0, 1],
+    hypnoticSensitivity: [0.5, 2],
+    temperatureC: [32, 40],
+    hepaticFunction: [0.2, 1],
+    renalFunction: [0.2, 1],
+    eegAmplitude: [0.5, 1.5],
+  };
+  const out: Partial<PatientFactors> = {};
+  for (const key of Object.keys(ranges) as (keyof PatientFactors)[]) {
+    const v = patch[key];
+    const [lo, hi] = ranges[key];
+    if (typeof v === 'number' && Number.isFinite(v)) out[key] = clamp(v, lo, hi);
+  }
+  return out;
 }

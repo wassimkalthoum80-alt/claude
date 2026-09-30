@@ -1,4 +1,5 @@
 import type { TimeScale } from '../core/Clock';
+import type { BisState } from './BrainState';
 import type { CPRState } from './CPRState';
 import type { MonitorState } from './MonitorState';
 import type { PatientState } from './PatientState';
@@ -63,6 +64,8 @@ export interface SimulationState {
     pumps: PumpState[];
     /** IV line dead space contents */
     line: LineState;
+    /** processed-EEG monitor ("Simulated BIS") */
+    bis: BisState;
   };
   interventions: { cpr: CPRState };
   timers: ArrestTimers;

@@ -10,7 +10,11 @@ export type MoietyId =
   | 'rocuronium'
   | 'salbutamol'
   | 'naloxone'
-  | 'calcium';
+  | 'calcium'
+  | 'midazolam'
+  | 'dexmedetomidine'
+  | 'ketamine'
+  | 'esketamine';
 
 /**
  * Amounts are in the moiety's model unit: mg (propofol, rocuronium), µg (opioids, catecholamines, salbutamol,
