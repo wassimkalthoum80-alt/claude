@@ -124,6 +124,6 @@ describe('circuit disconnection', () => {
     const ids = s.devices.monitor.alarms.map((a) => a.id);
     expect(ids).toEqual(expect.arrayContaining(['DISCONNECT', 'APNEA']));
     expect(max(window(e, 'co2', 45, 60))).toBeLessThan(2);
-    expect(s.devices.monitor.numerics.etco2).toBe(0);
+    expect(s.devices.monitor.numerics.etco2).toBeNull(); // "---", never a misleading 0
   });
 });

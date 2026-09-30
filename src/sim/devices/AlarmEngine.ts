@@ -10,7 +10,13 @@ const PRIORITY: Record<AlarmId, AlarmPriority> = {
   DISCONNECT: 'high',
   SPO2_NO_PULSE: 'medium',
   SPO2_LOW: 'medium',
+  HR_LOW: 'high',
+  HR_HIGH: 'medium',
 };
+
+/** /min — heart-rate alarm limits (typical adult defaults) */
+export const HR_LOW_LIMIT = 45;
+export const HR_HIGH_LIMIT = 120;
 
 /** % — SpO2 below which SPO2 LOW alarms (medium), and becomes high priority */
 export const SPO2_LOW = 90;
@@ -31,6 +37,9 @@ export class AlarmEngine {
 
     if (p.cardio.rhythm === 'vf') active.add('VFIB');
     if (p.cardio.rhythm === 'asystole') active.add('ASYSTOLE');
+    const hr = mon.numerics.hr;
+    if (hr !== null && hr > 0 && hr < HR_LOW_LIMIT) active.add('HR_LOW');
+    if (hr !== null && hr > HR_HIGH_LIMIT) active.add('HR_HIGH');
     if (mon.numerics.artMean !== null && mon.numerics.artMean < ART_LOW_MAP) active.add('ART_LOW');
     if (mon.numerics.spo2 === null) active.add('SPO2_NO_PULSE');
     if (vent.pressureLimited || vent.measured.ppeak >= vent.active.pmax) active.add('PAW_HIGH');

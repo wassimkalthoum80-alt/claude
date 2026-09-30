@@ -9,6 +9,8 @@ export const MONITOR_REFRESH_S = 1;
 /** s — window for ART sys/dia/mean and the perfusion index */
 const PRESSURE_WINDOW_S = 3;
 const HR_BEATS = 5;
+/** s — window for the pulse-pressure variation */
+const PPV_WINDOW_S = 15;
 
 /**
  * Patient monitor: measures its numbers from the generated signals, like a real monitor.
@@ -16,10 +18,12 @@ const HR_BEATS = 5;
  * - ART sys/dia/mean = max/min/mean of the arterial signal over the last 3 s
  * - SpO2 shown only if the pleth pulse (perfusion index) is large enough; it lags the arterial blood by the
  *   lung-to-finger circulation time and is averaged over a few seconds, like a real oximeter
- * - EtCO2 = peak CO2 of the last completed breath; 0 when no breath has been detected for 15 s (apnoea)
+ * - EtCO2 = peak CO2 of the last completed breath; "---" (null) when no breath has been detected for 15 s
+ * - PPV = (PPmax − PPmin) / mean PP over the beats of the last 15 s (arterial line, sinus rhythm)
  */
 export class MonitorDevice {
   private beats: number[] = [];
+  private ppvBeats: number[] = [];
   private breathStartIndex: number | null = null;
   private lastEtco2: number | null = null;
   private lastBreathTime = 0;
@@ -28,6 +32,7 @@ export class MonitorDevice {
 
   reset(initial: MonitorNumerics, trueSpo2: number): void {
     this.beats = [];
+    this.ppvBeats = [];
     this.breathStartIndex = null;
     this.lastEtco2 = initial.etco2;
     this.lastBreathTime = 0;
@@ -38,9 +43,17 @@ export class MonitorDevice {
   onBeat(t: number): void {
     this.beats.push(t);
     if (this.beats.length > HR_BEATS + 1) this.beats.shift();
+    this.ppvBeats.push(t);
+    while (this.ppvBeats.length > 0 && (this.ppvBeats[0] ?? t) < t - PPV_WINDOW_S - 2)
+      this.ppvBeats.shift();
   }
 
-  onBreathStart(signals: SignalBank, t: number): void {
+  /** A breath started. With the circuit open no gas passes the sidestream sensor: no breath is detected. */
+  onBreathStart(signals: SignalBank, t: number, gasAtSensor = true): void {
+    if (!gasAtSensor) {
+      this.breathStartIndex = null;
+      return;
+    }
     this.lastBreathTime = t;
     const co2 = signals.co2;
     if (this.breathStartIndex !== null && co2.count > this.breathStartIndex) {
@@ -55,13 +68,14 @@ export class MonitorDevice {
 
   update(state: SimulationState, signals: SignalBank, dt: number): void {
     const mon = state.devices.monitor;
-    if (state.time - this.lastBreathTime > 15) this.lastEtco2 = 0;
+    if (state.time - this.lastBreathTime > 15) this.lastEtco2 = null;
     mon.numerics.etco2 = this.lastEtco2;
     this.trackOximeter(state, dt);
     if (state.time - mon.lastRefresh < MONITOR_REFRESH_S - 1e-9) return;
     mon.lastRefresh = state.time;
 
     mon.numerics.hr = this.heartRate(state);
+    mon.numerics.ppv = this.pulsePressureVariation(state, signals);
 
     const n = Math.round(PRESSURE_WINDOW_S * signals.art.rate);
     const art = signals.art.last(n);
@@ -90,6 +104,34 @@ export class MonitorDevice {
     mon.numerics.perfusionIndex = Math.round(pi * 100) / 100;
     mon.numerics.spo2 =
       pi >= PLETH.perfusionIndexThreshold ? Math.round(clamp(this.spo2Averaged, 0, 100)) : null;
+  }
+
+  private pulsePressureVariation(state: SimulationState, signals: SignalBank): number | null {
+    if (!state.patient.cardio.spontaneousCirculation || state.interventions.cpr.active) return null;
+    const art = signals.art;
+    const pulse: number[] = [];
+    const beats = this.ppvBeats.filter((b) => b >= state.time - PPV_WINDOW_S);
+    for (let i = 0; i + 1 < beats.length; i++) {
+      const a = beats[i];
+      const b = beats[i + 1];
+      if (a === undefined || b === undefined) continue;
+      const from = Math.max(art.firstAvailable, art.indexAt(a));
+      const to = Math.min(art.count - 1, art.indexAt(b + 0.05));
+      if (to - from < 10) continue;
+      let min = Infinity;
+      let max = -Infinity;
+      for (let j = from; j <= to; j++) {
+        const v = art.at(j) ?? 0;
+        min = Math.min(min, v);
+        max = Math.max(max, v);
+      }
+      pulse.push(max - min);
+    }
+    if (pulse.length < 6) return null;
+    const hi = Math.max(...pulse);
+    const lo = Math.min(...pulse);
+    if (hi < 5) return null;
+    return Math.round((100 * (hi - lo)) / ((hi + lo) / 2));
   }
 
   /** Delay line (circulation time to the finger) + averaging of the true arterial saturation. */

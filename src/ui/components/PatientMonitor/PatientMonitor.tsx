@@ -103,6 +103,12 @@ export function PatientMonitor() {
         <span className={`num ${styles.artMean} ${flashClass(vm.flash.art)}`}>
           ({vm.artMean})<span className={styles.unitInline}>mmHg</span>
         </span>
+        {vm.ppv !== '' && (
+          <span className={`num ${styles.ppv}`}>
+            {t('monitor.ppv')} {vm.ppv}
+            <span className={styles.unitInline}>%</span>
+          </span>
+        )}
       </MonitorRow>
 
       <MonitorRow

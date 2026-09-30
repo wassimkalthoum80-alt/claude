@@ -20,6 +20,8 @@ export interface MonitorViewModel {
   artSysDia: string;
   artMean: string;
   etco2: string;
+  /** pulse-pressure variation, '' when not measurable */
+  ppv: string;
   flash: { hr: AlarmPriority | null; spo2: AlarmPriority | null; art: AlarmPriority | null };
 }
 
@@ -33,8 +35,9 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
     artSysDia: n.artSys === null || n.artDia === null ? '--/--' : `${n.artSys}/${n.artDia}`,
     artMean: formatNum(n.artMean, '--'),
     etco2: formatNum(n.etco2, '--'),
+    ppv: n.ppv === null ? '' : String(n.ppv),
     flash: {
-      hr: prio('VFIB', 'ASYSTOLE'),
+      hr: prio('VFIB', 'ASYSTOLE', 'HR_LOW', 'HR_HIGH'),
       spo2: prio('SPO2_LOW', 'SPO2_NO_PULSE'),
       art: prio('ART_LOW'),
     },

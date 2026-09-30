@@ -7,9 +7,10 @@ import { MonitorDevice } from '../devices/MonitorDevice';
 import { VentilatorDevice } from '../devices/VentilatorDevice';
 import { CPREngine } from '../interventions/CPREngine';
 import { CardiovascularModel } from '../physiology/CardiovascularModel';
-import { GasExchangeModel } from '../physiology/GasExchangeModel';
-import { OxygenModel } from '../physiology/OxygenModel';
-import { LUNG_PRESETS } from '../physiology/parameters';
+import { BloodGasModel, type GasExchangeInputs } from '../physiology/BloodGasModel';
+import { HeartLungModel, type HeartLungTransition } from '../physiology/HeartLungModel';
+import { LungStateModel } from '../physiology/LungStateModel';
+import { clamp } from '../physiology/shapes';
 import { RespiratoryDriveModel } from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
 import { ArterialWaveformGenerator } from '../signals/ArterialWaveformGenerator';
@@ -24,8 +25,8 @@ import {
   VentPressureGenerator,
 } from '../signals/VentilatorWaveformGenerators';
 import { createInitialState } from '../state/createInitialState';
-import type { RhythmId } from '../state/PatientState';
-import type { SimulationState } from '../state/SimulationState';
+import type { PhysiologyReserves, RhythmId } from '../state/PatientState';
+import type { HeartLungCalibration, SimulationState } from '../state/SimulationState';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
 import type { SimEvent } from '../types/events';
 import type { GuidelineSet } from '../types/guidelines';
@@ -36,6 +37,8 @@ export interface EngineOptions {
   guidelines: GuidelineSet;
   /** overrides the scenario seed */
   seed?: number;
+  /** overrides heart–lung calibration values (tests, instructor experiments); stored in the state */
+  calibration?: Partial<HeartLungCalibration>;
 }
 
 type Listener = () => void;
@@ -53,6 +56,7 @@ export class SimulationEngine {
   readonly guidelines: GuidelineSet;
   private scenarioDef: ScenarioDefinition;
   private seed: number;
+  private readonly calibration: Partial<HeartLungCalibration>;
   private state: SimulationState;
   private rng: SeededRng;
   private readonly clock = new FixedStepClock();
@@ -62,8 +66,9 @@ export class SimulationEngine {
   private readonly rhythm = new RhythmEngine();
   private readonly cardio = new CardiovascularModel();
   private readonly ventilator = new VentilatorDevice();
-  private readonly gas = new GasExchangeModel();
-  private readonly oxygen = new OxygenModel();
+  private readonly lungState = new LungStateModel();
+  private readonly bloodGas = new BloodGasModel();
+  private readonly heartLung = new HeartLungModel();
   private readonly drive = new RespiratoryDriveModel();
   private readonly cpr: CPREngine;
   private readonly monitor = new MonitorDevice();
@@ -90,8 +95,9 @@ export class SimulationEngine {
     this.guidelines = options.guidelines;
     this.scenarioDef = options.scenario;
     this.seed = options.seed ?? options.scenario.seed;
+    this.calibration = { ...options.calibration };
     this.cpr = new CPREngine(options.guidelines);
-    this.state = createInitialState(this.scenarioDef, this.seed);
+    this.state = createInitialState(this.scenarioDef, this.seed, this.calibration);
     this.snapshot = this.state;
     this.rng = new SeededRng(this.seed);
     this.baselineHeartRate = this.scenarioDef.patient.heartRate;
@@ -164,9 +170,16 @@ export class SimulationEngine {
         this.rng,
       );
       if (this.ventilator.step(t, SUBSTEP_S, vent, s.patient.resp)) {
-        this.monitor.onBreathStart(this.bank, t);
+        this.monitor.onBreathStart(this.bank, t, vent.circuitConnected);
         this.emit({ type: 'breath', t });
       }
+      this.heartLung.substep(
+        SUBSTEP_S,
+        (this.ventilator.lung.volume * 1000) / s.patient.resp.compliance,
+        s.patient.resp.pmus,
+        s.patient,
+        s.model.calibration,
+      );
       const arterialPressure = this.cardio.step(t, SUBSTEP_S, cardioState, kinematics);
 
       const ctx: SignalContext = {
@@ -199,8 +212,15 @@ export class SimulationEngine {
     // Slow (10 Hz) physiology and devices.
     this.cardio.slowUpdate(cardioState, TICK_S);
     this.cpr.slowUpdate(cprState, s.time, TICK_S);
-    this.gas.update(s.patient, vent, TICK_S);
-    this.oxygen.update(s.patient, vent, TICK_S);
+    this.lungState.update(s.patient, this.ventilator.readout(), s.time, TICK_S);
+    this.bloodGas.update(s.patient.gas, this.gasInputs(), TICK_S);
+    const transition = this.heartLung.update(
+      s.patient,
+      s.model.calibration,
+      s.model.arrestModelEnabled,
+      TICK_S,
+    );
+    if (transition) this.applyTransition(transition);
     this.updateTimers(TICK_S);
     this.monitor.update(s, this.bank, TICK_S);
     this.alarms.update(s);
@@ -259,7 +279,7 @@ export class SimulationEngine {
 
   private load(scenario: ScenarioDefinition, seed: number): void {
     this.rng = new SeededRng(seed);
-    this.state = createInitialState(scenario, seed);
+    this.state = createInitialState(scenario, seed, this.calibration);
     this.baselineHeartRate = scenario.patient.heartRate;
     this.substep = 0;
     this.timelineIndex = 0;
@@ -271,9 +291,15 @@ export class SimulationEngine {
     const s = this.state;
     this.rhythm.reset(s.patient.cardio.rhythm, 0, s.patient.cardio, this.rng);
     this.cardio.reset(s.patient.cardio);
+    this.lungState.reset(s.patient, s.devices.ventilator);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
-    this.gas.reset(s.patient, s.devices.ventilator);
-    this.oxygen.reset(s.patient, s.devices.ventilator);
+    this.bloodGas.reset(s.patient.gas, this.gasInputs());
+    if (scenario.patient.initialPaco2 !== undefined)
+      this.bloodGas.setCo2(s.patient.gas, this.gasInputs(), scenario.patient.initialPaco2);
+    this.heartLung.reset(s.patient, scenario.patient.heartRate);
+    s.devices.monitor.numerics.etco2 = Math.round(s.patient.gas.etco2);
+    if (s.devices.monitor.numerics.spo2 !== null)
+      s.devices.monitor.numerics.spo2 = Math.round(s.patient.gas.spo2);
     this.drive.reset();
     this.cpr.reset(s.interventions.cpr);
     this.monitor.reset(s.devices.monitor.numerics, s.patient.gas.spo2);
@@ -310,15 +336,16 @@ export class SimulationEngine {
       case 'SET_CIRCUIT':
         this.ventilator.setCircuit(s.devices.ventilator, command.connected);
         break;
-      case 'SET_LUNG': {
-        const l = LUNG_PRESETS[command.preset];
-        const r = s.patient.resp;
-        r.lungPreset = command.preset;
-        r.compliance = l.compliance;
-        r.resistance = l.resistance;
-        r.frc = l.frc;
+      case 'SET_LUNG':
+        // Mechanics, shunt and recruitability follow from the preset in the lung-state model.
+        s.patient.resp.lungPreset = command.preset;
         break;
-      }
+      case 'SET_RESERVES':
+        s.patient.reserves = { ...s.patient.reserves, ...validReserves(command.reserves) };
+        break;
+      case 'SET_ARREST_MODEL':
+        s.model.arrestModelEnabled = command.enabled;
+        break;
       case 'SET_RESP_DRIVE':
         s.patient.resp.drive = command.drive;
         s.patient.resp.spontaneousBreathing = command.drive !== 'none';
@@ -345,7 +372,10 @@ export class SimulationEngine {
     const wasPerfusing = c.spontaneousCirculation;
     const perfusing = this.rhythm.isPerfusing(id);
     c.rhythm = id;
-    c.heartRate = perfusing ? this.baselineHeartRate : 0;
+    if (perfusing) c.heartRate = this.baselineHeartRate;
+    // PEA keeps an electrical rate: the current (bradycardic) rate, or 40/min when set out of the blue.
+    else if (id === 'pea') c.heartRate = c.heartRate > 8 && c.heartRate < 60 ? c.heartRate : 40;
+    else c.heartRate = 0;
     this.rhythm.setRhythm(id, s.time, c, this.rng);
 
     if (!perfusing) {
@@ -363,10 +393,37 @@ export class SimulationEngine {
         this.logEvent('ARREST_START', s.time);
       }
     } else if (!wasPerfusing) {
+      // Return of circulation is always an explicit external event (instructor/scenario), never automatic.
       c.spontaneousCirculation = true;
       if (s.timers.arrestStartTime !== null) s.patient.rosc = true;
+      this.heartLung.onCirculationRestored(s.patient, s.model.calibration);
       this.logEvent('CIRCULATION_RESTORED', s.time);
     }
+  }
+
+  /** A rhythm change requested by the heart–lung model: applied and written to the event log. */
+  private applyTransition(tr: HeartLungTransition): void {
+    const s = this.state;
+    this.setRhythm(tr.rhythm);
+    if (tr.rhythm === 'pea') {
+      s.patient.heartLung.arrestCause = tr.cause;
+      this.logEvent('PEA_ONSET', s.time, tr.cause);
+    } else {
+      this.logEvent('ASYSTOLE_ONSET', s.time);
+    }
+  }
+
+  private gasInputs(): GasExchangeInputs {
+    const p = this.state.patient;
+    const vent = this.state.devices.ventilator;
+    return {
+      cardiacOutput: p.cardio.cardiacOutput,
+      alveolarVentilation: p.gas.alveolarVentilation,
+      fio2: vent.circuitConnected ? vent.active.fio2 / 100 : 0.21,
+      shunt: p.gas.shunt,
+      lungGasVolume: p.gas.lungGasVolume,
+      alveolarDeadSpace: p.gas.alveolarDeadSpace,
+    };
   }
 
   private updateTimers(dt: number): void {
@@ -412,8 +469,14 @@ export class SimulationEngine {
     });
   }
 
-  private logEvent(event: ClinicalEventType, t: number): void {
-    this.log.append({ kind: 'event', tick: this.state.tick, t, event });
+  private logEvent(event: ClinicalEventType, t: number, detail?: string): void {
+    this.log.append({
+      kind: 'event',
+      tick: this.state.tick,
+      t,
+      event,
+      ...(detail !== undefined ? { detail } : {}),
+    });
   }
 
   private emit(e: SimEvent): void {
@@ -428,6 +491,23 @@ export class SimulationEngine {
   private notify(): void {
     for (const l of this.listeners) l();
   }
+}
+
+/** Reserves are dimensionless multipliers; clamp to a range the model is calibrated for. */
+function validReserves(patch: Partial<PhysiologyReserves>): Partial<PhysiologyReserves> {
+  const out: Partial<PhysiologyReserves> = {};
+  for (const key of [
+    'preloadReserve',
+    'rightVentricularReserve',
+    'cardiacReserve',
+    'sympatheticResponse',
+  ] as const) {
+    const v = patch[key];
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      out[key] = clamp(v, key === 'sympatheticResponse' ? 0 : 0.2, 2);
+    }
+  }
+  return out;
 }
 
 function deepFreeze<T>(value: T): T {

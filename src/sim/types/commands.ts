@@ -1,6 +1,11 @@
 import type { TimeScale } from '../core/Clock';
 import type { CprQualityPreset } from '../state/CPRState';
-import type { LungPreset, RespiratoryDrive, RhythmId } from '../state/PatientState';
+import type {
+  LungPreset,
+  PhysiologyReserves,
+  RespiratoryDrive,
+  RhythmId,
+} from '../state/PatientState';
 import type { VentMode } from '../state/VentilatorState';
 
 export type VentSettingKey =
@@ -31,6 +36,8 @@ export type Command =
   | { type: 'SET_LUNG'; preset: LungPreset }
   | { type: 'SET_RESP_DRIVE'; drive: RespiratoryDrive }
   | { type: 'SET_RHYTHM'; rhythm: RhythmId }
+  | { type: 'SET_RESERVES'; reserves: Partial<PhysiologyReserves> }
+  | { type: 'SET_ARREST_MODEL'; enabled: boolean }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }
   | { type: 'RESET' };
@@ -41,7 +48,14 @@ export type CommandSource = 'user' | 'instructor' | 'scenario' | 'system';
 
 /** Clinical milestones the engine writes into the event log itself. */
 export type ClinicalEventType =
-  'ARREST_START' | 'CIRCULATION_RESTORED' | 'FIRST_COMPRESSION' | 'SCENARIO_END';
+  | 'ARREST_START'
+  | 'CIRCULATION_RESTORED'
+  | 'FIRST_COMPRESSION'
+  | 'SCENARIO_END'
+  /** heart–lung model: arrest from sustained low flow or oxygen debt (detail = cause) */
+  | 'PEA_ONSET'
+  /** heart–lung model: electrical activity ceased after prolonged PEA */
+  | 'ASYSTOLE_ONSET';
 
 export interface CommandLogEntry {
   seq: number;
@@ -61,6 +75,8 @@ export interface ClinicalLogEntry {
   /** s — sim time */
   t: number;
   event: ClinicalEventType;
+  /** optional context, e.g. the cause of a model-driven arrest */
+  detail?: string;
 }
 
 export type LogEntry = CommandLogEntry | ClinicalLogEntry;

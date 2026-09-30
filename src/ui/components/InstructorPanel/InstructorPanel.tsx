@@ -11,12 +11,14 @@ import type { I18nKey } from '../../../content/i18n/en';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi } from '../../hooks/UiContext';
 import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
+import { HeartLungPanel } from './HeartLungPanel';
 import styles from './InstructorPanel.module.css';
 
 const RHYTHMS: { id: RhythmId; key: I18nKey; hotkey: string }[] = [
   { id: 'sinus', key: 'rhythm.sinus', hotkey: '1' },
   { id: 'vf', key: 'rhythm.vf', hotkey: '2' },
   { id: 'asystole', key: 'rhythm.asystole', hotkey: '3' },
+  { id: 'pea', key: 'rhythm.pea', hotkey: '4' },
 ];
 
 const PRESETS: { id: CprQualityPreset; key: I18nKey }[] = [
@@ -228,6 +230,8 @@ export function InstructorPanel() {
           ))}
         </div>
       </div>
+
+      <HeartLungPanel />
 
       <p className={styles.hint}>{t('instructor.hint')}</p>
     </aside>

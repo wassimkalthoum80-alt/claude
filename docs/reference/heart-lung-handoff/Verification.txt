@@ -1,0 +1,32 @@
+Behavioral and numerical verification: 30 September 2026
+Runtime: Node v24.19.0
+These are software checks, NOT clinical validation.
+
+✔ healthy: default support does not spontaneously arrest over 600 seconds (388.741493ms)
+✔ obesity: default support does not spontaneously arrest over 600 seconds (361.474272ms)
+✔ ards: default support does not spontaneously arrest over 600 seconds (361.944091ms)
+✔ asthma: default support does not spontaneously arrest over 600 seconds (375.191515ms)
+✔ preoxygenation delays desaturation after ventilation stops (551.204611ms)
+✔ obesity phenotype desaturates earlier after the same preoxygenation interval (586.34287ms)
+✔ changing FiO2 cannot oxygenate or change depletion with zero ventilation: {"mode":"OFF"} (167.981927ms)
+✔ changing FiO2 cannot oxygenate or change depletion with zero ventilation: {"airwayOpen":false} (171.655702ms)
+✔ reduced compliance raises VC pressure and lowers PC delivered tidal volume (13.667567ms)
+✔ asthma: faster respiratory rate increases auto-PEEP; longer expiration reduces it (168.850761ms)
+✔ an open disconnected airway permits emptying; complete occlusion retains trapped gas (186.89074ms)
+✔ asthma recovery improves trapping and MAP without instantly normalizing CO2 (333.546244ms)
+✔ restoring ventilation before arrest reverses hypoxaemia progressively (366.874091ms)
+✔ anemia lowers oxygen delivery despite similar arterial saturation (82.17893ms)
+✔ render-frame partitioning does not alter the trajectory (77.194895ms)
+✔ 0.01 s and 0.02 s integration steps converge for changing ventilation (330.542697ms)
+✔ high PEEP in ARDS remains numerically bounded and converges across integration steps (1199.766088ms)
+✔ PEA and asystole separate electrical activity from pulse; ventilation alone does not cause ROSC (253.176268ms)
+✔ invalid elapsed time is rejected without advancing the simulation (1.12306ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6156.860532
+

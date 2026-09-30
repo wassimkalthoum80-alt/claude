@@ -129,6 +129,46 @@ for (const size of sizes) {
   await page.close();
 }
 
+// Heart–lung interaction: breath stacking (instructor panel with the live model), and a hypoxic PEA arrest.
+{
+  const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+  page.on('console', (m) => m.type() === 'error' && errors.push(`[heart-lung] ${m.text()}`));
+  page.on('pageerror', (e) => errors.push(`[heart-lung] ${e.message}`));
+  const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await page.keyboard.press('Backquote');
+  await page.getByRole('button', { name: /Breath stacking/ }).click();
+  await run(110); // the instructor panel stays open after loading a case without a briefing
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${outDir}/hl-1-asthma-stacking.jpg`, type: 'jpeg', quality: 88 });
+  await page.getByTestId('heart-lung-panel').screenshot({
+    path: `${outDir}/hl-2-instructor-heart-lung.jpg`,
+    type: 'jpeg',
+    quality: 90,
+  });
+  await page.getByRole('button', { name: /Silent disconnection/ }).click();
+  await page.click('[data-testid=start-button]');
+  await run(300);
+  await page.waitForTimeout(600);
+  await page.screenshot({
+    path: `${outDir}/hl-3-hypoxaemia-tachycardia.jpg`,
+    type: 'jpeg',
+    quality: 88,
+  });
+  for (let i = 0; i < 12; i++) {
+    const rhythm = await page.evaluate(
+      () => window.__resusEngine.getSnapshot().patient.cardio.rhythm,
+    );
+    if (rhythm === 'pea') break;
+    await run(10);
+  }
+  await run(15);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${outDir}/hl-4-hypoxic-pea.jpg`, type: 'jpeg', quality: 88 });
+  await page.close();
+}
+
 await browser.close();
 if (errors.length) {
   console.error('Console errors:\n' + errors.join('\n'));

@@ -1,13 +1,20 @@
 import { criticalClosingPressure } from '../physiology/CardiovascularModel';
-import { CARDIO, LUNG_PRESETS } from '../physiology/parameters';
+import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS } from '../physiology/parameters';
 import { CPR_PRESETS } from '../interventions/cprQuality';
+import type { HeartLungCalibration } from './SimulationState';
 import type { ScenarioDefinition } from '../types/scenario';
 import { predictedBodyWeight } from './PatientState';
 import type { SimulationState } from './SimulationState';
 
 /** Build the t = 0 state for a scenario. Pure: same scenario → same state. */
-export function createInitialState(scenario: ScenarioDefinition, seed: number): SimulationState {
+export function createInitialState(
+  scenario: ScenarioDefinition,
+  seed: number,
+  calibration: Partial<HeartLungCalibration> = {},
+): SimulationState {
   const p = scenario.patient;
+  const lungPreset = p.lungPreset ?? 'normal';
+  const lung = LUNG_PRESETS[lungPreset];
   const perfusing = p.rhythm === 'sinus';
   const tone = perfusing ? 1 : 0;
   const co = perfusing ? (p.strokeVolume * p.heartRate) / 1000 : 0;
@@ -37,27 +44,66 @@ export function createInitialState(scenario: ScenarioDefinition, seed: number): 
         criticalClosingPressure: criticalClosingPressure(tone),
         arterialPressure: startPressure,
         spontaneousCirculation: perfusing,
+        meanArterialPressure: perfusing ? 87 : CARDIO.msfp,
+        svrFactor: 1,
       },
       resp: {
-        compliance: p.compliance,
-        resistance: p.resistance,
+        compliance: lung.compliance,
+        resistance: lung.resistance,
+        expiratoryResistance: lung.expiratoryResistance,
         spontaneousBreathing: false,
-        lungPreset: 'normal',
+        lungPreset,
         drive: 'none',
         pmus: 0,
-        frc: LUNG_PRESETS.normal.frc,
+        frc: lung.frc,
         volumeAboveFRC: 0,
         airwayPressure: scenario.ventilator.peep,
         flow: 0,
         deadSpace: p.deadSpace,
       },
+      // Gas values are placeholders; the engine replaces them with the model's steady state on load.
       gas: {
-        paco2: p.etco2 + 5,
-        etco2: p.etco2,
-        spo2: p.spo2,
-        pao2: 160,
+        paco2: 40,
+        tissuePco2: 43,
+        etco2: 36,
+        spo2: 99,
+        pao2: 150,
         pao2Alveolar: 240,
         shunt: 0.06,
+        ph: 7.4,
+        hco3: 24,
+        lactate: 1,
+        cao2: 19,
+        cvo2: 14,
+        svo2: 75,
+        do2: 950,
+        vo2: 250,
+        alveolarVentilation: 4.2,
+        alveolarDeadSpace: lung.alveolarDeadSpace,
+        lungGasVolume: lung.frc,
+      },
+      heartLung: {
+        pleuralPressure: 0,
+        pleuralReference: 0,
+        recruitment: 0.5,
+        transpulmonaryPressure: 0,
+        overdistension: 0,
+        preloadFactor: 1,
+        rvFactor: 1,
+        myocardialFactor: 1,
+        heartRateTarget: p.heartRate,
+        oxygenDeficit: 0,
+        oxygenDebt: 0,
+        lowFlowTime: 0,
+        asystoleDose: 0,
+        arrestCause: null,
+      },
+      reserves: {
+        preloadReserve: 1,
+        rightVentricularReserve: 1,
+        cardiacReserve: 1,
+        sympatheticResponse: 1,
+        ...p.reserves,
       },
       airway: { device: p.airway },
       rosc: false,
@@ -69,8 +115,9 @@ export function createInitialState(scenario: ScenarioDefinition, seed: number): 
           artSys: perfusing ? 120 : CARDIO.msfp,
           artDia: perfusing ? 70 : CARDIO.msfp,
           artMean: perfusing ? 87 : CARDIO.msfp,
-          spo2: perfusing ? p.spo2 : null,
-          etco2: p.etco2,
+          spo2: perfusing ? 99 : null,
+          etco2: 36,
+          ppv: null,
           perfusionIndex: perfusing ? 1 : 0,
         },
         alarms: [],
@@ -125,5 +172,9 @@ export function createInitialState(scenario: ScenarioDefinition, seed: number): 
     },
     scenario: { id: scenario.id, seed, ended: false },
     control: { paused: false, timeScale: 1 },
+    model: {
+      calibration: { ...HEART_LUNG_CALIBRATION, ...calibration },
+      arrestModelEnabled: true,
+    },
   };
 }

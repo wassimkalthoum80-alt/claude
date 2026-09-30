@@ -3,7 +3,7 @@
   top: var(--edge);
   left: 50%;
   transform: translateX(-50%);
-  width: min(600px, calc(100vw - 32px));
+  width: min(680px, calc(100vw - 32px));
   max-height: calc(100vh - 2 * var(--edge));
   overflow-y: auto;
   z-index: 30;

@@ -15,11 +15,8 @@ export const baselinePatient: ScenarioDefinition = {
     heartRate: 80,
     // 62.5 mL × 80/min = 5.0 L/min
     strokeVolume: 62.5,
-    compliance: 50,
-    resistance: 10,
+    lungPreset: 'normal',
     deadSpace: 150,
-    etco2: 37,
-    spo2: 99,
     airway: 'ett',
   },
   ventilator: {

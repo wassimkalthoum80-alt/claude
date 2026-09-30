@@ -1,3 +1,4 @@
+import type { LungReadout } from '../physiology/LungStateModel';
 import { RespiratoryModel } from '../physiology/RespiratoryModel';
 import type { RespState } from '../state/PatientState';
 import type {
@@ -51,10 +52,16 @@ export class VentilatorDevice {
   private connectedThroughBreath = true;
   private breathStarts: number[] = [];
   private vteHistory: number[] = [];
+  private completedBreaths = 0;
+  private lastTidalVolume = 0;
+  private endExpiratoryPressure = 5;
 
   reset(vent: VentilatorState, resp: RespState, t: number): void {
     this.lung.reset(vent.settings.peep, resp.compliance);
     this.nextMandatory = t;
+    this.completedBreaths = 0;
+    this.lastTidalVolume = vent.settings.vt;
+    this.endExpiratoryPressure = vent.settings.peep;
     this.breathStarts = [];
     this.vteHistory = [];
     this.peak = 0;
@@ -167,13 +174,23 @@ export class VentilatorDevice {
     }
 
     if (vent.breathPhase === 'expiration') {
-      lung.pressureStep(dt, vent.circuitConnected ? a.peep : 0, c, r, pmus);
+      lung.pressureStep(dt, vent.circuitConnected ? a.peep : 0, c, resp.expiratoryResistance, pmus);
     }
 
     this.peak = Math.max(this.peak, lung.airwayPressure);
     this.pawIntegral += lung.airwayPressure * dt;
     this.writeSensors(vent, resp);
     return started;
+  }
+
+  /** What the lung itself did (true volumes, not the circuit sensors) — for the lung-state model. */
+  readout(): LungReadout {
+    return {
+      endInspiratoryVolume: this.volumeAtEndInspiration,
+      endExpiratoryPressure: this.endExpiratoryPressure,
+      completedBreaths: this.completedBreaths,
+      lastTidalVolume: this.lastTidalVolume,
+    };
   }
 
   /** Timing of the breath in progress (s), for the capnogram and ECG baseline wander. */
@@ -277,6 +294,9 @@ export class VentilatorDevice {
     const a = vent.active;
     const m = vent.measured;
     const endVolume = this.lung.volume;
+    this.completedBreaths += 1;
+    this.lastTidalVolume = Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000);
+    this.endExpiratoryPressure = (endVolume * 1000) / resp.compliance;
     const vte = this.connectedThroughBreath
       ? Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000)
       : 0;

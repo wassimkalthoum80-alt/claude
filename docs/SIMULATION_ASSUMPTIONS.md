@@ -1,4 +1,4 @@
-# Simulation assumptions (Milestone 1)
+# Simulation assumptions (Milestone 1 + heart–lung interaction)
 
 Every physiological simplification in the code is marked `// SIM-ASSUMPTION:` and listed here with the value
 used and the reason. The whole model is **phenomenological and tuned to published target values**. It is built
@@ -14,12 +14,18 @@ All tunable constants live in `src/sim/physiology/parameters.ts`.
 
 | Situation | Target (spec) | Model result |
 |---|---|---|
-| Sinus 80/min | ART 120/70 (87), SpO₂ 99 %, EtCO₂ 35–40, CO ≈ 5 L/min | 121/69 (87), 99 %, 37, 5.0 L/min |
+| Sinus 80/min | ART 120/70 (87), SpO₂ 99 %, EtCO₂ 35–40, CO ≈ 5 L/min | 123/70 (88), 99 %, 38, 5.0 L/min; PaO₂ 157, PaCO₂ 43, pH 7.38, SvO₂ 74 % |
 | Ventilator baseline (VT 500, RR 12, PEEP 5, C 50, R 10) | Ppeak ≈ 18, Pplat ≈ 15, peak expiratory flow ≈ −60 L/min | 18.3 / 15.0 / −59 L/min |
 | Arrest, no CPR | ART < 30 mmHg by 5–10 s, then drifts to 10–15 mmHg over 30–60 s; pleth flat; EtCO₂ → 0–5 | < 30 at ≈ 5 s; 14.8 at 30 s; 12.4 at 60 s; EtCO₂ 1.9 at 60 s |
 | Good CPR plateau (110/min, 5.3 cm) | ≈ 60–80 / 20–30 mmHg; EtCO₂ ≈ 15–22; CO ≈ 25–30 % | ≈ 72/23 (37); EtCO₂ ≈ 18; CO ≈ 1.3 L/min (26 %) |
 | Build-up after CPR start | diastolic < 50 % of plateau after 1–2 compressions, ≈ 50 % after ~5, ≥ 90 % after ~15 | tested per compression cycle |
 | CPR stop | diastolic component < 50 % within 3 s | < 50 % at ≈ 1.5 s |
+| Apnoea (disconnection) after 5 min at FiO₂ 40 % | SpO₂ < 90 % after ≈ 2–3 min | SaO₂ < 90 % at 111 s, displayed SpO₂ at 127 s; tachycardia from 130 s; PEA 339 s; asystole 398 s |
+| … after 5 min preoxygenation with FiO₂ 100 % | safe apnoea time ≈ 6–8 min (healthy adult) | displayed SpO₂ < 90 % at 368 s; PEA 585 s |
+| … obese / ARDS, FiO₂ 100 % | markedly shorter than normal | obese 161 s, ARDS 147 s |
+| PEEP, normovolaemic normal lung | CO falls with PEEP | PEEP 10 −16 %, 15 −30 %, 20 −41 % (MAP 79 / 70 / 64) |
+| PEEP, hypovolaemic (volume status 0.6) | larger fall, higher PPV | PEEP 5 → 15: CO 2.97 → 1.84 L/min, MAP 64 → 52; PPV 16 % vs 10 % normovolaemic |
+| Breath stacking (severe bronchospasm, volume status 0.8, VT 750 / RR 20 / I:E 1:1) | auto-PEEP, hypotension, PEA if untreated | total PEEP ≈ 28, MAP ≈ 45 at 30 s, low-flow PEA ≈ 3 min; RR 10 / VT 450 / I:E 1:3 prevents it |
 
 "Diastolic component" means diastolic pressure **above the no-flow equilibrium pressure** (≈ MSFP). This is a
 proxy for coronary perfusion pressure, which is the quantity that actually collapses during a pause.
@@ -57,7 +63,7 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 | Assumption | Value | Rationale |
 |---|---|---|
 | Single-compartment lung with patient effort, `Paw + Pmus = V/C + R·Flow`; V measured from the relaxation volume at ZEEP | Normal lung: C = 50 mL/cmH₂O, R = 10 cmH₂O·s/L (τ = 0.5 s) | Standard equation of motion. PEEP raises end-expiratory volume by PEEP·C. |
-| Lung presets (instructor) | Normal C 50 / R 10 / FRC 2.2 L · ARDS C 25 / R 12 / FRC 1.2 L · Bronchospasm C 45 / R 30 / FRC 2.4 L · Obese C 30 / R 14 / FRC 1.4 L | Typical textbook values (verify). |
+| Lung presets (instructor) | See *Lungs, recruitment and heart–lung interaction* below | — |
 | Spontaneous effort | Half-sine Pmus per breath. Weak 8/min, 3 cmH₂O · Normal 14/min, 6 cmH₂O · Strong 26/min, 12 cmH₂O. None during cardiac arrest. | Enough to exercise triggering, assisted breaths and breath stacking. |
 | **VC-AC** | Constant flow, 10 % end-inspiratory pause, time-cycled | Typical anaesthesia-ventilator default. Pplat can be read. |
 | **PC-AC** | Paw ramps to PEEP + Pinsp over the rise time, time-cycled (Ti from RR and I:E) | VT is the result, not a setting. It falls when compliance falls. |
@@ -72,18 +78,59 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 | Intrinsic PEEP | Emerges automatically if expiration is too short (high RR, bronchospasm, strong drive) | Physics of the model, not a separate rule. |
 | Compression artefacts on the ventilator curves | 25 mL gas displacement and +5 cmH₂O per compression at 5.3 cm (ETT only) | Visible oscillations during CPR. |
 
-## Oxygenation (`OxygenModel.ts`, `parameters.ts → OXYGEN, LUNG_PRESETS`)
+## Blood gases (`BloodGasModel.ts`, `bloodGas.ts`, `parameters.ts → OXYGEN, GAS`)
+
+Ported from the ChatGPT heart–lung handoff (reviewed) and replacing the earlier `OxygenModel`/`GasExchangeModel`.
 
 | Assumption | Value | Rationale |
 |---|---|---|
-| Alveolar O₂ store: `dFAO2/dt = [VA·(FiO2 − FAO2) − uptake] / FRC` | VO₂ 250 mL/min, scaled by (CO/5)^0.5 | Mass balance. Reproduces the steady state of the alveolar gas equation (PAO₂ ≈ 240 mmHg at FiO₂ 40 %). |
-| Uptake falls as alveolar PO₂ approaches ≈ 25 mmHg | factor ((PAO₂ − 25)/75)^0.7, clamped 0…1 | Uptake needs a gradient to mixed-venous blood. Desaturation is steep but not instantaneous. |
-| End-capillary blood equilibrates with alveolar gas; shunt mixing `CaO2 = CcO2 − s·(VO2/Q)/(1 − s)` | Hb 14 g/dL; Severinghaus dissociation curve | Standard shunt equation. |
-| Shunt = fixed + recruitable × e^(−PEEP/k) | Normal 0.05 + 0.10·e^(−PEEP/4) (≈ 8 % at PEEP 5) · ARDS 0.15 + 0.30·e^(−PEEP/8) · Obese 0.05 + 0.20·e^(−PEEP/6) · Bronchospasm 0.05 + 0.10·e^(−PEEP/4) | Atelectasis under anaesthesia (5–10 % shunt). PEEP recruits; FiO₂ helps little with a large shunt. Disconnection means PEEP 0, so derecruitment. |
-| Resulting behaviour (tested) | Baseline SpO₂ 99 %, PaO₂ ≈ 140 mmHg. Apnoea at FiO₂ 40 %: < 90 % after ≈ 2–3 min. After 100 % preoxygenation: ≈ 7 min. ARDS: SpO₂ ≈ 91 % at FiO₂ 40 % / PEEP 5, ≈ 99 % with PEEP 14. | Matches classic safe-apnoea-time teaching (verify). |
-| Pulse oximeter | Reads SaO₂ delayed by the lung-to-finger circulation time (12 s at normal CO, up to 36 s at low CO), averaged with τ 3 s, shown only with an adequate pleth | Real oximeters lag and average. The finger reads late. |
+| Alveolar O₂ store: `dPAO2/dt = VA/(V·60)·(FiO2·713 − PAO2) − uptake·863·(1 − FA + FA·RQ)/(V·60)` | V = lung gas volume (below), RQ 0.8 | Mass balance. With VA = 0 the FiO₂ knob has **no** effect. Fixed-pressure reservoir without full N₂ bookkeeping. |
+| Arterial and mixed-venous O₂ content compartments | arterial 1 L, venous 4 L, Hb 14 g/dL | The venous pool is the body's blood O₂ reserve, so desaturation is gradual after preoxygenation and fast from room air. |
+| Pulmonary uptake `(1 − s)·Q·(CcO2 − CvO2)`; shunted blood keeps venous content | signed (a very hypoxic lung can take O₂ back) | Standard shunt physiology; uptake vanishes at zero flow. |
+| O₂ consumption | 250 mL/min, supply-dependent below CvO₂ 3 mL/dL | Heuristic smooth limiter, not a validated critical DO₂. |
+| Dissociation curve | Severinghaus with Bohr shift (virtual PO₂ = PO₂·10^(0.48·(pH − 7.4))) | Acidosis lowers SaO₂ at the same PaO₂. No temperature, 2,3-DPG or dyshaemoglobins. |
+| Two CO₂ stores | central 0.008 L/mmHg, tissue 0.04 L/mmHg, exchange 0.06 L/min/mmHg, VCO₂ 200 mL/min constant | Apnoea: PaCO₂ +5–8 mmHg in the first minute, then ≈ 4 mmHg/min. Doubling ventilation lowers it with τ ≈ 4–6 min. |
+| CO₂ excretion and tissue→blood exchange scale with relative flow | `VA·PaCO2/863 × min(1, Q/5)` | No flow → CO₂ is held back and flushed when circulation returns (EtCO₂ jump at ROSC). |
+| End-tidal plateau | `(PaCO2 − 3)·(1 − alveolar dead space)·min(1, Q/5)^0.65`, τ 4 s | ≈ 18–20 mmHg with good CPR; low flow widens the gap. |
+| Acid–base | HCO₃ 24 + 0.1·(PaCO₂ − 40) − (lactate − 1); Henderson–Hasselbalch | Acute respiratory buffering + lactic acidosis. No renal compensation or strong-ion model. |
+| Alveolar ventilation | each completed breath: (true VT − VD)·(1 − VDalv) ÷ breath interval, smoothed τ 3 s; → 0 after 1.5 intervals without a breath | Uses the lung's true volume change (not the circuit sensors). |
+| Starting state | steady state of the scenario's start ventilation (optional starting PaCO₂, e.g. 70 mmHg in the asthma case) | No start-up transient. |
+| Pulse oximeter | Reads SaO₂ delayed by the lung-to-finger circulation time (12 s at normal CO, up to 36 s at low CO), averaged with τ 3 s, shown only with an adequate pleth | Real oximeters lag and average. Never shows SaO₂ without a pulse signal. |
 | SPO2 LOW alarm | < 90 % medium, < 85 % high | Common default limits. |
-| CO₂ in hypoventilation/apnoea | EtCO₂ target rises with τ 400 s (washout τ 75 s); ventilation factor capped at 3 | CO₂ accumulates at roughly 3–6 mmHg/min during apnoea (large tissue stores). |
+
+## Lungs, recruitment and heart–lung interaction (`LungStateModel.ts`, `HeartLungModel.ts`, `parameters.ts → LUNG_PRESETS, HEART_LUNG_CALIBRATION`)
+
+Ported from the ChatGPT heart–lung handoff and adapted: the handoff's breath-averaged mechanics and cardiac output
+were **not** ported, because ResusSim already integrates the lung breath by breath (4 ms) and the circulation beat
+by beat. Only the coupling terms were ported, so nothing is counted twice. All calibration values are part of the
+simulation state and shown in the instructor panel.
+
+| Lung preset | C (mL/cmH₂O) | R insp / exp | FRC (L) | Shunt fixed + recruitable | PEEP₅₀ / width | Ppl transmission (Crs/Ccw) | Alv. dead space |
+|---|---|---|---|---|---|---|---|
+| Normal | 50 | 10 / 10 | 2.5 | 0.02 + 0.10 | 4 / 2.5 | 0.45 | 0.04 |
+| ARDS | 25 | 12 / 12 | 1.2 | 0.08 + 0.26 | 10 / 2.5 | 0.15 | 0.20 |
+| Bronchospasm | 50 | 25 / 60 | 2.5 | 0.03 + 0.06 | 4 / 2.5 | 0.45 | 0.30 |
+| Obese | 30 | 14 / 16 | 1.2 | 0.03 + 0.14 | 9 / 3 | 0.60 (offset +5) | 0.05 |
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| Recruitment relaxes towards logistic((PEEPtotal − PEEP₅₀)/width) | τ open 30–45 s, τ close 12–20 s | PEEP works over tens of seconds; disconnection derecruits. |
+| Recruitment improves compliance and gas volume | gain 0.1 (normal) – 0.45 (ARDS); +0.3–0.5 L at full recruitment | Recruitable lungs get easier to ventilate with PEEP. |
+| Overdistension | end-inspiratory transpulmonary pressure > 22 cmH₂O; compliance × max(0.4, 1/(1 + 0.003·over²)), +1 % dead space per cmH₂O; estimated from the unpenalised compliance | Bounded, avoids a stiffer-lung → higher-pressure runaway. Not a constitutive P–V curve. |
+| Expiratory flow limitation (bronchospasm) | R exp 60 vs R insp 25 cmH₂O·s/L (τexp ≈ 3 s) | Dynamic hyperinflation when expiration is too short. |
+| Pleural pressure | `Ppl = offset + (Crs/Ccw)·Palv − Pmus`, low-pass τ 2 s for the right heart | Single compartment, no gravitational gradient. |
+| Preload per beat | `reserve·exp(−0.08·(Ppl − Ppl_ref)/reserve)`; for Ppl below the reference at most +15 % (great-vein collapse) | Positive intrathoracic pressure impedes venous return, more in hypovolaemia; gives respiratory PPV. The +15 % cap is a review change. |
+| Pleural reference | offset + transmission·(5 + 0.28·7 mL/kg PBW / C) | Filling factor 1 at PEEP 5 and 7 mL/kg. |
+| Right ventricle | output ÷ (1 + (0.06·overdistension + 0.35·hypoxic stress + 0.3·acidosis − 0.2·Δrecruitment)/RV reserve) | Afterload from overdistension, hypoxic vasoconstriction, acidosis. |
+| Myocardium | exp(−O₂ debt/100)·(1 − 0.45·acidosis) | Oxygen debt and acidosis depress contractility. |
+| Reflexes | HR target = (baseline + 55·stress·sympathetic)·bradycardia factor; stress = hypoxic + 0.4·CO₂ + 0.8·pressure (MAP < 65); SVR × (1 + 0.18·stress − 0.45·debt fraction − 0.12·acidosis) | Tachycardia and vasoconstriction first. The baroreflex weight was raised from 0.4 to 0.8 in review (MAP 45 gave only +11/min). |
+| Above 1.45 × baseline HR | stroke volume falls so CO stops rising | Shorter filling time. |
+| Oxygen deficit | `1 − 0.65·DO2/VO2` | Tissues can extract ≈ 65 % of delivery before consumption becomes supply-limited. |
+| Oxygen debt | rate `(deficit^1.3 + 0.6·max(0, (0.6 − SaO2)/0.6))/cardiac reserve`, recovers with τ 120 s when deficit < 5 % | The severe-hypoxaemia term was raised from 0.25 below 55 % in review, so bradycardia starts in the 20–40 % SaO₂ range. |
+| Bradycardia / arrest | brady from 45 s debt; PEA at 105 s debt **or** CO < 0.65 L/min for 12 s | Illustrative, not human thresholds. The low-flow route produces obstructive PEA (breath stacking, high PEEP in hypovolaemia). |
+| PEA → asystole | deficit dose 90 s (+0.6·severe hypoxaemia); PEA rate falls from 45 to 12/min | Electrical exhaustion; good CPR flow slows it. |
+| Lactate | +0.018 mmol/L/s × deficit; clears with τ 10 min | Heuristic. |
+| Return of circulation | **only** by an explicit external event (instructor/scenario sets a perfusing rhythm). Correcting ventilation after an arrest never restarts the heart. On ROSC the debt is × 0.6 and capped halfway between the brady and arrest thresholds | The cap is a review change: the plain × 0.6 re-arrested immediately after a few minutes of no-flow. |
 
 ## Monitor sounds (UI, `src/ui/audio`)
 
@@ -101,10 +148,13 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 | Heart-rate variability | ±1 % beat to beat | Low HRV under general anaesthesia. |
 | VF | 3 random-walk oscillators, 4.6–7.2 Hz; amplitude 0.65 → 0.15 mV with τ = 240 s | Coarse VF becomes fine VF over minutes. |
 | Asystole | near-flat line + wander + noise | — |
+| PEA | organised broad complexes (QRS ≈ 160 ms, broad T, no P), ±3 % R–R, no ejection | One representative hypoxic morphology. |
 | ECG compression artefact | 0.9 mV biphasic at 5.3 cm | The rhythm cannot be assessed while compressing. |
-| Arrhythmia detection | perfect: HR "---" in VF, 0 in asystole | Real monitors can misclassify. Later milestones may add artefact-driven errors. |
-| Monitor numerics | HR from the last 5 R–R intervals; ART max/min/mean over 3 s; refresh 1 Hz; EtCO₂ = peak CO₂ per breath | Similar to commercial monitors. |
-| Pleth | ART delayed 0.22 s, baseline-removed, low-passed 50 ms; gain (CO/5)^1.5; SpO₂ shown only if perfusion index ≥ 0.3 | Fingers are poorly perfused during CPR, so SpO₂ is unreadable there (typical in practice). |
+| Arrhythmia detection | perfect: HR "---" in VF, 0 in asystole; in PEA the monitor counts the complexes | Real monitors can misclassify. Later milestones may add artefact-driven errors. |
+| HR alarms | HR LOW < 45/min (high), HR HIGH > 120/min (medium) | Common adult defaults. |
+| PPV | (PPmax − PPmin)/mean PP over the beats of the last 15 s; sinus rhythm, no CPR | As on monitors with PPV. |
+| Monitor numerics | HR from the last 5 R–R intervals; ART max/min/mean over 3 s; refresh 1 Hz; EtCO₂ = peak CO₂ per breath, "--" (never 0) when no breath passes the sensor for 15 s (disconnection) | Similar to commercial monitors. |
+| Pleth | ART delayed 0.22 s, baseline-removed, low-passed 50 ms; gain (CO/5)^2; SpO₂ shown only if perfusion index ≥ 0.15 | Unreadable during CPR and in low-output states; still readable at CO ≈ 3 L/min. |
 
 ## Presentation-only assumptions (UI)
 
@@ -116,12 +166,19 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 
 ## Known physiological limitations
 
-- No venous or right-heart compartment. RA pressure and true coronary perfusion pressure are not computed; the
-  diastolic component above MSFP stands in for them.
-- No autonomic reflexes (baroreflex), no drug effects, no metabolic acidosis, no oxygen stores or desaturation.
-- Spontaneous circulation returns instantly when the instructor selects sinus rhythm (no ROSC probability, no
-  stunning).
-- Lung mechanics are linear and single-compartment: no overdistension and no leaks. Recruitment only affects
-  the shunt, not compliance.
-- Oxygen stores in blood and tissue are not modelled separately, so SpO₂ settles around 40 % in prolonged
-  apnoea instead of causing bradycardia and arrest (a later milestone).
+- No venous or right-heart pressure compartment. RA pressure and true coronary perfusion pressure are not
+  computed; the diastolic component above MSFP stands in for them. Preload and RV effects are multipliers on
+  stroke volume, not a ventricular model.
+- Single-compartment lung: no regional (dependent/non-dependent) distribution, no gravitational pleural gradient,
+  no leaks, no pneumothorax yet. Overdistension is a bounded heuristic, not a P–V curve.
+- The oxygen-debt → bradycardia → PEA → asystole chain uses author-selected thresholds (shown to the instructor).
+  It is a teaching trajectory, not a prediction of when a human heart stops. The bradycardia phase is short
+  (≈ 20–40 s) because the debt accelerates quickly once the venous O₂ reserve is exhausted.
+- Obstructive PEA from breath stacking is sticky: disconnecting the patient restores the lung and the preload,
+  but return of circulation must be declared by the instructor (in reality circulation often returns within
+  30–60 s of disconnection). A reversible-cause ROSC rule belongs in the later ALS engine.
+- Hypoxic bradycardia is driven by the oxygen debt only; no vagal reflexes (e.g. laryngoscopy), no drugs.
+- CO₂ production stays constant when O₂ consumption falls; no renal compensation.
+- Hb, VO₂ and blood volume are fixed (no anaemia, fever or haemorrhage inputs yet).
+- Baroreflex acts only below MAP 65 mmHg (not relative to the individual set point), so moderate PEEP-induced
+  hypotension gets no heart-rate response.

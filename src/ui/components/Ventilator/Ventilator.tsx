@@ -91,10 +91,18 @@ export function Ventilator() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className={`${styles.tube} ${vm.disconnected ? styles.tubeOpen : ''}`}
+          onClick={() =>
+            engine.dispatch({ type: 'SET_CIRCUIT', connected: vm.disconnected }, 'user')
+          }
+          title={t(vm.disconnected ? 'vent.reconnectHint' : 'vent.disconnectHint')}
+          data-testid="vent-tube"
+        >
+          {t(vm.disconnected ? 'vent.reconnect' : 'vent.disconnectTube')}
+        </button>
         <span className={styles.badges}>
-          {vm.disconnected && (
-            <span className={`${styles.badge} ${styles.badgeBad}`}>{t('alarm.DISCONNECT')}</span>
-          )}
           {vm.backup && (
             <span className={`${styles.badge} ${styles.badgeWarn}`}>{t('vent.backup')}</span>
           )}

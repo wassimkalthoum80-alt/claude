@@ -3,7 +3,12 @@ import type { RhythmId } from '../../sim';
 import { useEngine } from './EngineContext';
 import { useUi } from './UiContext';
 
-const RHYTHM_KEYS: Record<string, RhythmId> = { '1': 'sinus', '2': 'vf', '3': 'asystole' };
+const RHYTHM_KEYS: Record<string, RhythmId> = {
+  '1': 'sinus',
+  '2': 'vf',
+  '3': 'asystole',
+  '4': 'pea',
+};
 
 function isTextInput(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -16,7 +21,7 @@ function isTextInput(target: EventTarget | null): boolean {
 }
 
 /**
- * Space = CPR, P/Esc = pause menu, ` = instructor, M = audio, 1/2/3 = rhythm (instructor open).
+ * Space = CPR, P/Esc = pause menu, ` = instructor, M = audio, 1/2/3/4 = sinus/VF/asystole/PEA (instructor open).
  * Every action still goes through engine.dispatch.
  */
 export function useKeyboardShortcuts(): void {

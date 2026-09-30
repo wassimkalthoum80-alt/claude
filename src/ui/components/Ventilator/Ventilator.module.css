@@ -18,6 +18,7 @@
 }
 
 .mode {
+  white-space: nowrap;
   font: 500 clamp(11px, 0.85vw, 15px) / 1 var(--font-ui);
   letter-spacing: 0.06em;
   color: var(--text);
@@ -125,9 +126,32 @@
   gap: clamp(3px, 0.35vw, 6px);
 }
 
+.tube {
+  margin-right: auto;
+  margin-left: 6px;
+  padding: 3px 7px;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 10, 14, 0.8);
+  color: var(--text-dim);
+  font: 600 9.5px/1 var(--font-ui);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.tube:hover {
+  color: var(--text);
+}
+
+.tubeOpen {
+  border-color: var(--alarm-high);
+  color: #fff;
+  background: var(--alarm-high);
+  animation: alarm-flash-high 1s steps(1, end) infinite;
+}
+
 .viewToggle {
   margin-left: 12px;
-  margin-right: auto;
   display: inline-flex;
   border: 1px solid var(--tile-border);
   border-radius: var(--radius-sm);

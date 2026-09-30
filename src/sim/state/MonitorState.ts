@@ -6,7 +6,9 @@ export type AlarmId =
   | 'ART_LOW'
   | 'PAW_HIGH'
   | 'APNEA'
-  | 'DISCONNECT';
+  | 'DISCONNECT'
+  | 'HR_LOW'
+  | 'HR_HIGH';
 
 export type AlarmPriority = 'high' | 'medium' | 'low';
 
@@ -29,8 +31,10 @@ export interface MonitorNumerics {
   artMean: number | null;
   /** % */
   spo2: number | null;
-  /** mmHg — peak CO2 of the last breath */
+  /** mmHg — peak CO2 of the last breath; null when no breath has been detected for 15 s */
   etco2: number | null;
+  /** % — arterial pulse-pressure variation over the last 15 s (sinus rhythm only) */
+  ppv: number | null;
   /** arbitrary units — pleth pulse amplitude (1 ≈ healthy baseline) */
   perfusionIndex: number;
 }

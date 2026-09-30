@@ -1,5 +1,5 @@
 import type { CprQualityPreset } from '../state/CPRState';
-import type { AirwayDevice, RhythmId } from '../state/PatientState';
+import type { AirwayDevice, LungPreset, PhysiologyReserves, RhythmId } from '../state/PatientState';
 import type { VentSettings } from '../state/VentilatorState';
 import type { Command } from './commands';
 
@@ -16,16 +16,14 @@ export interface PatientInit {
   heartRate: number;
   /** mL — spontaneous stroke volume */
   strokeVolume: number;
-  /** mL/cmH2O */
-  compliance: number;
-  /** cmH2O·s/L */
-  resistance: number;
+  /** lung condition at the start (mechanics, shunt, recruitability); default 'normal' */
+  lungPreset?: LungPreset;
+  /** patient reserves (volume status, RV, myocardium, sympathetic response); default all 1 */
+  reserves?: Partial<PhysiologyReserves>;
+  /** mmHg — starting PaCO2 (e.g. hypercapnia on arrival); default: steady state of the start ventilation */
+  initialPaco2?: number;
   /** mL */
   deadSpace: number;
-  /** mmHg — steady-state EtCO2 at the scenario's baseline ventilation */
-  etco2: number;
-  /** % */
-  spo2: number;
   airway: AirwayDevice;
 }
 

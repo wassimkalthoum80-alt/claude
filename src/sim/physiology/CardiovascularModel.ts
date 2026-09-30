@@ -100,7 +100,7 @@ export class CardiovascularModel {
       this.pulses = this.pulses.filter((p) => t < p.start + p.duration);
     }
 
-    const r = CARDIO.peripheralResistance;
+    const r = CARDIO.peripheralResistance * clamp(cardio.svrFactor, 0.2, 2);
     const c = CARDIO.arterialCompliance;
     const outflow = Math.max(0, this.pressure - cardio.criticalClosingPressure) / r;
     this.pressure = Math.max(0, this.pressure + ((inflow - outflow) / c) * dt);
@@ -111,17 +111,23 @@ export class CardiovascularModel {
       thoracic = this.thoracicAmplitude * halfSine(kinematics.u) ** 1.3;
     }
     this.lastArterialPressure = this.pressure + CARDIO.characteristicImpedance * inflow + thoracic;
+    cardio.meanArterialPressure = approach(
+      cardio.meanArterialPressure,
+      this.lastArterialPressure,
+      dt,
+      CARDIO.meanPressureTauS,
+    );
     return this.lastArterialPressure;
   }
 
-  /** Slow (10 Hz) update of tone, critical closing pressure, CO and SVR. */
+  /** Slow (10 Hz) update of tone, critical closing pressure, CO and SVR (factor set by HeartLungModel). */
   slowUpdate(cardio: CardioState, dt: number): void {
     const toneTarget = cardio.spontaneousCirculation ? 1 : 0;
     const tau = cardio.spontaneousCirculation ? CARDIO.toneRecoveryTauS : CARDIO.toneLossTauS;
     cardio.vascularTone = approach(cardio.vascularTone, toneTarget, dt, tau);
     cardio.criticalClosingPressure = criticalClosingPressure(cardio.vascularTone);
     cardio.cardiacOutput = (this.flowAverage * 60) / 1000;
-    cardio.svr = Math.round(CARDIO.peripheralResistance * 1333);
+    cardio.svr = Math.round(CARDIO.peripheralResistance * cardio.svrFactor * 1333);
     cardio.arterialPressure = this.lastArterialPressure;
   }
 

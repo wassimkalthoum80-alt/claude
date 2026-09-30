@@ -15,13 +15,14 @@ export { APNEA_TIME_S } from './devices/VentilatorDevice';
 export { SPO2_LOW, SPO2_CRITICAL } from './devices/AlarmEngine';
 export { LUNG_PRESETS } from './physiology/parameters';
 export { DRIVE_PATTERNS } from './physiology/RespiratoryDrive';
-export { saturation, oxygenContent } from './physiology/OxygenModel';
+export { saturation, oxygenContent } from './physiology/bloodGas';
+export { HEART_LUNG_CALIBRATION } from './physiology/parameters';
 export { ART_LOW_MAP } from './devices/AlarmEngine';
 export { CPR_PRESETS, assessCprQuality } from './interventions/cprQuality';
 export { SIGNAL_UNITS, type SignalChannel, type ReadonlySignalBank } from './signals/SignalBank';
 export type { RingBuffer } from './signals/RingBuffer';
 
-export type { SimulationState, ArrestTimers } from './state/SimulationState';
+export type { SimulationState, ArrestTimers, HeartLungCalibration } from './state/SimulationState';
 export type {
   PatientState,
   CardioState,
@@ -32,6 +33,9 @@ export type {
   Demographics,
   LungPreset,
   RespiratoryDrive,
+  HeartLungState,
+  PhysiologyReserves,
+  ArrestCause,
 } from './state/PatientState';
 export type {
   VentilatorState,

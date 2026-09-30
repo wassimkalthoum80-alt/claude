@@ -3,6 +3,7 @@ import { erc2025 } from '../../content/guidelines/erc2025';
 import { baselinePatient, vfUnderAnaesthesia } from '../../content/scenarios';
 import { SimulationEngine } from '../../sim';
 import { formatMmSs, formatNum } from './format';
+import { heartLungViewModel } from './heartLungViewModel';
 import { dynamicVisualState } from './patientVisualState';
 import { buildRunSummary } from './runSummary';
 import {
@@ -85,5 +86,23 @@ describe('view models', () => {
     expect(e.getSnapshot().scenario.ended).toBe(true);
     expect(s.objective?.met).toBe(true);
     expect(s.timeToFirstCompression).toBeCloseTo(5.25, 1);
+  });
+});
+
+describe('heart–lung view model', () => {
+  it('shows true values, meters with thresholds, reserves and the calibration', () => {
+    const e = new SimulationEngine({ scenario: baselinePatient, guidelines: erc2025 });
+    e.runFor(20);
+    const vm = heartLungViewModel(e.getSnapshot());
+    expect(vm.blood.find((r) => r.label === 'hl.sao2')?.tone).toBe('good');
+    expect(vm.meters[0]?.marker).toBeGreaterThan(0);
+    expect(vm.meters[0]?.fraction).toBe(0);
+    expect(vm.calibration.find((c) => c.key === 'arrestDebtS')?.value).toBe('105');
+    expect(vm.reserves.preloadReserve).toBe(1);
+    expect(vm.cause).toBeNull();
+    e.dispatch({ type: 'SET_CIRCUIT', connected: false });
+    e.runFor(240);
+    const later = heartLungViewModel(e.getSnapshot());
+    expect(later.blood.find((r) => r.label === 'hl.sao2')?.tone).toBe('bad');
   });
 });

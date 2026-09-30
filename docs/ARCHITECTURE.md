@@ -16,11 +16,15 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
  │    RhythmEngine ─ beat events ─┐                                                  │
  │    CPREngine ─ compression events ─┤                                              │
  │    VentilatorDevice ─ breath cycling ─► RespiratoryModel (equation of motion)      │
+ │    HeartLungModel.substep: alveolar → pleural pressure → preload of the next beat  │
  │                                   └► CardiovascularModel (Windkessel + CPR pulses) │
  │    signal generators sample state ─► SignalBank ring buffers                      │
  │        ECG 250 Hz · ART, pleth, CO2, Paw, flow 125 Hz                             │
- │  then the slow 10 Hz part: CPR priming decay, timers, gas exchange (EtCO2 lag),    │
- │  MonitorDevice (numerics measured from the buffers), AlarmEngine                   │
+ │  then the slow 10 Hz part: CPR priming decay,                                      │
+ │    LungStateModel (recruitment, overdistension, compliance, alveolar ventilation)  │
+ │    BloodGasModel (alveolar O2, arterial/venous O2 content, CO2 stores, pH)         │
+ │    HeartLungModel.update (O2 debt, reflex HR/SVR, RV load → PEA/asystole request)  │
+ │    timers, MonitorDevice (numerics measured from the buffers), AlarmEngine         │
  └──────────────────────────────────────────────────────────────────────────────────┘
                 │ getSnapshot() (immutable copy, versioned)     │ signals (ring buffers)
                 ▼                                                ▼
@@ -36,8 +40,8 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 | `src/sim/engine` | `SimulationEngine`: tick orchestration, command application, snapshots, subscriptions |
 | `src/sim/types` | Commands, log entries, scenario, guideline and transient-event types |
 | `src/sim/state` | State types and the initial-state factory (patient, ventilator, CPR, monitor) |
-| `src/sim/physiology` | Cardiovascular, respiratory and gas-exchange models |
-| `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole) and beat scheduling |
+| `src/sim/physiology` | Cardiovascular, respiratory, lung-state, blood-gas and heart–lung interaction models |
+| `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole, PEA) and beat scheduling |
 | `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation |
 | `src/sim/devices` | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms |
 | `src/sim/signals` | Ring buffers and waveform generators |
@@ -96,3 +100,27 @@ The UI imports the simulation only through `src/sim/index.ts`.
 | Player-driven compressions, feedback devices, manikins | new `CompressionSource` implementations |
 | 2D art, Three.js or Unity patient | new renderer consuming `PatientVisualState` |
 | Scoring, debrief, replay (M7) | `EventLog` + deterministic re-run |
+
+## Heart–lung interaction
+
+```
+ ventilator settings ─► lung (4 ms)  ── alveolar pressure ──► pleural pressure ──► preload per beat ─┐
+      │                    │                                                                           ▼
+      │                    └─ breaths, end-exp. pressure ─► LungStateModel ─ shunt, dead space,  CardiovascularModel
+      │                                                     compliance, VA, overdistension ─┐   (CO, MAP)
+      └─ FiO2 ─────────────────────────────────────────────► BloodGasModel ◄── CO ────────────┤      ▲
+                                                                  │ SaO2, DO2, PaCO2, pH      │      │
+                                                                  ▼                           │      │
+                                                            HeartLungModel ── HR, SV factor, SVR ────┘
+                                                                  │ PEA / asystole request
+                                                                  ▼
+                                                   SimulationEngine.setRhythm + EventLog (PEA_ONSET …)
+```
+
+- The heart–lung model never changes the rhythm itself: it returns a transition, and the engine applies and logs
+  it (`PEA_ONSET` with the cause `lowFlow` or `oxygenDebt`, `ASYSTOLE_ONSET`).
+- Return of circulation is always external (`SET_RHYTHM` sinus by the instructor or a scenario).
+- Calibration (`state.model.calibration`) and patient reserves (`state.patient.reserves`) are part of the state, so
+  the instructor panel shows exactly what a run uses. `EngineOptions.calibration` overrides values per run.
+- The monitor measures only what a real monitor could: the true SaO₂, PaO₂, PaCO₂, O₂ debt, etc. are shown in the
+  instructor panel, never as monitor numerics.

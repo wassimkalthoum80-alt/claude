@@ -111,7 +111,7 @@ describe('single-compartment lung model (baseline)', () => {
 });
 
 describe('gas exchange', () => {
-  it('doubling the rate slowly lowers EtCO2 (alveolar ventilation, τ ≈ 75 s)', () => {
+  it('doubling the rate lowers EtCO2 over minutes (tissue CO2 stores), not instantly', () => {
     const e = createEngine();
     e.runFor(20);
     const before = e.getSnapshot().devices.monitor.numerics.etco2 ?? 0;
@@ -123,7 +123,8 @@ describe('gas exchange', () => {
     expect(before).toBeGreaterThanOrEqual(35);
     expect(before).toBeLessThanOrEqual(40);
     expect(soon).toBeGreaterThan(late); // gradual, not instant
-    expect(late).toBeGreaterThan(before * 0.4);
-    expect(late).toBeLessThan(before * 0.6);
+    // Steady state would be ≈ half; body CO2 stores make it take many minutes (τ ≈ 4–6 min).
+    expect(late).toBeGreaterThan(before * 0.5);
+    expect(late).toBeLessThan(before * 0.75);
   });
 });

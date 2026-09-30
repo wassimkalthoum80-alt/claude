@@ -8,7 +8,7 @@ respond second by second.
 > *Every second matters. Every interruption matters. Every intervention changes physiology.
 > The monitor tells the story of what is happening inside the patient.*
 
-**Status: Milestone 1 (foundation) + ventilator modes, oxygenation and SpO₂ tone.**
+**Status: Milestone 1 (foundation) + ventilator modes, oxygenation, SpO₂ tone and the heart–lung interaction.**
 For education only — not a medical device.
 
 ![Stable patient, 1920×1080](docs/screenshots/1920x1080-1-stable-sinus.jpg)
@@ -16,6 +16,10 @@ For education only — not a medical device.
 | VF, no CPR (20 s) | VF with CPR (20 s) |
 |---|---|
 | ![VF without CPR](docs/screenshots/1536x1024-2-vf-no-cpr.jpg) | ![VF with CPR](docs/screenshots/1536x1024-3-vf-cpr.jpg) |
+
+| Breath stacking: auto-PEEP 28, MAP 45 (instructor panel) | Unnoticed disconnection → hypoxic PEA |
+|---|---|
+| ![Breath stacking](docs/screenshots/hl-1-asthma-stacking.jpg) | ![Hypoxic PEA](docs/screenshots/hl-4-hypoxic-pea.jpg) |
 
 ## Quick start
 
@@ -63,13 +67,30 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   or treat ARDS with PEEP instead of FiO₂. With audio on (<kbd>M</kbd>), the pulse tone drops in pitch with every
   percent of saturation lost.
 
+**Heart–lung interaction (ventilation ↔ circulation)**
+- Ventilation now acts on the circulation. Alveolar pressure is transmitted to the pleural space and lowers
+  venous return. So PEEP, breath stacking (intrinsic PEEP) and large tidal volumes lower the blood pressure,
+  more so in hypovolaemia. The arterial line swings with each breath, and the monitor shows **PPV**.
+- Oxygen is carried in blood compartments. When delivery can't meet demand, an **oxygen debt** builds up:
+  first reflex tachycardia and hypertension, then bradycardia, **PEA** and finally asystole. A severe low-output
+  state (e.g. breath stacking) ends in low-flow PEA even with a normal SaO₂.
+- Correcting ventilation after the arrest does not restart the heart. Return of circulation is an explicit
+  instructor event, and when it comes, retained CO₂ is flushed (EtCO₂ jumps) and the heart is stunned.
+- **Instructor panel → Heart–lung model** shows the true values (SaO₂, PaO₂, PaCO₂, pH, lactate, SvO₂, DO₂/VO₂,
+  pleural pressure, recruitment, overdistension, preload/RV/myocardial factors, O₂ debt and low-flow meters). It
+  also has live sliders for volume status, RV and myocardial reserve and sympathetic response, a switch for the
+  arrest model, and the full heuristic calibration.
+- New cases: **Silent disconnection** (hypoxic arrest if unnoticed) and **Breath stacking in severe asthma**
+  (low-flow PEA unless expiration is lengthened or the tube is briefly disconnected). The ventilator header has a
+  **DISCONNECT / RECONNECT** button for the learner.
+
 | Key | Action |
 |---|---|
 | <kbd>Space</kbd> | Start / stop CPR |
 | <kbd>P</kbd> / <kbd>Esc</kbd> | Pause / menu |
 | <kbd>`</kbd> | Instructor panel |
 | <kbd>M</kbd> | Audio (QRS tone with SpO₂ pitch, alarms, compression clicks) |
-| <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | Sinus / VF / asystole (instructor panel open) |
+| <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> | Sinus / VF / asystole / PEA (instructor panel open) |
 
 Language: English and German (menu or `?lang=de`). ECG lead colours: IEC (default) or AHA.
 
@@ -97,10 +118,11 @@ src/
     engine/            SimulationEngine (tick orchestration, commands, snapshots)
     state/             state types + initial-state factory
     types/             commands, scenario, guideline and event types
-    physiology/        cardiovascular (Windkessel + CPR priming), respiratory, gas exchange, parameters
-    rhythms/           sinus, VF, asystole, rhythm engine
+    physiology/        cardiovascular (Windkessel + CPR priming), respiratory, lung state, blood gases,
+                       heart–lung interaction, parameters
+    rhythms/           sinus, VF, asystole, PEA, rhythm engine
     interventions/     CPR engine, compression sources, quality presets/assessment
-    devices/           ventilator (VCV), monitor (measured numerics), alarms, setting limits
+    devices/           ventilator (4 modes), monitor (measured numerics), alarms, setting limits
     signals/           ring buffers + ECG, ART, pleth, CO₂, Paw, flow generators
     __tests__/         unit tests
   content/             scenarios, ERC 2025 guideline config, i18n (EN/DE), teaching tooltips
@@ -111,7 +133,7 @@ src/
     hooks/ audio/ theme/
   App.tsx              composition only
 e2e/                   Playwright smoke test
-docs/                  architecture, assumptions, reference image, screenshots
+docs/                  architecture, assumptions, reviews, reference image, screenshots
 ```
 
 ## Known limitations (Milestone 1)
@@ -120,8 +142,10 @@ docs/                  architecture, assumptions, reference image, screenshots
   presets. Player-driven compressions plug into the existing `CompressionSource` interface later.
 - No defibrillation, rhythm-check logic, drugs, airway interaction, ultrasound, ROSC logic or scoring yet (see
   the roadmap). Those action buttons are visible but locked.
-- Lung mechanics are linear and single-compartment. Blood and tissue oxygen stores are not modelled, so
-  prolonged apnoea does not lead to bradycardia and arrest.
+- Lung mechanics are single-compartment (recruitment and overdistension are bounded heuristics). The heart–lung
+  interaction uses author-selected calibration for bradycardia/arrest thresholds. It is shown in the instructor
+  panel and is **not clinically validated** (see `docs/SIMULATION_ASSUMPTIONS.md` and
+  `docs/reviews/heart-lung-handoff-review.md`).
 - The patient is a stylised SVG illustration. It is built behind a `PatientVisualState` interface so that 2D
   art, Three.js or Unity can replace it.
 - Performance: the main-thread work per frame (engine + all canvases + scene) is ≈ 1.1 ms. In headless,
