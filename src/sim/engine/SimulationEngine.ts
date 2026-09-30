@@ -21,6 +21,15 @@ import {
   type ReadonlyBisTrends,
 } from '../devices/BisMonitor';
 import { EEGGenerator } from '../signals/EEGGenerator';
+import { chartUrine, FluidModel } from '../fluid/FluidModel';
+import {
+  ESTIMATED_CATEGORIES,
+  FluidLedger,
+  INPUT_CATEGORIES,
+  OUTPUT_CATEGORIES,
+  type ReadonlyFluidLedger,
+} from '../fluid/ledger';
+import type { FluidFactors } from '../state/BodyFluidState';
 import type { PatientFactors } from '../state/BrainState';
 import {
   bolusProtocolOf,
@@ -96,6 +105,8 @@ export class SimulationEngine {
   private readonly cerebral = new CerebralModel();
   private readonly bisMonitor = new BisMonitor();
   private readonly trendBank = new BisTrends();
+  private readonly fluidModel = new FluidModel();
+  private readonly ledger = new FluidLedger();
   /** EEG has its own seeded stream (derived from the scenario seed) so it cannot perturb the other signals */
   private readonly eegGen = new EEGGenerator(0, SUBSTEP_S);
   private readonly drive = new RespiratoryDriveModel();
@@ -146,6 +157,22 @@ export class SimulationEngine {
   /** 1 Hz trends of the processed-EEG monitor (read by the trend display). */
   get trends(): ReadonlyBisTrends {
     return this.trendBank;
+  }
+
+  /** Fluid-balance ledger: every external input/output, recorded once, in per-minute bins. */
+  get fluidLedger(): ReadonlyFluidLedger {
+    return this.ledger;
+  }
+
+  /**
+   * mL — mass-balance check: change of body fluid since the start minus (inputs − outputs − estimated losses).
+   * Zero up to rounding when nothing is created, lost or counted twice.
+   */
+  get fluidConservationError(): number {
+    const sum = (cats: readonly Parameters<FluidLedger['total']>[0][]) =>
+      cats.reduce((a, c) => a + this.ledger.total(c), 0);
+    const net = sum(INPUT_CATEGORIES) - sum(OUTPUT_CATEGORIES) - sum(ESTIMATED_CATEGORIES);
+    return this.fluidModel.bodyFluidChange(this.state.patient) - net;
   }
 
   get eventLog(): readonly LogEntry[] {
@@ -364,11 +391,13 @@ export class SimulationEngine {
     this.log.clear();
     this.bank.reset();
     this.trendBank.reset();
+    this.ledger.reset();
     this.bisMonitor.reset();
     this.eegGen.reset((seed ^ 0x5eedee6) >>> 0);
     const s = this.state;
     this.rhythm.reset(s.patient.cardio.rhythm, 0, s.patient.cardio, this.rng);
     s.devices.line = this.pharmacology.reset(s.patient, s.devices.pumps);
+    this.fluidModel.reset(s.patient);
     this.cardio.reset(s.patient.cardio);
     this.lungState.reset(s.patient, s.devices.ventilator);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
@@ -497,6 +526,64 @@ export class SimulationEngine {
       case 'LINE_FLUSH':
         this.applyPumpCommand(command, source);
         break;
+      case 'FLUID_SET_FACTORS':
+        s.patient.fluidFactors = {
+          ...s.patient.fluidFactors,
+          ...validFluidFactors(command.factors),
+        };
+        break;
+      case 'CATHETER_SET': {
+        const bal = s.devices.balance;
+        const next = command.state === 'kinked' ? 'kinked' : 'patent';
+        if (bal.catheter !== next) {
+          bal.catheter = next;
+          this.logEvent('BALANCE_ACTION', s.time, `catheter-${next}`);
+        }
+        break;
+      }
+      case 'URINE_BAG_EMPTY': {
+        const bal = s.devices.balance;
+        this.logEvent('BALANCE_ACTION', s.time, `bag-emptied|${Math.round(bal.urineBagMl)}`);
+        bal.urineBagMl = 0;
+        break;
+      }
+      case 'URINE_MEASURE':
+        this.chartUrineNow();
+        break;
+      case 'URINE_SET_INTERVAL':
+        if (Number.isFinite(command.minutes) && command.minutes >= 15 && command.minutes <= 240) {
+          const bal = s.devices.balance;
+          bal.measurementIntervalMin = Math.round(command.minutes);
+          bal.nextMeasurementAt = bal.lastMeasurementAt + bal.measurementIntervalMin * 60;
+          if (bal.nextMeasurementAt <= s.time) bal.nextMeasurementAt = s.time + 60;
+        }
+        break;
+      case 'FLUID_DRAIN':
+        if (
+          Number.isFinite(command.volumeMl) &&
+          command.volumeMl > 0 &&
+          command.volumeMl <= 10000
+        ) {
+          s.devices.balance.pendingDrains[command.source] += command.volumeMl;
+          this.logEvent(
+            'BALANCE_ACTION',
+            s.time,
+            `drain-${command.source}|${Math.round(command.volumeMl)}`,
+          );
+        } else this.logEvent('COMMAND_REJECTED', s.time, 'volume-invalid');
+        break;
+      case 'IRRIGATION':
+        if (
+          Number.isFinite(command.volumeMl) &&
+          command.volumeMl > 0 &&
+          command.volumeMl <= 10000
+        ) {
+          const bal = s.devices.balance;
+          bal.irrigationUsedMl += command.volumeMl;
+          bal.irrigationInFieldMl += command.volumeMl;
+          this.logEvent('BALANCE_ACTION', s.time, `irrigation|${Math.round(command.volumeMl)}`);
+        } else this.logEvent('COMMAND_REJECTED', s.time, 'volume-invalid');
+        break;
       case 'ALARM_LIMITS_DEFAULT':
         s.devices.monitor.alarmLimits = defaultAlarmLimits();
         break;
@@ -570,10 +657,44 @@ export class SimulationEngine {
   private updatePharmacology(dt: number): void {
     const s = this.state;
     const wasRunning = s.devices.pumps.map((p) => p.remainingMl > 1e-9 && p.productId !== null);
-    this.pharmacology.update(s.patient, s.devices.pumps, s.devices.line, dt);
+    const delivery = this.pharmacology.update(s.patient, s.devices.pumps, s.devices.line, dt);
+    const vent = s.devices.ventilator;
+    const deviceAirway = s.patient.airway.device !== 'none' && vent.circuitConnected;
+    const fluid = this.fluidModel.update(
+      s.patient,
+      s.devices.balance,
+      this.ledger,
+      {
+        delivery,
+        exposures: this.pharmacology.exposures(s.patient),
+        // SIM-ASSUMPTION: without the ventilator circuit, minute ventilation ≈ alveolar ventilation / 0.7.
+        minuteVentilation: deviceAirway
+          ? vent.measured.mv
+          : s.patient.gas.alveolarVentilation / 0.7,
+        deviceAirway,
+        time: s.time,
+        pumps: s.devices.pumps,
+      },
+      dt,
+    );
+    if (fluid.measured) this.logMeasurement();
+    if (fluid.drainFinished)
+      this.logEvent('BALANCE_ACTION', s.time, `drain-${fluid.drainFinished}-done`);
     s.devices.pumps.forEach((p, i) => {
       if (wasRunning[i] && p.remainingMl <= 1e-9) this.logEvent('PUMP_EMPTY', s.time, p.id);
     });
+  }
+
+  private chartUrineNow(): void {
+    const s = this.state;
+    chartUrine(s.devices.balance, s.patient.demographics.weightKg, s.time);
+    this.logMeasurement();
+  }
+
+  private logMeasurement(): void {
+    const s = this.state;
+    const m = s.devices.balance.measurements.at(-1);
+    if (m) this.logEvent('URINE_MEASURED', s.time, `${m.ml}|${m.mlKgH}`);
   }
 
   /** Medication commands: validated like a real pump/order check; rejections are logged, never corrected. */
@@ -717,6 +838,13 @@ export class SimulationEngine {
         );
         if (!accept(v, command.override, command.confirm)) return;
         if (v.errors.length > 0) pump.overridden = true;
+        if (product?.fluid) {
+          s.devices.balance.tracerPumpId = pump.id;
+          this.fluidModel.startTracer(
+            s.patient.fluid,
+            `${pump.id} ${product.genericName} ${Math.round(command.volumeMl)} mL`,
+          );
+        }
         this.logEvent(
           'BOLUS_GIVEN',
           s.time,
@@ -852,6 +980,39 @@ function deepFreeze<T>(value: T): T {
     Object.freeze(value);
   }
   return value;
+}
+
+/** Fluid processes, limited to their documented ranges (invalid values are ignored). */
+function validFluidFactors(patch: Partial<FluidFactors>): Partial<FluidFactors> {
+  const ranges: Record<Exclude<keyof FluidFactors, 'humidification'>, [number, number]> = {
+    capillaryLeak: [0, 1],
+    lungLeak: [0, 1],
+    vasoplegia: [0, 1],
+    lvFunction: [0.2, 1],
+    surgicalTrauma: [0, 1],
+    externalBleedingMlMin: [0, 500],
+    internalBleedingMlMin: [0, 500],
+    gastricLossMlMin: [0, 20],
+    stomaLossMlMin: [0, 20],
+    woundDrainMlMin: [0, 20],
+    ascitesFormation: [0, 1],
+    pleuralFormation: [0, 1],
+    gutSequestration: [0, 1],
+    sweatingMlMin: [0, 10],
+    surgicalExposure: [0, 1],
+    ambientC: [10, 40],
+    ambientHumidityPct: [0, 100],
+    irrigationAbsorption: [0, 0.5],
+  };
+  const out: Partial<FluidFactors> = {};
+  for (const key of Object.keys(ranges) as (keyof typeof ranges)[]) {
+    const v = patch[key];
+    const [lo, hi] = ranges[key];
+    if (typeof v === 'number' && Number.isFinite(v)) out[key] = clamp(v, lo, hi);
+  }
+  if (patch.humidification && ['none', 'hme', 'heated'].includes(patch.humidification))
+    out.humidification = patch.humidification;
+  return out;
 }
 
 /** Instructor patient factors, limited to their documented ranges (invalid values are ignored). */

@@ -1,4 +1,5 @@
 import type { CerebralState, PatientFactors } from './BrainState';
+import type { BodyFluidState, FluidFactors } from './BodyFluidState';
 import type { PharmacologyState } from './PharmacologyState';
 
 /** Cardiac rhythms known to the rhythm registry. Extend here and in src/sim/rhythms. */
@@ -79,8 +80,10 @@ export interface RespState {
 }
 
 export interface GasState {
-  /** g/dL — haemoglobin (diluted by infused fluid) */
+  /** g/dL — haemoglobin (from the red-cell and plasma volumes of the fluid model) */
   hb: number;
+  /** mmol/L — metabolic bicarbonate change from fluids (strong-ion difference, albumin) */
+  metabolicOffset: number;
   /** mmHg — arterial PCO2 */
   paco2: number;
   /** mmHg — tissue PCO2 (large, slow CO2 store) */
@@ -175,8 +178,12 @@ export interface PatientState {
   gas: GasState;
   heartLung: HeartLungState;
   reserves: PhysiologyReserves;
-  /** drugs received, their kinetics and effects; infused fluids */
+  /** drugs received, their kinetics and effects */
   pharmacology: PharmacologyState;
+  /** body fluid compartments, electrolytes, kidney (hidden model values) */
+  fluid: BodyFluidState;
+  /** processes that move or remove fluid (leak, bleeding, sequestration, ambient conditions…) */
+  fluidFactors: FluidFactors;
   /** cerebral state (drug effect, arousal, cerebral O2, EEG bands) — true model values */
   brain: CerebralState;
   /** patient factors for drug sensitivity and the EEG (age is in demographics) */

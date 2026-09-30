@@ -154,7 +154,7 @@ export const de: Record<I18nKey, string> = {
   'ph.fluids': 'Flüssigkeit',
   'ph.plasma': 'Plasma Δ',
   'ph.interstitial': 'Interstitium Δ',
-  'ph.infused': 'Infundiert / Verlust',
+  'ph.lungWater': 'Lungenwasser (rel.)',
   'ph.hb': 'Hb',
   'ph.interactions': 'Interaktionen und Warnungen',
   'ph.noInteractions': 'Keine aktiv.',

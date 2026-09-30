@@ -163,6 +163,18 @@ export function pkParams(
       );
     // Ketamine (racemic) and esketamine: V1 0.5 + V2 2.5 L/kg (actual), CL 15 mL/kg/min (adjusted) → t½α ≈ 6 min,
     // t½β ≈ 3 h; fast onset, ke0 0.5/min. Esketamine: same PK, twice the potency (pd.ts).
+    // SIM-ASSUMPTION: furosemide — V1 0.07 + V2 0.1 L/kg, renal clearance 2 mL/kg/min × renal function
+    // (t½ ≈ 1–1.5 h, longer in renal failure); slow effect compartment ke0 0.05/min (peak natriuresis ≈ 30 min).
+    case 'furosemide':
+      return twoCompartmentEducational(
+        0.07,
+        0.1,
+        2 * Math.max(0.15, factors.renalFunction),
+        4,
+        0.05,
+        d.weightKg,
+        abw,
+      );
     case 'ketamine':
     case 'esketamine':
       return twoCompartmentEducational(

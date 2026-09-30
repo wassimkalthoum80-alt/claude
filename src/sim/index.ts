@@ -67,7 +67,6 @@ export type {
   LineState,
   DrugEffects,
   DrugKinetics,
-  FluidState,
   MoietyId,
   PharmacologyState,
 } from './state/PharmacologyState';

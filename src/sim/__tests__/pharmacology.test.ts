@@ -157,9 +157,8 @@ describe('formulary', () => {
     expect(getProduct('adrenaline-100')?.protocols.map((p) => p.id)).toEqual(['arrest']);
     expect(getProduct('adrenaline-20')?.protocols.map((p) => p.id)).toEqual(['infusion']);
     expect(getProduct('adrenaline-im')?.status).toBe('reference-only');
-    expect(getProduct('albumin-5')?.fluid?.oncoticHoldPerMl).not.toBe(
-      getProduct('albumin-20')?.fluid?.oncoticHoldPerMl,
-    );
+    expect(getProduct('albumin-5')?.fluid?.albuminGPerL).toBe(50);
+    expect(getProduct('albumin-20')?.fluid?.albuminGPerL).toBe(200);
   });
 
   it('search finds products by generic and brand name', () => {
@@ -493,26 +492,27 @@ describe('pharmacodynamics and interactions', () => {
 describe('fluids', () => {
   it('crystalloid expands plasma, then redistributes; albumin 20 % expands plasma by more than its volume', () => {
     const e = createEngine(awakeWithCarrier);
+    const f0 = snap(e).patient.fluid;
     cmd(e, { type: 'PUMP_SET_PROTOCOL', pumpId: 'INF1', protocolId: 'bolus' });
     cmd(e, { type: 'PUMP_BOLUS', pumpId: 'INF1', volumeMl: 500, durationS: 600 });
     e.runFor(600);
-    const peak = snap(e).patient.pharmacology.fluids.plasmaExcess;
+    const peak = snap(e).patient.fluid.plasmaMl - f0.plasmaMl;
     e.runFor(3600);
-    const later = snap(e).patient.pharmacology.fluids;
-    expect(peak).toBeGreaterThan(0.2);
-    expect(later.plasmaExcess).toBeLessThan(peak * 0.5);
-    expect(later.interstitialExcess).toBeGreaterThan(0.1);
+    const later = snap(e).patient.fluid;
+    expect(peak).toBeGreaterThan(200);
+    expect(later.plasmaMl - f0.plasmaMl).toBeLessThan(peak * 0.5);
+    expect(later.interstitialMl - f0.interstitialMl).toBeGreaterThan(100);
     expect(snap(e).patient.gas.hb).toBeLessThan(14);
-    expect(later.ionLoad.Na ?? 0).toBeGreaterThan(0.5 * 145); // the bolus alone carries ≈ 72 mmol Na
 
     const a = createEngine(awakeWithCarrier);
+    const a0 = snap(a).patient.fluid;
     cmd(a, { type: 'PUMP_ADD', kind: 'volumetric' });
     cmd(a, { type: 'PUMP_LOAD', pumpId: 'INF2', productId: 'albumin-20', protocolId: 'bolus' });
     cmd(a, { type: 'PUMP_BOLUS', pumpId: 'INF2', volumeMl: 100, durationS: 1800 });
     a.runFor(3600);
-    const f = snap(a).patient.pharmacology.fluids;
-    expect(f.plasmaExcess).toBeGreaterThan(0.18);
-    expect(f.interstitialExcess).toBeLessThan(0);
+    const f = snap(a).patient.fluid;
+    expect(f.plasmaMl - a0.plasmaMl).toBeGreaterThan(150);
+    expect(f.interstitialMl - a0.interstitialMl).toBeLessThan(0);
   });
 
   it('a fluid bolus raises cardiac output more in hypovolaemia than in a well-filled patient (Starling plateau)', () => {

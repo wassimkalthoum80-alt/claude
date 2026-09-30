@@ -1,4 +1,5 @@
 import type { TimeScale } from '../core/Clock';
+import type { BalanceChartState } from './BodyFluidState';
 import type { BisState } from './BrainState';
 import type { CPRState } from './CPRState';
 import type { MonitorState } from './MonitorState';
@@ -66,6 +67,8 @@ export interface SimulationState {
     line: LineState;
     /** processed-EEG monitor ("Simulated BIS") */
     bis: BisState;
+    /** urine catheter, bag, suction, irrigation and the charted balance (the ledger lives in the engine) */
+    balance: BalanceChartState;
   };
   interventions: { cpr: CPRState };
   timers: ArrestTimers;

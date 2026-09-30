@@ -17,6 +17,19 @@ export interface LungReadout {
 
 const OVERDISTENSION_TAU_S = 3;
 
+/**
+ * Extravascular lung water → mechanics and gas exchange.
+ * SIM-ASSUMPTION: interstitial oedema up to +30 % costs little; beyond that, compliance falls (×0.7 when lung water
+ * doubles, at least ×0.4) and alveolar flooding adds shunt (+5 % when doubled, at most +25 %).
+ */
+export function lungWaterComplianceFactor(ratio: number): number {
+  return Math.max(0.4, 1 / (1 + (0.43 * Math.max(0, ratio - 1.3)) / 0.7));
+}
+
+export function lungWaterShunt(ratio: number): number {
+  return Math.min(0.25, 0.05 * (Math.max(0, ratio - 1.3) / 0.7) ** 1.3);
+}
+
 /** Logistic recruitment target at an end-expiratory alveolar pressure (cmH2O). */
 export function recruitmentTarget(l: LungParameters, peepTotal: number): number {
   const x = clamp((peepTotal - l.recruitPeep50) / l.recruitWidth, -40, 40);
@@ -72,7 +85,7 @@ export class LungStateModel {
       1000;
     this.vaTarget = patient.gas.alveolarVentilation;
     this.applyMechanics(patient, l);
-    patient.gas.shunt = this.shunt(l, hl.recruitment);
+    patient.gas.shunt = this.shunt(l, hl.recruitment, patient.fluid.derived.lungWaterRatio);
     patient.gas.alveolarDeadSpace = l.alveolarDeadSpace;
     patient.gas.lungGasVolume = this.gasVolume(patient, l, vent.settings.peep);
   }
@@ -111,7 +124,7 @@ export class LungStateModel {
     // SIM-ASSUMPTION: overdistended units are ventilated but poorly perfused (+1 % dead space per cmH2O).
     const alveolarDeadSpace = clamp(l.alveolarDeadSpace + 0.01 * hl.overdistension, 0, 0.95);
     patient.gas.alveolarDeadSpace = alveolarDeadSpace;
-    patient.gas.shunt = this.shunt(l, hl.recruitment);
+    patient.gas.shunt = this.shunt(l, hl.recruitment, patient.fluid.derived.lungWaterRatio);
     patient.gas.lungGasVolume = approach(
       patient.gas.lungGasVolume,
       this.gasVolume(patient, l, lung.endExpiratoryPressure),
@@ -149,7 +162,8 @@ export class LungStateModel {
     r.compliance =
       l.compliance *
       this.recruitmentComplianceFactor(l, patient.heartLung.recruitment) *
-      this.overdistensionFactor;
+      this.overdistensionFactor *
+      lungWaterComplianceFactor(patient.fluid.derived.lungWaterRatio);
     // Bronchodilators remove part of the BRONCHOSPASTIC resistance only (the excess over a normal airway);
     // they do not touch compliance or shunt (an ARDS shunt does not disappear after salbutamol).
     const relief =
@@ -161,8 +175,12 @@ export class LungStateModel {
     r.frc = l.frc;
   }
 
-  private shunt(l: LungParameters, recruitment: number): number {
-    return l.shuntFixed + l.shuntRecruitable * (1 - recruitment);
+  private shunt(l: LungParameters, recruitment: number, lungWaterRatio: number): number {
+    return clamp(
+      l.shuntFixed + l.shuntRecruitable * (1 - recruitment) + lungWaterShunt(lungWaterRatio),
+      0,
+      0.9,
+    );
   }
 
   /**

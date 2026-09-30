@@ -6,10 +6,8 @@ import type {
   PharmacologyState,
   PumpState,
 } from '../state/PharmacologyState';
-import { OXYGEN } from '../physiology/parameters';
-import { stepDelivery, steadyStateLine } from './delivery';
+import { stepDelivery, steadyStateLine, type DeliveryStep } from './delivery';
 import { getProduct } from './formulary/products';
-import { dilutedHb, emptyFluids, stepFluids } from './fluids';
 import { drugEffects, NO_DRUG_EFFECTS, type Exposures } from './pd';
 import { emptyKinetics, pkParams, steadyState, stepKinetics, type MammillaryParams } from './pk';
 
@@ -21,9 +19,9 @@ const AMOUNT_BASED: ReadonlySet<MoietyId> = new Set(['salbutamol', 'naloxone']);
 /**
  * Medication pipeline, run once per 100 ms tick:
  *   pumps → line (dead space, carrier, flush) → patient-received amount → PK → effect-site exposure → PD effects
- *   fluid pumps → volume kinetics → haemodilution and volume status.
- * Only this class writes `patient.pharmacology` and `gas.hb`; the heart–lung, respiratory and lung models read
- * the effects. Displayed monitor numbers are never touched.
+ * The delivered fluid volume (infusions, drug carrier, flushes) is returned to the engine, which hands it to the
+ * fluid model — so every delivered millilitre is counted exactly once.
+ * Only this class writes `patient.pharmacology`; the heart–lung, respiratory and lung models read the effects. Displayed monitor numbers are never touched.
  */
 export class PharmacologyModel {
   private params = new Map<MoietyId, MammillaryParams>();
@@ -47,7 +45,6 @@ export class PharmacologyModel {
     this.params.clear();
     const ph = patient.pharmacology;
     ph.drugs = {};
-    ph.fluids = emptyFluids();
     const inputs: Partial<Record<MoietyId, number>> = {};
     for (const pump of pumps) {
       const product = pump.productId ? getProduct(pump.productId) : undefined;
@@ -67,11 +64,10 @@ export class PharmacologyModel {
       patient.demographics.ageYears,
       patient.factors,
     );
-    patient.gas.hb = OXYGEN.hemoglobin;
     return steadyStateLine(pumps, getProduct);
   }
 
-  update(patient: PatientState, pumps: PumpState[], line: LineState, dtS: number): void {
+  update(patient: PatientState, pumps: PumpState[], line: LineState, dtS: number): DeliveryStep {
     const ph = patient.pharmacology;
     const step = stepDelivery(pumps, line, dtS, getProduct);
     const dtMin = dtS / 60;
@@ -86,8 +82,6 @@ export class PharmacologyModel {
       stepKinetics(k, this.paramsFor(patient, m), amount / dtMin, dtMin);
     }
     const w = patient.demographics.weightKg;
-    stepFluids(ph.fluids, step.fluids, step.otherMl, getProduct, w, dtS);
-    patient.gas.hb = dilutedHb(OXYGEN.hemoglobin, ph.fluids, w);
     ph.effects = drugEffects(
       this.exposures(patient),
       ph.reference,
@@ -95,6 +89,7 @@ export class PharmacologyModel {
       patient.demographics.ageYears,
       patient.factors,
     );
+    return step;
   }
 
   /** Effect-relevant exposure of each moiety (units: see pd.ts). */
@@ -115,6 +110,5 @@ export function emptyPharmacology(): PharmacologyState {
     drugs: {},
     reference: {},
     effects: { ...NO_DRUG_EFFECTS },
-    fluids: emptyFluids(),
   };
 }

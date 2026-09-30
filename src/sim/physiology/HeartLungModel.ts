@@ -78,12 +78,18 @@ export function starling(reserve: number): number {
   return reserve <= 1 ? reserve : 1 + 0.5 * (1 - Math.exp(-(reserve - 1) / 0.5));
 }
 
-/** Effective volume status: patient reserve + drug venous tone (stressed volume) + infused/lost fluid. */
+/**
+ * Effective volume status: patient reserve + drug venous tone (stressed volume) + blood-volume change of the fluid
+ * model − venous pooling in vasoplegia.
+ * SIM-ASSUMPTION: full vasoplegia costs 0.5 units of effective volume (venous capacitance).
+ */
 export function effectiveVolumeStatus(patient: PatientState): number {
-  const ph = patient.pharmacology;
   return Math.max(
     0.1,
-    patient.reserves.preloadReserve + ph.effects.venousTone + ph.fluids.volumeStatus,
+    patient.reserves.preloadReserve +
+      patient.pharmacology.effects.venousTone +
+      patient.fluid.derived.volumeStatus -
+      0.5 * patient.fluidFactors.vasoplegia,
   );
 }
 
@@ -271,15 +277,22 @@ export class HeartLungModel {
     // vasopressor can raise MAP while cardiac output falls.
     const afterload = clamp(1 - 0.3 * (cardio.svrFactor - 1), 0.55, 1.15);
     cardio.contractility = clamp(
-      hl.rvFactor * hl.myocardialFactor * rateFactor * drugs.inotropy * afterload,
+      hl.rvFactor *
+        hl.myocardialFactor *
+        rateFactor *
+        drugs.inotropy *
+        afterload *
+        clamp(patient.fluidFactors.lvFunction, 0.2, 1),
       0.02,
       2.5,
     );
 
     // Vascular resistance: sympathetic tone up, vasoplegia with debt and acidosis.
+    // SIM-ASSUMPTION: septic vasoplegia lowers vascular resistance by up to 50 %.
     const svrTarget = clamp(
       (1 + 0.18 * stress * reserves.sympatheticResponse - 0.45 * debtFraction - 0.12 * acidosis) *
-        drugs.svr,
+        drugs.svr *
+        (1 - 0.5 * clamp(patient.fluidFactors.vasoplegia, 0, 1)),
       0.25,
       3,
     );

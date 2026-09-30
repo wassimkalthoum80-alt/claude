@@ -4,6 +4,7 @@ import type { VentSettings } from '../state/VentilatorState';
 import type { EcgLeadSet } from '../state/MonitorState';
 import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
+import type { FluidInit } from '../fluid/init';
 
 export interface PatientInit {
   sex: 'male' | 'female';
@@ -74,6 +75,8 @@ export interface ScenarioDefinition {
   /** scripted commands, fired by the engine with source "scenario" */
   timeline: ScenarioEvent[];
   objectives: ScenarioObjective[];
+  /** body-fluid state and fluid processes at the start (default: normal, no losses) */
+  fluid?: FluidInit;
   /** end the run (and show the summary) this many seconds after arrest onset */
   endAfterArrestS?: number;
 }

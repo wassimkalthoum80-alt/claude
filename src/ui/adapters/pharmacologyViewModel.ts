@@ -20,6 +20,7 @@ const MOIETY: Record<MoietyId, { name: string; amount: string; conc: string }> =
   dexmedetomidine: { name: 'Dexmedetomidine', amount: 'µg', conc: 'ng/mL' },
   ketamine: { name: 'Ketamine', amount: 'mg', conc: 'µg/mL' },
   esketamine: { name: 'Esketamine', amount: 'mg', conc: 'µg/mL' },
+  furosemide: { name: 'Furosemide', amount: 'mg', conc: 'µg/mL' },
 };
 
 const OPIOIDS: MoietyId[] = ['sufentanil', 'remifentanil'];
@@ -59,7 +60,7 @@ export interface Interaction {
 export interface PharmacologyViewModel {
   effects: EffectReadout[];
   drugs: DrugRow[];
-  fluids: { plasma: string; interstitial: string; infused: string; lost: string; hb: string };
+  fluids: { plasma: string; interstitial: string; lungWater: string; hb: string };
   interactions: Interaction[];
 }
 
@@ -158,7 +159,7 @@ export function interactions(s: Readonly<SimulationState>): Interaction[] {
     if (parts.length > 0)
       out.push({ key: 'ph.int.lineDeadSpace', vars: { amount: parts.join(', ') } });
   }
-  const volume = s.patient.reserves.preloadReserve + ph.fluids.volumeStatus;
+  const volume = s.patient.reserves.preloadReserve + s.patient.fluid.derived.volumeStatus;
   if (volume < 0.8 && (fx.svr < 0.9 || fx.venousTone < -0.05 || fx.baroreflex < 0.8))
     out.push({ key: 'ph.int.hypovolaemicVasodilation' });
   if (
@@ -171,16 +172,15 @@ export function interactions(s: Readonly<SimulationState>): Interaction[] {
 }
 
 export function pharmacologyViewModel(s: Readonly<SimulationState>): PharmacologyViewModel {
-  const f = s.patient.pharmacology.fluids;
-  const mL = (l: number) => `${l >= 0 ? '+' : ''}${Math.round(l * 1000)} mL`;
+  const f = s.patient.fluid;
+  const mL = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v)} mL`;
   return {
     effects: effectReadouts(s),
     drugs: drugRows(s),
     fluids: {
-      plasma: mL(f.plasmaExcess),
-      interstitial: mL(f.interstitialExcess),
-      infused: `${Math.round(f.infusedTotal * 1000)} mL`,
-      lost: `${Math.round(f.lossesTotal * 1000)} mL`,
+      plasma: mL(f.plasmaMl - f.baseline.plasmaMl),
+      interstitial: mL(f.interstitialMl - f.baseline.interstitialMl),
+      lungWater: `${Math.round(100 * f.derived.lungWaterRatio)} %`,
       hb: `${s.patient.gas.hb.toFixed(1)} g/dL`,
     },
     interactions: interactions(s),

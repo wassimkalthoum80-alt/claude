@@ -46,7 +46,7 @@ export class BloodGasModel {
     const hb = gas.hb;
     const va = Math.max(0.5, inp.alveolarVentilation);
     const paco2 = clamp((K_BTPS * GAS.vco2) / 1000 / va, 25, 80);
-    const acid = acidBase(paco2, 1);
+    const acid = acidBase(paco2, 1, gas.metabolicOffset);
     let pAlv = Math.max(40, inp.fio2 * OXYGEN.dryBarometric - paco2 / RQ);
     let ca = 0;
     let cv = 0;
@@ -99,7 +99,7 @@ export class BloodGasModel {
     const s = clamp(inp.shunt, 0, 0.95);
     const v = Math.max(0.2, inp.lungGasVolume);
     const va = Math.max(0, inp.alveolarVentilation);
-    const { ph } = acidBase(gas.paco2, gas.lactate);
+    const { ph } = acidBase(gas.paco2, gas.lactate, gas.metabolicOffset);
 
     // ── oxygen ──
     const cc = oxygenContent(gas.pao2Alveolar, hb, ph);
@@ -146,7 +146,7 @@ export class BloodGasModel {
   /** Arterial PO2/SaO2, SvO2, DO2 and acid–base from the compartments. */
   private derive(gas: GasState, inp: GasExchangeInputs): void {
     const hb = gas.hb;
-    const acid = acidBase(gas.paco2, gas.lactate);
+    const acid = acidBase(gas.paco2, gas.lactate, gas.metabolicOffset);
     gas.ph = acid.ph;
     gas.hco3 = acid.hco3;
     gas.pao2 = po2FromContent(gas.cao2, hb, acid.ph);

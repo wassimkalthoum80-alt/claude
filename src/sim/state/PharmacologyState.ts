@@ -14,7 +14,8 @@ export type MoietyId =
   | 'midazolam'
   | 'dexmedetomidine'
   | 'ketamine'
-  | 'esketamine';
+  | 'esketamine'
+  | 'furosemide';
 
 /**
  * Amounts are in the moiety's model unit: mg (propofol, rocuronium), µg (opioids, catecholamines, salbutamol,
@@ -109,28 +110,9 @@ export interface DrugEffects {
   lactateProduction: number;
 }
 
-/** Infused fluids: volume kinetics and electrolyte accounting. */
-export interface FluidState {
-  /** L — plasma volume above baseline (negative = deficit) */
-  plasmaExcess: number;
-  /** L — interstitial volume above baseline */
-  interstitialExcess: number;
-  /** L — plasma volume held intravascularly by infused colloid (oncotic) */
-  colloidHold: number;
-  /** L — cumulative volume infused (all fluids incl. drug syringes and flushes) */
-  infusedTotal: number;
-  /** L — cumulative losses (renal + insensible) */
-  lossesTotal: number;
-  /** change of effective volume status (preload reserve units) from the plasma volume change */
-  volumeStatus: number;
-  /** mmol — cumulative ion load delivered, by ion */
-  ionLoad: Partial<Record<'Na' | 'K' | 'Ca' | 'Mg' | 'Cl' | 'acetate' | 'malate', number>>;
-}
-
 export interface PharmacologyState {
   drugs: Partial<Record<MoietyId, DrugKinetics>>;
   /** drug concentrations at scenario start (effects are relative to these for haemodynamics) */
   reference: Partial<Record<MoietyId, number>>;
   effects: DrugEffects;
-  fluids: FluidState;
 }

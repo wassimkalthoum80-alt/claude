@@ -9,5 +9,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    // Physiology tests run hours of simulated time.
+    testTimeout: 30000,
   },
 });

@@ -1,5 +1,6 @@
 import type { TimeScale } from '../core/Clock';
 import type { BisSensorFault, PatientFactors, StimulusKind } from '../state/BrainState';
+import type { CatheterState, FluidFactors } from '../state/BodyFluidState';
 import type { CprQualityPreset } from '../state/CPRState';
 import type {
   LungPreset,
@@ -88,6 +89,20 @@ export type Command =
   | { type: 'PUMP_ADD'; kind: 'syringe' | 'volumetric' }
   /** flush the common IV line with carrier (mL) */
   | { type: 'LINE_FLUSH'; volumeMl: number }
+  /** instructor/scenario: processes that move or remove fluid (leak, bleeding, sequestration, ambient…) */
+  | { type: 'FLUID_SET_FACTORS'; factors: Partial<FluidFactors> }
+  /** urine catheter patent or kinked/blocked */
+  | { type: 'CATHETER_SET'; state: CatheterState }
+  /** empty the urine bag (documentation step: no fluid leaves the patient) */
+  | { type: 'URINE_BAG_EMPTY' }
+  /** chart the urine output now (off-schedule measurement) */
+  | { type: 'URINE_MEASURE' }
+  /** min — interval of scheduled urine measurements (15–240) */
+  | { type: 'URINE_SET_INTERVAL'; minutes: number }
+  /** mL — ordered drainage of ascites (paracentesis) or pleural fluid (runs at 50 mL/min) */
+  | { type: 'FLUID_DRAIN'; source: 'ascites' | 'pleural'; volumeMl: number }
+  /** mL — surgical irrigation into the field (not an IV input; absorbed only by the explicit fraction) */
+  | { type: 'IRRIGATION'; volumeMl: number }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }
   | { type: 'RESET' };
@@ -121,7 +136,11 @@ export type ClinicalEventType =
   /** noxious stimulation (detail: kind) — trend marker */
   | 'STIMULUS_APPLIED'
   /** processed-EEG sensor connected/removed or signal condition changed (detail) — trend marker */
-  | 'BIS_SIGNAL';
+  | 'BIS_SIGNAL'
+  /** a urine measurement was charted (detail: "mL|mL/kg/h") */
+  | 'URINE_MEASURED'
+  /** balance action: bag emptied, catheter kinked/released, drain started/finished, irrigation (detail) */
+  | 'BALANCE_ACTION';
 
 export interface CommandLogEntry {
   seq: number;

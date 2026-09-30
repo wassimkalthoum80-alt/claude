@@ -64,7 +64,8 @@ export interface SaltInfo {
 
 /** Composition of an infusion fluid (mmol/L unless stated). */
 export interface FluidComposition {
-  type: 'crystalloid' | 'colloid';
+  /** balance-chart group and distribution behaviour */
+  type: 'crystalloid' | 'colloid' | 'glucose' | 'blood';
   electrolytesMmolPerL: Partial<
     Record<
       | 'Na'
@@ -80,11 +81,20 @@ export interface FluidComposition {
       number
     >
   >;
-  /** g/L albumin for colloids */
+  /** g/L albumin (albumin solutions, plasma-containing blood products) */
   albuminGPerL?: number;
-  /** SIM-ASSUMPTION: plasma volume held per mL infused by the colloid's oncotic pressure */
-  oncoticHoldPerMl?: number;
+  /** g/L glucose (metabolised; the water then distributes like free water) */
+  glucoseGPerL?: number;
+  /** 0..1 — red-cell volume fraction of the unit (packed red cells) */
+  rbcFraction?: number;
+  /** relative coagulation-factor content vs normal plasma (FFP ≈ 1) */
+  coagFactors?: number;
+  /** platelet content relative to normal whole blood (platelet concentrate ≫ 1) */
+  plateletsRelative?: number;
 }
+
+/** Solvent of a syringe drug solution: its water and electrolytes enter the balance as carrier volume. */
+export type CarrierSolution = 'nacl09' | 'water' | 'glucose5';
 
 /** A. Clinical reference information (shown on the drug card, never executed). */
 export interface ClinicalReference {
@@ -114,6 +124,8 @@ export interface Product {
   status: 'executable' | 'reference-only';
   /** active moiety handled by a PK/PD model (drugs only) */
   moiety?: MoietyId;
+  /** solvent of a syringe solution (default NaCl 0.9 %; lipid emulsions are water) */
+  carrier?: CarrierSolution;
   manufacturer?: string;
   /** e.g. "20 mg/mL, 50 mL syringe" */
   formulationLabel?: string;

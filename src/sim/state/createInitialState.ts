@@ -5,6 +5,7 @@ import { defaultAlarmLimits } from '../devices/alarmLimits';
 import { emptyPharmacology } from '../pharmacology/PharmacologyModel';
 import { defaultPatientFactors, initialCerebralState } from '../brain/CerebralModel';
 import { initialBisState } from '../devices/BisMonitor';
+import { defaultFluidFactors, initialBalance, initialBodyFluid } from '../fluid/init';
 import { getProduct } from '../pharmacology/formulary/products';
 import type { PumpState } from './PharmacologyState';
 import type { HeartLungCalibration } from './SimulationState';
@@ -70,6 +71,7 @@ export function createInitialState(
       // Gas values are placeholders; the engine replaces them with the model's steady state on load.
       gas: {
         hb: OXYGEN.hemoglobin,
+        metabolicOffset: 0,
         paco2: 40,
         tissuePco2: 43,
         etco2: 36,
@@ -114,6 +116,17 @@ export function createInitialState(
         ...p.reserves,
       },
       pharmacology: emptyPharmacology(),
+      fluid: initialBodyFluid(
+        {
+          sex: p.sex,
+          ageYears: p.ageYears,
+          weightKg: p.weightKg,
+          heightCm: p.heightCm,
+          pbwKg: predictedBodyWeight(p.sex, p.heightCm),
+        },
+        scenario.fluid,
+      ),
+      fluidFactors: { ...defaultFluidFactors(), ...scenario.fluid?.factors },
       brain: initialCerebralState(),
       factors: { ...defaultPatientFactors(p.ageYears), ...p.factors },
       airway: { device: p.airway },
@@ -139,6 +152,7 @@ export function createInitialState(
         alarmLimits: defaultAlarmLimits(),
       },
       bis: initialBisState(scenario.monitor?.bis ?? true),
+      balance: initialBalance(scenario.fluid),
       ventilator: {
         mode: 'VCV',
         settings: { ...scenario.ventilator },

@@ -78,10 +78,8 @@ export function PharmacologyPanel() {
               <dd className="num">{vm.fluids.interstitial}</dd>
             </div>
             <div className={hl.cell}>
-              <dt>{t('ph.infused')}</dt>
-              <dd className="num">
-                {vm.fluids.infused} / {vm.fluids.lost}
-              </dd>
+              <dt>{t('ph.lungWater')}</dt>
+              <dd className="num">{vm.fluids.lungWater}</dd>
             </div>
             <div className={hl.cell}>
               <dt>{t('ph.hb')}</dt>

@@ -152,7 +152,7 @@ export const en = {
   'ph.fluids': 'Fluids',
   'ph.plasma': 'Plasma Δ',
   'ph.interstitial': 'Interstitium Δ',
-  'ph.infused': 'Infused / lost',
+  'ph.lungWater': 'Lung water (rel.)',
   'ph.hb': 'Hb',
   'ph.interactions': 'Interactions and warnings',
   'ph.noInteractions': 'None active.',

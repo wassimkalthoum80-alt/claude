@@ -1,5 +1,5 @@
 import type { LineState, MoietyId, PumpState } from '../state/PharmacologyState';
-import type { Product } from './formulary/types';
+import type { CarrierSolution, Product } from './formulary/types';
 
 /** mL/h — hardware limits (typical syringe / volumetric pump). */
 export const PUMP_MAX_RATE = { syringe: 999, volumetric: 1200 } as const;
@@ -18,8 +18,12 @@ export interface DeliveryStep {
   drugs: Partial<Record<MoietyId, number>>;
   /** mL of each infusion fluid (by product id) that reached the patient this step */
   fluids: Record<string, number>;
-  /** mL of carrier-free drug solution and flush (counted as free water volume) */
-  otherMl: number;
+  /** mL of syringe drug solution that reached the patient, by solvent (carrier volume in the balance) */
+  carriers: Partial<Record<CarrierSolution, number>>;
+  /** mL of NaCl 0.9 % line flush that reached the patient */
+  flushMl: number;
+  /** mL delivered as bolus this step, by pump id (fluid tracer) */
+  bolusByPump: Record<string, number>;
 }
 
 type ProductLookup = (id: string) => Product | undefined;
@@ -40,7 +44,7 @@ export function stepDelivery(
   dtS: number,
   products: ProductLookup,
 ): DeliveryStep {
-  const out: DeliveryStep = { drugs: {}, fluids: {}, otherMl: 0 };
+  const out: DeliveryStep = { drugs: {}, fluids: {}, carriers: {}, flushMl: 0, bolusByPump: {} };
   let commonFlowMl = 0;
 
   for (const pump of pumps) {
@@ -61,12 +65,14 @@ export function stepDelivery(
     pump.deliveredMl += vol;
     if (pump.remainingMl <= 1e-9) pump.running = false;
     commonFlowMl += vol;
+    if (bolusMl > 0) out.bolusByPump[pump.id] = bolusMl;
 
     if (pump.kind === 'volumetric' || product.fluid) {
       out.fluids[product.id] = (out.fluids[product.id] ?? 0) + vol;
       continue;
     }
-    out.otherMl += vol;
+    const carrier = product.carrier ?? 'nacl09';
+    out.carriers[carrier] = (out.carriers[carrier] ?? 0) + vol;
     const moiety = product.moiety;
     const conc = product.concentration;
     const ext = (line.extension[pump.id] ??= {});
@@ -83,7 +89,7 @@ export function stepDelivery(
   const flushMl = Math.min(line.flushRemainingMl, FLUSH_ML_PER_S * dtS);
   line.flushRemainingMl -= flushMl;
   commonFlowMl += flushMl;
-  out.otherMl += flushMl;
+  out.flushMl = flushMl;
 
   const fc = commonFlowMl > 0 ? 1 - Math.exp(-commonFlowMl / line.commonMl) : 0;
   for (const [m, amount] of Object.entries(line.common) as [MoietyId, number][]) {

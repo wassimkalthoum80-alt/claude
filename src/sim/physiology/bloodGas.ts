@@ -32,11 +32,16 @@ export function po2FromContent(content: number, hb: number = OXYGEN.hemoglobin, 
 /**
  * Acid–base from PaCO2 and lactate (Henderson–Hasselbalch).
  * SIM-ASSUMPTION: acute respiratory buffering (+1 mmol/L HCO3 per +10 mmHg CO2) and a 1:1 bicarbonate loss for
- * lactate above 1 mmol/L. No renal compensation, chloride/albumin or strong-ion model.
+ * lactate above 1 mmol/L, plus the metabolic offset of the fluid model (strong-ion difference and albumin,
+ * src/sim/fluid). No renal compensation.
  */
-export function acidBase(paco2: number, lactate: number): { ph: number; hco3: number } {
+export function acidBase(
+  paco2: number,
+  lactate: number,
+  metabolicOffset = 0,
+): { ph: number; hco3: number } {
   const hco3 = clamp(
-    GAS.baselineBicarbonate + 0.1 * (paco2 - 40) - Math.max(0, lactate - 1),
+    GAS.baselineBicarbonate + 0.1 * (paco2 - 40) - Math.max(0, lactate - 1) + metabolicOffset,
     3,
     50,
   );

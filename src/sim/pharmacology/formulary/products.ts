@@ -100,9 +100,10 @@ const CATECHOLAMINE_MODEL = (name: string, halfLife: string): ModelInfo => ({
 const VOLUME_KINETICS: ModelInfo = {
   kind: 'volume-kinetics',
   description:
-    'Two-space volume kinetics (plasma ↔ interstitium, τ ≈ 20 min), colloid oncotic hold, losses and haemodilution. EDUCATIONAL parameters inspired by Hahn.',
-  population: 'Adult under anaesthesia; illustrative only.',
-  uncertainty: 'No glycocalyx, capillary leak or renal model; no fixed BP increment is used.',
+    'Enters plasma through the delivery model, then distributes by a Starling/glycocalyx transcapillary model with lymph return, albumin (oncotic) exchange, osmotic ICF/ECF water shift and renal excretion (src/sim/fluid). No fixed retained fraction, replacement ratio or BP increment.',
+  population: 'Adult; EDUCATIONAL parameters, not fitted to a population.',
+  uncertainty:
+    'Uncalibrated educational approximation; compartment volumes are model estimates, not measured anatomical volumes.',
 };
 
 export const EXECUTABLE: Product[] = [
@@ -115,6 +116,7 @@ export const EXECUTABLE: Product[] = [
     category: 'Hypnotika / Sedativa',
     status: 'executable',
     moiety: 'propofol',
+    carrier: 'water',
     formulationLabel: '10 mg/mL, 50 mL',
     concentration: { value: 10, unit: 'mg' },
     containerMl: 50,
@@ -133,6 +135,7 @@ export const EXECUTABLE: Product[] = [
     category: 'Hypnotika / Sedativa',
     status: 'executable',
     moiety: 'propofol',
+    carrier: 'water',
     formulationLabel: '20 mg/mL, 50 mL',
     concentration: { value: 20, unit: 'mg' },
     containerMl: 50,
@@ -867,7 +870,8 @@ export const EXECUTABLE: Product[] = [
     status: 'executable',
     formulationLabel: '50 g/L, iso-onkotisch, 250 mL',
     containerMl: 250,
-    fluid: { type: 'colloid', electrolytesMmolPerL: {}, albuminGPerL: 50, oncoticHoldPerMl: 1 },
+    // Electrolytes: albumin solutions contain sodium (label range ≈ 100–160 mmol/L); 145 is an unreviewed mid value.
+    fluid: { type: 'colloid', electrolytesMmolPerL: { Na: 145 }, albuminGPerL: 50 },
     routes: ['IV'],
     protocols: [
       {
@@ -902,8 +906,9 @@ export const EXECUTABLE: Product[] = [
     status: 'executable',
     formulationLabel: '200 g/L, hyper-onkotisch, 100 mL',
     containerMl: 100,
-    // SIM-ASSUMPTION: 20 % albumin holds ≈ 4 mL plasma per mL infused, drawing the rest from the interstitium.
-    fluid: { type: 'colloid', electrolytesMmolPerL: {}, albuminGPerL: 200, oncoticHoldPerMl: 4 },
+    // No fixed plasma-expansion multiplier: the oncotic effect follows from the albumin mass, permeability and
+    // the patient's interstitial fluid (src/sim/fluid).
+    fluid: { type: 'colloid', electrolytesMmolPerL: { Na: 145 }, albuminGPerL: 200 },
     routes: ['IV'],
     protocols: [
       {
@@ -1210,6 +1215,222 @@ export const SEDATIVES: Product[] = [
   },
 ];
 
+const TRANSFUSION_CARD: ModelInfo = {
+  kind: 'volume-kinetics',
+  description:
+    'Delivered volume enters the circulation once (never also as crystalloid). Packed red cells add red-cell volume (haematocrit, O2 content); plasma products add plasma volume, albumin and coagulation factors; platelet concentrate adds platelets (display only — no bleeding/coagulation model).',
+  population: 'Adult; illustrative only.',
+  uncertainty:
+    'Unit volumes and contents are typical values, not a specific blood service product.',
+};
+
+/** Glucose 5 %, blood components and furosemide — executable for the fluid-balance module. */
+export const FLUID_PRODUCTS: Product[] = [
+  {
+    id: 'glucose-5',
+    genericName: 'Glukose 5 %',
+    brandNames: ['Glucose 5 % B. Braun', 'Glucosteril 5 %'],
+    aliases: ['dextrose 5 %', 'G5'],
+    category: 'Elektrolyte / Säure-Basen / Glukose',
+    status: 'executable',
+    formulationLabel: '50 g/L Glukose, elektrolytfrei, 500 mL',
+    containerMl: 500,
+    fluid: { type: 'glucose', electrolytesMmolPerL: {}, glucoseGPerL: 50 },
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'maintenance',
+        indication: 'Freies Wasser / Glukosezufuhr (not a volume expander)',
+        route: 'IV',
+        weightBasis: 'none',
+        infusion: { rate: { min: 20, typical: 80, unit: 'mL/h' } },
+        notes:
+          'Glucose is metabolised; the water distributes into all body water (mostly intracellular) — little stays intravascular. Risk of hyponatraemia.',
+        sources: ['niceCg174'],
+      },
+    ],
+    reference: {
+      indications: ['Free water replacement', 'Glucose supply (maintenance)'],
+      contraindications: ['Hyponatraemia', 'Raised intracranial pressure'],
+      interactions: [],
+      adverseEffects: ['Hyponatraemia', 'Hyperglycaemia'],
+      considerations: {},
+    },
+    model: VOLUME_KINETICS,
+    sources: ['niceCg174', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'rbc',
+    genericName: 'Erythrozytenkonzentrat (EK)',
+    brandNames: [],
+    aliases: ['PRBC', 'packed red cells'],
+    category: 'Blutkomponenten',
+    status: 'executable',
+    formulationLabel: '1 Einheit ≈ 280 mL, Hkt ≈ 0,60',
+    containerMl: 280,
+    fluid: {
+      type: 'blood',
+      electrolytesMmolPerL: { Na: 120, Cl: 90 },
+      rbcFraction: 0.6,
+      albuminGPerL: 3,
+      coagFactors: 0,
+      plateletsRelative: 0,
+    },
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'transfusion',
+        indication: 'Transfusion (1 Einheit)',
+        route: 'IV',
+        weightBasis: 'none',
+        bolus: {
+          dose: { min: 50, typical: 280, unit: 'mL' },
+          durationS: { min: 300, typical: 3600 },
+        },
+        notes: 'Adds red-cell mass and volume; O2 content rises without an obligatory SpO2 change.',
+        sources: ['baekHaemotherapy'],
+      },
+    ],
+    reference: {
+      indications: ['Anaemia with impaired O2 delivery', 'Haemorrhage'],
+      contraindications: [],
+      interactions: [],
+      adverseEffects: ['Transfusion reactions', 'TACO (circulatory overload)', 'TRALI'],
+      considerations: {},
+    },
+    model: TRANSFUSION_CARD,
+    sources: ['baekHaemotherapy', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'ffp',
+    genericName: 'Gefrorenes Frischplasma (GFP/FFP)',
+    brandNames: [],
+    aliases: ['plasma', 'FFP'],
+    category: 'Blutkomponenten',
+    status: 'executable',
+    formulationLabel: '1 Einheit ≈ 250 mL',
+    containerMl: 250,
+    fluid: {
+      type: 'blood',
+      electrolytesMmolPerL: { Na: 150, Cl: 80 },
+      albuminGPerL: 38,
+      coagFactors: 1,
+      plateletsRelative: 0,
+    },
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'transfusion',
+        indication: 'Plasmatransfusion (1 Einheit)',
+        route: 'IV',
+        weightBasis: 'none',
+        bolus: {
+          dose: { min: 50, typical: 250, unit: 'mL' },
+          durationS: { min: 300, typical: 1800 },
+        },
+        notes: 'Haemostatic effect via coagulation factors; volume as plasma.',
+        sources: ['baekHaemotherapy'],
+      },
+    ],
+    reference: {
+      indications: ['Coagulopathy with bleeding', 'Massive transfusion'],
+      contraindications: [],
+      interactions: [],
+      adverseEffects: ['TACO', 'TRALI', 'Allergic reactions'],
+      considerations: {},
+    },
+    model: TRANSFUSION_CARD,
+    sources: ['baekHaemotherapy', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'platelets',
+    genericName: 'Thrombozytenkonzentrat (TK)',
+    brandNames: [],
+    aliases: ['platelets', 'TK'],
+    category: 'Blutkomponenten',
+    status: 'executable',
+    formulationLabel: '1 Einheit ≈ 250 mL (Pool/Apherese)',
+    containerMl: 250,
+    fluid: {
+      type: 'blood',
+      electrolytesMmolPerL: { Na: 140, Cl: 90 },
+      albuminGPerL: 25,
+      coagFactors: 0.7,
+      plateletsRelative: 4,
+    },
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'transfusion',
+        indication: 'Thrombozytentransfusion (1 Einheit)',
+        route: 'IV',
+        weightBasis: 'none',
+        bolus: {
+          dose: { min: 50, typical: 250, unit: 'mL' },
+          durationS: { min: 300, typical: 1800 },
+        },
+        sources: ['baekHaemotherapy'],
+      },
+    ],
+    reference: {
+      indications: ['Thrombocytopenia / platelet dysfunction with bleeding'],
+      contraindications: [],
+      interactions: [],
+      adverseEffects: ['Febrile reactions', 'Bacterial contamination (rare)'],
+      considerations: {},
+    },
+    model: TRANSFUSION_CARD,
+    sources: ['baekHaemotherapy', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'furosemide-10',
+    genericName: 'Furosemid',
+    brandNames: ['Lasix'],
+    aliases: ['furosemide 10 mg/mL', 'frusemide'],
+    category: 'Diuretika',
+    status: 'executable',
+    moiety: 'furosemide',
+    formulationLabel: '10 mg/mL (20 mg / 2 mL)',
+    concentration: { value: 10, unit: 'mg' },
+    containerMl: 20,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'bolus',
+        indication: 'Diurese (IV bolus)',
+        route: 'IV',
+        weightBasis: 'none',
+        bolus: { dose: { min: 10, typical: 20, unit: 'mg' }, durationS: { min: 60, typical: 120 } },
+        notes:
+          'Delayed, exposure-dependent natriuresis; needs residual kidney function (tubular delivery). Does not repair AKI and does not clear pulmonary oedema immediately.',
+        sources: ['smpcFurosemide'],
+      },
+    ],
+    reference: {
+      indications: ['Oedema, fluid overload', 'Acute pulmonary oedema (adjunct)'],
+      contraindications: ['Anuria', 'Severe hypovolaemia / dehydration', 'Severe hypokalaemia'],
+      interactions: ['Aminoglycosides (ototoxicity)', 'Hypokalaemia potentiates digoxin'],
+      adverseEffects: ['Hypovolaemia, hypotension', 'Hypokalaemia, hypomagnesaemia', 'Ototoxicity'],
+      considerations: { renal: 'Higher doses needed in renal impairment; response falls with GFR' },
+      onsetOffset: 'IV: onset ≈ 5 min, peak ≈ 30 min, duration ≈ 2 h.',
+    },
+    model: {
+      kind: 'educational',
+      description:
+        'EDUCATIONAL two-compartment PK (V ≈ 0.17 L/kg, renal clearance × kidney function, ke0 0.05/min); natriuretic urine output as a saturable effect × tubular delivery (GFR) × (1 − tolerance).',
+      population: 'Adult; illustrative only.',
+      uncertainty:
+        'Not a published PK/PD model; response and electrolyte losses are author calibration.',
+    },
+    sources: ['smpcFurosemide', 'textbookPk', 'educational'],
+    review: 'unreviewed',
+  },
+];
+
 export const REFERENCE_ONLY: Product[] = [
   ref('etomidate', 'Etomidat', 'Hypnotika / Sedativa', ['Hypnomidate', 'Etomidat-Lipuro']),
   ref('thiopental', 'Thiopental', 'Hypnotika / Sedativa', ['Trapanal']),
@@ -1301,27 +1522,9 @@ export const REFERENCE_ONLY: Product[] = [
     [],
     'Potassium shift and later hypoglycaemia — phase B.',
   ),
-  ref(
-    'furosemide',
-    'Furosemid',
-    'Diuretika',
-    ['Lasix'],
-    [],
-    'Does not remove pulmonary oedema immediately — phase B.',
-  ),
   ref('mannitol', 'Mannitol', 'Diuretika', ['Osmofundin']),
   ref('ringer-lactate', 'Ringer-Laktat', 'Kristalloide', ['Ringer-Laktat nach Hartmann']),
   ref('gelatin', 'Gelatine 4 %', 'Kolloide / Albumin', ['Gelafundin']),
-  ref(
-    'rbc',
-    'Erythrozytenkonzentrat (EK)',
-    'Blutkomponenten',
-    [],
-    ['PRBC'],
-    'Raises oxygen content without an obligatory SpO₂ change — phase C.',
-  ),
-  ref('ffp', 'Gefrorenes Frischplasma (GFP/FFP)', 'Blutkomponenten', [], ['plasma']),
-  ref('platelets', 'Thrombozytenkonzentrat (TK)', 'Blutkomponenten'),
   ref('pcc', 'PPSB (Prothrombinkomplex)', 'Gerinnung / Hämostase', ['Beriplex', 'Octaplex']),
   ref('fibrinogen', 'Fibrinogen', 'Gerinnung / Hämostase', ['Haemocomplettan']),
   ref('factor-xiii', 'Faktor XIII', 'Gerinnung / Hämostase', ['Fibrogammin']),
@@ -1357,7 +1560,12 @@ export const REFERENCE_ONLY: Product[] = [
   ),
 ];
 
-export const FORMULARY: readonly Product[] = [...EXECUTABLE, ...SEDATIVES, ...REFERENCE_ONLY];
+export const FORMULARY: readonly Product[] = [
+  ...EXECUTABLE,
+  ...SEDATIVES,
+  ...FLUID_PRODUCTS,
+  ...REFERENCE_ONLY,
+];
 
 const BY_ID = new Map(FORMULARY.map((p) => [p.id, p]));
 

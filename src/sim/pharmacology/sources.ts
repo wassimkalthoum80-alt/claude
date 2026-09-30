@@ -267,6 +267,78 @@ export const SOURCES = {
     kind: 'study',
     review: 'unreviewed',
   },
+  niceCg174: {
+    id: 'niceCg174',
+    citation:
+      'NICE CG174. Intravenous fluid therapy in adults in hospital (2013, updated 2017). Adults ≥ 16 y in hospital; routine maintenance 25–30 mL/kg/day water, ≈ 1 mmol/kg/day Na+, K+, Cl−, 50–100 g/day glucose; fluid balance and daily reassessment. https://www.nice.org.uk/guidance/cg174 (not reachable from this session; status not re-verified).',
+    year: 2017,
+    jurisdiction: 'UK',
+    kind: 'guideline',
+    review: 'unreviewed',
+  },
+  kdigoAki2012: {
+    id: 'kdigoAki2012',
+    citation:
+      'KDIGO Clinical Practice Guideline for Acute Kidney Injury. Kidney Int Suppl 2012;2:1-138. Urine-output criteria: < 0.5 mL/kg/h for 6–12 h (stage 1), ≥ 12 h (stage 2), < 0.3 mL/kg/h ≥ 24 h or anuria ≥ 12 h (stage 3); creatinine criteria not simulated. An update has been in development — a draft is not treated as final. https://kdigo.org/guidelines/acute-kidney-injury/ (not reachable from this session).',
+    year: 2012,
+    jurisdiction: 'international',
+    kind: 'guideline',
+    review: 'unreviewed',
+  },
+  pmc10967119: {
+    id: 'pmc10967119',
+    citation:
+      'PMC10967119 (supplied starting reference on fluid distribution; content not verified — PMC not reachable from this session). No model parameter depends on it.',
+    year: 2024,
+    jurisdiction: 'international',
+    kind: 'review',
+    review: 'unreviewed',
+  },
+  pmc7183132: {
+    id: 'pmc7183132',
+    citation:
+      'PMC7183132 (supplied starting reference on fluid kinetics; content not verified — PMC not reachable from this session). No model parameter depends on it.',
+    year: 2020,
+    jurisdiction: 'international',
+    kind: 'review',
+    review: 'unreviewed',
+  },
+  woodcockWoodcock2012: {
+    id: 'woodcockWoodcock2012',
+    citation:
+      'Woodcock TE, Woodcock TM. Revised Starling equation and the glycocalyx model of transvascular fluid exchange: an improved paradigm for prescribing intravenous fluid therapy. Br J Anaesth 2012;108:384-94 (from memory; not re-verified).',
+    year: 2012,
+    jurisdiction: 'international',
+    kind: 'review',
+    review: 'unreviewed',
+  },
+  levickMichel2010: {
+    id: 'levickMichel2010',
+    citation:
+      'Levick JR, Michel CC. Microvascular fluid exchange and the revised Starling principle. Cardiovasc Res 2010;87:198-210 (from memory; not re-verified).',
+    year: 2010,
+    jurisdiction: 'international',
+    kind: 'review',
+    review: 'unreviewed',
+  },
+  baekHaemotherapy: {
+    id: 'baekHaemotherapy',
+    citation:
+      'Bundesärztekammer. Querschnitts-Leitlinien zur Therapie mit Blutkomponenten und Plasmaderivaten (current edition; typical unit volumes and administration). Not re-verified in this session.',
+    year: 2020,
+    jurisdiction: 'DE',
+    kind: 'guideline',
+    review: 'unreviewed',
+  },
+  smpcFurosemide: {
+    id: 'smpcFurosemide',
+    citation:
+      'Fachinformation Furosemid (Lasix®) i.v. — initial 20–40 mg IV, slow injection; response depends on renal function. Transcribed without access to the current document in this session.',
+    year: 2022,
+    jurisdiction: 'DE',
+    kind: 'label',
+    review: 'unreviewed',
+  },
   educational: {
     id: 'educational',
     citation:
