@@ -145,9 +145,9 @@ describe('alarm limits view model', () => {
       'st',
     ]);
     const hr = rows.find((r) => r.param === 'hr');
-    expect(hr?.low).toBe(45);
+    expect(hr?.low).toBe(60);
     expect(hr?.alarming).toBe(false);
-    expect(monitorViewModel(e.getSnapshot()).limits.hr).toEqual({ high: '120', low: '45' });
+    expect(monitorViewModel(e.getSnapshot()).limits.hr).toEqual({ high: '120', low: '60' });
     e.dispatch({ type: 'SET_ALARM_LIMIT', param: 'hr', bound: 'high', value: 70 });
     e.runFor(2);
     rows = alarmLimitsViewModel(e.getSnapshot()).rows;

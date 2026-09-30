@@ -14,7 +14,8 @@ export interface LimitSpec {
 }
 
 /**
- * Adjustable monitor alarm limits (typical adult defaults; the ranges are what the knob allows).
+ * Adjustable monitor alarm limits (defaults chosen for anaesthetised adults: HR 60–120, SYS 100–160, EtCO2
+ * 35–45 — tight on purpose; the ranges are what the knob allows).
  * - hr: HR LOW (high priority) / HR HIGH (medium)
  * - spo2: SpO2 LOW (medium) / SpO2 HIGH (medium, 100 = effectively off)
  * - desat: desaturation limit — below it SpO2 LOW escalates to high priority
@@ -25,7 +26,7 @@ export interface LimitSpec {
 export const ALARM_LIMIT_SPECS: Record<AlarmLimitParam, LimitSpec> = {
   hr: {
     unit: '/min',
-    low: { min: 25, max: 150, step: 5, default: 45 },
+    low: { min: 25, max: 150, step: 5, default: 60 },
     high: { min: 60, max: 220, step: 5, default: 120 },
   },
   spo2: {
@@ -36,7 +37,7 @@ export const ALARM_LIMIT_SPECS: Record<AlarmLimitParam, LimitSpec> = {
   desat: { unit: '%', low: { min: 50, max: 95, step: 1, default: 85 } },
   artSys: {
     unit: 'mmHg',
-    low: { min: 50, max: 150, step: 5, default: 80 },
+    low: { min: 50, max: 150, step: 5, default: 100 },
     high: { min: 100, max: 250, step: 5, default: 160 },
   },
   artMean: {
@@ -46,8 +47,8 @@ export const ALARM_LIMIT_SPECS: Record<AlarmLimitParam, LimitSpec> = {
   },
   etco2: {
     unit: 'mmHg',
-    low: { min: 5, max: 45, step: 1, default: 25 },
-    high: { min: 30, max: 80, step: 1, default: 50 },
+    low: { min: 5, max: 45, step: 1, default: 35 },
+    high: { min: 30, max: 80, step: 1, default: 45 },
   },
   st: { unit: 'mm', high: { min: 0.5, max: 5, step: 0.5, default: 2 } },
 };

@@ -15,12 +15,12 @@ const limits = (e: Engine) => e.getSnapshot().devices.monitor.alarmLimits;
 describe('alarm limits: device rules', () => {
   it('starts at typical adult defaults', () => {
     const d = defaultAlarmLimits();
-    expect(d.hr).toEqual({ low: 45, high: 120 });
+    expect(d.hr).toEqual({ low: 60, high: 120 });
     expect(d.spo2).toEqual({ low: 90, high: 100 });
     expect(d.desat).toEqual({ low: 85, high: null });
-    expect(d.artSys).toEqual({ low: 80, high: 160 });
+    expect(d.artSys).toEqual({ low: 100, high: 160 });
     expect(d.artMean).toEqual({ low: 60, high: 110 });
-    expect(d.etco2).toEqual({ low: 25, high: 50 });
+    expect(d.etco2).toEqual({ low: 35, high: 45 });
     expect(d.st).toEqual({ low: null, high: 2 });
     for (const p of ALARM_LIMIT_PARAMS) expect(ALARM_LIMIT_SPECS[p].unit).not.toBe('');
   });
