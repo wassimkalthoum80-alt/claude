@@ -206,8 +206,10 @@ export class FluidModel {
 
     const filtration = this.limit(jv * dtMin, f.plasmaMl, f.interstitialMl);
     const lymphMl = Math.min(lymph * dtMin, f.interstitialMl - 50);
-    this.moveTracer(f, 'plasma', 'interstitium', filtration, f.plasmaMl);
-    this.moveTracer(f, 'interstitium', 'plasma', Math.max(0, lymphMl), f.interstitialMl);
+    // The tracer follows the NET plasma ↔ interstitium exchange (filtration − lymph), not the gross fluxes.
+    const netToIsf = filtration - Math.max(0, lymphMl);
+    if (netToIsf >= 0) this.moveTracer(f, 'plasma', 'interstitium', netToIsf, f.plasmaMl, true);
+    else this.moveTracer(f, 'interstitium', 'plasma', -netToIsf, f.interstitialMl, true);
     f.plasmaMl += -filtration + Math.max(0, lymphMl);
     f.interstitialMl += filtration - Math.max(0, lymphMl);
     const albMove = clamp(
@@ -244,6 +246,7 @@ export class FluidModel {
       lungNet >= 0 ? 'lung' : 'plasma',
       Math.abs(lungNet),
       lungNet >= 0 ? f.plasmaMl : f.lungInterstitialMl,
+      true,
     );
     f.plasmaMl -= lungNet;
     f.lungInterstitialMl += lungNet;
@@ -357,6 +360,7 @@ export class FluidModel {
       shift >= 0 ? 'intracellular' : 'interstitium',
       Math.abs(shift),
       shift >= 0 ? f.interstitialMl : f.intracellularMl,
+      true,
     );
     f.interstitialMl -= shift;
     f.intracellularMl += shift;
@@ -596,10 +600,15 @@ export class FluidModel {
     to: TracerKey,
     volume: number,
     fromVolume: number,
+    excessFirst = false,
   ): void {
     const tr = f.tracer;
     if (tr.label === null || volume <= 0 || fromVolume <= 0 || tr[from] <= 0) return;
-    const moved = Math.min(tr[from], (tr[from] * volume) / fromVolume);
+    // SIM-ASSUMPTION (teaching attribution): net shifts between compartments are attributed to the traced bolus
+    // first ("excess volume moves first"); losses are attributed in proportion (well mixed).
+    const moved = excessFirst
+      ? Math.min(tr[from], volume)
+      : Math.min(tr[from], (tr[from] * volume) / fromVolume);
     tr[from] -= moved;
     tr[to] += moved;
   }

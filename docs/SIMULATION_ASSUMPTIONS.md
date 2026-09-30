@@ -1,4 +1,4 @@
-# Simulation assumptions (Milestone 1 + heart–lung interaction + medications phase A + processed EEG)
+# Simulation assumptions (Milestone 1 + heart–lung interaction + medications phase A + processed EEG + fluid balance)
 
 Every physiological simplification in the code is marked `// SIM-ASSUMPTION:` and listed here with the value
 used and the reason. The whole model is **phenomenological and tuned to published target values**. It is built
@@ -234,20 +234,11 @@ All compartments integrate with RK4 in the 4 ms physiology sub-step.
 Paralysis does not cause apnoea directly on a controlled ventilator; it removes spontaneous effort (diaphragm
 block), so breathing stops only where the patient depended on it.
 
-### Fluids (`fluids.ts`)
+### Fluids
 
-| Assumption | Value |
-|---|---|
-| Model | two-space volume kinetics (after Hahn; parameters author-selected) |
-| Crystalloid distribution | plasma → interstitium towards 1 : 3, τ 20 min |
-| Colloid | albumin 5 % holds 1 mL plasma per mL, 20 % holds ≈ 4 mL per mL (drawn from the interstitium); hold leaks with τ 20 h |
-| Losses | 1.25 mL/kg/h baseline + excretion of excess volume, τ 3 h |
-| Preload | plasma change / (20 mL/kg stressed volume) adds to the volume status; Frank–Starling plateau above 1 (at most +50 %) |
-| Haemodilution | Hb scaled by blood volume (70 mL/kg) / (blood volume + plasma change) |
-| Electrolytes | ion load recorded (mmol) from the product composition; no acid–base effect yet |
-
-No fixed "retained fraction" and no fixed BP increment per mL: the effect follows from preload through the
-circulation model.
+Replaced by the body-fluid model — see **Bilanzierung & Flüssigkeitsverteilung** below. The pharmacology pipeline
+only reports the volume it delivered (infusions by product, syringe carrier by solvent, line flushes); the fluid
+model is the single owner of volumes.
 
 ### Validation and instructor override
 
@@ -352,6 +343,142 @@ spectrum, suppression detector, SQI, EMG → smoothing → displayed values and 
 - Hepatic/renal factors act only on the educational midazolam/dexmedetomidine models; published PK models are
   used unchanged.
 - Nitrous oxide, benzodiazepine antagonism (flumazenil) and dexmedetomidine loading are not modelled.
+
+## Bilanzierung & Flüssigkeitsverteilung (`src/sim/fluid`)
+
+Educational model. Every constant is author-selected (`fluid/params.ts`, `fluid/renal.ts`, `fluid/losses.ts`);
+none is fitted to patient data. Sources are listed at the end of this section; they could not be opened from the
+development session (network blocked) and are cited from memory, marked "not verified".
+
+### Body boundary and accounting
+
+| Assumption                                                                    | Value / rule                                                                                                                                                                              |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inside the body                                                               | plasma, red cells, systemic interstitium, lung interstitium, intracellular water, ascites, pleural fluid, gut lumen, internal haematoma, bladder urine                                    |
+| Volume ledger                                                                 | includes red cells (a volume ledger, not a pure water ledger)                                                                                                                             |
+| Crossing the boundary                                                         | recorded once, in the step it happens: delivered infusion/carrier/flush, drained urine (bladder → bag), external blood, drains, gastric/stoma loss, estimated losses, absorbed irrigation |
+| Not a ledger entry                                                            | internal shifts (filtration, lymph, osmotic, sequestration, internal bleeding), urine formation (kidney → bladder), emptying or charting the bag, irrigation in the field, suction        |
+| Binning                                                                       | per-minute bins, entry time = middle of the 100 ms step; 48 h history                                                                                                                     |
+| Conservation check                                                            | Δ body fluid − (inputs − outputs − estimated) → 0 (tests: < 0.5 mL in every teaching scenario)                                                                                            |
+| Metabolic water, oral intake, enteral/parenteral nutrition, renal replacement | not modelled (shown as "nicht simuliert")                                                                                                                                                 |
+
+### Compartments
+
+| Assumption        | Value                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Size scalar       | adjusted body weight (IBW + 0.4·excess) — adipose tissue holds little water, so compartments do not scale linearly with obesity |
+| Blood volume      | 70 mL/kg (male), 65 mL/kg (female); haematocrit 0.42 / 0.38                                                                     |
+| Total body water  | 0.6 / 0.5 L/kg; ECF 38 % of TBW                                                                                                 |
+| Lung interstitium | 3.5 mL/kg IBW (a defined part of the extravascular space)                                                                       |
+| Haemoglobin       | 14 g/dL × Hct / baseline Hct (red cells only change with bleeding and red-cell units)                                           |
+
+### Capillary exchange (revised Starling principle)
+
+| Assumption            | Value                                                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Net filtration        | Jv = Kf·[(Pc − Pi) − σ(πp − f·πi)], f = sub-glycocalyx fraction 0.2 (leak: up to 0.7)                                                                               |
+| Capillary pressure    | 20 mmHg + 0.7·ΔPv + 0.05·ΔMAP                                                                                                                                       |
+| Reflection σ          | 0.9 (leak: down to 0.4); Kf × (1 + 2·leak + 0.5·tissue trauma)                                                                                                      |
+| Kf                    | derived so that Jv = lymph (4 mL/min per 3 L plasma) in the normal state                                                                                            |
+| Absorption            | sustained absorption attenuated to 30 % (no reabsorption "Starling" refill)                                                                                         |
+| Interstitial pressure | −1 mmHg; +3 mmHg over the first ≈ 10 % expansion (tanh), then compliant; −4 mmHg per 10 % depletion                                                                 |
+| Lymph                 | 4 mL/min × (1 + 1·ΔPi), 0.1–10×                                                                                                                                     |
+| Albumin               | plasma 40, interstitium 20 g/L; diffusion (PS derived for steady state, ×(1 + 3·leak)) + convection (1 − σ)·Jv·Cp; lymph returns Ci; π = 25 mmHg at 40 g/L (linear) |
+| Colloid effect        | emerges from oncotic pressure (albumin 20 %: plasma gain > infused volume; albumin 5 %: ≈ iso-oncotic). No fixed retained fraction.                                 |
+
+### Lung water
+
+| Assumption             | Value                                                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Filtration             | pulmonary capillary pressure 9 mmHg (+6 per unit volume status, +20 at LV function 0.2), interstitial −8 mmHg rising 10 mmHg per doubling, interstitial π 18 mmHg (sub-glycocalyx 0.5), σ 0.85 |
+| Lung leak              | σ − 0.6·leak, Kf × (1 + 4·leak)                                                                                                                                                                |
+| Lung lymph             | 0.27 mL/min, up to 10× at +50 % lung water; beyond that oedema accumulates                                                                                                                     |
+| Effect on mechanics    | above 130 % of baseline: compliance ×1/(1 + 0.43·(ratio − 1.3)/0.7), ≥ 0.4                                                                                                                     |
+| Effect on gas exchange | shunt + 0.05·((ratio − 1.3)/0.7)^1.3, ≤ 0.25                                                                                                                                                   |
+
+ARDS (lung leak, high-permeability oedema at normal pressure), cardiac failure (high capillary pressure) and a
+systemic leak (plasma → systemic interstitium) are separate processes.
+
+### Osmotic exchange, electrolytes, acid–base
+
+| Assumption           | Value                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| ICF ↔ ECF            | water only, towards osmotic equilibrium, τ 10 min; effective ECF osmoles 2·(Na + K) + glucose + 10 mOsm/L (urea ineffective)               |
+| Glucose              | glucose 5 %: glucose added to the ECF, disposed of towards 5 mmol/L with τ 40 min → the water becomes free water and reaches the cells     |
+| Electrolytes         | Na, Cl, K tracked as ECF totals from each product's composition; Ca and Mg not tracked                                                     |
+| Organic anions       | acetate, lactate, gluconate (malate = 2 mEq) are strong anions until metabolised, τ 20 min                                                 |
+| Acid–base            | ΔHCO₃ = ΔSID + 0.25 mmol/L per g/L albumin fall (Stewart-type); added to the existing Henderson–Hasselbalch model as `gas.metabolicOffset` |
+| Displayed osmolality | 2·Na + glucose + 5 (urea)                                                                                                                  |
+
+### Circulation coupling
+
+| Assumption                               | Value                                                                                                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Volume status                            | Δ blood volume / (0.45 × baseline blood volume) adds to the effective volume status (with the reserve and drug venous tone) |
+| Vasoplegia                               | −0.5 volume-status units (venous pooling) and up to −50 % SVR                                                               |
+| LV function                              | multiplies contractility                                                                                                    |
+| Venous pressure (model value, not a CVP) | 6 mmHg + 6 per unit effective volume status + 6·(1/RV reserve − 1), 0–30                                                    |
+
+### Kidney (`renal.ts`)
+
+| Assumption           | Value                                                                                                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Filtration           | perfusion pressure (MAP − Pv): 0 at 35, full at 65 mmHg (autoregulation above); × flow factor (CO/5 L/min ÷ 0.6); × congestion (−4 % per mmHg Pv above 12, ≥ 0.35); × kidney function × (1 − injury) |
+| Base urine           | 1 mL/kg IBW/h × filtration^1.5 × (1 − antidiuresis)/0.8 × ECF-deficit factor                                                                                                                         |
+| Antidiuresis         | 0.2 normal; + hypovolaemia, osmolality, surgical stress, vasopressin V2 (max 0.6, EC50 0.005 IU/min); τ 20 min; ≤ 0.9                                                                                |
+| Pressure natriuresis | 0.004/min × ECF excess × filtration × (1 − antidiuresis)                                                                                                                                             |
+| Injury               | + 0.0015/min × hypoperfusion below 60 % filtration pressure; no recovery within a scenario; diuretics do not repair it                                                                               |
+| Furosemide           | effect-site (ke0 0.05/min) Emax 14 mL/min per 70 kg IBW, EC50 0.8 mg/L, Hill 1.5; × filtration × (1 − tolerance) × ECF-deficit factor; tolerance +0.004/min at full effect, decays τ 6 h, ≤ 0.7      |
+| Urine composition    | Na 60–130 mmol/L (higher with natriuresis), Cl = Na + 10, K 30–40                                                                                                                                    |
+| Vasopressors         | act only through perfusion pressure — above the autoregulation limit noradrenaline does not raise urine output                                                                                       |
+
+### Bladder, catheter and charting
+
+| Assumption       | Value                                                                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Patent catheter  | bladder drains with τ 20 s to ≈ 5 mL residual                                                                                  |
+| Kinked / blocked | nothing drains; formation continues; release gives a surge                                                                     |
+| Charting         | scheduled every 60 min (15–240 selectable) or on demand; mL/kg/h with the named weight basis (actual or ideal)                 |
+| KDIGO hint       | rolling windows 6/12/24 h (< 0.5 / < 0.5 / < 0.3 mL/kg/h); an incomplete window is named as such; never a fluid recommendation |
+
+### Estimated losses (`losses.ts`)
+
+| Assumption           | Value                                                                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skin                 | 250 mL/m²/day (Mosteller BSA — not linear with weight), +12 % per °C above 37, ± ambient humidity (≤ ±40 %) and temperature (3 %/°C)                                                                      |
+| Respiratory          | V̇E × (exhaled − inspired water); exhaled 37 mg/L via an airway device, 34 mg/L via the upper airway; inspired: dry gas 0, HME 30, heated humidifier 44 (no net gain), ambient air from temperature and RH |
+| Sweat                | instructor rate + 0.2 mL/min per °C above 38.5 + 0.1 mL/min per °C ambient above 30; Na 40, Cl 35, K 5 mmol/L                                                                                             |
+| Surgical evaporation | 1 mL/kg IBW/h × field exposure (open abdomen = 1)                                                                                                                                                         |
+| Source               | pure water from the interstitium (sweat with its electrolytes) — each loss is computed once from its own driver                                                                                           |
+
+### Third space, drains, bleeding, irrigation
+
+| Assumption      | Value                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sequestration   | explicit processes from the interstitium, isotonic: ascites 1.5, pleural 1, gut lumen 2 mL/min at full drive                                                  |
+| Drains          | ascites/pleural drainage 50 mL/min from its pool until the ordered volume is reached — recorded once                                                          |
+| Wound drain     | serous (Na 140, Cl 105, K 4) from the interstitium                                                                                                            |
+| Gastric / stoma | from luminal fluid first; fresh secretion from the ECF (gastric Cl-rich → alkalosis; stoma Na-rich → acidosis)                                                |
+| Bleeding        | whole blood at the current haematocrit; external → suction + ledger; internal → haematoma (inside the body)                                                   |
+| Irrigation      | leaves the field with τ 2 min: suction (canister, not blood loss) or — only with an explicit absorption fraction — absorbed as isotonic saline (ledger input) |
+| Blood products  | red cells (60 % RBC), FFP (coagulation factors ≈ 100 %), platelets; coagulation factors and platelets follow dilution (display only, no coagulation model)    |
+
+### Tracer ("Modellzuordnung")
+
+The most recent fluid bolus is traced. Net shifts between compartments are attributed to it first; losses in
+proportion. Tracer volumes always sum to the delivered volume. A teaching device, not a measurement.
+
+### Sources (status checked from memory — not re-verified in this session)
+
+- NICE CG174 _Intravenous fluid therapy in adults in hospital_ (2013, updated 2017) — adult inpatients; not
+  anaesthesia/critical-care specific.
+- Woodcock & Woodcock 2012 (Br J Anaesth) and Levick & Michel 2010 (Cardiovasc Res) — revised Starling principle;
+  physiological reviews, not a validated whole-body model.
+- PMC10967119 and PMC7183132 — cited as given in the request; their content and population could not be checked.
+  Treated as background only.
+- KDIGO Clinical Practice Guideline for AKI (2012) — urine criteria; a 2024–2025 update was in preparation (draft
+  status not relied upon).
+- Furosemide SmPC — onset/peak/duration only.
 
 ## Presentation-only assumptions (UI)
 

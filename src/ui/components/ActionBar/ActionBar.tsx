@@ -30,7 +30,6 @@ const LOCKED: LockedAction[] = [
   { key: 'action.defibrillator', icon: IconBolt, milestone: 2 },
   { key: 'action.airway', icon: IconLungs, milestone: 4 },
   { key: 'action.drugs', icon: IconSyringe, milestone: 3 },
-  { key: 'action.fluids', icon: IconDrip, milestone: 3 },
   { key: 'action.ultrasound', icon: IconProbe, milestone: 5 },
   { key: 'action.procedures', icon: IconTools, milestone: 6 },
 ];
@@ -41,7 +40,7 @@ const selectCprActive = (s: { interventions: { cpr: { active: boolean } } }) =>
 export function ActionBar() {
   const t = useT();
   const engine = useEngine();
-  const { setUi } = useUi();
+  const { ui, setUi } = useUi();
   const cprActive = useEngineSelector(selectCprActive);
 
   const toggleCpr = () => engine.dispatch({ type: cprActive ? 'CPR_STOP' : 'CPR_START' }, 'user');
@@ -66,6 +65,16 @@ export function ActionBar() {
           {cprActive ? t('action.stopCpr') : t('action.startCpr')}
         </span>
         <kbd className={styles.kbd}>Space</kbd>
+      </button>
+      <button
+        type="button"
+        className={`${styles.action} ${ui.balanceOpen ? styles.active : ''}`}
+        onClick={() => setUi({ balanceOpen: !ui.balanceOpen })}
+        aria-pressed={ui.balanceOpen}
+        data-testid="balance-button"
+      >
+        <IconDrip />
+        <span className={styles.label}>{t('action.fluids')}</span>
       </button>
       {LOCKED.map(({ key, icon: Icon, milestone }) => (
         <span

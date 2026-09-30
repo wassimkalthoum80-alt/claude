@@ -22,6 +22,8 @@ export interface UiState {
   pumpEditor: string | null;
   /** processed-EEG (BIS) detail panel open */
   bisOpen: boolean;
+  /** fluid-balance ("Bilanz") panel open */
+  balanceOpen: boolean;
 }
 
 type UiAction =
@@ -89,6 +91,7 @@ function initialState(): UiState {
     limitsFocus: null,
     pumpEditor: null,
     bisOpen: false,
+    balanceOpen: false,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

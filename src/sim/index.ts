@@ -150,3 +150,23 @@ export type {
   ScenarioObjective,
   ScenarioPump,
 } from './types/scenario';
+// Fluid balance ("Bilanzierung & Flüssigkeitsverteilung")
+export {
+  INPUT_CATEGORIES,
+  OUTPUT_CATEGORIES,
+  ESTIMATED_CATEGORIES,
+  type InputCategory,
+  type OutputCategory,
+  type EstimatedCategory,
+  type LedgerCategory,
+  type ReadonlyFluidLedger,
+} from './fluid/ledger';
+export { idealBodyWeight } from './pharmacology/bodySize';
+export type {
+  BodyFluidState,
+  BalanceChartState,
+  FluidFactors,
+  FluidTracer,
+  CatheterState,
+} from './state/BodyFluidState';
+export type { FluidInit } from './fluid/init';

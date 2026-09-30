@@ -126,6 +126,18 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   tetanic, surgery), sensor conditions and patient factors (frailty, sensitivity, temperature, organ
   function, EEG amplitude). Midazolam, dexmedetomidine, racemic ketamine and esketamine are now executable
   (educational models). **Educational approximation — not the proprietary BIS algorithm, not validated.**
+- **Fluid balance ("Bilanzierung & Flüssigkeitsverteilung").** FLUIDS / BALANCE opens a German balance chart:
+  EINFUHR (crystalloids, colloids/albumin, blood products, syringe carrier volume, flushes, absorbed irrigation),
+  AUSFUHR (drained urine, external blood loss, drains, gastric tube, stoma) and GESCHÄTZTE VERLUSTE (skin and
+  respiratory perspiration, sweat, surgical evaporation) for 1 h / 6 h / 24 h / the whole case, with measured
+  and estimated balance, hourly and cumulative urine, mL/kg/h with its weight basis, the next scheduled
+  measurement, bag emptying, catheter check, suction vs irrigation and a KDIGO rolling-window hint (never a
+  fluid recommendation). The optional "Simulierte Verteilung" view shows the hidden compartments (plasma, red
+  cells, interstitium, lung water, cells, third space, bladder), the transfer rates and where the last bolus
+  went. Fluid moves by explicit processes — revised Starling filtration with the glycocalyx, lymph, albumin
+  kinetics, osmotic shifts, a kidney that depends on perfusion, congestion, ADH, injury and diuretics — so the
+  same bolus acts differently in hypovolaemia, capillary leak, heart failure and ARDS. Eight fluid teaching
+  scenarios are in the scenario list; the instructor panel has the true values and all fluid processes.
 - The same bolus acts **much more strongly in hypovolaemia and in the elderly** (instructor panel → heart–lung
   model: *Age* slider, *Volume status*). An 80-year-old at volume status 0.6 falls to ≈ 53/33 with loss of the
   pleth signal; at 0.5 the circulation collapses unless you treat it (vasopressor, fluid bolus). Reason in the
@@ -211,6 +223,9 @@ docs/                  architecture, assumptions, reviews, reference image, scre
   have no effect on ROSC, and there is no automatic ROSC.
 - The pharmacology is an **educational calibration**: PD constants, the educational PK models, the line model and
   the fluid kinetics are author-selected, and the formulary is unreviewed (see the assumptions document).
+- The fluid model is an **educational compartment model**: exchange, renal and perspiration constants are
+  author-selected; no oral intake, nutrition, renal replacement, metabolic water, coagulation model or renal
+  recovery. Ledger views have minute resolution. See `docs/reviews/fluid-balance-report.md`.
 - Lung mechanics are single-compartment (recruitment and overdistension are bounded heuristics). The heart–lung
   interaction uses author-selected calibration for bradycardia/arrest thresholds. It is shown in the instructor
   panel and is **not clinically validated** (see `docs/SIMULATION_ASSUMPTIONS.md` and

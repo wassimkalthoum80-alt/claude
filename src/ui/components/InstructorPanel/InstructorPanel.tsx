@@ -14,6 +14,7 @@ import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { HeartLungPanel } from './HeartLungPanel';
 import { PharmacologyPanel } from './PharmacologyPanel';
 import { BrainPanel } from './BrainPanel';
+import { FluidPanel } from './FluidPanel';
 import styles from './InstructorPanel.module.css';
 
 const RHYTHMS: { id: RhythmId; key: I18nKey; hotkey: string }[] = [
@@ -236,6 +237,7 @@ export function InstructorPanel() {
       <HeartLungPanel />
       <PharmacologyPanel />
       <BrainPanel />
+      <FluidPanel />
 
       <p className={styles.hint}>{t('instructor.hint')}</p>
     </aside>

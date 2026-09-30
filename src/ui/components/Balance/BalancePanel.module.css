@@ -1,0 +1,321 @@
+/* Opens over the right-hand side of the scene, so the patient monitor on the left stays visible. */
+.panel {
+  position: absolute;
+  top: var(--edge);
+  right: var(--edge);
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 2 * var(--edge));
+  overflow-y: auto;
+  z-index: 28;
+  padding: 10px 12px 12px;
+  background: rgba(8, 12, 17, 0.97);
+  border: 1px solid var(--panel-border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  font: 500 12px/1.35 var(--font-ui);
+  color: var(--text);
+}
+
+@media (max-width: 700px) {
+  .panel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.title {
+  font: 600 13px/1 var(--font-ui);
+  letter-spacing: 0.08em;
+  color: #7fd4ff;
+}
+
+.close {
+  width: 28px;
+  height: 26px;
+  background: none;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.periods {
+  display: flex;
+  gap: 4px;
+}
+
+.chip {
+  padding: 3px 9px;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font: 600 11px/1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.chipActive {
+  color: var(--text);
+  border-color: #7fd4ff;
+}
+
+.sub {
+  margin: 4px 0 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.incomplete {
+  color: var(--warn);
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+h3 {
+  margin: 8px 0 3px;
+  font: 700 11px/1.2 var(--font-ui);
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.in {
+  color: #7fd4ff;
+}
+
+.out {
+  color: #ffb21e;
+}
+
+.est {
+  color: #b9a4ff;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.na {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.sum {
+  font-weight: 700;
+  border-bottom: none;
+}
+
+.note {
+  margin: 4px 0;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.totals > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 7px;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.totals :global(.num) {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.urine {
+  padding-top: 2px;
+}
+
+.urineGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 520px) {
+  .urineGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.urineGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.urineGrid :global(.num) {
+  font-size: 15px;
+  color: var(--co2);
+}
+
+.urineGrid small {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.k {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 6px 0;
+  align-items: center;
+}
+
+.actions button,
+.actions select {
+  padding: 3px 8px;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: 600 11px/1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.actions label {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.chart {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.chart th {
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.low {
+  color: var(--warn);
+}
+
+.hint {
+  margin: 6px 0 2px;
+  padding: 4px 7px;
+  border-left: 3px solid var(--tile-border);
+  font-size: 11px;
+}
+
+.met {
+  border-left-color: var(--warn);
+  color: var(--warn);
+}
+
+.watch {
+  border-left-color: #b9a4ff;
+}
+
+.none {
+  color: var(--text-dim);
+}
+
+.toggle {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font: 600 12px/1.3 var(--font-ui);
+  cursor: pointer;
+  padding: 0;
+}
+
+.model {
+  margin-top: 4px;
+  padding: 6px;
+  border: 1px dashed var(--panel-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.diagram {
+  width: 100%;
+  height: auto;
+}
+
+.tracer {
+  margin-top: 6px;
+}
+
+.tracerBar {
+  display: flex;
+  height: 10px;
+  margin: 3px 0;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--tile-bg);
+}
+
+.tracerLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.tracerLegend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+.lab {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.disclaimer {
+  margin: 8px 0 0;
+  color: var(--text-faint);
+  font-size: 10px;
+}

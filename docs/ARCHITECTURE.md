@@ -44,6 +44,7 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 | `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole, PEA) and beat scheduling |
 | `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation |
 | `src/sim/pharmacology` | Formulary, units, dosing weights, IV line delivery, PK/PD, fluids, order validation (imports core, state, physiology parameters) |
+| `src/sim/fluid` | Body-fluid compartments, capillary/lung exchange, osmotic shift, electrolytes and SID, kidney, bladder/catheter, estimated losses, the balance ledger (imports core, state, physiology, pharmacology formulary) |
 | `src/sim/brain` | Cerebral state: hypnotic/GABAergic depth from the shared PD response surface, stimulation and analgesic attenuation, cerebral O₂, patient factors → EEG band amplitudes and suppression drive (imports core, state, pharmacology) |
 | `src/sim/devices` | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms |
 | `src/sim/signals` | Ring buffers and waveform generators |
@@ -141,15 +142,16 @@ The UI imports the simulation only through `src/sim/index.ts`.
  PharmacologyModel.update: delivery.ts (pump → extension → common line → patient, mass-conserving)
                            pk.ts (RK4, published / educational compartments per moiety)
                            pd.ts (effects relative to the scenario-start reference exposure)
-                           fluids.ts (volume kinetics, haemodilution)
-                                │ patient.pharmacology.effects, fluids, gas.hb
+                                │ patient.pharmacology.effects; returns the delivered volume (DeliveryStep)
+                                ▼
+ FluidModel.update (see "Fluid balance") → patient.fluid, gas.hb, gas.metabolicOffset
                                 ▼
  HeartLungModel (SVR, venous tone, inotropy, chronotropy, reflexes, lactate) · RespiratoryDrive (rate, effort)
  LungStateModel (bronchodilation) · BloodGasModel (Hb)
 ```
 
 - Pumps and the line are **device state**; drug amounts in the body and the effects are **patient state**. Only
-  `PharmacologyModel` writes `patient.pharmacology` and `gas.hb`.
+  `PharmacologyModel` writes `patient.pharmacology`; `FluidModel` writes `patient.fluid` and `gas.hb`.
 - The formulary separates clinical reference (shown), protocols (validation and display), models (executed) and
   sources. Brand products map to a moiety; products without a model are reference-only and cannot be loaded.
 - The engine re-validates every order; the UI validates the same way only to show messages early. Rejections and
@@ -183,3 +185,32 @@ The UI imports the simulation only through `src/sim/index.ts`.
   acceleration (×2/×5) runs the same ticks.
 - UI: `PatientMonitor` EEG row (±100 µV, 25 mm/s) with BIS/SQI/EMG/BSV; `Bis/BisPanel` (trend, markers,
   settings, explanations); `InstructorPanel/BrainPanel` (true model values, stimulation, sensor, patient factors).
+
+## Fluid balance ("Bilanzierung & Flüssigkeitsverteilung")
+
+```
+ pumps ─► PharmacologyModel.update ─► DeliveryStep { fluids by product, carriers by solvent, flushMl, bolusByPump }
+                                              │ (the only source of delivered volume — counted once)
+ FLUID_SET_FACTORS, CATHETER_SET, FLUID_DRAIN, IRRIGATION ─┐
+                                              ▼            ▼
+ FluidModel.update (10 Hz): inputs → plasma/RBC → Starling + lymph ↔ interstitium, lung filtration ↔ lung water,
+   sequestration → ascites/pleura/gut, bleeding (external → suction, internal → haematoma), drains, estimated
+   losses, osmotic ICF shift, glucose/organic-anion metabolism, kidney → bladder → catheter → bag, irrigation
+        │ writes patient.fluid (hidden), devices.balance (bag, suction, charted values), gas.hb, gas.metabolicOffset
+        │ adds every boundary crossing once to FluidLedger (engine-owned, outside the snapshot, per-minute bins)
+        ▼
+ HeartLungModel (effectiveVolumeStatus, vasoplegia, LV function) · LungStateModel (lung water → compliance, shunt)
+ BloodGasModel (metabolic offset) · UI: Balance/BalancePanel (ledger views), DistributionView, InstructorPanel/FluidPanel
+```
+
+- **One balance.** Volumes live only in `patient.fluid`; the pharmacology pipeline no longer keeps a fluid state.
+  Delivered volume enters exactly once; charting or emptying the bag, and irrigation in the field, never add entries.
+- **Measured vs estimated vs hidden.** The ledger separates inputs, measured outputs and estimated losses. Hidden
+  compartment values appear only in the labelled "Simulierte Verteilung" view and the instructor panel.
+- **Ledger outside the snapshot**, like the signal buffers: `engine.fluidLedger` (read-only) and
+  `engine.fluidConservationError`. It is rebuilt deterministically on replay; time acceleration runs the same ticks.
+- **Patient vs device.** Compartments and the kidney are patient state; catheter, bag, suction, irrigation, drain
+  orders and charted values are device state (`devices.balance`); scenario/instructor processes are
+  `patient.fluidFactors`.
+- `src/ui/adapters/balanceViewModel.ts` computes interval views (1 h/6 h/24 h/whole case, incomplete periods marked),
+  mL/kg/h with a named weight basis, the KDIGO rolling-window hint and the teaching view; unit-tested.

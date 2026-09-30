@@ -173,3 +173,28 @@ test('case timer next to the instructor button counts from 00:00 and restarts on
   await page.getByRole('button', { name: /VF under anaesthesia/ }).click();
   await expect(timer).toHaveText('00:00');
 });
+
+test('fluid balance: panel shows intake and urine; emptying the bag keeps the balance', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?autostart&debug&lang=de');
+  await page.evaluate(() => window.__resusEngine?.runFor(1800));
+  await page.getByTestId('balance-button').click();
+  const panel = page.getByTestId('balance-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText('EINFUHR');
+  await expect(panel).toContainText('GESCHÄTZTE VERLUSTE');
+  const net = await page.getByTestId('bal-net-measured').textContent();
+  await expect(page.getByTestId('bal-bag')).not.toHaveText('0 mL');
+  await page.getByTestId('bal-empty-bag').click();
+  await expect(page.getByTestId('bal-bag')).toHaveText('0 mL');
+  await expect(page.getByTestId('bal-net-measured')).toHaveText(net ?? '');
+  await page.getByTestId('bal-model-toggle').click();
+  await expect(page.getByTestId('bal-distribution')).toBeVisible();
+  expect(errors).toEqual([]);
+});

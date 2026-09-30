@@ -11,6 +11,7 @@ import { PatientMonitor } from './ui/components/PatientMonitor/PatientMonitor';
 import { PerfusorRack } from './ui/components/Perfusors/PerfusorRack';
 import { PumpEditor } from './ui/components/Perfusors/PumpEditor';
 import { BisPanel } from './ui/components/Bis/BisPanel';
+import { BalancePanel } from './ui/components/Balance/BalancePanel';
 import { PatientScene } from './ui/components/PatientScene/PatientScene';
 import { Timers } from './ui/components/Timers/Timers';
 import { Ventilator } from './ui/components/Ventilator/Ventilator';
@@ -84,6 +85,7 @@ function Workstation() {
       <AlarmLimitsPanel />
       <PumpEditor />
       <BisPanel />
+      <BalancePanel />
       <BriefingOverlay />
       <PauseMenu />
       <RunSummaryCard />
