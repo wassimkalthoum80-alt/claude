@@ -3,7 +3,7 @@ import { erc2025 } from '../../content/guidelines/erc2025';
 import { baselinePatient, vfUnderAnaesthesia } from '../../content/scenarios';
 import { SimulationEngine } from '../../sim';
 import { alarmLimitsViewModel } from './alarmLimitsViewModel';
-import { formatMmSs, formatNum } from './format';
+import { formatCaseTime, formatMmSs, formatNum } from './format';
 import { heartLungViewModel } from './heartLungViewModel';
 import { formatSt } from './viewModels';
 import { dynamicVisualState } from './patientVisualState';
@@ -26,6 +26,14 @@ describe('format helpers', () => {
     expect(formatNum(null)).toBe('--');
     expect(formatNum(null, '---')).toBe('---');
     expect(formatNum(6.04, '--', 1)).toBe('6.0');
+  });
+
+  it('formats the case timer as MM:SS, and H:MM:SS from one hour on', () => {
+    expect(formatCaseTime(0)).toBe('00:00');
+    expect(formatCaseTime(125.9)).toBe('02:05');
+    expect(formatCaseTime(3599)).toBe('59:59');
+    expect(formatCaseTime(3600)).toBe('1:00:00');
+    expect(formatCaseTime(7384)).toBe('2:03:04');
   });
 });
 

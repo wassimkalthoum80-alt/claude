@@ -7,6 +7,15 @@ export function formatMmSs(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** Case timer: "MM:SS", "H:MM:SS" from one hour on. */
+export function formatCaseTime(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds + 1e-6));
+  if (s < 3600) return formatMmSs(s);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
 /** Integer or placeholder ("--" for unmeasurable values, "---" for HR in VF, like real monitors). */
 export function formatNum(
   value: number | null | undefined,

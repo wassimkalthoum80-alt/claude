@@ -2,6 +2,7 @@
 interface Window {
   __resusEngine?: {
     runFor(seconds: number): void;
+    dispatch(command: { type: string; [key: string]: unknown }, source?: string): void;
     readonly eventLog: readonly { kind: string; event?: string }[];
   };
 }

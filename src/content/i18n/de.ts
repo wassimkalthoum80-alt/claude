@@ -188,8 +188,9 @@ export const de: Record<I18nKey, string> = {
   'hl.reserves': 'Reserven des Patienten',
   'hl.preloadReserve': 'Volumenstatus',
   'hl.age': 'Alter',
-  'clock.label': 'Uhrzeit',
-  'clock.caseTime': 'Fallzeit',
+  'clock.label': 'Fallzeit',
+  'clock.hint':
+    'Fall-Timer (Simulationszeit): beginnt bei 00:00 mit jedem neuen Fall oder Reset, steht bei Pause.',
   'bis.label': 'Simulierter BIS',
   'bis.eeg': 'EEG',
   'bis.sqi': 'SQI',

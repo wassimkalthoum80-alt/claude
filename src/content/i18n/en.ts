@@ -185,8 +185,9 @@ export const en = {
   'hl.reserves': 'Patient reserves',
   'hl.preloadReserve': 'Volume status',
   'hl.age': 'Age',
-  'clock.label': 'Time',
-  'clock.caseTime': 'Case time',
+  'clock.label': 'Case time',
+  'clock.hint':
+    'Case timer (simulation time): starts at 00:00 with every new case or reset, stops while paused.',
   'bis.label': 'Simulated BIS',
   'bis.eeg': 'EEG',
   'bis.sqi': 'SQI',

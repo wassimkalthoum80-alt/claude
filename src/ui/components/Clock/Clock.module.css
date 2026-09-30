@@ -1,4 +1,4 @@
-/* Digital wall clock beside the instructor button (styled like the other top-bar chips). */
+/* Case timer beside the instructor button (styled like the other top-bar chips). */
 .clock {
   display: inline-flex;
   align-items: center;
@@ -26,6 +26,15 @@
 
 .colon {
   animation: blink 1s steps(1) infinite;
+}
+
+/* Paused: digits dim and stop blinking, like a stopped stopwatch. */
+.paused .digits {
+  opacity: 0.55;
+}
+
+.paused .colon {
+  animation: none;
 }
 
 @keyframes blink {

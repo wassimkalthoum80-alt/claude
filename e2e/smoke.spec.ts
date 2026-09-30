@@ -151,14 +151,25 @@ test('processed EEG: BIS row, detail panel with trend, sensor loss shows "Check 
   expect(errors).toEqual([]);
 });
 
-test('digital wall clock next to the instructor button shows the local time', async ({ page }) => {
+test('case timer next to the instructor button counts from 00:00 and restarts on reset and a new case', async ({
+  page,
+}) => {
   await page.goto('/?autostart&debug');
-  const clock = page.getByTestId('wall-clock');
-  await expect(clock).toBeVisible();
-  await expect(clock).toHaveText(/^\d{2}:\d{2}:\d{2}$/);
-  const first = await clock.textContent();
-  await expect(clock).not.toHaveText(first ?? '', { timeout: 2500 });
-  const box = await clock.boundingBox();
+  const timer = page.getByTestId('case-timer');
+  await expect(timer).toBeVisible();
+  const box = await timer.boundingBox();
   const instr = await page.getByTestId('instructor-toggle').boundingBox();
   expect(box && instr && box.x > instr.x && box.x - (instr.x + instr.width) < 20).toBe(true);
+
+  await page.evaluate(() => window.__resusEngine?.runFor(125));
+  await expect(timer).toHaveText(/^02:0[5-9]$/);
+  await page.evaluate(() => window.__resusEngine?.dispatch({ type: 'RESET' }, 'instructor'));
+  await expect(timer).toHaveText(/^00:0\d$/);
+
+  // A new case from the pause menu starts at 00:00 again.
+  await page.evaluate(() => window.__resusEngine?.runFor(90));
+  await expect(timer).toHaveText(/^01:3\d$/);
+  await page.keyboard.press('p');
+  await page.getByRole('button', { name: /VF under anaesthesia/ }).click();
+  await expect(timer).toHaveText('00:00');
 });

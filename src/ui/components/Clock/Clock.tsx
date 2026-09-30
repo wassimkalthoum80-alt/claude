@@ -1,50 +1,35 @@
-import { useEffect, useState } from 'react';
 import type { SimulationState } from '../../../sim';
-import { formatMmSs } from '../../adapters/format';
+import { formatCaseTime } from '../../adapters/format';
 import { useT } from '../../hooks/UiContext';
 import { useEngineSelector } from '../../hooks/useEngineSelector';
 import styles from './Clock.module.css';
 
-const pad = (n: number) => String(n).padStart(2, '0');
 const caseSecond = (s: Readonly<SimulationState>) => Math.floor(s.time);
+const paused = (s: Readonly<SimulationState>) => s.control.paused;
 
 /**
- * Digital wall clock (real local time, like the clock on an OR wall) — presentation only, never simulation
- * state. The tooltip shows the elapsed case time (simulated), which follows pause and time acceleration.
+ * Case timer beside the instructor button: counts the simulated case time from 00:00 — restarts with every
+ * new case and after a reset, stops while the simulation is paused and runs faster with time acceleration.
+ * Reads the engine clock only (no separate timer state).
  */
 export function Clock() {
   const t = useT();
-  const [now, setNow] = useState(() => new Date());
-  const caseTime = useEngineSelector(caseSecond);
-  useEffect(() => {
-    // Align updates to the start of each second so the display ticks like a real clock.
-    let id: number | undefined;
-    const tick = () => {
-      const d = new Date();
-      setNow(d);
-      id = window.setTimeout(tick, 1000 - d.getMilliseconds());
-    };
-    id = window.setTimeout(tick, 1000 - new Date().getMilliseconds());
-    return () => window.clearTimeout(id);
-  }, []);
-  const hh = pad(now.getHours());
-  const mm = pad(now.getMinutes());
-  const ss = pad(now.getSeconds());
+  const time = formatCaseTime(useEngineSelector(caseSecond));
+  const isPaused = useEngineSelector(paused);
+  const [main, seconds] = [time.slice(0, -3), time.slice(-2)];
   return (
     <div
-      className={styles.clock}
+      className={`${styles.clock} ${isPaused ? styles.paused : ''}`}
       role="timer"
-      aria-label={`${t('clock.label')} ${hh}:${mm}:${ss}`}
-      title={`${t('clock.caseTime')} ${formatMmSs(caseTime)}`}
-      data-testid="wall-clock"
+      aria-label={`${t('clock.label')} ${time}`}
+      title={t('clock.hint')}
+      data-testid="case-timer"
     >
       <span className={styles.digits}>
-        {hh}
-        <span className={styles.colon}>:</span>
-        {mm}
+        {main}
         <span className={styles.seconds}>
           <span className={styles.colon}>:</span>
-          {ss}
+          {seconds}
         </span>
       </span>
     </div>
