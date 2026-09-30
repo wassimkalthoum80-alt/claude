@@ -233,6 +233,10 @@ export class FluidModel {
         (piP - (FLUID.lungSubGlycocalyxFraction + 0.4 * lungLeak) * FLUID.lungInterstitialOncotic);
     let jl = this.k.kfLung * (1 + 4 * lungLeak) * nfpLung;
     if (jl < 0) jl *= FLUID.absorptionFactor;
+    // SIM-ASSUMPTION: alveolar flooding — above a pulmonary capillary pressure of 25 mmHg the lung's safety factor
+    // is exceeded and fluid floods the alveoli (+2 mL/min per mmHg per 70 kg), so cardiogenic ("flash") pulmonary
+    // oedema develops within minutes, not hours.
+    jl += 2 * (this.k.lymph0 / 4) * Math.max(0, dv.pulmonaryCapillaryMmHg - 25);
     // SIM-ASSUMPTION: lung lymph rises up to 10× baseline (reached at +50 % lung water), then oedema accumulates.
     const lungLymph = this.k.lungLymph0 * clamp(1 + (9 * (lungRatio - 1)) / 0.5, 0.2, 10);
     const lungNet = this.limit(
@@ -660,11 +664,20 @@ export class FluidModel {
       0,
       30,
     );
+    // SIM-ASSUMPTION: LV filling pressure also rises with afterload (MAP above 110 mmHg: +0.12 mmHg/mmHg) and with
+    // acute LV decompensation (+30 mmHg at full decompensation) — the hypertensive crisis → pulmonary oedema path.
     d.pulmonaryCapillaryMmHg = clamp(
-      FLUID.pulmonaryCapillaryPressure + 6 * (veff - 1) + 20 * (1 - clamp(ff.lvFunction, 0.2, 1)),
+      FLUID.pulmonaryCapillaryPressure +
+        6 * (veff - 1) +
+        20 * (1 - clamp(ff.lvFunction, 0.2, 1)) +
+        0.12 * Math.max(0, patient.cardio.meanArterialPressure - 110) +
+        30 * patient.heartLung.lvDecompensation,
       3,
-      40,
+      50,
     );
+    // Without cardiac output the pulmonary vessels equilibrate at the mean filling pressure.
+    if (!patient.cardio.spontaneousCirculation)
+      d.pulmonaryCapillaryMmHg = Math.min(d.pulmonaryCapillaryMmHg, 12);
     d.totalBodyFluidMl = totalBodyFluid(f);
     d.lungWaterRatio = f.lungInterstitialMl / b.lungInterstitialMl;
     f.coagFactorsPct = this.coagAmount / Math.max(1, f.plasmaMl);

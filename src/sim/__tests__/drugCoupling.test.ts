@@ -415,3 +415,121 @@ describe('consistency and reproducibility', () => {
 function armedRate(ugKgMin: number, ugPerMl: number): number {
   return (ugKgMin * 80 * 60) / ugPerMl;
 }
+
+describe('noradrenaline dose–response realism (healthy-volunteer and overdose data)', () => {
+  /** TIVA baseline patient; the noradrenaline pump P3 runs 0.05 µg/kg/min at the start. */
+  const tivaAt = (ugKgMin: number, seconds: number) => {
+    const e = createEngine();
+    e.runFor(120);
+    cmd(e, {
+      type: 'PUMP_SET_RATE',
+      pumpId: 'P3',
+      rateMlH: (ugKgMin * 80 * 60) / 100,
+      confirm: true,
+    });
+    e.runFor(seconds);
+    return e;
+  };
+
+  it('MAP rises monotonically with dose; under anaesthesia ≈ 150–300 mmHg per µg/kg/min (published ≈ 222)', () => {
+    const maps = [0.05, 0.1, 0.2, 0.3].map((d) => haemo(tivaAt(d, 900)).map);
+    for (let i = 1; i < maps.length; i++)
+      expect(maps[i] ?? 0).toBeGreaterThan((maps[i - 1] ?? 0) + 3);
+    const slope = ((maps[2] ?? 0) - (maps[0] ?? 0)) / 0.15;
+    expect(slope).toBeGreaterThan(150);
+    expect(slope).toBeLessThan(300);
+  });
+
+  it('a high dose gives a hypertensive crisis with reflex bradycardia', () => {
+    const e = tivaAt(1, 300);
+    const h = haemo(e);
+    expect(h.map).toBeGreaterThan(140);
+    expect(h.hr).toBeLessThan(60);
+    expect(snap(e).devices.monitor.numerics.artSys ?? 0).toBeGreaterThan(180); // hypertensive emergency ≥ 180/120
+  });
+
+  it('left running, the crisis decompensates the LV: pulmonary oedema, cardiogenic shock, arrest', () => {
+    const e = tivaAt(1, 0);
+    let peakMap = 0;
+    let shock = false;
+    let arrestAt: number | null = null;
+    for (let t = 0; t < 1800 && arrestAt === null; t += 10) {
+      e.runFor(10);
+      const s = snap(e);
+      peakMap = Math.max(peakMap, s.patient.cardio.meanArterialPressure);
+      if (s.patient.heartLung.lvDecompensation > 0.8 && s.patient.cardio.cardiacOutput < 1.5)
+        shock = true;
+      if (!s.patient.cardio.spontaneousCirculation) arrestAt = t;
+    }
+    expect(peakMap).toBeGreaterThan(145);
+    expect(shock).toBe(true);
+    expect(arrestAt).not.toBeNull();
+    expect(e.eventLog.some((l) => l.kind === 'event' && l.event === 'PEA_ONSET')).toBe(true);
+  });
+
+  it('stopping the overdose early lets the ventricle recover', () => {
+    const e = tivaAt(1, 180);
+    cmd(e, { type: 'PUMP_SET_RATE', pumpId: 'P3', rateMlH: 2.4 });
+    e.runFor(1800);
+    const s = snap(e);
+    expect(s.patient.cardio.spontaneousCirculation).toBe(true);
+    expect(s.patient.heartLung.lvDecompensation).toBeLessThan(0.3);
+    expect(haemo(e).map).toBeLessThan(120);
+  });
+
+  it('the response starts within about a minute of a rate change (half-life ≈ 2.5 min sets the plateau)', () => {
+    const e = createEngine();
+    e.runFor(120);
+    const m0 = haemo(e).map;
+    cmd(e, { type: 'PUMP_SET_RATE', pumpId: 'P3', rateMlH: 24, confirm: true }); // 0.5 µg/kg/min
+    e.runFor(60);
+    const m60 = haemo(e).map;
+    e.runFor(240);
+    const m300 = haemo(e).map;
+    expect(m60).toBeGreaterThan(m0 + 4);
+    expect(m300).toBeGreaterThan(m60 + 20);
+  });
+
+  it('septic vasoplegia blunts the α response (hyporesponsiveness); vasopressin is spared', () => {
+    const rise = (vasoplegia: number, product: string, rateMlH: number) => {
+      const e = createEngine(vasoplegic(vasoplegia));
+      e.runFor(120);
+      const m0 = haemo(e).map;
+      infuse(e, 'P1', product, rateMlH);
+      e.runFor(900);
+      return haemo(e).map - m0;
+    };
+    const naNormal = rise(0, 'noradrenaline-100', 9.6); // 0.2 µg/kg/min
+    const naSeptic = rise(0.8, 'noradrenaline-100', 9.6);
+    expect(naSeptic).toBeLessThan(0.7 * naNormal);
+    const avpSeptic = rise(0.8, 'vasopressin-1', 1.8);
+    expect(avpSeptic).toBeGreaterThan(3);
+  });
+});
+
+describe('adrenaline dose–response realism', () => {
+  it('low dose is β-dominated: HR and CO rise, SVR falls', () => {
+    const e = createEngine(patient());
+    e.runFor(120);
+    const b = haemo(e);
+    infuse(e, 'P1', 'adrenaline-20', 12); // 0.05 µg/kg/min
+    e.runFor(600);
+    const a = haemo(e);
+    expect(a.hr).toBeGreaterThan(b.hr + 5);
+    expect(a.co).toBeGreaterThan(1.2 * b.co);
+    expect(a.svr).toBeLessThan(0.9 * b.svr);
+  });
+
+  it('1 mg IV push with a beating heart: severe hypertension and tachycardia within seconds', () => {
+    const e = createEngine(patient());
+    e.runFor(120);
+    const b = haemo(e);
+    push(e, 'P1', 'adrenaline-100', 10, 0);
+    e.runFor(30);
+    const a = haemo(e);
+    expect(snap(e).devices.monitor.numerics.artSys ?? 0).toBeGreaterThan(250);
+    expect(a.hr).toBeGreaterThan(b.hr + 20);
+    e.runFor(120);
+    expect(snap(e).patient.heartLung.lvDecompensation).toBeGreaterThan(0.5); // acute LV failure follows
+  });
+});

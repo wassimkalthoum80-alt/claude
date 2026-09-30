@@ -100,7 +100,8 @@ export class CardiovascularModel {
       this.pulses = this.pulses.filter((p) => t < p.start + p.duration);
     }
 
-    const r = CARDIO.peripheralResistance * clamp(cardio.svrFactor, 0.2, 2);
+    // SIM-ASSUMPTION: resistance may rise to 6× baseline (severe vasoconstriction / catecholamine overdose).
+    const r = CARDIO.peripheralResistance * clamp(cardio.svrFactor, 0.2, 6);
     const c = CARDIO.arterialCompliance;
     const outflow = Math.max(0, this.pressure - cardio.criticalClosingPressure) / r;
     this.pressure = Math.max(0, this.pressure + ((inflow - outflow) / c) * dt);
@@ -146,7 +147,7 @@ export class CardiovascularModel {
 export function criticalClosingPressure(tone: number, vasomotor = 1): number {
   return (
     CARDIO.msfp +
-    clamp(tone, 0, 1) * clamp(vasomotor, 0.5, 1.5) * (CARDIO.pcritWithTone - CARDIO.msfp)
+    clamp(tone, 0, 1) * clamp(vasomotor, 0.5, 2) * (CARDIO.pcritWithTone - CARDIO.msfp)
   );
 }
 

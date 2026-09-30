@@ -659,6 +659,8 @@ export class SimulationEngine {
     if (tr.rhythm === 'pea') {
       s.patient.heartLung.arrestCause = tr.cause;
       this.logEvent('PEA_ONSET', s.time, tr.cause);
+    } else if (tr.rhythm === 'vf') {
+      this.logEvent('VF_ONSET', s.time, tr.cause);
     } else {
       this.logEvent('ASYSTOLE_ONSET', s.time);
     }

@@ -64,7 +64,7 @@ export class PharmacologyModel {
       ph.reference,
       patient.demographics.weightKg,
       patient.demographics.ageYears,
-      patient.factors,
+      { ...patient.factors, alphaResponsiveness: alphaResponsiveness(patient) },
       ph.referencePlasma,
       ph.referencePlasma,
     );
@@ -93,7 +93,7 @@ export class PharmacologyModel {
       ph.reference,
       w,
       patient.demographics.ageYears,
-      patient.factors,
+      { ...patient.factors, alphaResponsiveness: alphaResponsiveness(patient) },
       plasmaExposures(patient),
       ph.referencePlasma,
     );
@@ -131,4 +131,15 @@ export function plasmaExposures(patient: PatientState): Exposures {
     out[m] = k.cp * (EXPOSURE_SCALE[m] ?? 1);
   }
   return out;
+}
+
+/**
+ * SIM-ASSUMPTION: vascular α1 responsiveness — septic/inflammatory vasoplegia down-regulates α1 receptors (up to
+ * −70 %) and acidaemia blunts catecholamine action (−50 % from pH 7.25 to 7.0). Explains catecholamine-refractory
+ * shock; vasopressin (V1) is not affected.
+ */
+export function alphaResponsiveness(patient: PatientState): number {
+  const vasoplegia = clamp(patient.fluidFactors.vasoplegia, 0, 1);
+  const acid = clamp((7.25 - patient.gas.ph) / 0.25, 0, 1);
+  return (1 - 0.7 * vasoplegia) * (1 - 0.5 * acid);
 }

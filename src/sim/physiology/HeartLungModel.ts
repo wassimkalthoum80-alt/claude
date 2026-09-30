@@ -42,10 +42,14 @@ export function myocardialIschaemia(patient: PatientState): number {
   // raise demand; negative inotropes lower it).
   const demand =
     ((hr * Math.max(20, map)) / (80 * 87)) * (0.7 + 0.3 * patient.pharmacology.effects.inotropy);
+  // SIM-ASSUMPTION: a raised LV filling pressure (pulmonary capillary pressure above 12 mmHg) lowers the
+  // coronary perfusion pressure of the subendocardium (−2.5 % per mmHg, ≥ 30 % left).
+  const lvedp = patient.fluid.derived.pulmonaryCapillaryMmHg;
   const supply =
     (gas.cao2 / REFERENCE_CAO2) *
     clamp((map - 10) / 77, 0, 1.5) *
-    (diastolicFraction(hr) / diastolicFraction(80));
+    (diastolicFraction(hr) / diastolicFraction(80)) *
+    clamp(1 - 0.025 * Math.max(0, lvedp - 12), 0.3, 1);
   const reserve = ECG.coronaryReserve * reserves.cardiacReserve;
   const ischaemia = clamp(1 - (reserve * supply) / demand, 0, 1);
   const strain = clamp(1 - supply / demand, 0, 1);
@@ -54,7 +58,12 @@ export function myocardialIschaemia(patient: PatientState): number {
 
 /** A rhythm change the heart–lung model asks the engine to make (the engine logs and applies it). */
 export type HeartLungTransition =
-  { rhythm: 'pea'; cause: 'lowFlow' | 'oxygenDebt' } | { rhythm: 'asystole' };
+  | { rhythm: 'pea'; cause: 'lowFlow' | 'oxygenDebt' }
+  | { rhythm: 'asystole' }
+  | { rhythm: 'vf'; cause: 'ischaemicArrhythmia' };
+
+/** s — ischaemic-arrhythmia burden at which ventricular fibrillation starts (model threshold, not a law). */
+export const ARRHYTHMIA_THRESHOLD_S = 90;
 
 /** The most filling that negative pleural pressure can add (s-shaped venous-return response). */
 const MAX_FILLING_GAIN = 0.15;
@@ -131,6 +140,8 @@ export class HeartLungModel {
     hl.asystoleDose = 0;
     hl.arrestCause = null;
     hl.ischaemia = 0;
+    hl.lvDecompensation = 0;
+    hl.arrhythmiaDose = 0;
     patient.cardio.preload = hl.preloadFactor;
     patient.cardio.contractility = 1;
     patient.cardio.svrFactor = 1;
@@ -247,7 +258,10 @@ export class HeartLungModel {
         0,
         1.5,
       ) * ageSympatheticFactor(patient.demographics.ageYears);
-    const highPressure = clamp((cardio.meanArterialPressure - 105) / 40, 0, 1) * drugs.baroreflex;
+    // SIM-ASSUMPTION: high-pressure baroreflex — above MAP 95 mmHg vagal slowing (up to −35/min at MAP 145) and
+    // sympathetic withdrawal (SVR up to −50 % of the reflex share); blunted by anaesthetics. This buffering is why the MAP rise per
+    // noradrenaline dose is about half as steep awake as under general anaesthesia (healthy-volunteer data).
+    const highPressure = clamp((cardio.meanArterialPressure - 95) / 50, 0, 1.2) * drugs.baroreflex;
     const debtFraction = clamp(
       (hl.oxygenDebt - k.bradycardiaDebtS) / (k.arrestDebtS - k.bradycardiaDebtS),
       0,
@@ -261,7 +275,7 @@ export class HeartLungModel {
     const betaHr = 1 - 0.7 * clamp(patient.factors.betaBlockade, 0, 1);
     hl.sympatheticStress = stress;
     hl.hrDirect = this.baselineHeartRate * drugs.chronotropy;
-    hl.hrReflex = 55 * stress * reserves.sympatheticResponse * betaHr - 25 * highPressure;
+    hl.hrReflex = 55 * stress * reserves.sympatheticResponse * betaHr - 35 * highPressure;
     hl.heartRateTarget = clamp((hl.hrDirect + hl.hrReflex) * bradyFactor, 15, 190);
     cardio.heartRate = approach(cardio.heartRate, hl.heartRateTarget, dt, k.heartRateTauS);
 
@@ -281,17 +295,54 @@ export class HeartLungModel {
     hl.myocardialFactor = approach(hl.myocardialFactor, myocardial, dt, k.strokeVolumeTauS);
     // Above ≈ 1.45 × baseline rate, shorter filling time costs stroke volume (CO stops rising).
     const hrRatio = Math.max(0.05, cardio.heartRate / this.baselineHeartRate);
-    const rateFactor = clamp(hrRatio, 0.1, 1.45) / hrRatio;
-    // SIM-ASSUMPTION: afterload sensitivity — stroke volume falls ≈ 30 % per doubling of vascular resistance, so a
-    // vasopressor can raise MAP while cardiac output falls.
-    const afterload = clamp(1 - 0.3 * (cardio.svrFactor - 1), 0.55, 1.15);
+    // SIM-ASSUMPTION: at lower rates the longer diastole fills the ventricle more (stroke volume +0.6 per unit of
+    // rate reduction, at most +35 %), so a reflex bradycardia lowers cardiac output less than proportionally.
+    const rateFactor =
+      hrRatio < 1 ? Math.min(1.35, 1 + 0.6 * (1 - hrRatio)) : clamp(hrRatio, 0.1, 1.45) / hrRatio;
+    // SIM-ASSUMPTION: acute LV decompensation. Sustained MAP above 140 mmHg (afterload mismatch) and severe
+    // ischaemia build it (0.006/s at MAP 200 mmHg or full ischaemia, faster with a small cardiac reserve); it
+    // recovers slowly (τ 10 min) once the load is removed. It lowers contractility (up to −60 %) and raises the
+    // left-atrial/pulmonary capillary pressure (fluid model) → pulmonary oedema, hypoxaemia, cardiogenic shock.
+    const afterloadStress = clamp((cardio.meanArterialPressure - 140) / 60, 0, 1.5);
+    const ischaemicStress = clamp((hl.ischaemia - 0.5) / 0.5, 0, 1);
+    // Self-sustaining once established: an ACUTE rise of LV filling pressure (from afterload and from the
+    // decompensation itself — not a chronically raised, compensated filling pressure) raises wall stress and
+    // subendocardial ischaemia and drives further decompensation — so a crisis left untreated progresses to
+    // cardiogenic shock, while early removal of the load lets the ventricle recover.
+    const acuteFilling =
+      0.12 * Math.max(0, cardio.meanArterialPressure - 110) + 30 * hl.lvDecompensation;
+    const fillingStress = 0.8 * clamp((acuteFilling - 8) / 15, 0, 1);
+    const decompDrive =
+      (afterloadStress + ischaemicStress + fillingStress) / Math.max(0.3, reserves.cardiacReserve);
+    hl.lvDecompensation = clamp(
+      hl.lvDecompensation +
+        dt * (0.006 * decompDrive - (decompDrive === 0 ? hl.lvDecompensation / 600 : 0)),
+      0,
+      1,
+    );
+    // SIM-ASSUMPTION: afterload sensitivity — stroke volume ∝ 1/(1 + 0.12·(SVR factor − 1)/LV function): a
+    // healthy ventricle largely holds its stroke volume against a higher pressure (homeometric autoregulation),
+    // a weak or decompensating one loses much more; no floor, so extreme vasoconstriction drives cardiac output
+    // down (overdose: severe hypertension, reflex bradycardia, falling CO).
+    const lvEffective =
+      clamp(patient.fluidFactors.lvFunction, 0.2, 1) * (1 - 0.6 * hl.lvDecompensation);
+    const afterload =
+      cardio.svrFactor >= 1
+        ? 1 / (1 + (0.12 * (cardio.svrFactor - 1)) / Math.max(0.15, lvEffective) ** 1.5)
+        : Math.min(1.15, 1 + 0.3 * (1 - cardio.svrFactor));
+    // SIM-ASSUMPTION: ketamine's peripheral sympathomimetic action (catecholamine release, reuptake inhibition)
+    // adds inotropy (+50 %) and vascular tone (+40 %) at full drive — only as far as catecholamine stores
+    // (sympathetic reserve) and β-receptors (β-blockade) allow. With depleted stores the direct negative inotropy
+    // remains (hypotension, falling CO).
+    const catecholamineRelease = Math.max(0, drugs.sympatheticDrive) * reserves.sympatheticResponse;
     cardio.contractility = clamp(
       hl.rvFactor *
         hl.myocardialFactor *
         rateFactor *
         drugs.inotropy *
         afterload *
-        clamp(patient.fluidFactors.lvFunction, 0.2, 1),
+        lvEffective *
+        (1 + 0.5 * catecholamineRelease * betaHr),
       0.02,
       2.5,
     );
@@ -299,9 +350,16 @@ export class HeartLungModel {
     // Vascular resistance: sympathetic tone up, vasoplegia with debt and acidosis.
     // SIM-ASSUMPTION: septic vasoplegia lowers vascular resistance by up to 50 %.
     hl.svrReflexFactor =
-      1 + 0.18 * stress * reserves.sympatheticResponse - 0.45 * debtFraction - 0.12 * acidosis;
-    hl.svrDrugFactor = drugs.svr * (1 - 0.5 * clamp(patient.fluidFactors.vasoplegia, 0, 1));
-    const svrTarget = clamp(hl.svrReflexFactor * hl.svrDrugFactor, 0.25, 3);
+      1 +
+      0.18 * stress * reserves.sympatheticResponse -
+      0.5 * highPressure -
+      0.45 * debtFraction -
+      0.12 * acidosis;
+    hl.svrDrugFactor =
+      drugs.svr *
+      (1 - 0.5 * clamp(patient.fluidFactors.vasoplegia, 0, 1)) *
+      (1 + 0.4 * catecholamineRelease);
+    const svrTarget = clamp(hl.svrReflexFactor * hl.svrDrugFactor, 0.25, 6);
     cardio.svrFactor = approach(cardio.svrFactor, svrTarget, dt, k.svrTauS);
 
     // Low-flow burden and arrest.
@@ -309,7 +367,25 @@ export class HeartLungModel {
       cardio.cardiacOutput < k.lowFlowThresholdLMin
         ? hl.lowFlowTime + dt
         : Math.max(0, hl.lowFlowTime - 2 * dt);
+    // SIM-ASSUMPTION: severe myocardial ischaemia (> 0.7) under catecholamine drive builds an arrhythmia burden
+    // (×1 + 2·excess drug inotropy); it decays when ischaemia resolves. Ventricular fibrillation at 90 s of burden —
+    // deterministic, reproducible, labelled as a model threshold.
+    const catecholamineDrive =
+      Math.max(0, drugs.direct.inotropy - 1) + Math.max(0, drugs.direct.chronotropy - 1);
+    // Extreme β1 stimulation (e.g. 1 mg adrenaline IV with a beating heart — far above infusion exposures used in
+    // septic shock) is arrhythmogenic by itself.
+    const arrhythmogenic =
+      clamp((hl.ischaemia - 0.7) / 0.3, 0, 1) * (1 + 2 * catecholamineDrive) +
+      1.5 * clamp(catecholamineDrive - 1.6, 0, 1);
+    hl.arrhythmiaDose = Math.max(
+      0,
+      hl.arrhythmiaDose + dt * (arrhythmogenic > 0 ? arrhythmogenic : -hl.arrhythmiaDose / 120),
+    );
     if (!arrestEnabled) return null;
+    if (hl.arrhythmiaDose >= ARRHYTHMIA_THRESHOLD_S) {
+      hl.arrhythmiaDose = 0;
+      return { rhythm: 'vf', cause: 'ischaemicArrhythmia' };
+    }
     if (hl.lowFlowTime >= k.lowFlowBeforePeaS) return { rhythm: 'pea', cause: 'lowFlow' };
     if (hl.oxygenDebt >= k.arrestDebtS) return { rhythm: 'pea', cause: 'oxygenDebt' };
     return null;

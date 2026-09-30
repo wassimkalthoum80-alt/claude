@@ -169,6 +169,12 @@ export interface HeartLungState {
   svrDrugFactor: number;
   /** mmol/L/s — lactate from regional hypoperfusion by excessive vasoconstriction */
   vasoconstrictionLactate: number;
+  /** 0..1 — acute LV decompensation (afterload mismatch in hypertensive crisis, ischaemia): lowers contractility,
+   * raises left-atrial / pulmonary capillary pressure (→ pulmonary oedema) */
+  lvDecompensation: number;
+  /** s — ischaemic-arrhythmia burden (severe ischaemia × catecholamine drive); ventricular fibrillation at the
+   * model threshold */
+  arrhythmiaDose: number;
 }
 
 /** Patient reserves the instructor can change live (dimensionless, 1 = normal). */

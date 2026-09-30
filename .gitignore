@@ -6,3 +6,7 @@ test-results
 playwright-report
 blob-report
 .DS_Store
+
+# Licensed third-party study material (personalised, redistribution not permitted) — kept local only
+docs/reference/pharma/*.pdf
+docs/reference/pharma/*.txt

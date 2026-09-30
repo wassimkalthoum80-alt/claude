@@ -69,8 +69,8 @@ export const PD = {
     sympatheticMax: 0.6,
     /** racemic-equivalent µg/mL for half the sympathetic drive */
     sympathomimeticU50: 1,
-    inotropyMax: 0.3,
-    inotropyU50: 2,
+    inotropyMax: 0.4,
+    inotropyU50: 1.5,
     bronchoMax: 0.4,
     bronchoU50: 1,
     analgesiaMax: 0.6,
@@ -107,28 +107,41 @@ export const PD = {
   naloxoneKNgMl: 0.25,
   // SIM-ASSUMPTION: rocuronium block Ce50 1.0 µg/mL, Hill 4.5; diaphragm needs ≈ 1.7× the concentration.
   rocuronium: { ce50: 1.0, gamma: 4.5, diaphragmFactor: 1.7 },
-  // ng/mL. α: SVR and venous tone (stressed volume); small β1 inotropy and chronotropy (net HR set by the reflexes).
+  // ng/mL. α: SVR and venous tone (stressed volume); β1 inotropy and chronotropy (net HR set by the reflexes).
+  // SIM-ASSUMPTION (calibrated to healthy-volunteer data, see docs): MAP rises about linearly with dose over the
+  // clinical range (≈ 100 mmHg per µg/kg/min awake, ≈ 220 under anaesthesia) — so the vascular effect must not
+  // saturate there: SVR × (1 + 14·C^1.3/(40^1.3 + C^1.3)); 0.1 µg/kg/min ≈ 2.9 ng/mL, 1 µg/kg/min ≈ 29 ng/mL
+  // (SVR ≈ ×6.6 against no drug — hypertensive crisis in a patient without vasoplegia). At very high doses the β1
+  // chronotropy (EC50 60 ng/mL ≈ 2 µg/kg/min) can overcome the reflex bradycardia.
   noradrenaline: {
-    svrMax: 1.2,
-    ec50: 3.4,
-    venousMax: 0.15,
-    inotropyMax: 0.1,
-    inoEc50: 4.3,
-    chronoMax: 0.08,
-    chronoEc50: 4.3,
+    svrMax: 14,
+    ec50: 40,
+    svrHill: 1.3,
+    venousMax: 0.3,
+    venousEc50: 10,
+    inotropyMax: 0.15,
+    inoEc50: 8,
+    chronoMax: 0.35,
+    chronoEc50: 60,
   },
   // ng/mL. Graded β1 (inotropy, HR), β2 (vasodilation, bronchodilation, lactate, K⁺ shift, glucose) and α
   // (vasoconstriction) — no sharp dose boundary.
+  // SIM-ASSUMPTION (sources: low doses 0.01–0.05 µg/kg/min β-dominated — HR, contractility and CO rise, SVR
+  // falls; at higher doses α vasoconstriction takes over; no sharp boundary): β1 chronotropy up to ×2 (EC50
+  // 5 ng/mL) so a large bolus causes tachycardia despite the baroreflex; β2 vasodilation up to −40 %; α sigmoid
+  // (Hill 1.5, EC50 60 ng/mL) crossing over near 0.3 µg/kg/min.
   adrenaline: {
     inotropyMax: 0.6,
-    inoEc50: 1.7,
-    chronoMax: 0.4,
-    chronoEc50: 2.3,
-    beta2SvrMax: 0.15,
-    beta2Ec50: 0.57,
-    alphaSvrMax: 0.8,
-    alphaEc50: 4.3,
-    venousMax: 0.1,
+    inoEc50: 2,
+    chronoMax: 1.0,
+    chronoEc50: 5,
+    beta2SvrMax: 0.4,
+    beta2Ec50: 1,
+    alphaSvrMax: 6,
+    alphaEc50: 60,
+    alphaHill: 1.5,
+    venousMax: 0.2,
+    venousEc50: 10,
     lactateMax: 0.004,
     lactateEc50: 2.9,
     bronchoMax: 0.8,
@@ -209,10 +222,14 @@ export function haemodynamics(
   ageYears: number,
   betaBlockade = 0,
   plasma: Exposures = e,
+  alphaResponsiveness = 1,
 ): Haemodynamics {
   // Age-scaled propofol concentration (equivalent to scaling every haemodynamic Ce50).
   const p = (e.propofol ?? 0) / propofolAgeFactor(ageYears);
   const beta = 1 - PD.betaBlockade.maxBlock * Math.min(1, Math.max(0, betaBlockade));
+  // α1 responsiveness (septic vasoplegia, acidosis: receptor down-regulation) acts as a reduced effective
+  // concentration at the vascular α receptors; vasopressin (V1) is spared.
+  const alpha = Math.min(1, Math.max(0.1, alphaResponsiveness));
   const dexPlasma = plasma.dexmedetomidine ?? 0;
   const ca = (e.calcium ?? 0) * PD.calcium.ionisedFraction;
   const C = PD.calcium;
@@ -241,8 +258,10 @@ export function haemodynamics(
     (1 - emax(dex, X.svrLowMax, X.svrLowC50) + X.svrHighMax * hill(dexPlasma, X.svrHighC50, 2)) *
     (1 - emax(p, P.svrMax, P.svrCe50)) *
     (1 - emax(opioid, O.svrMax, O.bradyC50)) *
-    (1 + emax(na, N.svrMax, N.ec50)) *
-    (1 - beta * emax(ad, A.beta2SvrMax, A.beta2Ec50) + A.alphaSvrMax * hill(ad, A.alphaEc50, 2)) *
+    (1 + N.svrMax * hill(alpha * na, N.ec50, N.svrHill)) *
+    (1 -
+      beta * emax(ad, A.beta2SvrMax, A.beta2Ec50) +
+      A.alphaSvrMax * hill(alpha * ad, A.alphaEc50, A.alphaHill)) *
     (1 - beta * emax(dob, D.svrMax, D.svrEc50)) *
     (1 + emax(vp, V.svrMax, V.ec50)) *
     (1 - beta * emax(sal, S.svrMax, S.chronoEc50)) *
@@ -251,8 +270,8 @@ export function haemodynamics(
     -emax(mid, M.venousMax, M.c50) -
     emax(p, P.venousMax, P.venousCe50) -
     emax(opioid, O.venousMax, O.bradyC50) +
-    emax(na, N.venousMax, N.ec50) +
-    emax(ad, A.venousMax, A.alphaEc50) +
+    emax(alpha * na, N.venousMax, N.venousEc50) +
+    emax(alpha * ad, A.venousMax, A.venousEc50) +
     emax(vp, V.venousMax, V.ec50);
   const inotropy =
     (1 - emax(p, P.inotropyMax, P.inotropyCe50)) *
@@ -369,7 +388,10 @@ export function drugEffects(
     PatientFactors,
     'frailty' | 'hypnoticSensitivity' | 'temperatureC' | 'renalFunction'
   > &
-    Partial<Pick<PatientFactors, 'betaBlockade'>> = TYPICAL_FACTORS,
+    Partial<Pick<PatientFactors, 'betaBlockade'>> & {
+      /** 0.1..1 — vascular α1 responsiveness (vasoplegia, acidosis) */
+      alphaResponsiveness?: number;
+    } = TYPICAL_FACTORS,
   plasma: Exposures = e,
   referencePlasma: Exposures = reference,
 ): DrugEffects {
@@ -377,8 +399,9 @@ export function drugEffects(
   const beta = 1 - PD.betaBlockade.maxBlock * Math.min(1, Math.max(0, bb));
   const opioid = opioidEffect(e, weightKg);
   const opioidRef = opioidEffect(reference, weightKg);
-  const now = haemodynamics(e, opioid, ageYears, bb, plasma);
-  const ref = haemodynamics(reference, opioidRef, ageYears, bb, referencePlasma);
+  const alphaResp = factors.alphaResponsiveness ?? 1;
+  const now = haemodynamics(e, opioid, ageYears, bb, plasma, alphaResp);
+  const ref = haemodynamics(reference, opioidRef, ageYears, bb, referencePlasma, alphaResp);
 
   const P = PD.propofol;
   const hc = hypnoticComponents(e, weightKg, ageYears, factors);

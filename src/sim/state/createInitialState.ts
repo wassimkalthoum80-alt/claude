@@ -113,6 +113,8 @@ export function createInitialState(
         svrReflexFactor: 1,
         svrDrugFactor: 1,
         vasoconstrictionLactate: 0,
+        lvDecompensation: 0,
+        arrhythmiaDose: 0,
       },
       reserves: {
         preloadReserve: 1,

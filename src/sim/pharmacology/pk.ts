@@ -116,10 +116,10 @@ export function concentrationModel(
  * noradrenaline 0.035, adrenaline 0.035, dobutamine 0.069 L/kg/min, vasopressin 0.010 L/kg/min.
  */
 export const CONCENTRATION_MODELS = {
-  noradrenaline: { vLKg: 0.126, halfLifeMin: 2.5, ke0: 1.5 },
-  adrenaline: { vLKg: 0.101, halfLifeMin: 2, ke0: 1.5 },
-  dobutamine: { vLKg: 0.2, halfLifeMin: 2, ke0: 1 },
-  vasopressin: { vLKg: 0.144, halfLifeMin: 10, ke0: 0.3 },
+  noradrenaline: { vLKg: 0.126, halfLifeMin: 2.5, ke0: 6 },
+  adrenaline: { vLKg: 0.101, halfLifeMin: 2, ke0: 6 },
+  dobutamine: { vLKg: 0.2, halfLifeMin: 2, ke0: 3 },
+  vasopressin: { vLKg: 0.144, halfLifeMin: 10, ke0: 2 },
   salbutamol: { vLKg: 2, halfLifeMin: 240, ke0: 0.15 },
   naloxone: { vLKg: 2, halfLifeMin: 60, ke0: 0.5 },
   calcium: { vLKg: 0.2, halfLifeMin: 30, ke0: 0.5 },
@@ -175,14 +175,14 @@ export function pkParams(
     // SIM-ASSUMPTION: educational 2-compartment PK from textbook ranges (Vss, clearance, half-lives), mid-range
     // values; hepatic function scales the clearance of hepatically metabolised drugs.
     // Midazolam: V1 0.35 + V2 0.9 L/kg (actual weight), CL 7.5 mL/kg/min (ideal weight) → t½β ≈ 2.3 h;
-    // ke0 0.15/min (peak effect ≈ 5 min).
+    // ke0 0.25/min (peak CNS effect ≈ 3–5 min after an IV bolus, as in the product information).
     case 'midazolam':
       return twoCompartmentEducational(
         0.35,
         0.9,
         7.5 * factors.hepaticFunction,
         20,
-        0.15,
+        0.25,
         d.weightKg,
         ibw,
       );
@@ -232,10 +232,18 @@ export function pkParams(
     case 'rocuronium':
       // SIM-ASSUMPTION: rocuronium distribution scales with ideal (not actual) weight in obesity.
       return rocuroniumEducational(Math.min(d.weightKg, idealBodyWeight(d.sex, d.heightCm)));
-    // SIM-ASSUMPTION: one-compartment concentration models (CONCENTRATION_MODELS) scaled to adjusted body weight;
-    // ke0 chosen for onset within ≈ 1–3 min (catecholamines ≈ 1 min). Calcium: Δ total calcium (mmol/L) in the ECF.
+    // SIM-ASSUMPTION: one-compartment concentration models (CONCENTRATION_MODELS) scaled to adjusted body weight.
+    // Half-lives from the literature (noradrenaline ≈ 2–2.4 min, adrenaline ≈ 2 min, dobutamine 2 min,
+    // vasopressin 10–20 min). The vascular and cardiac receptors see plasma almost directly: ke0 6/min for the
+    // catecholamines (τ ≈ 10 s), 3/min dobutamine, 2/min vasopressin — the response starts within seconds of the
+    // drug reaching the blood; the new steady state still needs ≈ 4–5 half-lives (pharmacology, not model lag).
+    // Calcium: Δ total calcium (mmol/L) in the ECF.
+    // SIM-ASSUMPTION: noradrenaline and adrenaline — two compartments so a bolus first mixes in about the blood
+    // volume (V1 0.05 L/kg) and gives a brief, high peak (a 10 µg push acts within ≈ 30–60 s and fades within
+    // minutes), while the clearance (0.035 L/kg/min) and so every infusion steady state stay as above.
     case 'noradrenaline':
     case 'adrenaline':
+      return twoCompartmentEducational(0.05, 0.07, 35, 60, 6, abw, abw);
     case 'dobutamine':
     case 'vasopressin':
     case 'salbutamol':

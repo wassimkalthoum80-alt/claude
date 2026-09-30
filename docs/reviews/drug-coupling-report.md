@@ -157,3 +157,63 @@ calcium, furosemide, plus fluids and blood products.
 `docs/screenshots/drugs-1-response-decomposition.jpg` shows a noradrenaline overdose and its correction under
 TIVA. It includes the decomposition table, aligned trends and markers, and a line flush that delivers a hidden
 propofol bolus (respiratory drive dips at "F").
+
+
+## Realism revision (owner feedback)
+
+**Feedback:** "the higher the rate the higher the blood pressure until a hypertensive crisis and cardiac
+decompensation; reflex bradycardia; if persisting, cardiogenic shock and death; reactions in seconds, not
+minutes; fact-check all drugs."
+
+### What was wrong
+
+| Problem | Cause |
+|---|---|
+| Noradrenaline MAP plateaued at about 125 mmHg | Hyperbolic Emax; the Windkessel resistance was capped at 2× and the SVR target at 3× |
+| No decompensation | The afterload penalty had a floor, and no acute-LV-failure or pulmonary-oedema path existed |
+| Weak reflex bradycardia | The high-pressure reflex only started above MAP 105 mmHg |
+| Slow onset | Effect-site τ was 40 s on top of the line dead space and concentration build-up; a bolus mixed into the whole distribution volume |
+
+### Fact check
+
+Web search worked in this session, but direct page fetches were blocked.
+
+| Claim | Source | Model now |
+|---|---|---|
+| MAP linear in noradrenaline dose: ≈ 103 mmHg per µg/kg/min awake, ≈ 222 under GA | [Healthy-volunteer study, Eur J Anaesthesiol (PMC13152066)](https://pmc.ncbi.nlm.nih.gov/articles/PMC13152066/), [PubMed 41481868](https://pubmed.ncbi.nlm.nih.gov/41481868/) | GA ≈ 190–260 ✓; awake ≈ 200 (deviation, see assumptions) |
+| Overdose: severe hypertension, reflex bradycardia, decreased CO, pulmonary oedema | Noradrenaline SmPC sections via [emc 8776](https://www.medicines.org.uk/emc/product/8776/smpc), [emc 13172](https://www.medicines.org.uk/emc/product/13172/smpc) | ✓ Cascade ending in cardiogenic shock and arrest if left running |
+| Catecholamine crisis → acute pulmonary oedema, cardiogenic shock, arrhythmias | Pheochromocytoma crisis case series ([PMC9918853](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9918853/), [PMC13402045](https://pmc.ncbi.nlm.nih.gov/articles/PMC13402045/)) | ✓ LV decompensation, flooding, VF burden |
+| Noradrenaline t½ ≈ 2–2.4 min (2–6.8 in sepsis/trauma), onset 1–2 min | [StatPearls NBK537259](https://www.ncbi.nlm.nih.gov/sites/books/NBK537259/), [Beloeil, BJA](https://www.sciencedirect.com/science/article/pii/S000709121735033X), [LITFL](https://litfl.com/pharm-101-noradrenaline/) | t½ ≈ 2–2.5 min; response starts within 30–60 s of a rate change and within 20 s of a flushed bolus |
+| Septic α1 down-regulation and acidosis → catecholamine hyporesponsiveness; vasopressin catecholamine-sparing | [Intensive Care Med 2026 adrenoceptor review](https://link.springer.com/article/10.1007/s00134-026-08589-x), [PMC8128952](https://pmc.ncbi.nlm.nih.gov/articles/PMC8128952/) | ✓ α responsiveness × (1 − 0.7·vasoplegia) × acidosis factor |
+| Adrenaline: β at 0.01–0.05 µg/kg/min (SVR ↓), α at higher doses; HR, BP, CO ↑; hyperglycaemia, lactate; t½ ≈ 2 min | [FDA label 205029](https://www.accessdata.fda.gov/drugsatfda_docs/nda/2014/205029Orig1s000ClinPharmR.pdf), [OpenAnesthesia](https://www.openanesthesia.org/keywords/epinephrine-and-norepinephrine/) | ✓ |
+| Dobutamine: onset 1–2 min, t½ 2 min, steady state 10–12 min; SV and CI ↑, MAP and SVR ↓; HR unchanged at low doses | [Davis Drug Guide](https://www.drugguide.com/ddo/view/Davis-Drug-Guide/51232/all/DOBUTamine), [PMC9500364](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9500364/) | ✓ (unchanged, ke0 raised to 3/min) |
+| Vasopressin: t½ 10–20 min; immediate MAP and SVR rise in vasodilatory shock | [LITFL](https://litfl.com/vasopressin/), [PMC6975768](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6975768/) | t½ 10 min, ke0 2/min ✓ |
+| Dexmedetomidine: biphasic — transient α2B hypertension with reflex bradycardia on a rapid load, then hypotension; distribution t½ ≈ 6 min, elimination ≈ 2 h | [Clin Pharmacokinet review](https://link.springer.com/article/10.1007/s40262-017-0507-7) | ✓ (unchanged) |
+| Ketamine: 2 mg/kg HR +33 %, MAP +28 %, CO +29 %; negative inotrope with catecholamine depletion | [Ketamine label (Pfizer)](https://www.pfizermedical.com/ketamine/warnings) | ✓ Peripheral catecholamine route added; 1 mg/kg +16/+17/+18 % |
+| Propofol induction: MAP −25 to −40 %, little HR change, blunted baroreflex | Induction studies ([Acta Anaesth Scand 2023](https://onlinelibrary.wiley.com/doi/10.1111/aas.14293)) | ✓ (unchanged) |
+| Midazolam peak 3–5 min; sufentanil onset 1–3 min; remifentanil onset 1–1.5 min, CSHT 3–4 min | Midazolam labels ([FDA](https://www.accessdata.fda.gov/drugsatfda_docs/label/2017/208878Orig1s000lbl.pdf)); [Sufentanil FDA label](https://www.accessdata.fda.gov/drugsatfda_docs/label/2014/019050s032lbl.pdf); remifentanil CSHT literature | Midazolam ke0 0.25/min; Gepts and Minto unchanged ✓ |
+| Vagal baroreflex acts within 0.2–0.6 s, sympathetic within 2–5 s | [Baroreflex review, Ann Noninvasive Electrocardiol](https://onlinelibrary.wiley.com/doi/10.1111/j.1542-474X.2008.00219.x) | HR τ 5 s, SVR τ 2 s ✓ |
+| Opioids: chest-wall rigidity with rapid IV injection; remifentanil esterase metabolism; sufentanil most potent, less accumulation than fentanyl | Medi Know Lernkarten "Analgetika" (owner-supplied, local only) | ✓ (unchanged) |
+
+### New tests (drugCoupling.test.ts)
+
+- **Noradrenaline:**
+  - monotonic dose–response with a GA slope of 150–300;
+  - crisis with reflex bradycardia (MAP > 140, HR < 60, systolic > 180);
+  - left running: decompensation → cardiogenic shock → PEA;
+  - stopped early: recovery;
+  - onset within 60 s;
+  - septic hyporesponsiveness, with vasopressin spared.
+- **Adrenaline:**
+  - low dose: HR and CO up, SVR down;
+  - 1 mg push: systolic > 250 with tachycardia, then acute LV failure.
+
+The full suite has 252 tests.
+
+### Known deviations
+
+- **Awake noradrenaline slope** is about twice the published value (see assumptions).
+- **Timing** follows the pharmacology: a new infusion plateau still takes 4–5 half-lives. Only the start of the
+  response is fast. A flushed bolus acts within 10–20 s, which is the fastest real-world route.
+- **No NIBP or arterial line lag** is modelled; the displayed numbers are refreshed about every second like a
+  real monitor.

@@ -224,6 +224,10 @@ describe('fluid distribution and physiology', () => {
       leak: { ...oneBag(0, false), fluid: { factors: { capillaryLeak: 0.9 } } },
       failure: { ...oneBag(0, false), fluid: { factors: { lvFunction: 0.35 } } },
     };
+    // Fluid responsiveness is judged by stroke volume: part of the gain in a hypovolaemic patient is spent on
+    // slowing the compensatory tachycardia (baroreflex), so CO alone would under-state it.
+    const sv = (s: ReturnType<typeof snap>) =>
+      s.patient.cardio.cardiacOutput / Math.max(1, s.patient.cardio.heartRate);
     const out: Record<string, { coGain: number; retained: number; lungRise: number }> = {};
     for (const [name, sc] of Object.entries(scenarios)) {
       const e = createEngine(sc);
@@ -235,7 +239,7 @@ describe('fluid distribution and physiology', () => {
       e.runFor(1800);
       const s2 = snap(e);
       out[name] = {
-        coGain: s1.patient.cardio.cardiacOutput / s0.patient.cardio.cardiacOutput - 1,
+        coGain: sv(s1) / sv(s0) - 1,
         retained: s2.patient.fluid.plasmaMl - s0.patient.fluid.plasmaMl,
         lungRise: s2.patient.fluid.lungInterstitialMl - s0.patient.fluid.lungInterstitialMl,
       };

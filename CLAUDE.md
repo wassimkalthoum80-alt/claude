@@ -4,6 +4,7 @@ Real-time resuscitation & ventilation simulator (serious game) for anesthesiolog
 This file is Part A of `prompts/milestone-01-foundation.md` and applies to every session and milestone.
 Visual target: `docs/reference/ui-target.webp`. Architecture: `docs/ARCHITECTURE.md`.
 Physiology shortcuts: `docs/SIMULATION_ASSUMPTIONS.md`.
+Pharmacology reference material from the owner (trusted, licensed, local only — never commit the PDFs): `docs/reference/pharma/README.md`.
 
 ### A1. The one rule
 

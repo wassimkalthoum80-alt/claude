@@ -119,6 +119,8 @@ export type ClinicalEventType =
   | 'SCENARIO_END'
   /** heart–lung model: arrest from sustained low flow or oxygen debt (detail = cause) */
   | 'PEA_ONSET'
+  /** heart–lung model: ventricular fibrillation from severe ischaemia under catecholamine drive (detail = cause) */
+  | 'VF_ONSET'
   /** heart–lung model: electrical activity ceased after prolonged PEA */
   | 'ASYSTOLE_ONSET'
   /** a medication command was blocked by validation (detail = reasons) */
