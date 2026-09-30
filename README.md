@@ -8,7 +8,7 @@ respond second by second.
 > *Every second matters. Every interruption matters. Every intervention changes physiology.
 > The monitor tells the story of what is happening inside the patient.*
 
-**Status: Milestone 1 — foundation and first playable prototype.**
+**Status: Milestone 1 (foundation) + ventilator modes, oxygenation and SpO₂ tone.**
 For education only — not a medical device.
 
 ![Stable patient, 1920×1080](docs/screenshots/1920x1080-1-stable-sinus.jpg)
@@ -49,6 +49,19 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 5. Stop and restart CPR: pressure collapses within seconds and has to be rebuilt. That is the lesson.
 6. Try the CPR-quality presets (too slow, too fast, too shallow, leaning) and change VT/RR/PEEP/FiO₂.
 7. Menu → **Cases** → *Sudden VF under anaesthesia*: a scripted case with an objective and an end-of-case summary.
+
+**Ventilation and oxygenation**
+- Four modes on the ventilator panel: **VC-AC**, **PC-AC**, **PRVC** and **CPAP/PS** (CPAP/ASB in German), each
+  with its own controls. **More settings** covers I:E, rise time, Pmax, flow trigger, expiratory trigger and
+  inspiratory pause.
+- **Curves / Loops**: pressure, flow and volume curves, or pressure–volume and flow–volume loops. The tiles show
+  VTe, RR, MV, Ppeak with Pmean, total PEEP, FiO₂, I:E (PRVC also shows its regulated pressure), and Pplat with
+  compliance.
+- The instructor panel sets the **lung condition** (normal, ARDS, bronchospasm, obese), **spontaneous breathing
+  effort** (triggers assisted or supported breaths), and can **disconnect the circuit**.
+- SpO₂ now comes from an oxygen model. Try disconnecting at FiO₂ 40 % and then at 100 % (the safe apnoea time),
+  or treat ARDS with PEEP instead of FiO₂. With audio on (<kbd>M</kbd>), the pulse tone drops in pitch with every
+  percent of saturation lost.
 
 | Key | Action |
 |---|---|
@@ -107,7 +120,8 @@ docs/                  architecture, assumptions, reference image, screenshots
   presets. Player-driven compressions plug into the existing `CompressionSource` interface later.
 - No defibrillation, rhythm-check logic, drugs, airway interaction, ultrasound, ROSC logic or scoring yet (see
   the roadmap). Those action buttons are visible but locked.
-- Oxygenation is not modelled: SpO₂ stays at 99 %. Lung mechanics are linear and single-compartment.
+- Lung mechanics are linear and single-compartment. Blood and tissue oxygen stores are not modelled, so
+  prolonged apnoea does not lead to bradycardia and arrest.
 - The patient is a stylised SVG illustration. It is built behind a `PatientVisualState` interface so that 2D
   art, Three.js or Unity can replace it.
 - Performance: the main-thread work per frame (engine + all canvases + scene) is ≈ 1.1 ms. In headless,

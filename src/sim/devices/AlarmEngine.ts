@@ -7,8 +7,14 @@ const PRIORITY: Record<AlarmId, AlarmPriority> = {
   ART_LOW: 'high',
   PAW_HIGH: 'high',
   APNEA: 'high',
+  DISCONNECT: 'high',
   SPO2_NO_PULSE: 'medium',
+  SPO2_LOW: 'medium',
 };
+
+/** % — SpO2 below which SPO2 LOW alarms (medium), and becomes high priority */
+export const SPO2_LOW = 90;
+export const SPO2_CRITICAL = 85;
 
 const RANK: Record<AlarmPriority, number> = { high: 0, medium: 1, low: 2 };
 
@@ -28,12 +34,19 @@ export class AlarmEngine {
     if (mon.numerics.artMean !== null && mon.numerics.artMean < ART_LOW_MAP) active.add('ART_LOW');
     if (mon.numerics.spo2 === null) active.add('SPO2_NO_PULSE');
     if (vent.pressureLimited || vent.measured.ppeak >= vent.active.pmax) active.add('PAW_HIGH');
-    if (vent.breathCount > 1 && vent.measured.mv < 1) active.add('APNEA');
+    if (vent.apnea || (vent.breathCount > 1 && vent.measured.mv < 1)) active.add('APNEA');
+    if (!vent.circuitConnected) active.add('DISCONNECT');
+    const spo2 = mon.numerics.spo2;
+    if (spo2 !== null && spo2 < SPO2_LOW) active.add('SPO2_LOW');
 
-    const kept: Alarm[] = mon.alarms.filter((a) => active.has(a.id));
+    const priorityOf = (id: AlarmId): AlarmPriority =>
+      id === 'SPO2_LOW' && spo2 !== null && spo2 < SPO2_CRITICAL ? 'high' : PRIORITY[id];
+    const kept: Alarm[] = mon.alarms
+      .filter((a) => active.has(a.id))
+      .map((a) => ({ ...a, priority: priorityOf(a.id) }));
     for (const id of active) {
       if (!kept.some((a) => a.id === id))
-        kept.push({ id, priority: PRIORITY[id], since: state.time });
+        kept.push({ id, priority: priorityOf(id), since: state.time });
     }
     kept.sort((a, b) => RANK[a.priority] - RANK[b.priority] || a.since - b.since);
     mon.alarms = kept;

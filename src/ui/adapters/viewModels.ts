@@ -4,6 +4,8 @@ import type {
   CprQualityAssessment,
   GuidelineSet,
   SimulationState,
+  VentMode,
+  VentSettings,
 } from '../../sim';
 import type { I18nKey } from '../../content/i18n/en';
 import { formatMmSs, formatNum } from './format';
@@ -33,7 +35,7 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
     etco2: formatNum(n.etco2, '--'),
     flash: {
       hr: prio('VFIB', 'ASYSTOLE'),
-      spo2: prio('SPO2_NO_PULSE'),
+      spo2: prio('SPO2_LOW', 'SPO2_NO_PULSE'),
       art: prio('ART_LOW'),
     },
   };
@@ -43,14 +45,40 @@ export interface VentTile {
   id: 'vt' | 'rr' | 'mv' | 'paw' | 'peep' | 'fio2' | 'ie' | 'pplat';
   value: string;
   unit: string;
+  /** small secondary reading under the value (e.g. Pmean, compliance) */
+  sub?: { key: I18nKey; value: string; unit: string };
 }
 
 export interface VentilatorViewModel {
-  mode: string;
+  mode: VentMode;
+  modeKey: I18nKey;
   tiles: VentTile[];
   vtPerKg: string;
   vtPerKgTone: Tone;
   pending: boolean;
+  /** last breath was triggered by the patient */
+  triggered: boolean;
+  backup: boolean;
+  disconnected: boolean;
+}
+
+const SETTING_KEYS: readonly (keyof VentSettings)[] = [
+  'vt',
+  'rr',
+  'peep',
+  'fio2',
+  'pinsp',
+  'ps',
+  'ieRatio',
+  'pmax',
+  'riseTime',
+  'trigger',
+  'ets',
+  'inspiratoryPauseFraction',
+];
+
+function settingsPending(v: Readonly<SimulationState>['devices']['ventilator']): boolean {
+  return SETTING_KEYS.some((k) => v.settings[k] !== v.active[k]);
 }
 
 export function ventilatorViewModel(
@@ -61,29 +89,50 @@ export function ventilatorViewModel(
   const m = v.measured;
   const pbw = s.patient.demographics.pbwKg;
   const perKg = v.settings.vt / pbw;
-  const pending = (['vt', 'rr', 'peep', 'fio2'] as const).some(
-    (k) => v.settings[k] !== v.active[k],
-  );
+  const pressureBreaths = v.mode !== 'VCV';
   return {
     mode: v.mode,
+    modeKey: `mode.${v.mode}`,
     tiles: [
       { id: 'vt', value: formatNum(m.vte), unit: 'mL' },
       { id: 'rr', value: formatNum(m.rrTotal), unit: '/min' },
       { id: 'mv', value: formatNum(m.mv, '--', 1), unit: 'L/min' },
-      { id: 'paw', value: formatNum(m.ppeak), unit: 'cmH₂O' },
+      {
+        id: 'paw',
+        value: formatNum(m.ppeak),
+        unit: 'cmH₂O',
+        sub: { key: 'vent.pmean', value: formatNum(m.pmean), unit: '' },
+      },
       { id: 'peep', value: formatNum(m.peepTotal), unit: 'cmH₂O' },
       { id: 'fio2', value: formatNum(v.active.fio2), unit: '%' },
-      { id: 'ie', value: `1:${v.active.ieRatio.toFixed(1)}`, unit: '' },
-      { id: 'pplat', value: formatNum(m.pplat), unit: 'cmH₂O' },
+      {
+        id: 'ie',
+        value: v.mode === 'PSV' && !v.apnea ? '--' : `1:${v.active.ieRatio.toFixed(1)}`,
+        unit: '',
+        ...(v.mode === 'PRVC'
+          ? { sub: { key: 'vent.preg' as const, value: formatNum(v.prvcPressure), unit: 'cmH₂O' } }
+          : {}),
+      },
+      {
+        id: 'pplat',
+        value: formatNum(m.pplat),
+        unit: 'cmH₂O',
+        sub: { key: 'vent.compliance', value: formatNum(m.compliance), unit: 'mL/cmH₂O' },
+      },
     ],
     vtPerKg: perKg.toFixed(1),
     vtPerKgTone:
-      perKg > g.lungProtective.vtPerKgMax
-        ? 'bad'
-        : perKg < g.lungProtective.vtPerKgMin
-          ? 'warn'
-          : 'good',
-    pending,
+      pressureBreaths && v.mode !== 'PRVC'
+        ? 'neutral'
+        : perKg > g.lungProtective.vtPerKgMax
+          ? 'bad'
+          : perKg < g.lungProtective.vtPerKgMin
+            ? 'warn'
+            : 'good',
+    pending: settingsPending(v),
+    triggered: v.breathType === 'assisted' || v.breathType === 'spontaneous',
+    backup: v.apnea,
+    disconnected: !v.circuitConnected,
   };
 }
 
@@ -183,9 +232,9 @@ export function messagesViewModel(s: Readonly<SimulationState>): Message[] {
   if (s.patient.rosc && s.patient.cardio.spontaneousCirculation)
     out.push({ key: 'msg.rosc', tone: 'good' });
   const v = s.devices.ventilator;
-  if ((['vt', 'rr', 'peep', 'fio2'] as const).some((k) => v.settings[k] !== v.active[k])) {
-    out.push({ key: 'msg.nextBreath', tone: 'info' });
-  }
+  if (!v.circuitConnected) out.push({ key: 'msg.disconnected', tone: 'bad' });
+  if (v.apnea) out.push({ key: 'msg.backup', tone: 'warn' });
+  if (settingsPending(v)) out.push({ key: 'msg.nextBreath', tone: 'info' });
   if (s.control.timeScale !== 1 && s.control.timeScale !== 0) {
     out.push({ key: 'msg.speed', vars: { n: s.control.timeScale }, tone: 'info' });
   }

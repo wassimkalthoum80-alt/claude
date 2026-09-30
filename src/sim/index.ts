@@ -4,7 +4,18 @@
 export { SimulationEngine, type EngineOptions } from './engine/SimulationEngine';
 export { TIME_SCALES, type TimeScale } from './core/Clock';
 export { TICK_S, SUBSTEP_HZ, SLOW_SIGNAL_HZ } from './core/constants';
-export { VENT_LIMITS, validateVentSetting, type SettingRange } from './devices/ventilatorLimits';
+export {
+  VENT_LIMITS,
+  MODE_CONTROLS,
+  MODE_EXTRA_CONTROLS,
+  validateVentSetting,
+  type SettingRange,
+} from './devices/ventilatorLimits';
+export { APNEA_TIME_S } from './devices/VentilatorDevice';
+export { SPO2_LOW, SPO2_CRITICAL } from './devices/AlarmEngine';
+export { LUNG_PRESETS } from './physiology/parameters';
+export { DRIVE_PATTERNS } from './physiology/RespiratoryDrive';
+export { saturation, oxygenContent } from './physiology/OxygenModel';
 export { ART_LOW_MAP } from './devices/AlarmEngine';
 export { CPR_PRESETS, assessCprQuality } from './interventions/cprQuality';
 export { SIGNAL_UNITS, type SignalChannel, type ReadonlySignalBank } from './signals/SignalBank';
@@ -19,13 +30,18 @@ export type {
   RhythmId,
   AirwayDevice,
   Demographics,
+  LungPreset,
+  RespiratoryDrive,
 } from './state/PatientState';
 export type {
   VentilatorState,
   VentSettings,
   VentMeasured,
   BreathPhase,
+  BreathType,
+  VentMode,
 } from './state/VentilatorState';
+export { VENT_MODES } from './state/VentilatorState';
 export type {
   CPRState,
   CprQualityPreset,

@@ -1,3 +1,5 @@
+import type { VentSettingKey } from '../../sim';
+
 /** mm:ss for timers. */
 export function formatMmSs(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds + 1e-6));
@@ -13,4 +15,20 @@ export function formatNum(
 ): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return placeholder;
   return value.toFixed(digits);
+}
+
+/** Display a setting the way a ventilator shows it. */
+export function formatSetting(key: VentSettingKey, value: number): string {
+  switch (key) {
+    case 'ieRatio':
+      return `1:${value.toFixed(1)}`;
+    case 'riseTime':
+      return value.toFixed(2);
+    case 'trigger':
+      return value.toFixed(1);
+    case 'inspiratoryPauseFraction':
+      return String(Math.round(value * 100));
+    default:
+      return String(value);
+  }
 }

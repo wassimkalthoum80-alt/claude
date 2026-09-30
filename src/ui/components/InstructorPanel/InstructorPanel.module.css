@@ -3,7 +3,9 @@
   top: var(--edge);
   left: 50%;
   transform: translateX(-50%);
-  width: min(560px, calc(100vw - 32px));
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100vh - 2 * var(--edge));
+  overflow-y: auto;
   z-index: 30;
   padding: 12px 14px 12px;
   background: rgba(8, 12, 17, 0.96);

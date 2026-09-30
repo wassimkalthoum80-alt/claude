@@ -1,65 +1,81 @@
 /**
- * Single-compartment lung, equation of motion:
+ * Single-compartment lung with patient effort, equation of motion:
  *
- *   Paw(t) = PEEP + V(t)/C + R·Flow(t)
+ *   Paw(t) + Pmus(t) = V(t)/C + R·Flow(t)
  *
- * V is the volume above the PEEP relaxation volume. Expiration is passive: Flow = −V/(R·C).
- * If expiration is too short, V does not return to 0 and intrinsic PEEP appears on its own.
+ * V is the lung volume above the relaxation volume at zero end-expiratory pressure (so PEEP raises the
+ * end-expiratory volume by PEEP·C). Pmus > 0 is inspiratory muscle effort; it lowers alveolar pressure and
+ * draws gas in (that is what the ventilator's flow trigger detects).
+ *
+ * Two ways of driving it:
+ * - pressure-controlled (the ventilator sets Paw: pressure breaths, expiration against PEEP, disconnection):
+ *   solved exactly with the time constant τ = R·C;
+ * - flow-controlled (VCV sets the inspiratory flow): Paw follows from the equation.
+ * If expiration is too short, V does not return to PEEP·C and intrinsic PEEP appears on its own.
  */
 export class RespiratoryModel {
-  /** L */
+  /** L above the relaxation volume at ZEEP */
   volume = 0;
   /** L/s, + = inspiration */
   flow = 0;
-  /** cmH2O */
-  airwayPressure = 5;
+  /** cmH2O at the airway opening */
+  airwayPressure = 0;
 
-  reset(peep: number): void {
-    this.volume = 0;
+  reset(peep: number, complianceMlPerCmH2O: number): void {
+    this.volume = (peep * complianceMlPerCmH2O) / 1000;
     this.flow = 0;
     this.airwayPressure = peep;
   }
 
-  /** Constant-flow inflation (VCV). */
-  inflate(
+  /** cmH2O — alveolar pressure */
+  alveolarPressure(complianceMlPerCmH2O: number, pmus: number): number {
+    return (this.volume * 1000) / complianceMlPerCmH2O - pmus;
+  }
+
+  /** The airway opening is held at `paw` for dt (pressure breath, expiration, open circuit). */
+  pressureStep(
     dt: number,
-    flowLps: number,
-    peep: number,
-    complianceMlPerCmH2O: number,
+    paw: number,
+    complianceMl: number,
     resistance: number,
+    pmus: number,
   ): void {
-    const c = complianceMlPerCmH2O / 1000;
-    this.flow = flowLps;
-    this.volume += flowLps * dt;
-    this.airwayPressure = peep + this.volume / c + resistance * flowLps;
+    const c = complianceMl / 1000;
+    const tau = resistance * c;
+    const veq = c * (paw + pmus);
+    const next = veq + (this.volume - veq) * Math.exp(-dt / tau);
+    this.flow = (next - this.volume) / dt;
+    this.volume = next;
+    this.airwayPressure = paw;
   }
 
-  /** Airway pressure the next inflation step would produce (for pressure limiting). */
-  pressureIfInflated(
+  /** The ventilator delivers a constant flow for dt (volume breath). */
+  flowStep(
     dt: number,
     flowLps: number,
-    peep: number,
-    complianceMlPerCmH2O: number,
+    complianceMl: number,
     resistance: number,
+    pmus: number,
+  ): void {
+    this.volume += flowLps * dt;
+    this.flow = flowLps;
+    this.airwayPressure = (this.volume * 1000) / complianceMl - pmus + resistance * flowLps;
+  }
+
+  /** Airway pressure a constant-flow step would produce (for pressure limiting). */
+  pressureIfFlow(
+    dt: number,
+    flowLps: number,
+    complianceMl: number,
+    resistance: number,
+    pmus: number,
   ): number {
-    const c = complianceMlPerCmH2O / 1000;
-    return peep + (this.volume + flowLps * dt) / c + resistance * flowLps;
+    return ((this.volume + flowLps * dt) * 1000) / complianceMl - pmus + resistance * flowLps;
   }
 
-  /** Inspiratory hold: no flow, Paw equals the plateau (alveolar) pressure. */
-  hold(peep: number, complianceMlPerCmH2O: number): void {
-    const c = complianceMlPerCmH2O / 1000;
+  /** Inspiratory hold: valves closed, no flow, Paw equals alveolar pressure. */
+  hold(complianceMl: number, pmus: number): void {
     this.flow = 0;
-    this.airwayPressure = peep + this.volume / c;
-  }
-
-  /** Passive exhalation against PEEP (exact exponential step). */
-  exhale(dt: number, peep: number, complianceMlPerCmH2O: number, resistance: number): void {
-    const c = complianceMlPerCmH2O / 1000;
-    const tau = resistance * c;
-    this.volume *= Math.exp(-dt / tau);
-    this.flow = -this.volume / tau;
-    // Paw at the airway opening = PEEP + V/C + R·Flow = PEEP during passive exhalation.
-    this.airwayPressure = peep + this.volume / c + resistance * this.flow;
+    this.airwayPressure = this.alveolarPressure(complianceMl, pmus);
   }
 }

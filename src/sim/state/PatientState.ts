@@ -3,6 +3,12 @@ export type RhythmId = 'sinus' | 'vf' | 'asystole';
 
 export type AirwayDevice = 'none' | 'mask' | 'sga' | 'ett';
 
+/** Lung conditions the instructor can select (mechanics + shunt). */
+export type LungPreset = 'normal' | 'ards' | 'bronchospasm' | 'obese';
+
+/** Spontaneous breathing effort of the patient. */
+export type RespiratoryDrive = 'none' | 'weak' | 'normal' | 'strong';
+
 export interface Demographics {
   sex: 'male' | 'female';
   /** years */
@@ -45,6 +51,14 @@ export interface RespState {
   /** cmH2O·s/L — airway + ETT resistance */
   resistance: number;
   spontaneousBreathing: boolean;
+  /** lung condition selected by the instructor */
+  lungPreset: LungPreset;
+  /** spontaneous breathing effort (forced to 'none' during cardiac arrest) */
+  drive: RespiratoryDrive;
+  /** cmH2O — current inspiratory muscle pressure (patient effort) */
+  pmus: number;
+  /** L — functional residual capacity (oxygen store) */
+  frc: number;
   /** mL — lung volume above the PEEP relaxation volume */
   volumeAboveFRC: number;
   /** cmH2O — airway-opening pressure, end of last tick */
@@ -62,6 +76,12 @@ export interface GasState {
   etco2: number;
   /** % — true arterial saturation (the monitor may not be able to read it) */
   spo2: number;
+  /** mmHg — arterial PO2 */
+  pao2: number;
+  /** mmHg — alveolar PO2 */
+  pao2Alveolar: number;
+  /** 0..1 — intrapulmonary shunt fraction */
+  shunt: number;
 }
 
 export interface PatientState {

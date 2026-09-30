@@ -1,4 +1,5 @@
-import { PLETH } from '../physiology/parameters';
+import { CARDIO, OXYGEN, PLETH } from '../physiology/parameters';
+import { approach, clamp } from '../physiology/shapes';
 import type { MonitorNumerics } from '../state/MonitorState';
 import type { SimulationState } from '../state/SimulationState';
 import type { SignalBank } from '../signals/SignalBank';
@@ -13,18 +14,25 @@ const HR_BEATS = 5;
  * Patient monitor: measures its numbers from the generated signals, like a real monitor.
  * - HR from QRS events (averaged over the last beats; "---" in VF, 0 in asystole)
  * - ART sys/dia/mean = max/min/mean of the arterial signal over the last 3 s
- * - SpO2 shown only if the pleth pulse (perfusion index) is large enough
- * - EtCO2 = peak CO2 of the last completed breath
+ * - SpO2 shown only if the pleth pulse (perfusion index) is large enough; it lags the arterial blood by the
+ *   lung-to-finger circulation time and is averaged over a few seconds, like a real oximeter
+ * - EtCO2 = peak CO2 of the last completed breath; 0 when no breath has been detected for 15 s (apnoea)
  */
 export class MonitorDevice {
   private beats: number[] = [];
   private breathStartIndex: number | null = null;
   private lastEtco2: number | null = null;
+  private lastBreathTime = 0;
+  private spo2History: { t: number; v: number }[] = [];
+  private spo2Averaged = 99;
 
-  reset(initial: MonitorNumerics): void {
+  reset(initial: MonitorNumerics, trueSpo2: number): void {
     this.beats = [];
     this.breathStartIndex = null;
     this.lastEtco2 = initial.etco2;
+    this.lastBreathTime = 0;
+    this.spo2History = [{ t: 0, v: trueSpo2 }];
+    this.spo2Averaged = trueSpo2;
   }
 
   onBeat(t: number): void {
@@ -32,7 +40,8 @@ export class MonitorDevice {
     if (this.beats.length > HR_BEATS + 1) this.beats.shift();
   }
 
-  onBreathStart(signals: SignalBank): void {
+  onBreathStart(signals: SignalBank, t: number): void {
+    this.lastBreathTime = t;
     const co2 = signals.co2;
     if (this.breathStartIndex !== null && co2.count > this.breathStartIndex) {
       let max = 0;
@@ -44,9 +53,11 @@ export class MonitorDevice {
     this.breathStartIndex = co2.count;
   }
 
-  update(state: SimulationState, signals: SignalBank): void {
+  update(state: SimulationState, signals: SignalBank, dt: number): void {
     const mon = state.devices.monitor;
+    if (state.time - this.lastBreathTime > 15) this.lastEtco2 = 0;
     mon.numerics.etco2 = this.lastEtco2;
+    this.trackOximeter(state, dt);
     if (state.time - mon.lastRefresh < MONITOR_REFRESH_S - 1e-9) return;
     mon.lastRefresh = state.time;
 
@@ -78,7 +89,24 @@ export class MonitorDevice {
     const pi = pleth.length > 0 ? pMax - pMin : 0;
     mon.numerics.perfusionIndex = Math.round(pi * 100) / 100;
     mon.numerics.spo2 =
-      pi >= PLETH.perfusionIndexThreshold ? Math.round(state.patient.gas.spo2) : null;
+      pi >= PLETH.perfusionIndexThreshold ? Math.round(clamp(this.spo2Averaged, 0, 100)) : null;
+  }
+
+  /** Delay line (circulation time to the finger) + averaging of the true arterial saturation. */
+  private trackOximeter(state: SimulationState, dt: number): void {
+    const t = state.time;
+    this.spo2History.push({ t, v: state.patient.gas.spo2 });
+    const relFlow = clamp(
+      state.patient.cardio.cardiacOutput / CARDIO.referenceCardiacOutput,
+      0.33,
+      1,
+    );
+    const delay = OXYGEN.oximeterDelayS / relFlow;
+    while (this.spo2History.length > 1 && (this.spo2History[1]?.t ?? Infinity) <= t - delay) {
+      this.spo2History.shift();
+    }
+    const delayed = this.spo2History[0]?.v ?? state.patient.gas.spo2;
+    this.spo2Averaged = approach(this.spo2Averaged, delayed, dt, OXYGEN.oximeterAveragingTauS);
   }
 
   private heartRate(state: SimulationState): number | null {

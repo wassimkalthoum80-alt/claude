@@ -1,5 +1,5 @@
 import { criticalClosingPressure } from '../physiology/CardiovascularModel';
-import { CARDIO } from '../physiology/parameters';
+import { CARDIO, LUNG_PRESETS } from '../physiology/parameters';
 import { CPR_PRESETS } from '../interventions/cprQuality';
 import type { ScenarioDefinition } from '../types/scenario';
 import { predictedBodyWeight } from './PatientState';
@@ -42,12 +42,23 @@ export function createInitialState(scenario: ScenarioDefinition, seed: number): 
         compliance: p.compliance,
         resistance: p.resistance,
         spontaneousBreathing: false,
+        lungPreset: 'normal',
+        drive: 'none',
+        pmus: 0,
+        frc: LUNG_PRESETS.normal.frc,
         volumeAboveFRC: 0,
         airwayPressure: scenario.ventilator.peep,
         flow: 0,
         deadSpace: p.deadSpace,
       },
-      gas: { paco2: p.etco2 + 5, etco2: p.etco2, spo2: p.spo2 },
+      gas: {
+        paco2: p.etco2 + 5,
+        etco2: p.etco2,
+        spo2: p.spo2,
+        pao2: 160,
+        pao2Alveolar: 240,
+        shunt: 0.06,
+      },
       airway: { device: p.airway },
       rosc: false,
     },
@@ -69,11 +80,24 @@ export function createInitialState(scenario: ScenarioDefinition, seed: number): 
         mode: 'VCV',
         settings: { ...scenario.ventilator },
         active: { ...scenario.ventilator },
-        measured: { vte: 0, rrTotal: 0, mv: 0, ppeak: 0, pplat: null, peepTotal: 0 },
+        measured: {
+          vte: 0,
+          rrTotal: 0,
+          mv: 0,
+          ppeak: 0,
+          pplat: null,
+          pmean: 0,
+          peepTotal: 0,
+          compliance: null,
+        },
         breathPhase: 'expiration',
+        breathType: 'mandatory',
         breathStartTime: 0,
         breathCount: 0,
         pressureLimited: false,
+        prvcPressure: 10,
+        circuitConnected: true,
+        apnea: false,
       },
     },
     interventions: {

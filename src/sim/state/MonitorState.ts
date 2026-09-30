@@ -1,4 +1,12 @@
-export type AlarmId = 'VFIB' | 'ASYSTOLE' | 'SPO2_NO_PULSE' | 'ART_LOW' | 'PAW_HIGH' | 'APNEA';
+export type AlarmId =
+  | 'VFIB'
+  | 'ASYSTOLE'
+  | 'SPO2_NO_PULSE'
+  | 'SPO2_LOW'
+  | 'ART_LOW'
+  | 'PAW_HIGH'
+  | 'APNEA'
+  | 'DISCONNECT';
 
 export type AlarmPriority = 'high' | 'medium' | 'low';
 

@@ -1,32 +1,72 @@
 import { RespiratoryModel } from '../physiology/RespiratoryModel';
 import type { RespState } from '../state/PatientState';
-import type { VentSettings, VentilatorState } from '../state/VentilatorState';
+import type {
+  BreathType,
+  VentMeasured,
+  VentMode,
+  VentSettings,
+  VentilatorState,
+} from '../state/VentilatorState';
 import type { VentSettingKey } from '../types/commands';
 import { validateVentSetting } from './ventilatorLimits';
 
+/** s — no breath for this long in CPAP/PS → apnoea alarm and backup ventilation */
+export const APNEA_TIME_S = 20;
+/** s — minimum expiratory time before a patient effort can trigger the next breath */
+const TRIGGER_REFRACTORY_S = 0.5;
+/** s — longest pressure-support inspiration before time-cycling */
+const PS_MAX_TI_S = 2.5;
+/** s — shortest pressure-support inspiration before flow-cycling is allowed */
+const PS_MIN_TI_S = 0.25;
+const HISTORY = 8;
+
+type BreathKind = 'volume' | 'pressure';
+
 /**
- * Anaesthesia/ICU ventilator in volume-controlled mode (VCV): constant inspiratory flow, optional
- * end-inspiratory pause, passive expiration. Settings changed by the user take effect at the start of
- * the next breath, as on a real machine. The lung itself is the RespiratoryModel.
+ * Anaesthesia/ICU ventilator with four modes (VC-AC, PC-AC, PRVC, CPAP/PS).
+ * - Mandatory breaths are time-triggered at the set rate; a patient effort that reaches the flow trigger
+ *   delivers an assisted breath (AC modes) or a pressure-supported spontaneous breath (PSV).
+ * - Volume breaths use constant flow (+ optional pause); pressure breaths ramp to the set pressure over the
+ *   rise time and are time-cycled (PC, PRVC, backup) or flow-cycled at ETS % of peak flow (PS).
+ * - PRVC adapts its pressure breath by breath towards the VT target.
+ * - CPAP/PS: no breath for 20 s → APNEA and backup pressure-controlled ventilation until the patient triggers.
+ * Settings and mode changes take effect at the next breath. The lung itself is the RespiratoryModel.
  */
 export class VentilatorDevice {
   readonly lung = new RespiratoryModel();
-  private nextBreathStart = 0;
-  private ti = 0;
-  private tiFlow = 0;
-  private peakThisBreath = 0;
-  private plateauThisBreath: number | null = null;
+  private nextMandatory = 0;
+  private kind: BreathKind = 'volume';
+  private cycle: 'time' | 'flow' = 'time';
+  /** cmH2O above PEEP for the current pressure breath */
+  private target = 0;
+  private activeMode: VentMode = 'VCV';
+  private ti = 1;
+  private tiFlow = 1;
+  private expirationStart = 0;
+  private peak = 0;
+  private plateau: number | null = null;
   private volumeAtEndInspiration = 0;
+  private pawIntegral = 0;
+  private peakInspiratoryFlow = 0;
+  private connectedThroughBreath = true;
+  private breathStarts: number[] = [];
+  private vteHistory: number[] = [];
 
   reset(vent: VentilatorState, resp: RespState, t: number): void {
-    this.lung.reset(vent.settings.peep);
-    this.nextBreathStart = t;
-    this.peakThisBreath = 0;
-    this.plateauThisBreath = null;
-    this.volumeAtEndInspiration = 0;
+    this.lung.reset(vent.settings.peep, resp.compliance);
+    this.nextMandatory = t;
+    this.breathStarts = [];
+    this.vteHistory = [];
+    this.peak = 0;
+    this.plateau = null;
+    this.pawIntegral = 0;
+    this.volumeAtEndInspiration = this.lung.volume;
+    this.expirationStart = t;
     vent.active = { ...vent.settings };
     vent.breathPhase = 'expiration';
+    vent.prvcPressure = clampPrvc(vent.settings.vt / resp.compliance, vent.settings);
     vent.measured = expectedMeasurements(vent.settings, resp.compliance, resp.resistance);
+    this.writeSensors(vent, resp);
   }
 
   /** Validate, clamp and store a user setting. Returns the value actually set. */
@@ -36,95 +76,265 @@ export class VentilatorDevice {
     return v;
   }
 
+  /** Select a mode (takes effect at the next breath). */
+  setMode(vent: VentilatorState, mode: VentMode, resp: RespState): void {
+    if (mode === 'PRVC' && vent.mode !== 'PRVC') {
+      // Test breath: start from the pressure the measured compliance predicts for the target VT.
+      const c = vent.measured.compliance ?? resp.compliance;
+      vent.prvcPressure = clampPrvc(vent.settings.vt / Math.max(5, c), vent.settings);
+    }
+    if (mode === 'PSV')
+      this.nextMandatory = Math.max(this.nextMandatory, vent.breathStartTime + APNEA_TIME_S);
+    vent.mode = mode;
+    vent.apnea = false;
+  }
+
+  setCircuit(vent: VentilatorState, connected: boolean): void {
+    vent.circuitConnected = connected;
+    if (!connected) this.connectedThroughBreath = false;
+  }
+
   /** Advance to time t. Returns true when a new breath started in this sub-step. */
   step(t: number, dt: number, vent: VentilatorState, resp: RespState): boolean {
+    const pmus = resp.pmus;
     let started = false;
-    if (t >= this.nextBreathStart - 1e-9) {
-      this.finishBreath(vent, resp);
-      this.startBreath(vent, this.nextBreathStart);
-      started = true;
+
+    if (vent.breathPhase === 'expiration') {
+      const patientFlow = this.lung.flow * 60;
+      const canTrigger =
+        vent.circuitConnected &&
+        t - this.expirationStart >= TRIGGER_REFRACTORY_S &&
+        patientFlow >= vent.settings.trigger;
+      if (canTrigger) {
+        this.startBreath(vent, resp, t, vent.mode === 'PSV' ? 'spontaneous' : 'assisted');
+        started = true;
+      } else if (t >= this.nextMandatory - 1e-9) {
+        this.startBreath(
+          vent,
+          resp,
+          this.nextMandatory,
+          vent.mode === 'PSV' ? 'backup' : 'mandatory',
+        );
+        started = true;
+      }
     }
 
     const a = vent.active;
-    const elapsed = t - vent.breathStartTime;
     const lung = this.lung;
+    const c = resp.compliance;
+    const r = resp.resistance;
+    const elapsed = t - vent.breathStartTime;
+    if (!vent.circuitConnected) this.connectedThroughBreath = false;
 
-    if (elapsed < this.tiFlow && !vent.pressureLimited) {
-      const flow = a.vt / 1000 / this.tiFlow;
-      if (lung.pressureIfInflated(dt, flow, a.peep, resp.compliance, resp.resistance) > a.pmax) {
-        // Pressure limit reached: stop inflation for the rest of this inspiration.
-        vent.pressureLimited = true;
-        lung.hold(a.peep, resp.compliance);
-        vent.breathPhase = 'pause';
+    if (vent.breathPhase === 'inspiration' || vent.breathPhase === 'pause') {
+      if (!vent.circuitConnected) {
+        // Open circuit: the lung sees atmospheric pressure whatever the machine does.
+        lung.pressureStep(dt, 0, c, r, pmus);
+        if (elapsed >= this.ti) this.toExpiration(vent, t);
+      } else if (this.kind === 'volume') {
+        if (elapsed < this.tiFlow && !vent.pressureLimited) {
+          const q = a.vt / 1000 / this.tiFlow;
+          if (lung.pressureIfFlow(dt, q, c, r, pmus) > a.pmax) {
+            vent.pressureLimited = true;
+            lung.hold(c, pmus);
+            vent.breathPhase = 'pause';
+          } else {
+            lung.flowStep(dt, q, c, r, pmus);
+            vent.breathPhase = 'inspiration';
+          }
+        } else if (elapsed < this.ti) {
+          lung.hold(c, pmus);
+          vent.breathPhase = 'pause';
+          this.plateau = lung.airwayPressure;
+        } else {
+          this.toExpiration(vent, t);
+        }
       } else {
-        lung.inflate(dt, flow, a.peep, resp.compliance, resp.resistance);
-        vent.breathPhase = 'inspiration';
+        const ramp = a.riseTime > 0 ? Math.min(1, elapsed / a.riseTime) : 1;
+        let paw = a.peep + this.target * ramp;
+        if (paw > a.pmax) {
+          paw = a.pmax;
+          vent.pressureLimited = true;
+        }
+        lung.pressureStep(dt, paw, c, r, pmus);
+        this.peakInspiratoryFlow = Math.max(this.peakInspiratoryFlow, lung.flow);
+        const flowCycled =
+          this.cycle === 'flow' &&
+          elapsed >= PS_MIN_TI_S &&
+          lung.flow <= (a.ets / 100) * this.peakInspiratoryFlow;
+        if (elapsed >= this.ti || flowCycled) this.toExpiration(vent, t);
       }
-    } else if (elapsed < this.ti) {
-      lung.hold(a.peep, resp.compliance);
-      vent.breathPhase = 'pause';
-      this.plateauThisBreath = lung.airwayPressure;
-    } else {
-      if (vent.breathPhase !== 'expiration') {
-        this.volumeAtEndInspiration = lung.volume;
-        vent.measured.ppeak = round1(this.peakThisBreath);
-        vent.measured.pplat =
-          a.inspiratoryPauseFraction > 0 && this.plateauThisBreath !== null
-            ? round1(this.plateauThisBreath)
-            : null;
-      }
-      lung.exhale(dt, a.peep, resp.compliance, resp.resistance);
-      vent.breathPhase = 'expiration';
     }
 
-    this.peakThisBreath = Math.max(this.peakThisBreath, lung.airwayPressure);
-    resp.volumeAboveFRC = lung.volume * 1000;
-    resp.airwayPressure = lung.airwayPressure;
-    resp.flow = lung.flow * 60;
+    if (vent.breathPhase === 'expiration') {
+      lung.pressureStep(dt, vent.circuitConnected ? a.peep : 0, c, r, pmus);
+    }
+
+    this.peak = Math.max(this.peak, lung.airwayPressure);
+    this.pawIntegral += lung.airwayPressure * dt;
+    this.writeSensors(vent, resp);
     return started;
   }
 
-  /** Timing of the breath in progress (s). */
-  get timing(): { start: number; inspiratoryTime: number; total: number } {
+  /** Timing of the breath in progress (s), for the capnogram and ECG baseline wander. */
+  get timing(): {
+    start: number;
+    expirationStart: number;
+    expectedExpiration: number;
+    total: number;
+  } {
+    const intervals = this.recentIntervals();
+    const total = intervals.length > 0 ? mean(intervals) : 60 / this.activeRate;
     return {
-      start: this.nextBreathStart - this.total,
-      inspiratoryTime: this.ti,
-      total: this.total,
+      start: this.breathStarts[this.breathStarts.length - 1] ?? 0,
+      expirationStart: this.expirationStart,
+      expectedExpiration: Math.max(0.3, total - this.ti),
+      total,
     };
   }
 
-  private total = 5;
+  private activeRate = 12;
 
-  private startBreath(vent: VentilatorState, start: number): void {
+  private startBreath(
+    vent: VentilatorState,
+    resp: RespState,
+    start: number,
+    type: BreathType,
+  ): void {
+    this.finishBreath(vent, resp, start);
     vent.active = { ...vent.settings };
+    this.activeMode = vent.mode;
     const a = vent.active;
+    this.activeRate = a.rr;
     const total = 60 / a.rr;
-    this.total = total;
     this.ti = total / (1 + a.ieRatio);
-    this.tiFlow = this.ti * (1 - a.inspiratoryPauseFraction);
+    this.tiFlow = this.ti;
+    this.cycle = 'time';
+
+    switch (type === 'backup' ? 'BACKUP' : this.activeMode) {
+      case 'VCV':
+        this.kind = 'volume';
+        this.tiFlow = this.ti * (1 - a.inspiratoryPauseFraction);
+        break;
+      case 'PCV':
+        this.kind = 'pressure';
+        this.target = a.pinsp;
+        break;
+      case 'PRVC':
+        this.kind = 'pressure';
+        this.target = vent.prvcPressure;
+        break;
+      case 'PSV':
+        this.kind = 'pressure';
+        this.target = a.ps;
+        this.cycle = 'flow';
+        this.ti = PS_MAX_TI_S;
+        break;
+      default: // backup ventilation in CPAP/PS: pressure control with the PC settings
+        this.kind = 'pressure';
+        this.target = a.pinsp;
+    }
+
+    vent.breathType = type;
     vent.breathStartTime = start;
     vent.breathCount += 1;
     vent.pressureLimited = false;
-    this.nextBreathStart = start + total;
-    this.peakThisBreath = 0;
-    this.plateauThisBreath = null;
+    vent.breathPhase = 'inspiration';
+    if (type === 'spontaneous') {
+      vent.apnea = false;
+      this.nextMandatory = start + APNEA_TIME_S;
+    } else if (type === 'backup') {
+      vent.apnea = true;
+      this.nextMandatory = start + total;
+    } else {
+      // Mandatory breaths keep the rate; an assisted breath restarts the breath timer.
+      this.nextMandatory = start + total;
+    }
+    this.breathStarts.push(start);
+    if (this.breathStarts.length > HISTORY + 1) this.breathStarts.shift();
+    this.peak = 0;
+    this.plateau = null;
+    this.pawIntegral = 0;
+    this.peakInspiratoryFlow = 0;
+    this.connectedThroughBreath = vent.circuitConnected;
   }
 
-  private finishBreath(vent: VentilatorState, resp: RespState): void {
-    if (vent.breathCount === 0) return;
+  private toExpiration(vent: VentilatorState, t: number): void {
     const a = vent.active;
+    this.volumeAtEndInspiration = this.lung.volume;
+    this.expirationStart = t;
+    vent.measured.ppeak = round1(this.peak);
+    vent.measured.pplat =
+      this.kind === 'volume' && a.inspiratoryPauseFraction > 0 && this.plateau !== null
+        ? round1(this.plateau)
+        : null;
+    vent.breathPhase = 'expiration';
+  }
+
+  private finishBreath(vent: VentilatorState, resp: RespState, now: number): void {
+    const previousStart = this.breathStarts[this.breathStarts.length - 1];
+    if (vent.breathCount === 0 || previousStart === undefined) return;
+    const a = vent.active;
+    const m = vent.measured;
     const endVolume = this.lung.volume;
-    const vte = Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000);
-    vent.measured.vte = Math.round(vte);
-    vent.measured.rrTotal = a.rr;
-    vent.measured.mv = Math.round(((vte * a.rr) / 1000) * 10) / 10;
-    // Total PEEP = set PEEP + intrinsic PEEP from volume still trapped at end expiration.
-    vent.measured.peepTotal = round1(a.peep + (endVolume * 1000) / resp.compliance);
+    const vte = this.connectedThroughBreath
+      ? Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000)
+      : 0;
+    m.vte = Math.round(vte);
+    this.vteHistory.push(vte);
+    if (this.vteHistory.length > HISTORY) this.vteHistory.shift();
+
+    const intervals = [...this.recentIntervals(), now - previousStart].slice(-HISTORY);
+    const rr = 60 / mean(intervals);
+    m.rrTotal = Math.round(rr);
+    m.mv = Math.round(((mean(this.vteHistory) * rr) / 1000) * 10) / 10;
+    const duration = Math.max(0.1, now - previousStart);
+    m.pmean = round1(this.pawIntegral / duration);
+    // Total PEEP = alveolar pressure at end expiration (set PEEP + intrinsic PEEP).
+    const endAlveolar = (endVolume * 1000) / resp.compliance;
+    m.peepTotal = vent.circuitConnected ? round1(Math.max(a.peep, endAlveolar)) : 0;
+    const drivingPressure = (m.pplat ?? m.ppeak) - m.peepTotal;
+    m.compliance = vte > 50 && drivingPressure > 1 ? Math.round(vte / drivingPressure) : null;
+
+    // PRVC: adapt the pressure towards the VT target (at most ±3 cmH2O per breath).
+    if (this.activeMode === 'PRVC' && vent.breathType !== 'backup' && vte > 50) {
+      const cDyn = vte / Math.max(1, vent.prvcPressure);
+      const step = Math.max(-3, Math.min(3, (a.vt - vte) / Math.max(5, cDyn)));
+      vent.prvcPressure = clampPrvc(vent.prvcPressure + step, vent.settings);
+    }
+  }
+
+  private recentIntervals(): number[] {
+    const s = this.breathStarts;
+    const out: number[] = [];
+    for (let i = 1; i < s.length; i++) out.push((s[i] ?? 0) - (s[i - 1] ?? 0));
+    return out;
+  }
+
+  private writeSensors(vent: VentilatorState, resp: RespState): void {
+    const lung = this.lung;
+    const peepVolume = (vent.active.peep * resp.compliance) / 1000;
+    resp.volumeAboveFRC = (lung.volume - peepVolume) * 1000;
+    // With the circuit open at the Y-piece, the machine's sensors see neither pressure nor flow.
+    resp.airwayPressure = vent.circuitConnected ? lung.airwayPressure : 0;
+    resp.flow = vent.circuitConnected ? lung.flow * 60 : 0;
   }
 }
 
+function clampPrvc(p: number, s: VentSettings): number {
+  return Math.round(Math.max(5, Math.min(s.pmax - s.peep - 2, p)) * 10) / 10;
+}
+
+function mean(xs: number[]): number {
+  return xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
+}
+
 /** Analytic single-compartment values, used to seed the display before the first breath completes. */
-export function expectedMeasurements(s: VentSettings, complianceMl: number, resistance: number) {
+export function expectedMeasurements(
+  s: VentSettings,
+  complianceMl: number,
+  resistance: number,
+): VentMeasured {
   const total = 60 / s.rr;
   const ti = total / (1 + s.ieRatio);
   const tiFlow = ti * (1 - s.inspiratoryPauseFraction);
@@ -136,7 +346,9 @@ export function expectedMeasurements(s: VentSettings, complianceMl: number, resi
     mv: Math.round(((s.vt * s.rr) / 1000) * 10) / 10,
     ppeak: round1(pplat + resistance * flow),
     pplat: s.inspiratoryPauseFraction > 0 ? round1(pplat) : null,
+    pmean: round1(s.peep + ((pplat - s.peep) * ti) / (2 * total)),
     peepTotal: s.peep,
+    compliance: complianceMl,
   };
 }
 

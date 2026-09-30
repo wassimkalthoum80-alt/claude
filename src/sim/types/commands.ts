@@ -1,8 +1,21 @@
 import type { TimeScale } from '../core/Clock';
 import type { CprQualityPreset } from '../state/CPRState';
-import type { RhythmId } from '../state/PatientState';
+import type { LungPreset, RespiratoryDrive, RhythmId } from '../state/PatientState';
+import type { VentMode } from '../state/VentilatorState';
 
-export type VentSettingKey = 'vt' | 'rr' | 'peep' | 'fio2';
+export type VentSettingKey =
+  | 'vt'
+  | 'rr'
+  | 'peep'
+  | 'fio2'
+  | 'pinsp'
+  | 'ps'
+  | 'ieRatio'
+  | 'pmax'
+  | 'riseTime'
+  | 'trigger'
+  | 'ets'
+  | 'inspiratoryPauseFraction';
 
 /**
  * Everything the outside world can ask the simulation to do.
@@ -13,6 +26,10 @@ export type Command =
   | { type: 'CPR_STOP' }
   | { type: 'SET_CPR_QUALITY'; preset: CprQualityPreset }
   | { type: 'SET_VENT_SETTING'; key: VentSettingKey; value: number }
+  | { type: 'SET_VENT_MODE'; mode: VentMode }
+  | { type: 'SET_CIRCUIT'; connected: boolean }
+  | { type: 'SET_LUNG'; preset: LungPreset }
+  | { type: 'SET_RESP_DRIVE'; drive: RespiratoryDrive }
   | { type: 'SET_RHYTHM'; rhythm: RhythmId }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }

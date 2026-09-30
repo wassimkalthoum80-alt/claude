@@ -4,7 +4,7 @@ import { CARDIO, GAS } from './parameters';
 import { approach, clamp } from './shapes';
 
 /**
- * Slow (10 Hz) CO2 / O2 model.
+ * Slow (10 Hz) CO2 model (oxygen: see OxygenModel).
  *
  *   EtCO2 = baseline × circulationFactor × ventilationFactor
  *
@@ -39,14 +39,15 @@ export class GasExchangeModel {
       GAS.circulationTauS,
     );
 
-    const va = alveolarVentilation(
-      vent.measured.vte,
-      vent.measured.rrTotal,
-      patient.resp.deadSpace,
-    );
+    const va = vent.circuitConnected
+      ? alveolarVentilation(vent.measured.vte, vent.measured.rrTotal, patient.resp.deadSpace)
+      : 0;
     // Guard against division by ~0 (apnoea): cap the ventilation factor.
-    const ventTarget = clamp(this.baselineAlveolarVentilation / Math.max(va, 300), 0.2, 4);
-    this.ventilationFactor = approach(this.ventilationFactor, ventTarget, dt, GAS.ventilationTauS);
+    const ventTarget = clamp(this.baselineAlveolarVentilation / Math.max(va, 300), 0.2, 3);
+    // SIM-ASSUMPTION: CO2 accumulates slowly in hypoventilation/apnoea (large tissue CO2 stores, ≈ 3–6 mmHg/min)
+    // but is washed out faster when ventilation increases.
+    const tau = ventTarget > this.ventilationFactor ? GAS.ventilationRiseTauS : GAS.ventilationTauS;
+    this.ventilationFactor = approach(this.ventilationFactor, ventTarget, dt, tau);
 
     const etco2 = clamp(
       this.baselineEtco2 * this.circulationFactor * this.ventilationFactor,
@@ -57,7 +58,6 @@ export class GasExchangeModel {
     const relFlow = clamp(patient.cardio.cardiacOutput / CARDIO.referenceCardiacOutput, 0, 1);
     // SIM-ASSUMPTION: a-ET gradient widens as flow falls (dead-space ventilation of unperfused alveoli).
     patient.gas.paco2 = etco2 + GAS.aEtGradient + 10 * (1 - relFlow);
-    // SIM-ASSUMPTION (Milestone 1): no oxygenation model — SpO2 stays at the scenario value.
   }
 }
 

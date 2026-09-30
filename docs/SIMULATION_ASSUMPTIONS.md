@@ -52,26 +52,46 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 | Auto-compressor | first compression 0.25 s after START; ±2 % interval and ±0.12 cm depth jitter (seeded) | Human-like variation. Deterministic per seed. |
 | Leaning residual chest displacement (scene only) | 0.8 cm × (1 − recoil) | Visual cue. |
 
-## Ventilation and lung (`RespiratoryModel.ts`, `VentilatorDevice.ts`)
+## Ventilation and lung (`RespiratoryModel.ts`, `RespiratoryDrive.ts`, `VentilatorDevice.ts`)
 
 | Assumption | Value | Rationale |
 |---|---|---|
-| Single-compartment lung, `Paw = PEEP + V/C + R·Flow` | C = 50 mL/cmH₂O, R = 10 cmH₂O·s/L (τ = 0.5 s) | Standard equation of motion. Healthy intubated adult. |
-| VCV: constant inspiratory flow, 10 % end-inspiratory pause, passive expiration | I:E fixed at 1:2 | Typical anaesthesia-ventilator default. Pplat can be read. |
-| Pressure limit | Pmax 35 cmH₂O: inspiration stops, PAW HIGH alarm | Common default (verify for the target device). |
-| New settings apply at the next breath | — | Behaviour of real ventilators. |
-| Intrinsic PEEP | Emerges automatically if expiration is too short | Physics of the model, not a separate rule. |
-| Compression artefacts on the ventilator curves | 25 mL gas displacement and +5 cmH₂O per compression at 5.3 cm (ETT only) | Visible oscillations during CPR (P1). |
+| Single-compartment lung with patient effort, `Paw + Pmus = V/C + R·Flow`; V measured from the relaxation volume at ZEEP | Normal lung: C = 50 mL/cmH₂O, R = 10 cmH₂O·s/L (τ = 0.5 s) | Standard equation of motion. PEEP raises end-expiratory volume by PEEP·C. |
+| Lung presets (instructor) | Normal C 50 / R 10 / FRC 2.2 L · ARDS C 25 / R 12 / FRC 1.2 L · Bronchospasm C 45 / R 30 / FRC 2.4 L · Obese C 30 / R 14 / FRC 1.4 L | Typical textbook values (verify). |
+| Spontaneous effort | Half-sine Pmus per breath. Weak 8/min, 3 cmH₂O · Normal 14/min, 6 cmH₂O · Strong 26/min, 12 cmH₂O. None during cardiac arrest. | Enough to exercise triggering, assisted breaths and breath stacking. |
+| **VC-AC** | Constant flow, 10 % end-inspiratory pause, time-cycled | Typical anaesthesia-ventilator default. Pplat can be read. |
+| **PC-AC** | Paw ramps to PEEP + Pinsp over the rise time, time-cycled (Ti from RR and I:E) | VT is the result, not a setting. It falls when compliance falls. |
+| **PRVC** | Pressure breaths; after each breath the pressure moves (target VT − VTe)/Cdyn, at most ±3 cmH₂O, within 5 … Pmax − PEEP − 2 | Similar to commercial PRVC/AutoFlow controllers. First breath from VT/C. |
+| **CPAP/PS** | Patient-triggered; Paw = PEEP + PS; cycles at ETS % of peak inspiratory flow (≥ 0.25 s, ≤ 2.5 s) | Standard flow-cycled pressure support. |
+| Triggering | Flow trigger (default 2 L/min), from 0.5 s after the start of expiration. An assisted breath restarts the mandatory breath timer. | Common assist/control behaviour. No pressure trigger. |
+| Apnoea backup (CPAP/PS) | No breath for 20 s → APNEA alarm and pressure-controlled backup at the set RR and Pinsp, until the patient triggers again | Typical ICU default (verify for the target device). |
+| Pressure limit | Pmax (default 35 cmH₂O): inspiration stops and the PAW HIGH alarm fires | Common default. |
+| Circuit disconnection | Lung exposed to atmospheric pressure. The machine's sensors read 0 pressure and 0 flow. VTe 0 → APNEA, DISCONNECT alarm, flat capnogram. | Classic disconnection picture. |
+| Measured values | VTe; RR and MV from the last 8 breaths; Ppeak; Pplat (VC with pause); Pmean over the breath; total PEEP = end-expiratory alveolar pressure; C = VTe / (Pplat or Ppeak − total PEEP) | Standard ventilator monitoring. |
+| New settings and mode changes | Take effect at the next breath | Behaviour of real ventilators. |
+| Intrinsic PEEP | Emerges automatically if expiration is too short (high RR, bronchospasm, strong drive) | Physics of the model, not a separate rule. |
+| Compression artefacts on the ventilator curves | 25 mL gas displacement and +5 cmH₂O per compression at 5.3 cm (ETT only) | Visible oscillations during CPR. |
 
-## Gas exchange (`GasExchangeModel.ts`, `parameters.ts → GAS`)
+## Oxygenation (`OxygenModel.ts`, `parameters.ts → OXYGEN, LUNG_PRESETS`)
 
 | Assumption | Value | Rationale |
 |---|---|---|
-| EtCO₂ = baseline × circulation factor × ventilation factor | baseline 37 mmHg | Separable, explainable effects. |
-| Circulation factor = (CO/5)^0.55, floor 0.05, τ = 8 s | — | Reproduces ≈ 18–20 mmHg with good CPR and washout to ≈ 2 mmHg without flow. EtCO₂ tracks pulmonary blood flow during CPR. |
-| Ventilation factor = baseline alveolar ventilation / current, τ = 75 s | dead space 150 mL | Doubling RR slowly halves EtCO₂ (tested). |
-| PaCO₂ = EtCO₂ + 5 + 10 × (1 − relative flow) | — | The a–ET gradient widens with dead-space ventilation during low flow. |
-| **No oxygenation model** | SpO₂ fixed at 99 % | Milestone 1 scope. FiO₂ and PEEP do not change SpO₂ yet. |
+| Alveolar O₂ store: `dFAO2/dt = [VA·(FiO2 − FAO2) − uptake] / FRC` | VO₂ 250 mL/min, scaled by (CO/5)^0.5 | Mass balance. Reproduces the steady state of the alveolar gas equation (PAO₂ ≈ 240 mmHg at FiO₂ 40 %). |
+| Uptake falls as alveolar PO₂ approaches ≈ 25 mmHg | factor ((PAO₂ − 25)/75)^0.7, clamped 0…1 | Uptake needs a gradient to mixed-venous blood. Desaturation is steep but not instantaneous. |
+| End-capillary blood equilibrates with alveolar gas; shunt mixing `CaO2 = CcO2 − s·(VO2/Q)/(1 − s)` | Hb 14 g/dL; Severinghaus dissociation curve | Standard shunt equation. |
+| Shunt = fixed + recruitable × e^(−PEEP/k) | Normal 0.05 + 0.10·e^(−PEEP/4) (≈ 8 % at PEEP 5) · ARDS 0.15 + 0.30·e^(−PEEP/8) · Obese 0.05 + 0.20·e^(−PEEP/6) · Bronchospasm 0.05 + 0.10·e^(−PEEP/4) | Atelectasis under anaesthesia (5–10 % shunt). PEEP recruits; FiO₂ helps little with a large shunt. Disconnection means PEEP 0, so derecruitment. |
+| Resulting behaviour (tested) | Baseline SpO₂ 99 %, PaO₂ ≈ 140 mmHg. Apnoea at FiO₂ 40 %: < 90 % after ≈ 2–3 min. After 100 % preoxygenation: ≈ 7 min. ARDS: SpO₂ ≈ 91 % at FiO₂ 40 % / PEEP 5, ≈ 99 % with PEEP 14. | Matches classic safe-apnoea-time teaching (verify). |
+| Pulse oximeter | Reads SaO₂ delayed by the lung-to-finger circulation time (12 s at normal CO, up to 36 s at low CO), averaged with τ 3 s, shown only with an adequate pleth | Real oximeters lag and average. The finger reads late. |
+| SPO2 LOW alarm | < 90 % medium, < 85 % high | Common default limits. |
+| CO₂ in hypoventilation/apnoea | EtCO₂ target rises with τ 400 s (washout τ 75 s); ventilation factor capped at 3 | CO₂ accumulates at roughly 3–6 mmHg/min during apnoea (large tissue stores). |
+
+## Monitor sounds (UI, `src/ui/audio`)
+
+| Assumption | Value |
+|---|---|
+| Variable-pitch pulse tone | 880 Hz at 100 %, half a semitone lower per 1 % (90 % ≈ 659 Hz, 80 % ≈ 494 Hz, 70 % ≈ 370 Hz) |
+| Timing | On the peripheral pulse (QRS + 0.22 s) when SpO₂ is readable; otherwise a fixed 587 Hz tone on the QRS |
+| Alarm tones | High priority: 3 + 2 burst, repeats every 8 s. Medium priority: 3 tones, repeats every 15 s (IEC 60601-1-8-like, simplified). |
 
 ## Rhythms and monitor (`rhythms/*`, `MonitorDevice.ts`)
 
@@ -101,5 +121,7 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 - No autonomic reflexes (baroreflex), no drug effects, no metabolic acidosis, no oxygen stores or desaturation.
 - Spontaneous circulation returns instantly when the instructor selects sinus rhythm (no ROSC probability, no
   stunning).
-- Lung mechanics are linear and single-compartment: no recruitment, no overdistension, no leaks, no spontaneous
-  breathing.
+- Lung mechanics are linear and single-compartment: no overdistension and no leaks. Recruitment only affects
+  the shunt, not compliance.
+- Oxygen stores in blood and tissue are not modelled separately, so SpO₂ settles around 40 % in prolonged
+  apnoea instead of causing bradycardia and arrest (a later milestone).

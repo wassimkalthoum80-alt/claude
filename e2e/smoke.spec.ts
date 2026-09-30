@@ -23,7 +23,7 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
       return lit;
     }),
   );
-  expect(painted).toHaveLength(6); // ECG, pleth, ART, CO2, Paw, flow
+  expect(painted).toHaveLength(7); // ECG, pleth, ART, CO2, Paw, flow, volume
   for (const lit of painted) expect(lit).toBeGreaterThan(200);
 
   // Instructor triggers VF, the player presses Space.
@@ -33,6 +33,11 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
   await expect(page.getByTestId('cpr-button')).toHaveText(/STOP CPR/);
   await page.evaluate(() => window.__resusEngine?.runFor(10));
   await expect(page.getByTestId('ccf')).not.toHaveText(/--/);
+
+  // Ventilator: switch to pressure control and to the loops view.
+  await page.getByTestId('mode-PCV').click();
+  await page.getByTestId('vent-view-loops').click();
+  await expect(page.getByText('PC-AC').first()).toBeVisible();
 
   expect(errors).toEqual([]);
 });

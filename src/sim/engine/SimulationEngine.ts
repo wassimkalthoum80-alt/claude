@@ -8,6 +8,9 @@ import { VentilatorDevice } from '../devices/VentilatorDevice';
 import { CPREngine } from '../interventions/CPREngine';
 import { CardiovascularModel } from '../physiology/CardiovascularModel';
 import { GasExchangeModel } from '../physiology/GasExchangeModel';
+import { OxygenModel } from '../physiology/OxygenModel';
+import { LUNG_PRESETS } from '../physiology/parameters';
+import { RespiratoryDriveModel } from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
 import { ArterialWaveformGenerator } from '../signals/ArterialWaveformGenerator';
 import { CapnographyGenerator } from '../signals/CapnographyGenerator';
@@ -60,6 +63,8 @@ export class SimulationEngine {
   private readonly cardio = new CardiovascularModel();
   private readonly ventilator = new VentilatorDevice();
   private readonly gas = new GasExchangeModel();
+  private readonly oxygen = new OxygenModel();
+  private readonly drive = new RespiratoryDriveModel();
   private readonly cpr: CPREngine;
   private readonly monitor = new MonitorDevice();
   private readonly alarms = new AlarmEngine();
@@ -152,8 +157,14 @@ export class SimulationEngine {
       }
 
       const kinematics = this.cpr.kinematics(t);
+      s.patient.resp.pmus = this.drive.step(
+        t,
+        s.patient.resp.drive,
+        !cardioState.spontaneousCirculation,
+        this.rng,
+      );
       if (this.ventilator.step(t, SUBSTEP_S, vent, s.patient.resp)) {
-        this.monitor.onBreathStart(this.bank);
+        this.monitor.onBreathStart(this.bank, t);
         this.emit({ type: 'breath', t });
       }
       const arterialPressure = this.cardio.step(t, SUBSTEP_S, cardioState, kinematics);
@@ -189,8 +200,9 @@ export class SimulationEngine {
     this.cardio.slowUpdate(cardioState, TICK_S);
     this.cpr.slowUpdate(cprState, s.time, TICK_S);
     this.gas.update(s.patient, vent, TICK_S);
+    this.oxygen.update(s.patient, vent, TICK_S);
     this.updateTimers(TICK_S);
-    this.monitor.update(s, this.bank);
+    this.monitor.update(s, this.bank, TICK_S);
     this.alarms.update(s);
     this.checkScenarioEnd();
     this.version += 1;
@@ -261,8 +273,10 @@ export class SimulationEngine {
     this.cardio.reset(s.patient.cardio);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
     this.gas.reset(s.patient, s.devices.ventilator);
+    this.oxygen.reset(s.patient, s.devices.ventilator);
+    this.drive.reset();
     this.cpr.reset(s.interventions.cpr);
-    this.monitor.reset(s.devices.monitor.numerics);
+    this.monitor.reset(s.devices.monitor.numerics, s.patient.gas.spo2);
     for (const g of [
       this.ecgGen,
       this.artGen,
@@ -289,6 +303,25 @@ export class SimulationEngine {
         break;
       case 'SET_VENT_SETTING':
         this.ventilator.applySetting(s.devices.ventilator, command.key, command.value);
+        break;
+      case 'SET_VENT_MODE':
+        this.ventilator.setMode(s.devices.ventilator, command.mode, s.patient.resp);
+        break;
+      case 'SET_CIRCUIT':
+        this.ventilator.setCircuit(s.devices.ventilator, command.connected);
+        break;
+      case 'SET_LUNG': {
+        const l = LUNG_PRESETS[command.preset];
+        const r = s.patient.resp;
+        r.lungPreset = command.preset;
+        r.compliance = l.compliance;
+        r.resistance = l.resistance;
+        r.frc = l.frc;
+        break;
+      }
+      case 'SET_RESP_DRIVE':
+        s.patient.resp.drive = command.drive;
+        s.patient.resp.spontaneousBreathing = command.drive !== 'none';
         break;
       case 'SET_RHYTHM':
         this.setRhythm(command.rhythm);

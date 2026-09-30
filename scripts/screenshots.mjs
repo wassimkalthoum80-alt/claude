@@ -87,6 +87,48 @@ for (const size of sizes) {
   await page.close();
 }
 
+// Ventilator: PRVC with ARDS + spontaneous breathing (loops), and a disconnected CPAP/PS patient desaturating.
+{
+  const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+  page.on('pageerror', (e) => errors.push(`[vent] ${e.message}`));
+  const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await page.click('[data-testid=mode-PRVC]');
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e.dispatch({ type: 'SET_LUNG', preset: 'ards' }, 'instructor');
+    e.dispatch({ type: 'SET_RESP_DRIVE', drive: 'normal' }, 'instructor');
+  });
+  await run(40);
+  await page.click('[data-testid=vent-view-loops]');
+  await page.waitForTimeout(5500);
+  await page.screenshot({
+    path: `${outDir}/vent-1-prvc-ards-loops.jpg`,
+    type: 'jpeg',
+    quality: 88,
+  });
+  await page.click('[data-testid=vent-view-curves]');
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e.dispatch({ type: 'SET_LUNG', preset: 'normal' }, 'instructor');
+    e.dispatch({ type: 'SET_RESP_DRIVE', drive: 'none' }, 'instructor');
+  });
+  await page.click('[data-testid=mode-PSV]');
+  await run(40);
+  await page.evaluate(() =>
+    window.__resusEngine.dispatch({ type: 'SET_CIRCUIT', connected: false }, 'instructor'),
+  );
+  await run(170);
+  await page.waitForTimeout(600);
+  await page.screenshot({
+    path: `${outDir}/vent-2-psv-disconnected.jpg`,
+    type: 'jpeg',
+    quality: 88,
+  });
+  await page.close();
+}
+
 await browser.close();
 if (errors.length) {
   console.error('Console errors:\n' + errors.join('\n'));

@@ -5,6 +5,7 @@
 
 .header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   align-items: baseline;
   padding: 0 2px 8px;
@@ -64,9 +65,45 @@
   color: var(--text-dim);
 }
 
-.perKg {
+.sub {
   font-size: clamp(9px, 0.62vw, 11px);
   letter-spacing: 0.02em;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.sub small {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge {
+  font: 600 10px/1 var(--font-num);
+  letter-spacing: 0.06em;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.badgeBad {
+  background: var(--alarm-high);
+  color: #fff;
+  animation: alarm-flash-high 1s steps(1, end) infinite;
+}
+
+.badgeWarn {
+  background: var(--alarm-medium);
+  color: #111;
+}
+
+.badgeInfo {
+  border: 1px solid var(--vent-pressure);
+  color: #cfe6ff;
 }
 
 .tile_ie {
@@ -80,11 +117,71 @@
 }
 
 .curves {
+  position: relative;
   grid-column: 2 / 4;
   grid-row: 3 / 5;
   display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: clamp(4px, 0.45vw, 8px);
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: clamp(3px, 0.35vw, 6px);
+}
+
+.viewToggle {
+  margin-left: 12px;
+  margin-right: auto;
+  display: inline-flex;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.viewToggle button {
+  padding: 3px 7px;
+  border: none;
+  background: rgba(6, 10, 14, 0.8);
+  color: var(--text-dim);
+  font: 600 9.5px/1 var(--font-ui);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.viewToggle button + button {
+  border-left: 1px solid var(--tile-border);
+}
+
+.viewToggle .viewActive {
+  color: #cfe6ff;
+  background: rgba(74, 168, 255, 0.18);
+}
+
+.loops {
+  grid-row: 1 / 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(3px, 0.35vw, 6px);
+}
+
+.loop {
+  position: relative;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  min-height: 150px;
+}
+
+.loopAxisX {
+  position: absolute;
+  bottom: 3px;
+  right: 6px;
+  font: 400 clamp(8.5px, 0.58vw, 10px) / 1 var(--font-num);
+  color: var(--text-dim);
+}
+
+.loopCanvas {
+  position: absolute;
+  top: 18px;
+  left: 6px;
+  right: 6px;
+  bottom: 16px;
 }
 
 .curve {
@@ -92,7 +189,7 @@
   background: var(--tile-bg);
   border: 1px solid var(--tile-border);
   border-radius: var(--radius-sm);
-  min-height: clamp(74px, 9vh, 122px);
+  min-height: clamp(50px, 6vh, 84px);
 }
 
 .curveLabel {
@@ -116,10 +213,21 @@
   color: var(--text-dim);
 }
 
+.plot {
+  position: absolute;
+  top: 21px;
+  left: 0;
+  right: 0;
+  bottom: 5px;
+}
+
+.plot .axis {
+  left: 4px;
+  width: 22px;
+  text-align: right;
+}
+
 .canvasWrap {
   position: absolute;
-  top: 18px;
-  left: 30px;
-  right: 8px;
-  bottom: 4px;
+  inset: 0 8px 0 30px;
 }

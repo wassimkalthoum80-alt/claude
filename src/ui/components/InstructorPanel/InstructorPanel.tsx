@@ -2,6 +2,8 @@ import { SCENARIOS } from '../../../content/scenarios';
 import {
   TIME_SCALES,
   type CprQualityPreset,
+  type LungPreset,
+  type RespiratoryDrive,
   type RhythmId,
   type SimulationState,
 } from '../../../sim';
@@ -32,7 +34,13 @@ const select = (s: Readonly<SimulationState>) => ({
   scale: s.control.timeScale,
   scenario: s.scenario.id,
   time: Math.floor(s.time),
+  lung: s.patient.resp.lungPreset,
+  drive: s.patient.resp.drive,
+  connected: s.devices.ventilator.circuitConnected,
 });
+
+const LUNGS: LungPreset[] = ['normal', 'ards', 'bronchospasm', 'obese'];
+const DRIVES: RespiratoryDrive[] = ['none', 'weak', 'normal', 'strong'];
 
 /**
  * Instructor / developer controls (toggle with `). Every button dispatches a command with source
@@ -98,6 +106,65 @@ export function InstructorPanel() {
               {t(p.key)}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className={styles.group}>
+        <div className={styles.groupLabel}>{t('instructor.lungs')}</div>
+        <div className={styles.buttons}>
+          {LUNGS.map((l) => (
+            <button
+              key={l}
+              type="button"
+              className={`${styles.btn} ${s.lung === l ? styles.active : ''}`}
+              onClick={() => engine.dispatch({ type: 'SET_LUNG', preset: l }, 'instructor')}
+              data-testid={`lung-${l}`}
+            >
+              {t(`lung.${l}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.row}>
+        <div className={styles.group}>
+          <div className={styles.groupLabel}>{t('instructor.drive')}</div>
+          <div className={styles.buttons}>
+            {DRIVES.map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`${styles.btn} ${s.drive === d ? styles.active : ''}`}
+                onClick={() => engine.dispatch({ type: 'SET_RESP_DRIVE', drive: d }, 'instructor')}
+              >
+                {t(`drive.${d}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.group}>
+          <div className={styles.groupLabel}>{t('instructor.circuit')}</div>
+          <div className={styles.buttons}>
+            <button
+              type="button"
+              className={`${styles.btn} ${s.connected ? styles.active : ''}`}
+              onClick={() =>
+                engine.dispatch({ type: 'SET_CIRCUIT', connected: true }, 'instructor')
+              }
+            >
+              {t('circuit.connected')}
+            </button>
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.danger} ${!s.connected ? styles.active : ''}`}
+              onClick={() =>
+                engine.dispatch({ type: 'SET_CIRCUIT', connected: false }, 'instructor')
+              }
+              data-testid="circuit-disconnect"
+            >
+              {t('circuit.disconnect')}
+            </button>
+          </div>
         </div>
       </div>
 

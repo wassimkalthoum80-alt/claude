@@ -17,5 +17,5 @@ export interface SignalContext {
   rhythmEcg: number;
   /** mmHg — true arterial pressure from the cardiovascular model */
   arterialPressure: number;
-  breath: { start: number; inspiratoryTime: number; total: number };
+  breath: { start: number; expirationStart: number; expectedExpiration: number; total: number };
 }

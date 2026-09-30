@@ -1,6 +1,6 @@
 /**
  * Monitor sounds via WebAudio (P1). Created lazily after a user gesture (browser autoplay policy).
- * - Pulse tone per QRS whose pitch falls with SpO2 (variable-pitch pulse oximetry tone).
+ * - Pulse tone per pleth pulse whose pitch falls with SpO2 (variable-pitch pulse oximetry tone).
  * - Alarm bursts by priority (IEC 60601-1-8-like patterns, simplified).
  * - Optional soft click per compression (CPR metronome feel).
  */
@@ -31,10 +31,13 @@ export class AudioEngine {
     return this.ctx !== null && this.ctx.state === 'running';
   }
 
-  /** QRS / pulse beep. Pitch ≈ 950 Hz at 100 % and ~1.5 % lower per % desaturation. */
-  pulse(spo2: number | null): void {
-    const f = spo2 === null ? 700 : 950 * 0.985 ** (100 - spo2);
-    this.tone(f, 0.07, 0.9);
+  /**
+   * Pulse beep: short "bip" (fundamental + soft 2nd harmonic, 4 ms attack, ~110 ms decay) at the pitch
+   * given by the SpO2 (see tones.ts).
+   */
+  pulse(frequency: number): void {
+    this.tone(frequency, 0.11, 0.85, 'sine');
+    this.tone(frequency * 2, 0.07, 0.16, 'sine');
   }
 
   compressionClick(): void {
@@ -65,7 +68,7 @@ export class AudioEngine {
     osc.type = type;
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(level, t0 + 0.005);
+    gain.gain.linearRampToValueAtTime(level, t0 + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     osc.connect(gain).connect(this.master);
     osc.start(t0);

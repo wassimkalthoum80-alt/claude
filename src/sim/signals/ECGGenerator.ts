@@ -10,7 +10,7 @@ export class ECGGenerator {
   reset(): void {}
 
   sample(ctx: SignalContext): number {
-    const breathPhase = ((ctx.t - ctx.breath.start) / ctx.breath.total) * 2 * Math.PI;
+    const breathPhase = ((ctx.t - ctx.breath.start) / Math.max(1, ctx.breath.total)) * 2 * Math.PI;
     const wander = ECG.baselineWander * Math.sin(breathPhase);
     return ctx.rhythmEcg + wander + compressionArtifact(ctx) + ctx.rng.normal(0, ECG.noiseSd);
   }

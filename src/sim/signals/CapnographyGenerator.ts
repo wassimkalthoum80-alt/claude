@@ -13,16 +13,16 @@ export class CapnographyGenerator {
   }
 
   sample(ctx: SignalContext): number {
-    const { start, inspiratoryTime, total } = ctx.breath;
-    const elapsed = ctx.t - start;
-    const expiratoryTime = Math.max(0.2, total - inspiratoryTime);
+    const { expirationStart, expectedExpiration } = ctx.breath;
+    const expiratoryTime = Math.max(0.2, expectedExpiration);
     let target: number;
     let tau: number;
-    if (ctx.vent.breathPhase !== 'expiration' || elapsed < inspiratoryTime) {
+    if (ctx.vent.breathPhase !== 'expiration' || !ctx.vent.circuitConnected) {
+      // Inspiration, or an open circuit (no exhaled gas reaches the sensor): no CO2.
       target = 0;
       tau = 0.04;
     } else {
-      const te = elapsed - inspiratoryTime;
+      const te = ctx.t - expirationStart;
       // Phase II: dead-space gas leaves first (~150 ms), then alveolar gas arrives.
       const rise = 1 / (1 + Math.exp(-(te - 0.16) / 0.035));
       // Phase III: slight upslope, reaching EtCO2 at end expiration.

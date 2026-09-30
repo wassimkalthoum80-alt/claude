@@ -78,8 +78,10 @@ export const GAS = {
   circulationFloor: 0.05,
   /** s — EtCO2 response to circulation changes */
   circulationTauS: 8,
-  /** s — EtCO2 response to ventilation changes */
+  /** s — EtCO2 response to more ventilation (washout) */
   ventilationTauS: 75,
+  /** s — CO2 accumulation with less ventilation / apnoea */
+  ventilationRiseTauS: 400,
   /** mmHg — arterial–end-tidal gradient with normal circulation */
   aEtGradient: 5,
 } as const;
@@ -93,4 +95,57 @@ export const PLETH = {
   perfusionIndexThreshold: 0.3,
   // SIM-ASSUMPTION: peripheral pulsatility scales with (relative flow)^1.5 — fingers are poorly perfused in CPR.
   flowExponent: 1.5,
+} as const;
+
+// SIM-ASSUMPTION: lung presets. Shunt = fixed + recruitable × exp(−PEEP / k): PEEP reopens collapsed alveoli.
+export const LUNG_PRESETS = {
+  normal: {
+    compliance: 50,
+    resistance: 10,
+    frc: 2.2,
+    shuntFixed: 0.05,
+    shuntRecruitable: 0.1,
+    recruitK: 4,
+  },
+  ards: {
+    compliance: 25,
+    resistance: 12,
+    frc: 1.2,
+    shuntFixed: 0.15,
+    shuntRecruitable: 0.3,
+    recruitK: 8,
+  },
+  bronchospasm: {
+    compliance: 45,
+    resistance: 30,
+    frc: 2.4,
+    shuntFixed: 0.05,
+    shuntRecruitable: 0.1,
+    recruitK: 4,
+  },
+  obese: {
+    compliance: 30,
+    resistance: 14,
+    frc: 1.4,
+    shuntFixed: 0.05,
+    shuntRecruitable: 0.2,
+    recruitK: 6,
+  },
+} as const;
+
+export const OXYGEN = {
+  /** mL/min — whole-body O2 consumption under anaesthesia (≈ 3 mL/kg/min) */
+  vo2: 250,
+  /** g/dL */
+  hemoglobin: 14,
+  /** mmHg — alveolar gas at 37 °C, dry (760 − 47) */
+  dryBarometric: 713,
+  // SIM-ASSUMPTION: O2 uptake from the lungs falls with pulmonary blood flow, (CO/5)^0.5 (tissues extract more at low flow).
+  uptakeFlowExponent: 0.5,
+  // SIM-ASSUMPTION: pulse-oximeter reading lags the arterial blood by the lung-to-finger circulation time
+  // (≈ 12 s at normal CO, longer at low CO) and is averaged over a few seconds.
+  /** s */
+  oximeterDelayS: 12,
+  /** s */
+  oximeterAveragingTauS: 3,
 } as const;
