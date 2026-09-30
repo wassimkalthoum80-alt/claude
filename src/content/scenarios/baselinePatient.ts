@@ -1,0 +1,37 @@
+import type { ScenarioDefinition } from '../../sim/types/scenario';
+
+/** Sandbox: stable, ventilated adult under general anaesthesia (B5). The instructor triggers events. */
+export const baselinePatient: ScenarioDefinition = {
+  id: 'baseline',
+  titleKey: 'scenario.baseline.title',
+  briefingKey: 'scenario.baseline.briefing',
+  seed: 20260930,
+  patient: {
+    sex: 'male',
+    ageYears: 58,
+    weightKg: 80,
+    heightCm: 178,
+    rhythm: 'sinus',
+    heartRate: 80,
+    // 62.5 mL × 80/min = 5.0 L/min
+    strokeVolume: 62.5,
+    compliance: 50,
+    resistance: 10,
+    deadSpace: 150,
+    etco2: 37,
+    spo2: 99,
+    airway: 'ett',
+  },
+  ventilator: {
+    vt: 500,
+    rr: 12,
+    peep: 5,
+    fio2: 40,
+    ieRatio: 2,
+    pmax: 35,
+    inspiratoryPauseFraction: 0.1,
+  },
+  cprPreset: 'good',
+  timeline: [],
+  objectives: [],
+};
