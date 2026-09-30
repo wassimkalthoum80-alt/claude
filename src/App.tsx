@@ -7,6 +7,8 @@ import { IconSliders, IconSpeaker } from './ui/components/icons';
 import { InstructorPanel } from './ui/components/InstructorPanel/InstructorPanel';
 import { BriefingOverlay, PauseMenu, RunSummaryCard } from './ui/components/Overlays/Overlays';
 import { PatientMonitor } from './ui/components/PatientMonitor/PatientMonitor';
+import { PerfusorRack } from './ui/components/Perfusors/PerfusorRack';
+import { PumpEditor } from './ui/components/Perfusors/PumpEditor';
 import { PatientScene } from './ui/components/PatientScene/PatientScene';
 import { Timers } from './ui/components/Timers/Timers';
 import { Ventilator } from './ui/components/Ventilator/Ventilator';
@@ -38,6 +40,7 @@ function Workstation() {
         <div className={`${styles.right} ${ui.ventDrawerOpen ? styles.drawerOpen : ''}`}>
           <Ventilator />
           <VentilatorControls />
+          <PerfusorRack />
           <CprMetrics />
         </div>
 
@@ -76,6 +79,7 @@ function Workstation() {
 
       <InstructorPanel />
       <AlarmLimitsPanel />
+      <PumpEditor />
       <BriefingOverlay />
       <PauseMenu />
       <RunSummaryCard />

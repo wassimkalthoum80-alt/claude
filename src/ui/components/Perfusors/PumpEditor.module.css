@@ -1,0 +1,381 @@
+/* Opens beside the right column so the rack, ventilator and monitor stay visible while programming. */
+.panel {
+  position: absolute;
+  top: var(--edge);
+  right: calc(var(--edge) + clamp(340px, 27.5vw, 560px) + 10px);
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 2 * var(--edge));
+  overflow-y: auto;
+  z-index: 28;
+  padding: 10px 12px 12px;
+  background: rgba(8, 12, 17, 0.97);
+  border: 1px solid var(--panel-border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  font: 500 12px/1.3 var(--font-ui);
+  color: var(--text);
+}
+
+@media (max-width: 1100px) {
+  .panel {
+    right: var(--edge);
+    top: 48px;
+    z-index: 30;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.title {
+  font: 600 13px/1 var(--font-ui);
+  letter-spacing: 0.08em;
+}
+
+.title small {
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.close {
+  width: 28px;
+  height: 26px;
+  background: none;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+/* Formulary browser */
+.browser {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search,
+.field input,
+.field select {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: 500 12px/1.2 var(--font-ui);
+}
+
+.search:focus,
+.field input:focus,
+.field select:focus {
+  outline: 1px solid var(--spo2);
+}
+
+.results {
+  max-height: 34vh;
+  overflow-y: auto;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+}
+
+.groupTitle {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  background: #0d141b;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.result {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--divider);
+  color: var(--text);
+  font: 500 12px/1.2 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover {
+  background: rgba(150, 175, 200, 0.07);
+}
+
+.selected {
+  background: rgba(54, 200, 255, 0.12);
+}
+
+.blocked {
+  color: var(--text-faint);
+}
+
+.resultName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultMeta {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.blocked .resultMeta {
+  font-style: italic;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Loaded pump */
+.loaded {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.loadedName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.loadedMeta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.loadedButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.field > span:first-child {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.protocol {
+  margin-bottom: 6px;
+}
+
+.inputUnit {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.inputUnit small {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  min-width: 34px;
+}
+
+.section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--divider);
+}
+
+.sectionTitle {
+  font: 600 11px/1 var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.hint {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.error,
+.warning {
+  margin: 4px 0 0;
+  padding: 4px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+}
+
+.error {
+  color: #ffb3b3;
+  background: rgba(255, 46, 46, 0.14);
+  border-left: 3px solid var(--alarm-high);
+}
+
+.warning {
+  color: #ffe08a;
+  background: rgba(255, 196, 0, 0.1);
+  border-left: 3px solid var(--alarm-medium);
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.primary,
+.secondary,
+.start,
+.stop {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font: 600 12px/1 var(--font-ui);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  border: 1px solid var(--tile-border);
+  background: var(--tile-bg);
+  color: var(--text);
+}
+
+.primary {
+  background: rgba(54, 200, 255, 0.16);
+  border-color: rgba(54, 200, 255, 0.55);
+}
+
+.start {
+  background: var(--cpr-green-bg);
+  border-color: var(--cpr-green-border);
+}
+
+.stop {
+  background: var(--stop-red-bg);
+  border-color: var(--stop-red-border);
+}
+
+.secondary {
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.override {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  padding: 5px 7px;
+  border: 1px dashed rgba(255, 196, 0, 0.5);
+  border-radius: var(--radius-sm);
+  color: var(--alarm-medium);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.cardToggle {
+  margin-top: 10px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font: 500 11.5px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+/* Drug card */
+.card {
+  margin-top: 4px;
+  padding: 8px;
+  background: rgba(14, 20, 27, 0.6);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.cardName {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cardCategory {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.cardMeta {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.cardBlock {
+  margin-top: 7px;
+}
+
+.cardTitle {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.cardList {
+  margin: 3px 0 0;
+  padding-left: 16px;
+  font-size: 11.5px;
+}
+
+.cardText {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+}
+
+.sources {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.unreviewed {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--alarm-medium);
+}

@@ -32,7 +32,7 @@
 
 .sliderArea {
   position: relative;
-  height: clamp(66px, 9.2vh, 130px);
+  height: clamp(52px, 6.4vh, 96px);
   width: 100%;
   display: flex;
   justify-content: center;

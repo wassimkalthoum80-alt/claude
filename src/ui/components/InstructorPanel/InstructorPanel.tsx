@@ -12,6 +12,7 @@ import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi } from '../../hooks/UiContext';
 import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { HeartLungPanel } from './HeartLungPanel';
+import { PharmacologyPanel } from './PharmacologyPanel';
 import styles from './InstructorPanel.module.css';
 
 const RHYTHMS: { id: RhythmId; key: I18nKey; hotkey: string }[] = [
@@ -232,6 +233,7 @@ export function InstructorPanel() {
       </div>
 
       <HeartLungPanel />
+      <PharmacologyPanel />
 
       <p className={styles.hint}>{t('instructor.hint')}</p>
     </aside>

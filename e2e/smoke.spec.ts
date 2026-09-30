@@ -57,3 +57,40 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
 
   expect(errors).toEqual([]);
 });
+
+test('perfusor rack: TIVA running, load rocuronium, block invalid bolus, give a valid bolus', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?autostart&debug');
+  const rack = page.getByTestId('perfusor-rack');
+  await expect(rack).toBeVisible();
+  await expect(page.getByTestId('pump-P1')).toHaveAttribute('data-state', 'run');
+  await expect(page.getByTestId('pump-P1')).toContainText('Propofol');
+  await expect(page.getByTestId('pump-INF1')).toBeVisible();
+
+  await page.getByTestId('pump-P4').click();
+  await page.getByTestId('pump-search').fill('rocuronium');
+  await page.getByTestId('product-rocuronium-10').click();
+  await page.getByTestId('pump-load').click();
+  await expect(page.getByTestId('pump-P4')).toContainText('Rocuronium');
+
+  // 5 mg/kg is above the protocol maximum: blocked with a message, not corrected.
+  await page.getByTestId('pump-bolus-dose').fill('5');
+  await expect(page.getByTestId('pump-error').first()).toBeVisible();
+  await expect(page.getByTestId('pump-give-bolus')).toBeDisabled();
+
+  await page.getByTestId('pump-bolus-dose').fill('0.6');
+  await expect(page.getByTestId('pump-give-bolus')).toBeEnabled();
+  await page.getByTestId('pump-give-bolus').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(180));
+  await expect(page.getByTestId('tof')).toContainText('0/4');
+
+  await page.getByTestId('add-syringe').click();
+  await expect(page.getByTestId('pump-P6')).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -61,8 +61,8 @@
   pointer-events: auto;
 }
 
+/* The perfusor rack (margin-top: auto) pushes itself and the CPR metrics to the bottom. */
 .right > section:last-child {
-  margin-top: auto;
   width: 92%;
   align-self: flex-end;
 }

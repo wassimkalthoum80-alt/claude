@@ -57,7 +57,7 @@ export {
   type Validation,
   type ValidationCode,
 } from './pharmacology/validation';
-export { PUMP_MAX_RATE, LINE_DEFAULTS } from './pharmacology/delivery';
+export { PUMP_MAX_RATE, LINE_DEFAULTS, lineAmount } from './pharmacology/delivery';
 export { PD } from './pharmacology/pd';
 export type {
   PumpState,

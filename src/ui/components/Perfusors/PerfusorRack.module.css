@@ -1,0 +1,208 @@
+.rack {
+  padding: 7px 10px 7px;
+  flex-shrink: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 92%;
+  align-self: flex-end;
+  margin-top: auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.title {
+  font: 500 clamp(12px, 0.95vw, 17px) / 1 var(--font-ui);
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+
+.tof {
+  font-size: clamp(10px, 0.72vw, 13px);
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+}
+
+.tofAlert {
+  color: #ff6a8a;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 5px 22px minmax(0, 1fr) auto 58px 30px 34px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: clamp(20px, 2.2vh, 26px);
+  padding: 0 7px 0 0;
+  flex-shrink: 0;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: 500 12px/1.1 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover {
+  border-color: var(--panel-border-strong);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--spo2);
+  outline-offset: 1px;
+}
+
+.nearEmpty {
+  border-color: rgba(255, 196, 0, 0.6);
+}
+
+.label {
+  align-self: stretch;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: var(--text-faint);
+}
+
+/* Syringe label colours (ISO 26825 / DIVI user-applied labels). */
+.c_yellow {
+  background: #f5d90a;
+}
+.c_blue {
+  background: #3b8fe6;
+}
+.c_red {
+  background: #ff4b3a;
+}
+.c_violet {
+  background: #b06ae0;
+}
+.c_violetStripe {
+  background: repeating-linear-gradient(0deg, #b06ae0 0 4px, #f2f2f2 4px 7px);
+}
+.c_blueStripe {
+  background: repeating-linear-gradient(0deg, #3b8fe6 0 4px, #f2f2f2 4px 7px);
+}
+.c_white {
+  background: #eceff1;
+}
+.c_fluid {
+  background: #7fb2c8;
+}
+.c_none {
+  background: transparent;
+}
+
+.id {
+  font: 600 11px/1 var(--font-num);
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+.emptyText {
+  grid-column: 3 / -1;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.name {
+  font-size: clamp(11px, 0.78vw, 14px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.override {
+  color: var(--alarm-high);
+  font-weight: 700;
+}
+
+.doseValue {
+  font-size: clamp(12px, 0.86vw, 15px);
+  color: var(--vent-value);
+  white-space: nowrap;
+}
+
+.mlh {
+  font-size: clamp(9px, 0.62vw, 11px);
+  color: var(--text-dim);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.state {
+  text-align: center;
+  font: 600 10px/1 var(--font-ui);
+  letter-spacing: 0.05em;
+}
+
+.s_run {
+  color: var(--good);
+}
+.s_stop {
+  color: var(--alarm-medium);
+}
+.s_bolus {
+  color: var(--spo2);
+}
+
+.volume {
+  height: 5px;
+  background: rgba(150, 175, 200, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.volumeFill {
+  display: block;
+  height: 100%;
+  background: rgba(200, 215, 230, 0.7);
+}
+
+.nearEmpty .volumeFill {
+  background: var(--alarm-medium);
+}
+
+.footer {
+  display: flex;
+  gap: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--divider);
+}
+
+.action {
+  flex: 1;
+  padding: 5px 4px;
+  background: none;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font: 500 11px/1 var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.action:hover {
+  color: var(--text);
+  border-color: var(--panel-border-strong);
+}
+
+.flush {
+  color: var(--vent-flow);
+}

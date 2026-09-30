@@ -18,6 +18,8 @@ export interface UiState {
   limitsOpen: boolean;
   /** parameter row to highlight when the panel was opened from a numeric (e.g. 'hr') */
   limitsFocus: string | null;
+  /** pump id whose editor is open (null = closed) */
+  pumpEditor: string | null;
 }
 
 type UiAction =
@@ -83,6 +85,7 @@ function initialState(): UiState {
     ventDrawerOpen: false,
     limitsOpen: false,
     limitsFocus: null,
+    pumpEditor: null,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

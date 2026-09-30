@@ -316,7 +316,7 @@ export const de: Record<I18nKey, string> = {
   'vent.pending': 'nächster Atemzug',
   'vent.controls': 'Beatmungseinstellungen',
 
-  'cpr.title': 'HLW-QUALITÄT',
+  'cpr.title': 'HLW-KENNZAHLEN',
   'cpr.rate': 'KOMPRESSIONSFREQUENZ',
   'cpr.depth': 'KOMPRESSIONSTIEFE',
   'cpr.ccf': 'HANDS-ON-ANTEIL',

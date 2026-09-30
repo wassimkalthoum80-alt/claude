@@ -19,7 +19,15 @@ export function CprMetrics() {
 
   return (
     <section className={`hud-panel ${styles.metrics}`} aria-label={t('cpr.title')}>
-      <div className={styles.title}>{t('cpr.title')}</div>
+      <div className={styles.title}>
+        <span>{t('cpr.title')}</span>
+        <Tooltip id="quality" placement="left" className={styles.qualityCell}>
+          <span className={styles.label}>{t('cpr.quality')}</span>
+          <span className={`num ${styles.value} ${styles.quality} tone-${vm.qualityTone}`}>
+            {vm.qualityKey ? t(vm.qualityKey) : '--'}
+          </span>
+        </Tooltip>
+      </div>
       <div className={styles.grid}>
         <Tooltip id="rate" placement="left" className={styles.cell}>
           <span className={styles.label}>{t('cpr.rate')}</span>
@@ -43,12 +51,6 @@ export function CprMetrics() {
           <span className={styles.label}>{t('cpr.etco2')}</span>
           <span className={`num ${styles.value} tone-${vm.etco2Tone}`}>
             {vm.etco2} <span className={styles.unit}>mmHg</span>
-          </span>
-        </Tooltip>
-        <Tooltip id="quality" placement="left" className={`${styles.cell} ${styles.wide}`}>
-          <span className={styles.label}>{t('cpr.quality')}</span>
-          <span className={`num ${styles.value} ${styles.quality} tone-${vm.qualityTone}`}>
-            {vm.qualityKey ? t(vm.qualityKey) : '--'}
           </span>
         </Tooltip>
       </div>

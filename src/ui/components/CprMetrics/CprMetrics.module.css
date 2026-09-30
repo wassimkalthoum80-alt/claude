@@ -4,10 +4,14 @@
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font: 500 clamp(12px, 0.95vw, 17px) / 1 var(--font-ui);
   letter-spacing: 0.05em;
   color: var(--text);
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--divider);
 }
 
@@ -16,11 +20,14 @@
   grid-template-columns: 1fr 1fr;
 }
 
+/* Label and value on one line so the column leaves room for the perfusor rack. */
 .cell {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 6px;
-  padding: clamp(5px, 0.8vh, 9px) 4px clamp(5px, 0.8vh, 8px);
+  padding: clamp(4px, 0.6vh, 7px) 4px;
   border-bottom: 1px solid var(--divider);
   cursor: help;
   min-width: 0;
@@ -29,11 +36,6 @@
 .cell:nth-child(even) {
   padding-left: 14px;
   border-left: 1px solid var(--divider);
-}
-
-.wide {
-  grid-column: span 2;
-  border-bottom: none;
 }
 
 .label {
@@ -47,7 +49,8 @@
 
 .value {
   font-weight: 500;
-  font-size: clamp(16px, 1.25vw, 24px);
+  font-size: clamp(15px, 1.1vw, 21px);
+  white-space: nowrap;
   line-height: 1;
 }
 
@@ -58,4 +61,17 @@
 
 .quality {
   letter-spacing: 0.04em;
+}
+
+/* CPR quality sits in the title line. */
+.qualityCell {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: help;
+  min-width: 0;
+}
+
+.grid .cell:nth-last-child(-n + 2) {
+  border-bottom: none;
 }
