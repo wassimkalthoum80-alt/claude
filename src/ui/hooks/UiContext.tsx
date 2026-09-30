@@ -24,7 +24,11 @@ export interface UiState {
   bisOpen: boolean;
   /** fluid-balance ("Bilanz") panel open */
   balanceOpen: boolean;
+  /** ALS action panel shown next to the action bar (one at a time) */
+  actionPanel: ActionPanelId | null;
 }
+
+export type ActionPanelId = 'rhythm' | 'defib' | 'airway' | 'drugs' | 'ultrasound' | 'procedures';
 
 type UiAction =
   | { type: 'set'; patch: Partial<UiState> }
@@ -92,6 +96,7 @@ function initialState(): UiState {
     pumpEditor: null,
     bisOpen: false,
     balanceOpen: false,
+    actionPanel: null,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

@@ -164,6 +164,31 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   About 50 further products are **reference-only** (drug card, not administrable) until they have a supported
   model. Nothing in the formulary has been clinically reviewed.
 
+- **ALS actions (left panel).** Every action button opens a panel beside the action bar:
+  - **Rhythm check**: the 2-min CPR cycle timer, a hands-off timer (red above 10 s), central pulse palpation and
+    your assessment (shockable / non-shockable / pulse). The monitor rhythm is what you read; after your
+    decision the panel shows the true rhythm class.
+  - **Defibrillator**: pads, manual mode (50–360 J, guideline-suggested energy, synchronised cardioversion,
+    charge, shock, disarm) or AED (analysis, "motion detected", shock advised → auto-charge). Shock outcomes are
+    decided by a seeded three-phase VF model: early shocks work, long no-flow VF needs good CPR first,
+    amiodarone lowers recurrent VF, an unsynchronised shock on the T wave can cause VF. The pre-shock pause and
+    shocks during compressions are logged.
+  - **Airway**: face mask, supraglottic airway, tracheal tube (placement takes time, no ventilation meanwhile),
+    withdraw 2 cm, remove; auscultation of lungs and epigastrium. A tube can end up in the oesophagus (flat
+    capnogram, gurgling epigastrium, stomach inflates) or a main bronchus (left side silent, SpO₂ falls). Mask
+    ventilation above 20 cmH₂O leaks and inflates the stomach.
+  - **Drugs**: adrenaline 1 mg, amiodarone 300/150 mg, atropine 0.5 mg, calcium chloride, noradrenaline 10 µg as
+    IV/IO pushes with flush, and timers since the last dose (adrenaline turns amber at 3 min and red after
+    5 min). Atropine and amiodarone are now executable models.
+  - **Ultrasound**: animated subcostal heart (contraction, fibrillation, standstill, effusion with RV collapse,
+    underfilling; compression artefact during CPR) and lung views with M-mode (sliding/seashore vs barcode,
+    lung point, lung pulse, B-lines).
+  - **Procedures**: needle decompression and chest drain (left/right), pericardiocentesis, IO access, gastric
+    tube.
+  - The instructor panel adds **pulseless VT** (key 5), tension pneumothorax, tamponade (volume and bleeding
+    rate), lost IV access, forced tube misplacement and the hidden myocardial state (ischaemic time, coronary
+    perfusion, viability, shock readiness).
+
 | Key | Action |
 |---|---|
 | <kbd>Space</kbd> | Start / stop CPR |
@@ -171,7 +196,7 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 | <kbd>`</kbd> | Instructor panel |
 | <kbd>L</kbd> | Alarm limits (or click a value on the monitor) |
 | <kbd>M</kbd> | Audio (QRS tone with SpO₂ pitch, alarms, compression clicks) |
-| <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> | Sinus / VF / asystole / PEA (instructor panel open) |
+| <kbd>1</kbd>–<kbd>5</kbd> | Sinus / VF / asystole / PEA / pulseless VT (instructor panel open) |
 
 A case timer next to the instructor button counts the simulated case time from 00:00; it restarts with every new case or reset and stops while paused.
 
@@ -229,9 +254,10 @@ docs/                  architecture, assumptions, reviews, reference image, scre
 
 - CPR is performed by an automatic compressor. The player starts and stops it, and the instructor sets quality
   presets. Player-driven compressions plug into the existing `CompressionSource` interface later.
-- No defibrillation, rhythm-check logic, airway interaction, ultrasound, ROSC logic or scoring yet (see
-  the roadmap). Those action buttons are visible but locked. Drugs exist as infusions (phase A); arrest drugs
-  have no effect on ROSC, and there is no automatic ROSC.
+- ROSC comes from a successful shock (seeded outcome model), from relieving an obstructive PEA, or from the
+  instructor; drugs alone never restart the heart. Non-obstructive PEA/asystole need the instructor for ROSC.
+  No scoring or debrief timeline yet (the event log records every action for it). The ultrasound images are
+  schematic, and VT with a pulse, bradycardias/AV blocks and bag-valve-mask ventilation are not modelled yet.
 - The pharmacology is an **educational calibration**: PD constants, the educational PK models, the line model and
   the fluid kinetics are author-selected, and the formulary is unreviewed (see the assumptions document).
 - The fluid model is an **educational compartment model**: exchange, renal and perspiration constants are
@@ -252,9 +278,9 @@ docs/                  architecture, assumptions, reviews, reference image, scre
 
 | Milestone | Content |
 |---|---|
-| **M2** | VF arrest done properly: 2-min cycles, rhythm check (hands-off timer), defibrillator, shockable/non-shockable, ROSC |
+| **M2** | Done: 2-min cycles, rhythm check (hands-off timer), defibrillator (manual/AED/sync), shockable/non-shockable, shock-driven ROSC, pulseless VT |
 | **M3** | Drugs: phase A done (pumps, formulary, PK/PD, fluids). Next: electrolytes/acid–base, blood products and haemostasis, arrest drugs (adrenaline cycles, amiodarone), IV/IO access |
-| **M4** | Airway and ventilation during CPR: BVM, SGA, intubation, capnography confirmation |
-| **M5** | Reversible causes (4 Hs & 4 Ts), POCUS, PEA/VT/bradycardia |
+| **M4** | Airway: mask, SGA, intubation with misplacement and capnography confirmation done. Next: bag-valve-mask, oesophageal pressure (Pes) monitoring and ARDS scenarios from the owner's references |
+| **M5** | Tension pneumothorax, tamponade and POCUS done. Next: other 4 H / HITS causes, VT with pulse, bradycardia/AV block |
 | **M6** | Anaesthesia crises, richer lung mechanics |
 | **M7** | Game layer: campaign, difficulty, EventLog-based scoring, debrief timeline, progression |

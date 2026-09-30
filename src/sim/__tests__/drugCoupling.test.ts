@@ -527,7 +527,10 @@ describe('adrenaline dose–response realism', () => {
     push(e, 'P1', 'adrenaline-100', 10, 0);
     e.runFor(30);
     const a = haemo(e);
-    expect(snap(e).devices.monitor.numerics.artSys ?? 0).toBeGreaterThan(250);
+    // Severe hypertension, but bounded by the LV pressure ceiling (no unphysiological pressures).
+    expect(snap(e).devices.monitor.numerics.artSys ?? 0).toBeGreaterThan(220);
+    expect(snap(e).devices.monitor.numerics.artSys ?? 0).toBeLessThan(320);
+    expect(a.map).toBeLessThan(260);
     expect(a.hr).toBeGreaterThan(b.hr + 20);
     e.runFor(120);
     expect(snap(e).patient.heartLung.lvDecompensation).toBeGreaterThan(0.5); // acute LV failure follows

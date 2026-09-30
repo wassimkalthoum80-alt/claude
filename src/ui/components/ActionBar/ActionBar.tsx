@@ -1,13 +1,13 @@
 import type { ComponentType, SVGProps } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
 import { useEngine } from '../../hooks/EngineContext';
-import { useT, useUi } from '../../hooks/UiContext';
-import { useEngineSelector } from '../../hooks/useEngineSelector';
+import { useT, useUi, type ActionPanelId } from '../../hooks/UiContext';
+import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
+import type { SimulationState } from '../../../sim';
 import {
   IconBolt,
   IconCpr,
   IconDrip,
-  IconLock,
   IconLungs,
   IconPause,
   IconProbe,
@@ -18,30 +18,54 @@ import {
 } from '../icons';
 import styles from './ActionBar.module.css';
 
-interface LockedAction {
+interface PanelAction {
+  id: ActionPanelId;
   key: I18nKey;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
-  milestone: number;
 }
 
-/** Visible now so the layout matches the target; unlocked in later milestones (Part C). */
-const LOCKED: LockedAction[] = [
-  { key: 'action.rhythmCheck', icon: IconPulse, milestone: 2 },
-  { key: 'action.defibrillator', icon: IconBolt, milestone: 2 },
-  { key: 'action.airway', icon: IconLungs, milestone: 4 },
-  { key: 'action.drugs', icon: IconSyringe, milestone: 3 },
-  { key: 'action.ultrasound', icon: IconProbe, milestone: 5 },
-  { key: 'action.procedures', icon: IconTools, milestone: 6 },
+/** Order as in the reference layout; FLUIDS sits between DRUGS and ULTRASOUND. */
+const BEFORE_FLUIDS: PanelAction[] = [
+  { id: 'rhythm', key: 'action.rhythmCheck', icon: IconPulse },
+  { id: 'defib', key: 'action.defibrillator', icon: IconBolt },
+  { id: 'airway', key: 'action.airway', icon: IconLungs },
+  { id: 'drugs', key: 'action.drugs', icon: IconSyringe },
+];
+const AFTER_FLUIDS: PanelAction[] = [
+  { id: 'ultrasound', key: 'action.ultrasound', icon: IconProbe },
+  { id: 'procedures', key: 'action.procedures', icon: IconTools },
 ];
 
-const selectCprActive = (s: { interventions: { cpr: { active: boolean } } }) =>
-  s.interventions.cpr.active;
+const selectBar = (s: Readonly<SimulationState>) => ({
+  cprActive: s.interventions.cpr.active,
+  checking: s.interventions.resus.rhythmCheck !== null,
+  charged: s.devices.defib.charge === 'charged',
+});
 
 export function ActionBar() {
   const t = useT();
   const engine = useEngine();
   const { ui, setUi } = useUi();
-  const cprActive = useEngineSelector(selectCprActive);
+  const bar = useEngineSelector(selectBar, shallowEqual);
+  const cprActive = bar.cprActive;
+  const badge: Partial<Record<ActionPanelId, boolean>> = {
+    rhythm: bar.checking,
+    defib: bar.charged,
+  };
+  const panelButton = ({ id, key, icon: Icon }: PanelAction) => (
+    <button
+      key={id}
+      type="button"
+      className={`${styles.action} ${ui.actionPanel === id ? styles.active : ''}`}
+      onClick={() => setUi({ actionPanel: ui.actionPanel === id ? null : id })}
+      aria-pressed={ui.actionPanel === id}
+      data-testid={`action-${id}`}
+    >
+      <Icon />
+      <span className={styles.label}>{t(key)}</span>
+      {badge[id] && <span className={styles.badge} aria-hidden="true" />}
+    </button>
+  );
 
   const toggleCpr = () => engine.dispatch({ type: cprActive ? 'CPR_STOP' : 'CPR_START' }, 'user');
   const openMenu = () => {
@@ -66,6 +90,7 @@ export function ActionBar() {
         </span>
         <kbd className={styles.kbd}>Space</kbd>
       </button>
+      {BEFORE_FLUIDS.map(panelButton)}
       <button
         type="button"
         className={`${styles.action} ${ui.balanceOpen ? styles.active : ''}`}
@@ -76,19 +101,7 @@ export function ActionBar() {
         <IconDrip />
         <span className={styles.label}>{t('action.fluids')}</span>
       </button>
-      {LOCKED.map(({ key, icon: Icon, milestone }) => (
-        <span
-          key={key}
-          className={styles.lockedWrap}
-          data-tip={t('action.comingIn', { n: milestone })}
-        >
-          <button type="button" className={styles.action} disabled aria-disabled="true">
-            <Icon />
-            <span className={styles.label}>{t(key)}</span>
-            <IconLock className={styles.lock} />
-          </button>
-        </span>
-      ))}
+      {AFTER_FLUIDS.map(panelButton)}
       <button
         type="button"
         className={`${styles.action} ${styles.pause}`}

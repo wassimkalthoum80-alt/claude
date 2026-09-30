@@ -338,8 +338,19 @@ export class HeartLungModel {
     // (sympathetic reserve) and β-receptors (β-blockade) allow. With depleted stores the direct negative inotropy
     // remains (hypotension, falling CO).
     const catecholamineRelease = Math.max(0, drugs.sympatheticDrive) * reserves.sympatheticResponse;
+    // SIM-ASSUMPTION: LV pressure ceiling — the ventricle cannot eject against a mean aortic pressure near its
+    // maximal isovolumic pressure (≈ 300 mmHg healthy, 120 + 180 × LV function): ejection falls linearly from
+    // MAP 160 mmHg to zero at that ceiling. Without it the Windkessel lets an extreme vasoconstrictor dose (e.g.
+    // 1 mg adrenaline into a beating heart) reach unphysiological pressures.
+    const pressureCeiling = 120 + 180 * lvEffective;
+    const ejectionLimit = clamp(
+      (pressureCeiling - cardio.meanArterialPressure) / Math.max(20, pressureCeiling - 160),
+      0.05,
+      1,
+    );
     cardio.contractility = clamp(
-      hl.rvFactor *
+      ejectionLimit *
+        hl.rvFactor *
         hl.myocardialFactor *
         rateFactor *
         drugs.inotropy *

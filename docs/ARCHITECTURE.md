@@ -37,12 +37,12 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 | Folder | Responsibility |
 |---|---|
 | `src/sim/core` | Fixed-step clock, seeded RNG, event log, constants (no dependencies) |
-| `src/sim/engine` | `SimulationEngine`: tick orchestration, command application, snapshots, subscriptions |
+| `src/sim/engine` | `SimulationEngine`: tick orchestration, command application, snapshots, subscriptions; `ResuscitationController`: ALS commands (rhythm check, defibrillator, pushes, airway, procedures, reversible causes), called by the engine through a narrow host interface |
 | `src/sim/types` | Commands, log entries, scenario, guideline and transient-event types |
 | `src/sim/state` | State types and the initial-state factory (patient, ventilator, CPR, monitor) |
-| `src/sim/physiology` | Cardiovascular, respiratory, lung-state, blood-gas and heart–lung interaction models |
-| `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole, PEA) and beat scheduling |
-| `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation |
+| `src/sim/physiology` | Cardiovascular, respiratory, lung-state, blood-gas and heart–lung interaction models; obstruction (tamponade, tension pneumothorax) and airway-device effects |
+| `src/sim/rhythms` | Rhythm registry (sinus, VF, pulseless VT, asystole, PEA) and beat scheduling |
+| `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation; defibrillation physics and the seeded shock-outcome model; rhythm classification, pulse finding, airway insertion and procedure constants |
 | `src/sim/pharmacology` | Formulary, units, dosing weights, IV line delivery, PK/PD, fluids, order validation (imports core, state, physiology parameters) |
 | `src/sim/fluid` | Body-fluid compartments, capillary/lung exchange, osmotic shift, electrolytes and SID, kidney, bladder/catheter, estimated losses, the balance ledger (imports core, state, physiology, pharmacology formulary) |
 | `src/sim/brain` | Cerebral state: hypnotic/GABAergic depth from the shared PD response surface, stimulation and analgesic attenuation, cerebral O₂, patient factors → EEG band amplitudes and suppression drive (imports core, state, pharmacology) |

@@ -198,3 +198,50 @@ test('fluid balance: panel shows intake and urine; emptying the bag keeps the ba
   await expect(page.getByTestId('bal-distribution')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('ALS panels: rhythm check → shockable → defibrillator shock; ultrasound and airway findings', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?autostart&debug');
+  await page.evaluate(() => {
+    window.__resusEngine?.runFor(3);
+    window.__resusEngine?.dispatch({ type: 'SET_RHYTHM', rhythm: 'vf' }, 'instructor');
+  });
+  await page.keyboard.press('Space');
+  await page.evaluate(() => window.__resusEngine?.runFor(30));
+
+  await page.getByTestId('action-rhythm').click();
+  await page.getByTestId('rc-start').click();
+  await expect(page.getByTestId('cpr-button')).toHaveText(/START CPR/);
+  await page.evaluate(() => window.__resusEngine?.runFor(3));
+  await expect(page.getByTestId('rc-handsoff')).toHaveText('3 s');
+  await page.getByTestId('rc-shockable').click();
+  // Compressions resume and the defibrillator panel opens.
+  await expect(page.getByTestId('cpr-button')).toHaveText(/STOP CPR/);
+  await expect(page.getByTestId('panel-defib')).toBeVisible();
+  await page.getByTestId('defib-pads').click();
+  await page.getByTestId('defib-charge').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(5));
+  await expect(page.getByTestId('defib-lcd')).toContainText('CHARGED');
+  await page.keyboard.press('Space'); // hands off
+  await page.getByTestId('defib-shock').click();
+  const shocks = await page.evaluate(
+    () => window.__resusEngine?.getSnapshot().devices.defib.shocks,
+  );
+  expect(shocks).toBe(1);
+
+  await page.getByTestId('action-ultrasound').click();
+  await page.getByTestId('us-cardiac').click();
+  await expect(page.getByTestId('us-canvas')).toBeVisible();
+  await expect(page.getByTestId('us-finding')).not.toBeEmpty();
+
+  await page.getByTestId('action-airway').click();
+  await page.getByTestId('auscultate').click();
+  await expect(page.getByTestId('auscultation')).toContainText('breath sounds');
+  expect(errors).toEqual([]);
+});

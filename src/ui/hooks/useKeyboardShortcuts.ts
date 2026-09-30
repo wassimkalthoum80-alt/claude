@@ -8,6 +8,7 @@ const RHYTHM_KEYS: Record<string, RhythmId> = {
   '2': 'vf',
   '3': 'asystole',
   '4': 'pea',
+  '5': 'vt',
 };
 
 function isTextInput(target: EventTarget | null): boolean {
@@ -21,7 +22,7 @@ function isTextInput(target: EventTarget | null): boolean {
 }
 
 /**
- * Space = CPR, P/Esc = pause menu, ` = instructor, M = audio, 1/2/3/4 = sinus/VF/asystole/PEA (instructor open).
+ * Space = CPR, P/Esc = pause menu, ` = instructor, M = audio, 1–5 = sinus/VF/asystole/PEA/pVT (instructor open).
  * Every action still goes through engine.dispatch.
  */
 export function useKeyboardShortcuts(): void {

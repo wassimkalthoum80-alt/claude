@@ -15,6 +15,7 @@ import { HeartLungPanel } from './HeartLungPanel';
 import { PharmacologyPanel } from './PharmacologyPanel';
 import { BrainPanel } from './BrainPanel';
 import { FluidPanel } from './FluidPanel';
+import { ResusInstructorPanel } from './ResusInstructorPanel';
 import { DrugResponsePanel } from './DrugResponsePanel';
 import styles from './InstructorPanel.module.css';
 
@@ -23,6 +24,7 @@ const RHYTHMS: { id: RhythmId; key: I18nKey; hotkey: string }[] = [
   { id: 'vf', key: 'rhythm.vf', hotkey: '2' },
   { id: 'asystole', key: 'rhythm.asystole', hotkey: '3' },
   { id: 'pea', key: 'rhythm.pea', hotkey: '4' },
+  { id: 'vt', key: 'rhythm.vt', hotkey: '5' },
 ];
 
 const PRESETS: { id: CprQualityPreset; key: I18nKey }[] = [
@@ -235,6 +237,7 @@ export function InstructorPanel() {
         </div>
       </div>
 
+      <ResusInstructorPanel />
       <HeartLungPanel />
       <PharmacologyPanel />
       <DrugResponsePanel />

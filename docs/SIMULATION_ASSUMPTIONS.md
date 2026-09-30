@@ -509,6 +509,43 @@ proportion. Tracer volumes always sum to the delivered volume. A teaching device
   status not relied upon).
 - Furosemide SmPC — onset/peak/duration only.
 
+## ALS actions — rhythm check, defibrillator, airway, drugs, ultrasound, procedures (`src/sim/interventions`, `engine/ResuscitationController.ts`, `physiology/obstruction.ts`)
+
+Guideline numbers (first shock ≥ 150 J biphasic, escalation 150/200/360 J, AED 150 J, 2-min cycle, hands-off
+< 10 s, pre-shock pause < 5 s, adrenaline 1 mg every 3–5 min — after the 3rd shock when shockable —, amiodarone
+300 mg after 3 shocks and 150 mg after 5, lidocaine 100/50 mg) live only in `src/content/guidelines/erc2025.ts`
+(ERC Guidelines 2025 ALS, Soar et al., Resuscitation 2025). Drug facts: Medi Know Notfallmedikamente (owner's
+reference script) and ERC. Everything below is **educational calibration** unless a source is named.
+
+| Assumption | Value | Rationale / source |
+|---|---|---|
+| Shock outcome: three-phase VF model | effective ischaemic time: no-flow 1 s/s, CPR 0.8 → 0.3 s/s with coronary perfusion; viability e^(−t/600 s) | Weisfeldt & Becker, JAMA 2002 (electrical ≈ 0–4 min, circulatory ≈ 4–10 min, metabolic phase); author calibration |
+| Coronary perfusion during CPR | from the Windkessel (diastolic) pressure, 0 at 10 mmHg → 1 at 35 mmHg; rises τ 45 s with CPR, falls τ 15 s in pauses | CPR diastolic target ≥ 20–25 mmHg; the fall in pauses is why pauses before a shock cost success |
+| Termination probability | energy efficacy (1 − 0.5·e^(−J/60)) × (0.6 + 0.35 × viability), +5 % for VT, ≤ 98 % | biphasic first-shock termination ≈ 85–95 % early; flat above ≈ 150 J |
+| ROSC after termination | readiness^1.3; readiness = viability × (1 − need × (1 − coronary perfusion)), need ramps from 180 s to 480 s ischaemic time | circulatory phase: CPR before the shock matters; otherwise PEA, asystole if viability < 0.15 |
+| Re-fibrillation | 30 % after termination, × (1 − 0.5 × amiodarone effect) × (1 + 0.3 × excess β drive), 5–40 s later | recurrent VF is common; amiodarone reduces recurrence (its role in ALS) |
+| R-on-T | unsynchronised shock 30–42 % of the R–R interval after the R wave → VF with p = 0.8; synchronised shocks discharge on the R wave | vulnerable period on the T-wave upslope |
+| Synchronised mode | waits ≤ 3 s for an R wave; never discharges into VF/asystole | device behaviour |
+| Charge time | 1.5 s + 0.015 s/J (≈ 3.8 s at 150 J, ≈ 7 s at 360 J); auto-disarm after 60 s; energy change dumps the charge | typical monitor-defibrillators |
+| AED | 5 s analysis, interrupted by compressions ("motion"), auto-charge to 150 J on a shockable rhythm | device behaviour |
+| Pulseless VT | 180/min monomorphic, degenerates to VF after 180 s | teaching simplification |
+| Pulse check | palpable with circulation and true MAP ≥ 40 mmHg, "weak" below 60 mmHg | teaching threshold (the classic carotid ⇒ SBP 60 rule overestimates pressure) |
+| Obstructive PEA | PEA that began with obstructive filling < 0.6 restores flow 5 s after relief (filling > 0.7) if viability > 0.35 | pseudo-PEA: the heart still contracts; other PEA needs instructor ROSC |
+| Airway insertion | mask 3 s, SGA 8 s, tube 15 s; no ventilation meanwhile (circuit open) | experienced operator |
+| Tube misplacement | oesophageal 6 %, endobronchial 8 % (seeded RNG; instructor can force) | order of magnitude of emergency intubation; forces position checks |
+| Oesophageal tube | alveolar ventilation 0, capnogram flat, stomach receives the tidal volume | waveform capnography is the confirmation standard |
+| Endobronchial tube | compliance × 0.55, shunt + 0.25, left breath sounds / sliding absent; withdrawing ≥ 1 cm corrects it | one-lung ventilation with HPV |
+| Leak | mask 15 % + 1.5 %/cmH2O above 20; SGA 2.5 %/cmH2O above 25; VTe reduced, alveolar VT reduced, exhaled CO2 reduced | 2nd-generation SGA seal ≈ 25–30 cmH2O |
+| Gastric insufflation | mask 15 mL per cmH2O above 20 cmH2O per breath; SGA 5 mL/cmH2O above 25; compliance −30 % at 2 L; regurgitation logged at 1.5 L; gastric tube empties it | Medi Know Anästhesie: keep mask pressure < 20 mbar |
+| Tension pneumothorax | tension rises 1/150 s under positive pressure (1/600 s spontaneous); venous return × (1 − 0.85 × tension); collapse 0.5–1 of one lung → compliance −45 %, shunt +30 % | obstructive shock; PEA from low flow at full tension |
+| Needle decompression | vents it (tension τ 10 s); fails in 30 % after 2–10 min; wrong side: no effect (iatrogenic PTX not modelled); chest drain definitive | needle failure rates in the literature 30–50 % |
+| Tamponade | filling 1/(1 + (V/180 mL)³); CPR stroke volume × (0.2 + 0.8 × filling); pericardiocentesis removes ≤ 150 mL; bleeding volume not taken from the circulation | steep pericardial P–V curve in acute tamponade |
+| Echo findings | derived from rhythm, contractility, preload and conditions; compressions make the cardiac view unreadable; effusion mm ≈ mL/10 | schematic teaching image, not an ultrasound simulator |
+| Atropine | V 2 L/kg, t½ 2.5 h, ke0 1/min; vagal block Hill(C, 4 ng/mL, 1.5); HR + (0.6 − 0.005·age) at full block; removes opioid (all), dexmedetomidine (half) and high-pressure-baroreflex slowing | Medi Know Notfallmedikamente (0.5 mg, max 3 mg, onset 1–2 min, 1–2 h); paradoxical low-dose slowing not modelled |
+| Amiodarone | early-phase V 1 L/kg, apparent t½ 60 min, ke0 0.2/min; antiarrhythmic Emax(C, 1 µg/mL); SVR −25 %, HR −15 %, inotropy −10 % at most | Medi Know Notfallmedikamente (onset 2–5 min, max 15 min; hypotension, bradycardia) |
+| Drug push | amount placed at the cannula, then 20 mL flush (+ drug volume counted as flush in the balance); reaches the circulation with blood flow | ERC: flush 20 mL; drugs in arrest wait for CPR flow |
+| LV pressure ceiling | ejection falls linearly from MAP 160 mmHg to zero at 120 + 180 × LV function (≈ 300 mmHg healthy) | maximal isovolumic LV pressure; stops the Windkessel reaching unphysiological pressures after 1 mg adrenaline into a beating heart |
+
 ## Presentation-only assumptions (UI)
 
 | Assumption | Value |
