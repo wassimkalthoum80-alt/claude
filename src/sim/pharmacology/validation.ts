@@ -20,6 +20,7 @@ export type ValidationCode =
   | 'wrong-pump'
   | 'route'
   | 'no-protocol'
+  | 'no-bolus-protocol'
   | 'unit-mismatch'
   | 'rate-invalid'
   | 'rate-hardware'
@@ -39,10 +40,13 @@ export interface Validation {
 
 /**
  * Soft limits (like the drug library of a real smart pump): exceeding the protocol maximum or the minimum bolus
- * time is allowed after an explicit confirmation, which is logged. Everything else (hardware limit, units, volume,
- * wrong pump, reference-only product) is a hard limit that only an instructor override can pass.
+ * time, and a push of an infusion-only drug, are allowed after an explicit confirmation, which is logged — the
+ * simulator never blocks a clinically possible bolus; it shows its consequences, up to cardiac arrest. Hard limits
+ * are only physically impossible or unsimulated actions (volume beyond the syringe, pump hardware rate, wrong pump,
+ * reference-only product); an instructor override can still pass them.
  */
 export const SOFT_LIMIT_CODES: readonly ValidationCode[] = [
+  'no-bolus-protocol',
   'above-protocol-max',
   'bolus-above-max',
   'bolus-duration',
@@ -142,14 +146,17 @@ export function validateBolus(
   if (volumeMl > pump.remainingMl + 1e-9) v.errors.push('bolus-volume');
   const bolus = protocol?.bolus;
   if (!bolus) {
-    v.warnings.push('no-protocol');
+    // An infusion-only drug (no bolus protocol, e.g. dobutamine, vasopressin, noradrenaline infusion): the push
+    // is not blocked — the simulator exists to show what it does — but it needs an explicit, logged confirmation.
+    v.errors.push('no-bolus-protocol');
     return v;
   }
   if (durationS + 1e-9 < bolus.durationS.min) v.errors.push('bolus-duration');
   const conc = product?.concentration;
   const unit = bolus.dose.unit;
   if (conc && !doseCompatible(unit, conc)) {
-    v.errors.push('unit-mismatch');
+    // The volume is known, only the dose check is impossible: warn, never block a bolus.
+    v.warnings.push('unit-mismatch');
     return v;
   }
   const d = parseDoseUnit(unit);

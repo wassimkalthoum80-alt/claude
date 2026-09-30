@@ -32,6 +32,9 @@ describe('processed-EEG view models', () => {
     const e = engine();
     e.runFor(90);
     e.dispatch({ type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 5, durationS: 10 }, 'user');
+    // Stop the maintenance infusion at the peak so suppression ends clearly while the 63 s BSV history lingers.
+    e.runFor(200);
+    e.dispatch({ type: 'PUMP_STOP', pumpId: 'P1' }, 'user');
     let sawMemory = false;
     for (let i = 0; i < 70 && !sawMemory; i++) {
       e.runFor(10);

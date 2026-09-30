@@ -38,7 +38,10 @@ export function myocardialIschaemia(patient: PatientState): number {
   const hr = Math.max(20, cardio.heartRate);
   const map = Math.max(0, cardio.meanArterialPressure);
   const diastolicFraction = (hr: number) => clamp(1 - (hr * (0.49 - 0.0017 * hr)) / 60, 0.05, 1);
-  const demand = (hr * Math.max(20, map)) / (80 * 87);
+  // SIM-ASSUMPTION: myocardial O2 demand ∝ HR × MAP, plus 30 % weight on drug-driven contractility (β-agonists
+  // raise demand; negative inotropes lower it).
+  const demand =
+    ((hr * Math.max(20, map)) / (80 * 87)) * (0.7 + 0.3 * patient.pharmacology.effects.inotropy);
   const supply =
     (gas.cao2 / REFERENCE_CAO2) *
     clamp((map - 10) / 77, 0, 1.5) *
@@ -180,12 +183,17 @@ export class HeartLungModel {
     const recovery = deficit < 0.05 ? hl.oxygenDebt / k.debtRecoveryTauS : 0;
     hl.oxygenDebt = Math.max(0, hl.oxygenDebt + dt * (injuryRate - recovery));
     // SIM-ASSUMPTION: lactate rises with the deficit and clears slowly (τ 10 min) when delivery is adequate.
+    // SIM-ASSUMPTION: excessive vasoconstriction (total SVR factor above 1.8) causes regional (splanchnic/peripheral)
+    // hypoperfusion lactate up to 0.0015 mmol/L/s at factor 2.8 — a production term separate from global O2 debt.
+    hl.vasoconstrictionLactate =
+      0.0015 * clamp((cardio.svrFactor - 1.8) / 1, 0, 1) * (cardio.spontaneousCirculation ? 1 : 0);
     gas.lactate = clamp(
       gas.lactate +
         dt *
           (0.018 * deficit -
             ((1 - deficit) * (gas.lactate - 1)) / 600 +
-            patient.pharmacology.effects.lactateProduction),
+            patient.pharmacology.effects.lactateProduction +
+            hl.vasoconstrictionLactate),
       1,
       25,
     );
@@ -230,7 +238,10 @@ export class HeartLungModel {
           0.4 * co2Stress +
           0.8 * pressureStress +
           setPointStress +
-          0.9 * patient.brain.autonomicResponse) *
+          0.9 * patient.brain.autonomicResponse +
+          // Central sympathetic drive of ketamine: blunted by anaesthetics like the reflexes, scaled below by
+          // the sympathetic reserve (catecholamine depletion) and β-blockade.
+          drugs.sympatheticDrive) *
           drugs.baroreflex +
           volumeStress * drugs.baroreflex ** 2,
         0,
@@ -246,14 +257,12 @@ export class HeartLungModel {
 
     // Heart rate: reflex tachycardia first, bradycardia as the oxygen debt grows.
     const bradyFactor = clamp(1 - 0.85 * debtFraction, 0.15, 1);
-    hl.heartRateTarget = clamp(
-      (this.baselineHeartRate * drugs.chronotropy +
-        55 * stress * reserves.sympatheticResponse -
-        25 * highPressure) *
-        bradyFactor,
-      15,
-      190,
-    );
+    // SIM-ASSUMPTION: chronic β-blockade removes up to 70 % of the sympathetic heart-rate response.
+    const betaHr = 1 - 0.7 * clamp(patient.factors.betaBlockade, 0, 1);
+    hl.sympatheticStress = stress;
+    hl.hrDirect = this.baselineHeartRate * drugs.chronotropy;
+    hl.hrReflex = 55 * stress * reserves.sympatheticResponse * betaHr - 25 * highPressure;
+    hl.heartRateTarget = clamp((hl.hrDirect + hl.hrReflex) * bradyFactor, 15, 190);
     cardio.heartRate = approach(cardio.heartRate, hl.heartRateTarget, dt, k.heartRateTauS);
 
     // Right ventricle: overdistension, hypoxic vasoconstriction and acidosis load it; recruitment relieves it.
@@ -289,13 +298,10 @@ export class HeartLungModel {
 
     // Vascular resistance: sympathetic tone up, vasoplegia with debt and acidosis.
     // SIM-ASSUMPTION: septic vasoplegia lowers vascular resistance by up to 50 %.
-    const svrTarget = clamp(
-      (1 + 0.18 * stress * reserves.sympatheticResponse - 0.45 * debtFraction - 0.12 * acidosis) *
-        drugs.svr *
-        (1 - 0.5 * clamp(patient.fluidFactors.vasoplegia, 0, 1)),
-      0.25,
-      3,
-    );
+    hl.svrReflexFactor =
+      1 + 0.18 * stress * reserves.sympatheticResponse - 0.45 * debtFraction - 0.12 * acidosis;
+    hl.svrDrugFactor = drugs.svr * (1 - 0.5 * clamp(patient.fluidFactors.vasoplegia, 0, 1));
+    const svrTarget = clamp(hl.svrReflexFactor * hl.svrDrugFactor, 0.25, 3);
     cardio.svrFactor = approach(cardio.svrFactor, svrTarget, dt, k.svrTauS);
 
     // Low-flow burden and arrest.

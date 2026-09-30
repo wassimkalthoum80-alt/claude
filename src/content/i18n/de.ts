@@ -115,6 +115,8 @@ export const de: Record<I18nKey, string> = {
   'val.reference-only': 'Nur Referenzkarte — dieses Medikament ist nicht zur Gabe konfiguriert.',
   'val.wrong-pump': 'Infusionen gehören an den Infusomat, Medikamente an einen Perfusor.',
   'val.route': 'Applikationsweg für dieses Präparat nicht unterstützt.',
+  'val.no-bolus-protocol':
+    'Kein Bolusprotokoll für dieses Präparat (nur als Infusion vorgesehen). Ein Bolus ist nach Bestätigung möglich — das Modell zeigt die Wirkung.',
   'val.no-protocol': 'Kein Protokoll für diese Aktion gewählt.',
   'val.unit-mismatch': 'Einheit passt nicht zur Zubereitung.',
   'val.rate-invalid': 'Ungültige Laufrate.',
@@ -154,6 +156,11 @@ export const de: Record<I18nKey, string> = {
   'ph.fluids': 'Flüssigkeit',
   'ph.plasma': 'Plasma Δ',
   'ph.interstitial': 'Interstitium Δ',
+  'ph.symp': 'Zentraler Sympathikusantrieb',
+  'ph.rigidity': 'Opioidrigidität',
+  'ph.beta2': 'β2-metabolisch (K⁺, Glukose)',
+  'ph.effectsNote':
+    'Modifikatoren: direkte Wirkung vs. ohne Medikament · Δ seit Szenariobeginn (das kalibrierte Modell nutzt Δ). Lehrkalibrierung.',
   'ph.lungWater': 'Lungenwasser (rel.)',
   'ph.hb': 'Hb',
   'ph.interactions': 'Interaktionen und Warnungen',
@@ -295,6 +302,7 @@ export const de: Record<I18nKey, string> = {
   'factor.temperatureC': 'Temperatur °C',
   'factor.hepaticFunction': 'Leberfunktion',
   'factor.renalFunction': 'Nierenfunktion',
+  'factor.betaBlockade': 'β-Blockade',
   'factor.eegAmplitude': 'EEG-Amplitude',
   'hl.rightVentricularReserve': 'RV-Reserve',
   'hl.cardiacReserve': 'Myokardreserve',

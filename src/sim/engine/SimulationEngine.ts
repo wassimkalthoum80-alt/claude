@@ -740,9 +740,10 @@ export class SimulationEngine {
       return;
     }
     if (command.type === 'LINE_FLUSH') {
-      if (Number.isFinite(command.volumeMl) && command.volumeMl > 0 && command.volumeMl <= 20)
+      if (Number.isFinite(command.volumeMl) && command.volumeMl > 0 && command.volumeMl <= 20) {
         s.devices.line.flushRemainingMl += command.volumeMl;
-      else reject({ errors: ['bolus-invalid'], warnings: [] });
+        this.logEvent('LINE_FLUSHED', s.time, `${command.volumeMl} mL`);
+      } else reject({ errors: ['bolus-invalid'], warnings: [] });
       return;
     }
     const pump = pumps.find((p) => p.id === command.pumpId);
@@ -1024,6 +1025,7 @@ function validFactors(patch: Partial<PatientFactors>): Partial<PatientFactors> {
     hepaticFunction: [0.2, 1],
     renalFunction: [0.2, 1],
     eegAmplitude: [0.5, 1.5],
+    betaBlockade: [0, 1],
   };
   const out: Partial<PatientFactors> = {};
   for (const key of Object.keys(ranges) as (keyof PatientFactors)[]) {

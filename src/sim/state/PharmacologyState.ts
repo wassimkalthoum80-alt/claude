@@ -18,12 +18,13 @@ export type MoietyId =
   | 'furosemide';
 
 /**
- * Amounts are in the moiety's model unit: mg (propofol, rocuronium), µg (opioids, catecholamines, salbutamol,
- * naloxone), IU (vasopressin), mmol (calcium). Concentrations are that unit per L (mg/L = µg/mL; µg/L = ng/mL).
- * For exposure models (catecholamines, vasopressin, salbutamol, naloxone) "cp" is the equivalent steady-state
- * input in unit/min.
+ * Amounts are in the moiety's model unit: mg (propofol, rocuronium, midazolam, ketamine, furosemide), µg (opioids,
+ * catecholamines, dexmedetomidine, salbutamol, naloxone), IU (vasopressin), mmol (calcium). Cp and Ce are
+ * concentrations in that unit per L (mg/L = µg/mL; µg/L = ng/mL; IU/L; mmol/L) for every moiety.
  */
 export interface DrugKinetics {
+  /** amount delivered but not yet carried from the cannula/venous depot to the central circulation */
+  a0: number;
   /** central compartment amount */
   a1: number;
   /** fast peripheral amount */
@@ -102,17 +103,38 @@ export interface DrugEffects {
   inotropy: number;
   /** relative heart rate from direct drug effects */
   chronotropy: number;
-  /** relative baroreflex gain */
+  /** relative baroreflex (sympathetic reflex) gain, relative to the scenario reference */
   baroreflex: number;
+  /** additive central sympathetic drive (ketamine), relative to the scenario reference */
+  sympatheticDrive: number;
+  /**
+   * DIRECT drug contribution, absolute against "no drug" (svr/inotropy/chronotropy/baroreflex relative, 1 = none;
+   * venousTone in preload-reserve units; sympatheticDrive additive). The fields above are relative to the scenario
+   * reference, which is what the calibrated heart–lung model consumes.
+   */
+  direct: {
+    svr: number;
+    venousTone: number;
+    inotropy: number;
+    chronotropy: number;
+    baroreflex: number;
+    sympatheticDrive: number;
+  };
   /** 0..1 — fraction of bronchospastic airway resistance removed */
   bronchodilation: number;
   /** mmol/L/s — drug-induced lactate production (β2 aerobic glycolysis) */
   lactateProduction: number;
+  /** 0..~1.6 — β2 metabolic drive (intracellular K⁺ shift, glycogenolysis) */
+  beta2Metabolic: number;
+  /** 0..1 — opioid chest-wall rigidity */
+  rigidity: number;
 }
 
 export interface PharmacologyState {
   drugs: Partial<Record<MoietyId, DrugKinetics>>;
   /** drug concentrations at scenario start (effects are relative to these for haemodynamics) */
   reference: Partial<Record<MoietyId, number>>;
+  /** plasma concentrations at scenario start */
+  referencePlasma: Partial<Record<MoietyId, number>>;
   effects: DrugEffects;
 }

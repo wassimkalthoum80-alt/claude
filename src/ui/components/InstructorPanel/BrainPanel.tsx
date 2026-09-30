@@ -17,6 +17,7 @@ const FACTORS: { key: keyof PatientFactors; min: number; max: number; step: numb
   { key: 'hepaticFunction', min: 0.2, max: 1, step: 0.05 },
   { key: 'renalFunction', min: 0.2, max: 1, step: 0.05 },
   { key: 'eegAmplitude', min: 0.5, max: 1.5, step: 0.05 },
+  { key: 'betaBlockade', min: 0, max: 1, step: 0.05 },
 ];
 const CONTRIB_CE: Record<string, { moiety: string; unit: string; name: string }> = {
   propofol: { moiety: 'propofol', unit: 'µg/mL', name: 'Propofol' },

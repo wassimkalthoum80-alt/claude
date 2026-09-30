@@ -369,6 +369,14 @@ export class FluidModel {
     const glucoseTarget = (FLUID.glucose * ecfNow) / 1000;
     f.ecfGlucose += (glucoseTarget - f.ecfGlucose) * (1 - Math.exp(-dtMin / FLUID.glucoseTauMin));
     f.ecfOrganicAnions *= Math.exp(-dtMin / FLUID.organicAnionTauMin);
+    // SIM-ASSUMPTION: β2 stimulation (adrenaline, salbutamol) shifts K⁺ into cells (−0.8 mmol/L at full drive,
+    // τ 10 min, reversible) and drives glycogenolysis (0.02 mmol/kg/min glucose at full drive). No K⁺ is removed.
+    const beta2 = patient.pharmacology.effects.beta2Metabolic;
+    const kTarget = (0.8 * beta2 * ecfNow) / 1000;
+    const kMove = (kTarget - f.kShiftedMmol) * (1 - Math.exp(-dtMin / 10));
+    f.kShiftedMmol += kMove;
+    f.ecfK = Math.max(0, f.ecfK - kMove);
+    f.ecfGlucose += 0.02 * patient.demographics.weightKg * beta2 * dtMin;
 
     // ── kidney → bladder → catheter → bag ──
     const ecfBaseline =

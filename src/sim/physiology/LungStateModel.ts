@@ -163,7 +163,9 @@ export class LungStateModel {
       l.compliance *
       this.recruitmentComplianceFactor(l, patient.heartLung.recruitment) *
       this.overdistensionFactor *
-      lungWaterComplianceFactor(patient.fluid.derived.lungWaterRatio);
+      lungWaterComplianceFactor(patient.fluid.derived.lungWaterRatio) *
+      // SIM-ASSUMPTION: opioid chest-wall rigidity stiffens the respiratory system by up to 60 %.
+      (1 - 0.6 * patient.pharmacology.effects.rigidity);
     // Bronchodilators remove part of the BRONCHOSPASTIC resistance only (the excess over a normal airway);
     // they do not touch compliance or shunt (an ARDS shunt does not disappear after salbutamol).
     const relief =

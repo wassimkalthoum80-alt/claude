@@ -34,7 +34,10 @@ export class PlethGenerator {
     this.smoothed += (highPassed - this.smoothed) * (1 - Math.exp(-ctx.dt / 0.05));
 
     const relFlow = clamp(ctx.patient.cardio.cardiacOutput / CARDIO.referenceCardiacOutput, 0, 1.2);
-    const gain = relFlow ** PLETH.flowExponent;
+    // SIM-ASSUMPTION: peripheral vasoconstriction (total SVR factor above 1.2) shrinks the finger pulsatility —
+    // the pleth amplitude and perfusion index fall while the true arterial saturation is unchanged.
+    const vasoconstriction = 1 / (1 + 1.5 * Math.max(0, ctx.patient.cardio.svrFactor - 1.2));
+    const gain = relFlow ** PLETH.flowExponent * vasoconstriction;
     return (this.smoothed / PLETH.referencePulsePressure) * gain + ctx.rng.normal(0, 0.004);
   }
 }

@@ -2,9 +2,13 @@ import type { PatientFactors } from '../state/BrainState';
 import type { DrugEffects, MoietyId } from '../state/PharmacologyState';
 
 /**
- * EDUCATIONAL pharmacodynamic calibration (not validated). Concentrations are effect-site values from pk.ts:
- * propofol µg/mL, opioids ng/mL, rocuronium µg/mL; catecholamines/vasopressin as delayed equivalent input
- * (µg/kg/min, IU/min); salbutamol and naloxone as delayed amount in the body (µg).
+ * EDUCATIONAL pharmacodynamic calibration (not validated). Exposures are effect-site concentrations from pk.ts:
+ * propofol, midazolam, ketamine, rocuronium µg/mL; opioids, dexmedetomidine, catecholamines, salbutamol, naloxone
+ * ng/mL; vasopressin mU/L; calcium Δ total calcium mmol/L. Dexmedetomidine's peripheral vasoconstriction follows
+ * the PLASMA concentration.
+ * SIM-ASSUMPTION: catecholamine potencies were converted from the earlier rate-based calibration at the model
+ * clearances (noradrenaline/adrenaline 0.035, dobutamine 0.069 L/kg/min), so steady-state responses are unchanged:
+ * noradrenaline 0.05 µg/kg/min ≈ 1.4 ng/mL.
  */
 export const PD = {
   // SIM-ASSUMPTION: hypnosis Ce50 3.4 µg/mL, Hill 3 (loss-of-consciousness order of magnitude; educational).
@@ -54,15 +58,21 @@ export const PD = {
     baroMax: 0.2,
     analgesiaMax: 0.2,
   },
+  // SIM-ASSUMPTION: ketamine's sympathomimetic action is CENTRAL sympathetic drive (added to the reflex model, so
+  // it scales with sympathetic reserve, β-blockade and anaesthetic blunting); a direct negative inotropic effect
+  // is always present and unmasked when sympathetic reserve is depleted. Bronchodilation up to 40 %.
   ketamine: {
     hypnosisC50: 1,
     esketaminePotency: 2,
     /** hypnotic units at which half-maximal cortical activation (gamma) appears */
     activationU50: 0.5,
-    chronoMax: 0.25,
-    svrMax: 0.2,
-    /** hypnotic units for half the sympathomimetic effect */
+    sympatheticMax: 0.6,
+    /** racemic-equivalent µg/mL for half the sympathetic drive */
     sympathomimeticU50: 1,
+    inotropyMax: 0.3,
+    inotropyU50: 2,
+    bronchoMax: 0.4,
+    bronchoU50: 1,
     analgesiaMax: 0.6,
     analgesiaU50: 0.3,
   },
@@ -85,44 +95,72 @@ export const PD = {
     bradyC50: 0.4,
     svrMax: 0.05,
     venousMax: 0.03,
+    // SIM-ASSUMPTION: chest-wall rigidity at high effect-site exposure (sufentanil-equivalent Ce50 1 ng/mL, Hill 4);
+    // abolished by neuromuscular block; stiffens the chest wall by up to 60 %.
+    rigidityCe50: 1,
+    rigidityGamma: 4,
   },
   // SIM-ASSUMPTION: Greco-type response surface for the respiratory drive: drive = 1/(1 + (Uo + Up + β·Uo·Up)^γ).
   respInteraction: { synergy: 1, gamma: 2 },
-  // SIM-ASSUMPTION: naloxone competitive antagonism, K = 0.5 µg/kg of (effect-delayed) naloxone in the body.
-  naloxoneKMicrogramPerKg: 0.5,
+  // SIM-ASSUMPTION: naloxone competitive antagonism, K = 0.25 ng/mL effect-site naloxone (≈ 0.5 µg/kg in a
+  // 2 L/kg distribution volume — the earlier amount-based calibration).
+  naloxoneKNgMl: 0.25,
   // SIM-ASSUMPTION: rocuronium block Ce50 1.0 µg/mL, Hill 4.5; diaphragm needs ≈ 1.7× the concentration.
   rocuronium: { ce50: 1.0, gamma: 4.5, diaphragmFactor: 1.7 },
-  noradrenaline: { svrMax: 1.2, ec50: 0.12, venousMax: 0.15, inotropyMax: 0.1, inoEc50: 0.15 },
+  // ng/mL. α: SVR and venous tone (stressed volume); small β1 inotropy and chronotropy (net HR set by the reflexes).
+  noradrenaline: {
+    svrMax: 1.2,
+    ec50: 3.4,
+    venousMax: 0.15,
+    inotropyMax: 0.1,
+    inoEc50: 4.3,
+    chronoMax: 0.08,
+    chronoEc50: 4.3,
+  },
+  // ng/mL. Graded β1 (inotropy, HR), β2 (vasodilation, bronchodilation, lactate, K⁺ shift, glucose) and α
+  // (vasoconstriction) — no sharp dose boundary.
   adrenaline: {
     inotropyMax: 0.6,
-    inoEc50: 0.06,
+    inoEc50: 1.7,
     chronoMax: 0.4,
-    chronoEc50: 0.08,
+    chronoEc50: 2.3,
     beta2SvrMax: 0.15,
-    beta2Ec50: 0.02,
+    beta2Ec50: 0.57,
     alphaSvrMax: 0.8,
-    alphaEc50: 0.15,
+    alphaEc50: 4.3,
     venousMax: 0.1,
     lactateMax: 0.004,
-    lactateEc50: 0.1,
+    lactateEc50: 2.9,
+    bronchoMax: 0.8,
+    bronchoEc50: 1,
+    metabolicEc50: 2.9,
   },
+  // ng/mL (5 µg/kg/min ≈ 72 ng/mL).
   dobutamine: {
     inotropyMax: 0.6,
-    inoEc50: 6,
+    inoEc50: 87,
     chronoMax: 0.25,
-    chronoEc50: 10,
+    chronoEc50: 144,
     svrMax: 0.2,
-    svrEc50: 5,
+    svrEc50: 72,
   },
-  vasopressin: { svrMax: 0.6, ec50: 0.02, venousMax: 0.05 },
+  // mU/L (0.03 IU/min in 80 kg ≈ 37 mU/L). V1 only: no inotropy, no chronotropy, no bronchodilation.
+  vasopressin: { svrMax: 0.6, ec50: 25, venousMax: 0.05 },
+  // ng/mL
   salbutamol: {
     bronchoMax: 0.8,
-    bronchoEc50: 150,
+    bronchoEc50: 0.9,
     chronoMax: 0.15,
-    chronoEc50: 300,
+    chronoEc50: 1.9,
     lactateMax: 0.001,
     svrMax: 0.05,
+    metabolicMax: 0.6,
   },
+  // SIM-ASSUMPTION: calcium — ionised fraction 0.5 of the Δ total calcium; inotropy +15 % and SVR +10 % at most
+  // (EC50 0.3 mmol/L ionised). No effect on potassium.
+  calcium: { ionisedFraction: 0.5, inotropyMax: 0.15, svrMax: 0.1, ec50: 0.3 },
+  // SIM-ASSUMPTION: β-blocked phenotype (patient factor 0–1) removes up to 80 % of the β-mediated drug effects.
+  betaBlockade: { maxBlock: 0.8 },
 } as const;
 
 const emax = (x: number, max: number, ec50: number) => (max * x) / (ec50 + x);
@@ -134,14 +172,30 @@ const hill = (x: number, ec50: number, g: number) => {
 /** Effect-relevant exposure of each moiety (see PD units above). */
 export type Exposures = Partial<Record<MoietyId, number>>;
 
-/** Multiplicative/additive haemodynamic components (absolute, before normalising to the reference). */
-interface Haemodynamics {
+/** Multiplicative/additive haemodynamic components (absolute against "no drug"). */
+export interface Haemodynamics {
+  /** relative SVR from drugs */
   svr: number;
+  /** preload-reserve units from venous tone */
   venousTone: number;
+  /** relative contractility from drugs */
   inotropy: number;
+  /** relative heart rate from direct drug effects */
   chronotropy: number;
+  /** relative sympathetic reflex gain */
   baroreflex: number;
+  /** additive central sympathetic drive (ketamine) */
+  sympatheticDrive: number;
 }
+
+export const NO_DRUG_HAEMODYNAMICS: Haemodynamics = {
+  svr: 1,
+  venousTone: 0,
+  inotropy: 1,
+  chronotropy: 1,
+  baroreflex: 1,
+  sympatheticDrive: 0,
+};
 
 /** Ce50 multiplier for the haemodynamic propofol effects at a given age (1 at 60 years). */
 export function propofolAgeFactor(ageYears: number): number {
@@ -149,9 +203,19 @@ export function propofolAgeFactor(ageYears: number): number {
   return Math.min(a.max, Math.max(a.min, 1 - a.perYear * (ageYears - a.referenceAge)));
 }
 
-function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodynamics {
+export function haemodynamics(
+  e: Exposures,
+  opioid: number,
+  ageYears: number,
+  betaBlockade = 0,
+  plasma: Exposures = e,
+): Haemodynamics {
   // Age-scaled propofol concentration (equivalent to scaling every haemodynamic Ce50).
   const p = (e.propofol ?? 0) / propofolAgeFactor(ageYears);
+  const beta = 1 - PD.betaBlockade.maxBlock * Math.min(1, Math.max(0, betaBlockade));
+  const dexPlasma = plasma.dexmedetomidine ?? 0;
+  const ca = (e.calcium ?? 0) * PD.calcium.ionisedFraction;
+  const C = PD.calcium;
   const na = e.noradrenaline ?? 0;
   const ad = e.adrenaline ?? 0;
   const dob = e.dobutamine ?? 0;
@@ -170,17 +234,19 @@ function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodyn
   const M = PD.midazolam;
   const X = PD.dexmedetomidine;
   const K = PD.ketamine;
+  // Dexmedetomidine: central sympatholysis follows the effect site (slow); peripheral α2B vasoconstriction
+  // follows the plasma concentration, so a rapid load gives transient hypertension.
   const svr =
     (1 - emax(mid, M.svrMax, M.c50)) *
-    (1 - emax(dex, X.svrLowMax, X.svrLowC50) + X.svrHighMax * hill(dex, X.svrHighC50, 2)) *
-    (1 + emax(ketU, K.svrMax, K.sympathomimeticU50)) *
+    (1 - emax(dex, X.svrLowMax, X.svrLowC50) + X.svrHighMax * hill(dexPlasma, X.svrHighC50, 2)) *
     (1 - emax(p, P.svrMax, P.svrCe50)) *
     (1 - emax(opioid, O.svrMax, O.bradyC50)) *
     (1 + emax(na, N.svrMax, N.ec50)) *
-    (1 - emax(ad, A.beta2SvrMax, A.beta2Ec50) + A.alphaSvrMax * hill(ad, A.alphaEc50, 2)) *
-    (1 - emax(dob, D.svrMax, D.svrEc50)) *
+    (1 - beta * emax(ad, A.beta2SvrMax, A.beta2Ec50) + A.alphaSvrMax * hill(ad, A.alphaEc50, 2)) *
+    (1 - beta * emax(dob, D.svrMax, D.svrEc50)) *
     (1 + emax(vp, V.svrMax, V.ec50)) *
-    (1 - emax(sal, S.svrMax, S.chronoEc50));
+    (1 - beta * emax(sal, S.svrMax, S.chronoEc50)) *
+    (1 + emax(ca, C.svrMax, C.ec50));
   const venousTone =
     -emax(mid, M.venousMax, M.c50) -
     emax(p, P.venousMax, P.venousCe50) -
@@ -190,21 +256,24 @@ function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodyn
     emax(vp, V.venousMax, V.ec50);
   const inotropy =
     (1 - emax(p, P.inotropyMax, P.inotropyCe50)) *
-    (1 + emax(na, N.inotropyMax, N.inoEc50)) *
-    (1 + emax(ad, A.inotropyMax, A.inoEc50)) *
-    (1 + emax(dob, D.inotropyMax, D.inoEc50));
+    (1 - emax(ketU, K.inotropyMax, K.inotropyU50)) *
+    (1 + beta * emax(na, N.inotropyMax, N.inoEc50)) *
+    (1 + beta * emax(ad, A.inotropyMax, A.inoEc50)) *
+    (1 + beta * emax(dob, D.inotropyMax, D.inoEc50)) *
+    (1 + emax(ca, C.inotropyMax, C.ec50));
   const chronotropy =
     (1 - emax(dex, X.chronoMax, X.chronoC50)) *
-    (1 + emax(ketU, K.chronoMax, K.sympathomimeticU50)) *
     (1 - emax(opioid, O.bradyMax, O.bradyC50)) *
-    (1 + emax(ad, A.chronoMax, A.chronoEc50)) *
-    (1 + emax(dob, D.chronoMax, D.chronoEc50)) *
-    (1 + emax(sal, S.chronoMax, S.chronoEc50));
+    (1 + beta * emax(na, N.chronoMax, N.chronoEc50)) *
+    (1 + beta * emax(ad, A.chronoMax, A.chronoEc50)) *
+    (1 + beta * emax(dob, D.chronoMax, D.chronoEc50)) *
+    (1 + beta * emax(sal, S.chronoMax, S.chronoEc50));
+  const sympatheticDrive = emax(ketU, K.sympatheticMax, K.sympathomimeticU50);
   const baroreflex =
     (1 - P.baroMax * hill(p, P.baroCe50, P.baroGamma)) *
     (1 - emax(opioid, 0.2, 0.5)) *
     (1 - emax(dex, X.baroMax, X.chronoC50));
-  return { svr, venousTone, inotropy, chronotropy, baroreflex };
+  return { svr, venousTone, inotropy, chronotropy, baroreflex, sympatheticDrive };
 }
 
 /** Ketamine exposure in racemic-equivalent µg/mL (esketamine counts twice). */
@@ -279,10 +348,9 @@ export function hypnoticComponents(
 }
 
 /** Sufentanil-equivalent opioid effect (ng/mL), reduced by competitive naloxone antagonism. */
-export function opioidEffect(e: Exposures, weightKg: number): number {
+export function opioidEffect(e: Exposures, _weightKg: number): number {
   const raw = (e.sufentanil ?? 0) + (e.remifentanil ?? 0) * PD.opioid.remifentanilToSufentanil;
-  const nal = (e.naloxone ?? 0) / Math.max(1, weightKg);
-  return raw / (1 + nal / PD.naloxoneKMicrogramPerKg);
+  return raw / (1 + (e.naloxone ?? 0) / PD.naloxoneKNgMl);
 }
 
 /**
@@ -300,12 +368,17 @@ export function drugEffects(
   factors: Pick<
     PatientFactors,
     'frailty' | 'hypnoticSensitivity' | 'temperatureC' | 'renalFunction'
-  > = TYPICAL_FACTORS,
+  > &
+    Partial<Pick<PatientFactors, 'betaBlockade'>> = TYPICAL_FACTORS,
+  plasma: Exposures = e,
+  referencePlasma: Exposures = reference,
 ): DrugEffects {
+  const bb = factors.betaBlockade ?? 0;
+  const beta = 1 - PD.betaBlockade.maxBlock * Math.min(1, Math.max(0, bb));
   const opioid = opioidEffect(e, weightKg);
   const opioidRef = opioidEffect(reference, weightKg);
-  const now = haemodynamics(e, opioid, ageYears);
-  const ref = haemodynamics(reference, opioidRef, ageYears);
+  const now = haemodynamics(e, opioid, ageYears, bb, plasma);
+  const ref = haemodynamics(reference, opioidRef, ageYears, bb, referencePlasma);
 
   const P = PD.propofol;
   const hc = hypnoticComponents(e, weightKg, ageYears, factors);
@@ -332,6 +405,11 @@ export function drugEffects(
 
   const ad = e.adrenaline ?? 0;
   const sal = e.salbutamol ?? 0;
+  const A = PD.adrenaline;
+  const S = PD.salbutamol;
+  const O = PD.opioid;
+  // Chest-wall rigidity needs intact neuromuscular transmission.
+  const rigidity = hill(opioid, O.rigidityCe50, O.rigidityGamma) * (1 - block);
   return {
     hypnosis,
     analgesia,
@@ -345,10 +423,18 @@ export function drugEffects(
     inotropy: now.inotropy / ref.inotropy,
     chronotropy: now.chronotropy / ref.chronotropy,
     baroreflex: now.baroreflex / ref.baroreflex,
-    bronchodilation: emax(sal, PD.salbutamol.bronchoMax, PD.salbutamol.bronchoEc50),
+    sympatheticDrive: now.sympatheticDrive - ref.sympatheticDrive,
+    direct: now,
+    // β2 bronchodilators and ketamine; combined as independent fractions of the bronchospastic resistance.
+    bronchodilation:
+      1 -
+      (1 - beta * emax(sal, S.bronchoMax, S.bronchoEc50)) *
+        (1 - beta * emax(ad, A.bronchoMax, A.bronchoEc50)) *
+        (1 - emax(hc.uk, PD.ketamine.bronchoMax, PD.ketamine.bronchoU50)),
     lactateProduction:
-      emax(ad, PD.adrenaline.lactateMax, PD.adrenaline.lactateEc50) +
-      emax(sal, PD.salbutamol.lactateMax, PD.salbutamol.chronoEc50),
+      beta * emax(ad, A.lactateMax, A.lactateEc50) + beta * emax(sal, S.lactateMax, S.chronoEc50),
+    beta2Metabolic: beta * (hill(ad, A.metabolicEc50, 1) + emax(sal, S.metabolicMax, S.chronoEc50)),
+    rigidity,
   };
 }
 
@@ -380,6 +466,10 @@ export const NO_DRUG_EFFECTS: DrugEffects = {
   inotropy: 1,
   chronotropy: 1,
   baroreflex: 1,
+  sympatheticDrive: 0,
+  direct: { ...NO_DRUG_HAEMODYNAMICS },
   bronchodilation: 0,
   lactateProduction: 0,
+  beta2Metabolic: 0,
+  rigidity: 0,
 };

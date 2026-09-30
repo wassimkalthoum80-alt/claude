@@ -113,6 +113,8 @@ export const en = {
   'val.reference-only': 'Reference card only — this drug is not configured for administration.',
   'val.wrong-pump': 'Fluids go on the volumetric pump, drugs on a syringe pump.',
   'val.route': 'Route not supported for this product.',
+  'val.no-bolus-protocol':
+    'No bolus protocol for this product (infusion-only drug). A push is possible after confirmation — the model shows what it does.',
   'val.no-protocol': 'No protocol selected for this action.',
   'val.unit-mismatch': 'Unit does not match the formulation.',
   'val.rate-invalid': 'Invalid rate.',
@@ -152,6 +154,11 @@ export const en = {
   'ph.fluids': 'Fluids',
   'ph.plasma': 'Plasma Δ',
   'ph.interstitial': 'Interstitium Δ',
+  'ph.symp': 'Central sympathetic drive',
+  'ph.rigidity': 'Opioid rigidity',
+  'ph.beta2': 'β2 metabolic (K⁺, glucose)',
+  'ph.effectsNote':
+    'Modifiers: direct drug effect vs no drug · Δ since scenario start (the calibrated model uses Δ). Educational calibration.',
   'ph.lungWater': 'Lung water (rel.)',
   'ph.hb': 'Hb',
   'ph.interactions': 'Interactions and warnings',
@@ -294,6 +301,7 @@ export const en = {
   'factor.temperatureC': 'Temperature °C',
   'factor.hepaticFunction': 'Hepatic function',
   'factor.renalFunction': 'Renal function',
+  'factor.betaBlockade': 'β-blockade',
   'factor.eegAmplitude': 'EEG amplitude',
   'hl.rightVentricularReserve': 'RV reserve',
   'hl.cardiacReserve': 'Myocardial reserve',

@@ -8,14 +8,14 @@ const MOIETY: Record<MoietyId, { name: string; amount: string; conc: string }> =
   sufentanil: { name: 'Sufentanil', amount: 'µg', conc: 'ng/mL' },
   remifentanil: { name: 'Remifentanil', amount: 'µg', conc: 'ng/mL' },
   rocuronium: { name: 'Rocuronium', amount: 'mg', conc: 'µg/mL' },
-  // Exposure models: "cp" is the equivalent steady-state input in unit/min.
-  noradrenaline: { name: 'Noradrenaline', amount: 'µg', conc: 'µg/min eq' },
-  adrenaline: { name: 'Adrenaline', amount: 'µg', conc: 'µg/min eq' },
-  vasopressin: { name: 'Vasopressin', amount: 'IU', conc: 'IU/min eq' },
-  dobutamine: { name: 'Dobutamine', amount: 'µg', conc: 'µg/min eq' },
-  salbutamol: { name: 'Salbutamol', amount: 'µg', conc: 'µg/min eq' },
-  naloxone: { name: 'Naloxone', amount: 'µg', conc: 'µg/min eq' },
-  calcium: { name: 'Calcium', amount: 'mmol', conc: 'mmol/L' },
+  // Educational one-compartment concentration models (Cp plasma, Ce effect site).
+  noradrenaline: { name: 'Noradrenaline', amount: 'µg', conc: 'ng/mL' },
+  adrenaline: { name: 'Adrenaline', amount: 'µg', conc: 'ng/mL' },
+  vasopressin: { name: 'Vasopressin', amount: 'IU', conc: 'IU/L' },
+  dobutamine: { name: 'Dobutamine', amount: 'µg', conc: 'ng/mL' },
+  salbutamol: { name: 'Salbutamol', amount: 'µg', conc: 'ng/mL' },
+  naloxone: { name: 'Naloxone', amount: 'µg', conc: 'ng/mL' },
+  calcium: { name: 'Calcium (Δ total)', amount: 'mmol', conc: 'mmol/L' },
   midazolam: { name: 'Midazolam', amount: 'mg', conc: 'µg/mL' },
   dexmedetomidine: { name: 'Dexmedetomidine', amount: 'µg', conc: 'ng/mL' },
   ketamine: { name: 'Ketamine', amount: 'mg', conc: 'µg/mL' },
@@ -92,16 +92,41 @@ function effectReadouts(s: Readonly<SimulationState>): EffectReadout[] {
       value: fx.tofRatio !== null ? `${fx.tofCount}/4 · ${fx.tofRatio} %` : `${fx.tofCount}/4`,
       tone: fx.tofRatio !== null && fx.tofRatio >= 90 ? 'neutral' : 'warn',
     },
-    { label: 'ph.svr', value: rel(fx.svr), tone: relTone(fx.svr) },
+    // Direct drug contribution (against no drug) · change since the scenario start (what the calibrated
+    // heart–lung model consumes). A drug running from the start shows a direct effect with Δ ×1.00.
+    {
+      label: 'ph.svr',
+      value: `${rel(fx.direct.svr)} · Δ ${rel(fx.svr)}`,
+      tone: relTone(fx.direct.svr),
+    },
     {
       label: 'ph.venous',
-      value: signed(fx.venousTone),
-      tone: Math.abs(fx.venousTone) < 0.05 ? 'neutral' : 'warn',
+      value: `${signed(fx.direct.venousTone)} · Δ ${signed(fx.venousTone)}`,
+      tone: Math.abs(fx.direct.venousTone) < 0.05 ? 'neutral' : 'warn',
     },
-    { label: 'ph.inotropy', value: rel(fx.inotropy), tone: relTone(fx.inotropy) },
-    { label: 'ph.chrono', value: rel(fx.chronotropy), tone: relTone(fx.chronotropy) },
-    { label: 'ph.baro', value: rel(fx.baroreflex), tone: relTone(fx.baroreflex) },
+    {
+      label: 'ph.inotropy',
+      value: `${rel(fx.direct.inotropy)} · Δ ${rel(fx.inotropy)}`,
+      tone: relTone(fx.direct.inotropy),
+    },
+    {
+      label: 'ph.chrono',
+      value: `${rel(fx.direct.chronotropy)} · Δ ${rel(fx.chronotropy)}`,
+      tone: relTone(fx.direct.chronotropy),
+    },
+    {
+      label: 'ph.baro',
+      value: `${rel(fx.direct.baroreflex)} · Δ ${rel(fx.baroreflex)}`,
+      tone: relTone(fx.direct.baroreflex),
+    },
+    {
+      label: 'ph.symp',
+      value: signed(fx.direct.sympatheticDrive),
+      tone: fx.direct.sympatheticDrive > 0.05 ? 'warn' : 'neutral',
+    },
     { label: 'ph.broncho', value: pct(fx.bronchodilation), tone: 'neutral' },
+    { label: 'ph.rigidity', value: pct(fx.rigidity), tone: fx.rigidity > 0.1 ? 'bad' : 'neutral' },
+    { label: 'ph.beta2', value: pct(Math.min(1, fx.beta2Metabolic)), tone: 'neutral' },
   ];
 }
 

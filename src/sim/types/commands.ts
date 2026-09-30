@@ -137,6 +137,8 @@ export type ClinicalEventType =
   | 'STIMULUS_APPLIED'
   /** processed-EEG sensor connected/removed or signal condition changed (detail) — trend marker */
   | 'BIS_SIGNAL'
+  /** the common IV line was flushed (detail: "mL") — trend marker; the flush delivers what is in the line */
+  | 'LINE_FLUSHED'
   /** a urine measurement was charted (detail: "mL|mL/kg/h") */
   | 'URINE_MEASURED'
   /** balance action: bag emptied, catheter kinked/released, drain started/finished, irrigation (detail) */

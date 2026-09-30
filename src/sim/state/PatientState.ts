@@ -157,6 +157,18 @@ export interface HeartLungState {
   arrestCause: ArrestCause;
   /** 0..1 — myocardial ischaemia (O2 supply/demand imbalance); drives ST depression on the ECG */
   ischaemia: number;
+  /** 0..1.5 — sympathetic stress of the reflex model (chemo-, baro-, volume reflex, stimulation, ketamine) */
+  sympatheticStress: number;
+  /** /min — heart rate from baseline × direct drug chronotropy (before reflexes) */
+  hrDirect: number;
+  /** /min — reflex contribution to the heart-rate target (sympathetic minus high-pressure vagal) */
+  hrReflex: number;
+  /** relative SVR from reflexes, oxygen debt and acidosis (drug and vasoplegia factors excluded) */
+  svrReflexFactor: number;
+  /** relative SVR from drugs × vasoplegia (the non-reflex part of the target) */
+  svrDrugFactor: number;
+  /** mmol/L/s — lactate from regional hypoperfusion by excessive vasoconstriction */
+  vasoconstrictionLactate: number;
 }
 
 /** Patient reserves the instructor can change live (dimensionless, 1 = normal). */

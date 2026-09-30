@@ -4,15 +4,16 @@ import type { PatientFactors } from '../state/BrainState';
 import { adjustedBodyWeight, idealBodyWeight, leanBodyMassJames } from './bodySize';
 
 /**
- * Linear mammillary model with an effect compartment (time in minutes, volumes in L):
- *   dA1/dt = I − (k10 + k12 + k13)·A1 + k21·A2 + k31·A3
+ * Linear mammillary model with a venous depot and an effect compartment (time in minutes, volumes in L):
+ *   dA0/dt = I − kd·f·A0                         (cannula → central circulation, f = relative cardiac output)
+ *   dA1/dt = kd·f·A0 − (k10 + k12 + k13)·A1 + k21·A2 + k31·A3
  *   dA2/dt = k12·A1 − k21·A2,  dA3/dt = k13·A1 − k31·A3
  *   dCe/dt = ke0·(A1/V1 − Ce)
- * Exposure models (catecholamines etc.) use one compartment with V1 = 1/k10, so Cp = A1·k10 is the equivalent
- * steady-state input rate (unit/min).
+ * Cp = A1/V1 is a plasma concentration for every moiety (amount unit per L: mg/L = µg/mL, µg/L = ng/mL,
+ * IU/L, mmol/L).
  */
 export interface MammillaryParams {
-  /** L (or min for exposure models) */
+  /** L */
   v1: number;
   /** 1/min */
   k10: number;
@@ -80,13 +81,49 @@ export function minto(d: Demographics): MammillaryParams {
 }
 
 /**
- * One-compartment exposure model: Cp = equivalent steady-state input (unit/min), delayed to Ce by ke0.
- * SIM-ASSUMPTION: half-lives are textbook approximations; not a published model.
+ * SIM-ASSUMPTION: transfer from the cannula/venous depot to the central circulation, 6/min at normal cardiac
+ * output (τ ≈ 10 s) and proportional to relative cardiac output: with no flow (untreated arrest) the drug stays
+ * in the depot; CPR-level flow delays its arrival. The amount is conserved.
  */
-export function exposure(halfLifeMin: number, ke0: number): MammillaryParams {
+export const DEPOT_TRANSFER_PER_MIN = 6;
+
+/**
+ * One-compartment concentration model (educational): V = vLKg × weight, elimination from the half-life.
+ * Cp and Ce are concentrations (µg/L = ng/mL for µg amounts); Ce lags Cp by ke0 — they are not forced equal.
+ * SIM-ASSUMPTION: half-lives and volumes are textbook approximations; not a published population model.
+ */
+export function concentrationModel(
+  vLKg: number,
+  halfLifeMin: number,
+  ke0: number,
+  weightKg: number,
+): MammillaryParams {
   const k10 = Math.LN2 / halfLifeMin;
-  return { v1: 1 / k10, k10, k12: 0, k21: 0, k13: 0, k31: 0, ke0, provenance: 'educational' };
+  return {
+    v1: vLKg * weightKg,
+    k10,
+    k12: 0,
+    k21: 0,
+    k13: 0,
+    k31: 0,
+    ke0,
+    provenance: 'educational',
+  };
 }
+
+/**
+ * Volumes (L/kg) and half-lives (min) of the concentration models. Clearance per kg = V·ln2/t½:
+ * noradrenaline 0.035, adrenaline 0.035, dobutamine 0.069 L/kg/min, vasopressin 0.010 L/kg/min.
+ */
+export const CONCENTRATION_MODELS = {
+  noradrenaline: { vLKg: 0.126, halfLifeMin: 2.5, ke0: 1.5 },
+  adrenaline: { vLKg: 0.101, halfLifeMin: 2, ke0: 1.5 },
+  dobutamine: { vLKg: 0.2, halfLifeMin: 2, ke0: 1 },
+  vasopressin: { vLKg: 0.144, halfLifeMin: 10, ke0: 0.3 },
+  salbutamol: { vLKg: 2, halfLifeMin: 240, ke0: 0.15 },
+  naloxone: { vLKg: 2, halfLifeMin: 60, ke0: 0.5 },
+  calcium: { vLKg: 0.2, halfLifeMin: 30, ke0: 0.5 },
+} as const;
 
 /**
  * Rocuronium — EDUCATIONAL two-compartment model per kg of weight with an effect compartment, calibrated to
@@ -195,44 +232,49 @@ export function pkParams(
     case 'rocuronium':
       // SIM-ASSUMPTION: rocuronium distribution scales with ideal (not actual) weight in obesity.
       return rocuroniumEducational(Math.min(d.weightKg, idealBodyWeight(d.sex, d.heightCm)));
-    // SIM-ASSUMPTION: exposure half-lives (min) and effect delays: noradrenaline 2.5, adrenaline 2, dobutamine 2,
-    // vasopressin 15, salbutamol 240, naloxone 60; ke0 chosen for onset within ≈ 1–3 min (catecholamines ≈ 1 min).
+    // SIM-ASSUMPTION: one-compartment concentration models (CONCENTRATION_MODELS) scaled to adjusted body weight;
+    // ke0 chosen for onset within ≈ 1–3 min (catecholamines ≈ 1 min). Calcium: Δ total calcium (mmol/L) in the ECF.
     case 'noradrenaline':
-      return exposure(2.5, 1.5);
     case 'adrenaline':
-      return exposure(2, 1.5);
     case 'dobutamine':
-      return exposure(2, 1);
     case 'vasopressin':
-      return exposure(15, 0.3);
     case 'salbutamol':
-      return exposure(240, 0.15);
     case 'naloxone':
-      return exposure(60, 0.5);
-    case 'calcium':
-      // accounting only in phase A (a slow exposure keeps a record of recent calcium)
-      return exposure(30, 0.2);
+    case 'calcium': {
+      const m = CONCENTRATION_MODELS[moiety];
+      return concentrationModel(m.vLKg, m.halfLifeMin, m.ke0, abw);
+    }
   }
 }
 
 export function emptyKinetics(): DrugKinetics {
-  return { a1: 0, a2: 0, a3: 0, cp: 0, ce: 0, received: 0 };
+  return { a0: 0, a1: 0, a2: 0, a3: 0, cp: 0, ce: 0, received: 0 };
 }
 
-/** Steady state for a constant input (unit/min): all compartments at C = I/CL1. */
+/** Steady state for a constant input (unit/min) at normal flow: all compartments at C = I/CL1. */
 export function steadyState(p: MammillaryParams, inputPerMin: number): DrugKinetics {
   const c = inputPerMin / (p.k10 * p.v1);
   const v2 = p.k21 > 0 ? (p.k12 * p.v1) / p.k21 : 0;
   const v3 = p.k31 > 0 ? (p.k13 * p.v1) / p.k31 : 0;
-  return { a1: c * p.v1, a2: c * v2, a3: c * v3, cp: c, ce: c, received: 0 };
+  return {
+    a0: inputPerMin / DEPOT_TRANSFER_PER_MIN,
+    a1: c * p.v1,
+    a2: c * v2,
+    a3: c * v3,
+    cp: c,
+    ce: c,
+    received: 0,
+  };
 }
 
-type Vec = [number, number, number, number];
+type Vec = [number, number, number, number, number];
 
-function deriv(p: MammillaryParams, y: Vec, input: number): Vec {
-  const [a1, a2, a3, ce] = y;
+function deriv(p: MammillaryParams, y: Vec, input: number, flow: number): Vec {
+  const [a0, a1, a2, a3, ce] = y;
+  const transfer = DEPOT_TRANSFER_PER_MIN * flow * a0;
   return [
-    input - (p.k10 + p.k12 + p.k13) * a1 + p.k21 * a2 + p.k31 * a3,
+    input - transfer,
+    transfer - (p.k10 + p.k12 + p.k13) * a1 + p.k21 * a2 + p.k31 * a3,
     p.k12 * a1 - p.k21 * a2,
     p.k13 * a1 - p.k31 * a3,
     p.ke0 * (a1 / p.v1 - ce),
@@ -248,33 +290,37 @@ export function stepKinetics(
   p: MammillaryParams,
   input: number,
   dtMin: number,
+  /** relative cardiac output (1 = normal); moves drug from the venous depot to the central compartment */
+  flow = 1,
 ): void {
-  const y: Vec = [s.a1, s.a2, s.a3, s.ce];
+  const y: Vec = [s.a0, s.a1, s.a2, s.a3, s.ce];
   const add = (a: Vec, b: Vec, h: number): Vec => [
     a[0] + b[0] * h,
     a[1] + b[1] * h,
     a[2] + b[2] * h,
     a[3] + b[3] * h,
+    a[4] + b[4] * h,
   ];
-  const k1 = deriv(p, y, input);
-  const k2 = deriv(p, add(y, k1, dtMin / 2), input);
-  const k3 = deriv(p, add(y, k2, dtMin / 2), input);
-  const k4 = deriv(p, add(y, k3, dtMin), input);
-  for (let i = 0; i < 4; i++) {
+  const k1 = deriv(p, y, input, flow);
+  const k2 = deriv(p, add(y, k1, dtMin / 2), input, flow);
+  const k3 = deriv(p, add(y, k2, dtMin / 2), input, flow);
+  const k4 = deriv(p, add(y, k3, dtMin), input, flow);
+  for (let i = 0; i < 5; i++) {
     y[i] = Math.max(
       0,
       (y[i] ?? 0) +
         (dtMin / 6) * ((k1[i] ?? 0) + 2 * (k2[i] ?? 0) + 2 * (k3[i] ?? 0) + (k4[i] ?? 0)),
     );
   }
-  s.a1 = y[0];
-  s.a2 = y[1];
-  s.a3 = y[2];
-  s.ce = y[3];
+  s.a0 = y[0];
+  s.a1 = y[1];
+  s.a2 = y[2];
+  s.a3 = y[3];
+  s.ce = y[4];
   s.cp = s.a1 / p.v1;
 }
 
-/** Total amount in the body (for mass-balance checks). */
+/** Total amount in the body incl. the venous depot (for mass-balance checks). */
 export function bodyAmount(s: DrugKinetics): number {
-  return s.a1 + s.a2 + s.a3;
+  return s.a0 + s.a1 + s.a2 + s.a3;
 }

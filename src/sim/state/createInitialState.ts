@@ -107,6 +107,12 @@ export function createInitialState(
         asystoleDose: 0,
         arrestCause: null,
         ischaemia: 0,
+        sympatheticStress: 0,
+        hrDirect: p.heartRate,
+        hrReflex: 0,
+        svrReflexFactor: 1,
+        svrDrugFactor: 1,
+        vasoconstrictionLactate: 0,
       },
       reserves: {
         preloadReserve: 1,

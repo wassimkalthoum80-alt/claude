@@ -37,6 +37,8 @@ export interface BodyFluidState {
   ecfNa: number;
   ecfCl: number;
   ecfK: number;
+  /** mmol — potassium shifted from the ECF into cells by β2 stimulation (reversible) */
+  kShiftedMmol: number;
   ecfGlucose: number;
   /** mmol — metabolisable anions (acetate, lactate, malate, gluconate) not yet converted to bicarbonate */
   ecfOrganicAnions: number;

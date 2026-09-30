@@ -24,9 +24,9 @@ export const RENAL = {
   excessExcretionPerMin: 0.004,
   /** min — antidiuretic state response (ADH release and washout) */
   antidiuresisTauMin: 20,
-  /** vasopressin V2 (antidiuretic) effect: maximum and IU/min at half effect */
+  /** vasopressin V2 (antidiuretic) effect: maximum and mU/L at half effect (≈ 0.005 IU/min in 80 kg) */
   v2Max: 0.6,
-  v2Ec50IuMin: 0.005,
+  v2Ec50MuL: 6,
   /** furosemide: maximal extra urine (mL/min per 70 kg IBW), effect-site mg/L at half effect, Hill */
   furosemideMaxMlMin: 14,
   furosemideEc50: 0.8,
@@ -53,7 +53,7 @@ export interface RenalInputs {
   osmolality: number;
   /** 0..1 — surgical / sympathetic stress (cerebral autonomic response + surgical stimulation) */
   stress: number;
-  /** IU/min — vasopressin exposure */
+  /** mU/L — vasopressin effect-site concentration */
   vasopressin: number;
   /** mg/L — furosemide effect-site concentration */
   furosemide: number;
@@ -114,7 +114,7 @@ export function stepRenal(r: RenalState, inp: RenalInputs, dtMin: number): Renal
   // V2 receptors independently of its vascular (V1) effect.
   const hypovolaemia = clamp((1 - inp.volumeStatus) / 0.4, 0, 1);
   const osm = clamp((inp.osmolality - 288) / 10, -1, 1);
-  const v2 = (RENAL.v2Max * inp.vasopressin) / (inp.vasopressin + RENAL.v2Ec50IuMin);
+  const v2 = (RENAL.v2Max * inp.vasopressin) / (inp.vasopressin + RENAL.v2Ec50MuL);
   const target = clamp(
     RENAL.normalAntidiuresis + 0.45 * hypovolaemia + 0.15 * osm + 0.3 * inp.stress + v2,
     0,

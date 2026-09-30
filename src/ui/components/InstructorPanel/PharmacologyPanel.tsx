@@ -27,6 +27,7 @@ export function PharmacologyPanel() {
       {open && (
         <>
           <div className={hl.label}>{t('ph.state')}</div>
+          <p className={hl.sub}>{t('ph.effectsNote')}</p>
           <dl className={hl.grid}>
             {vm.effects.map((r) => (
               <div key={r.label} className={hl.cell}>

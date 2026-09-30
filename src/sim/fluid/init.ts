@@ -110,6 +110,7 @@ export function initialBodyFluid(d: Demographics, init: FluidInit = {}): BodyFlu
     ecfNa: (140 * ecf) / 1000,
     ecfCl: (104 * ecf) / 1000,
     ecfK: (4 * ecf) / 1000,
+    kShiftedMmol: 0,
     ecfGlucose: (FLUID.glucose * ecf) / 1000,
     ecfOrganicAnions: 0,
     // Intracellular osmoles in equilibrium with the ECF at the start.

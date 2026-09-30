@@ -11,10 +11,11 @@ import { getProduct } from './formulary/products';
 import { drugEffects, NO_DRUG_EFFECTS, type Exposures } from './pd';
 import { emptyKinetics, pkParams, steadyState, stepKinetics, type MammillaryParams } from './pk';
 
-/** Moieties whose effect is driven by the delayed equivalent input rate per kg (µg/kg/min). */
-const PER_KG_RATE: ReadonlySet<MoietyId> = new Set(['noradrenaline', 'adrenaline', 'dobutamine']);
-/** Moieties whose effect is driven by the delayed amount in the body. */
-const AMOUNT_BASED: ReadonlySet<MoietyId> = new Set(['salbutamol', 'naloxone']);
+import { CARDIO } from '../physiology/parameters';
+import { clamp } from '../physiology/shapes';
+
+/** Exposure unit conversion from the kinetic concentration (IU/L → mU/L for vasopressin). */
+const EXPOSURE_SCALE: Partial<Record<MoietyId, number>> = { vasopressin: 1000 };
 
 /**
  * Medication pipeline, run once per 100 ms tick:
@@ -57,12 +58,15 @@ export class PharmacologyModel {
       ph.drugs[m] = steadyState(this.paramsFor(patient, m), input);
     }
     ph.reference = this.exposures(patient);
+    ph.referencePlasma = plasmaExposures(patient);
     ph.effects = drugEffects(
       ph.reference,
       ph.reference,
       patient.demographics.weightKg,
       patient.demographics.ageYears,
       patient.factors,
+      ph.referencePlasma,
+      ph.referencePlasma,
     );
     return steadyStateLine(pumps, getProduct);
   }
@@ -71,6 +75,8 @@ export class PharmacologyModel {
     const ph = patient.pharmacology;
     const step = stepDelivery(pumps, line, dtS, getProduct);
     const dtMin = dtS / 60;
+    // Drug reaches the central circulation with the blood flow (spontaneous or CPR-generated).
+    const flow = clamp(patient.cardio.cardiacOutput / CARDIO.referenceCardiacOutput, 0, 1.5);
     const moieties = new Set<MoietyId>([
       ...(Object.keys(ph.drugs) as MoietyId[]),
       ...(Object.keys(step.drugs) as MoietyId[]),
@@ -79,7 +85,7 @@ export class PharmacologyModel {
       const k: DrugKinetics = (ph.drugs[m] ??= emptyKinetics());
       const amount = step.drugs[m] ?? 0;
       k.received += amount;
-      stepKinetics(k, this.paramsFor(patient, m), amount / dtMin, dtMin);
+      stepKinetics(k, this.paramsFor(patient, m), amount / dtMin, dtMin, flow);
     }
     const w = patient.demographics.weightKg;
     ph.effects = drugEffects(
@@ -88,20 +94,15 @@ export class PharmacologyModel {
       w,
       patient.demographics.ageYears,
       patient.factors,
+      plasmaExposures(patient),
+      ph.referencePlasma,
     );
     return step;
   }
 
-  /** Effect-relevant exposure of each moiety (units: see pd.ts). */
+  /** Effect-site exposure of each moiety (concentrations; units: see pd.ts). */
   exposures(patient: PatientState): Exposures {
-    const out: Exposures = {};
-    const w = patient.demographics.weightKg;
-    for (const [m, k] of Object.entries(patient.pharmacology.drugs) as [MoietyId, DrugKinetics][]) {
-      if (PER_KG_RATE.has(m)) out[m] = k.ce / w;
-      else if (AMOUNT_BASED.has(m)) out[m] = k.ce / this.paramsFor(patient, m).k10;
-      else out[m] = k.ce;
-    }
-    return out;
+    return effectSiteExposures(patient);
   }
 }
 
@@ -109,6 +110,25 @@ export function emptyPharmacology(): PharmacologyState {
   return {
     drugs: {},
     reference: {},
+    referencePlasma: {},
     effects: { ...NO_DRUG_EFFECTS },
   };
+}
+
+/** Effect-site concentrations (pd.ts units: vasopressin mU/L, others as the kinetic concentration). */
+export function effectSiteExposures(patient: PatientState): Exposures {
+  const out: Exposures = {};
+  for (const [m, k] of Object.entries(patient.pharmacology.drugs) as [MoietyId, DrugKinetics][]) {
+    out[m] = k.ce * (EXPOSURE_SCALE[m] ?? 1);
+  }
+  return out;
+}
+
+/** Plasma concentrations (for effects that follow plasma rather than the effect site). */
+export function plasmaExposures(patient: PatientState): Exposures {
+  const out: Exposures = {};
+  for (const [m, k] of Object.entries(patient.pharmacology.drugs) as [MoietyId, DrugKinetics][]) {
+    out[m] = k.cp * (EXPOSURE_SCALE[m] ?? 1);
+  }
+  return out;
 }

@@ -17,6 +17,8 @@ export interface PatientFactors {
   renalFunction: number;
   /** 0.5..1.5 — individual EEG amplitude (baseline EEG characteristics; default from age) */
   eegAmplitude: number;
+  /** 0..1 — chronic β-blockade (removes up to 80 % of β-mediated drug effects and reflex tachycardia) */
+  betaBlockade: number;
 }
 
 /** Noxious stimulation the patient receives (instructor/scenario). */
