@@ -21,7 +21,8 @@ export type TooltipId =
   | 'quality'
   | 'noFlow'
   | 'lowFlow'
-  | 'st';
+  | 'st'
+  | 'bis';
 
 export interface Tooltip {
   title: string;
@@ -126,6 +127,12 @@ export const TOOLTIPS: Record<'en' | 'de', Record<TooltipId, Tooltip>> = {
       normal: 'within ±1 mm; alarm at ±2 mm. V5 (5-lead cable) shows lateral ischaemia best',
       cpr: 'Not measurable during compressions, in VF or asystole.',
     },
+    bis: {
+      title: 'Simulated BIS — educational processed-EEG index (not the proprietary BIS algorithm)',
+      normal:
+        '≈ 40–60 is a common target during propofol anaesthesia — context-dependent; no guarantee of unconsciousness, analgesia or absence of recall. SQI = signal quality, EMG = muscle/high-frequency activity (dB), BSV = suppressed EEG in the last 63 s.',
+      cpr: 'Low values in cardiac arrest reflect cerebral ischaemia, not anaesthetic depth.',
+    },
   },
   de: {
     hr: {
@@ -223,6 +230,13 @@ export const TOOLTIPS: Record<'en' | 'de', Record<TooltipId, Tooltip>> = {
       normal:
         'innerhalb ±1 mm; Alarm bei ±2 mm. V5 (5-Kanal-Kabel) zeigt laterale Ischämien am besten',
       cpr: 'Nicht messbar während Kompressionen, bei Kammerflimmern oder Asystolie.',
+    },
+    bis: {
+      title:
+        'Simulierter BIS — didaktischer prozessierter EEG-Index (nicht der proprietäre BIS-Algorithmus)',
+      normal:
+        '≈ 40–60 ist ein häufiger Zielbereich unter Propofol — kontextabhängig; keine Garantie für Bewusstlosigkeit, Analgesie oder fehlende Erinnerung. SQI = Signalqualität, EMG = Muskel-/Hochfrequenzaktivität (dB), BSV = supprimiertes EEG der letzten 63 s.',
+      cpr: 'Niedrige Werte im Kreislaufstillstand spiegeln zerebrale Ischämie, nicht Narkosetiefe.',
     },
   },
 };

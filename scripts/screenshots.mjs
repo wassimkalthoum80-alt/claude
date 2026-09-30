@@ -141,6 +141,44 @@ for (const size of sizes) {
   await page.close();
 }
 
+// Processed EEG: stable TIVA, burst suppression after a 100 mg propofol top-up (detail panel with trend),
+// recovery with BSV memory, and sensor loss.
+{
+  const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+  page.on('pageerror', (e) => errors.push(`[bis] ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`[bis] ${m.text()}`));
+  const shot = (name) =>
+    page.screenshot({ path: `${outDir}/bis-${name}.jpg`, type: 'jpeg', quality: 88 });
+  const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await run(120);
+  await page.waitForTimeout(700);
+  await shot('1-stable-tiva');
+  await page.evaluate(() =>
+    window.__resusEngine.dispatch(
+      { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 5, durationS: 10 },
+      'user',
+    ),
+  );
+  await run(150);
+  await page.click('[data-testid=bis-numerics]');
+  await page.click('[data-testid=bis-explain]');
+  await page.waitForTimeout(700);
+  await shot('2-burst-suppression-panel');
+  await run(330);
+  await page.waitForTimeout(700);
+  await shot('3-recovery-bsv-memory');
+  await page.click('[aria-label=Close]');
+  await page.evaluate(() =>
+    window.__resusEngine.dispatch({ type: 'BIS_SENSOR_FAULT', fault: 'disconnected' }, 'instructor'),
+  );
+  await run(5);
+  await page.waitForTimeout(500);
+  await shot('4-check-sensor');
+  await page.close();
+}
+
 // Ventilator: PRVC with ARDS + spontaneous breathing (loops), and a disconnected CPAP/PS patient desaturating.
 {
   const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });

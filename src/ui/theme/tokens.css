@@ -23,6 +23,9 @@
   --spo2: #36c8ff;
   --art: #ff4040;
   --co2: #ffd23a;
+  /* Processed EEG */
+  --eeg: #c7a4ff;
+  --bsv: #ff9f43;
   /* Ventilator */
   --vent-pressure: #4aa8ff;
   --vent-flow: #ffb21e;

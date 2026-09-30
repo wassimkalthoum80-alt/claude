@@ -114,6 +114,18 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 - Try a **propofol top-up bolus** under TIVA (P1 → Bolus 5 mL over 10 s = 100 mg): blood pressure falls
   (≈ 125/69 → 110/60), the heart rate rises as the baroreflex compensates (≈ 80 → 94/min), and the ST segment
   shows a small rate-related depression (≈ −0.3 mm in II, −0.6 mm in V5), all recovering over ≈ 10 min.
+- **Processed EEG ("Simulated BIS").** The monitor has an EEG row (±100 µV, 25 mm/s) with the index, SQI and
+  EMG bars and the burst suppression value (BSV, % of suppressed EEG in the preceding 63 s). Click it for the
+  detail panel: BIS/BSV trend with markers for boluses, infusion changes, stimulation and signal events,
+  averaging 10/15/30 s, optional EMG/SQI trends, "Explain" (model output) and things to try. Nothing sets the
+  number directly: drug delivery → effect-site concentration → brain state → EEG signal → device processing.
+  A propofol bolus can lower BIS with BSV staying 0, or — deeper, older or frailer — produce visible burst
+  suppression whose BSV lingers after the EEG is continuous again. Ketamine raises the index despite
+  anaesthesia; rocuronium removes EMG without hypnosis; poor contact or electrocautery lower SQI and withhold
+  BSV; a lost sensor shows "Check sensor". The instructor panel adds stimulation (laryngoscopy, incision,
+  tetanic, surgery), sensor conditions and patient factors (frailty, sensitivity, temperature, organ
+  function, EEG amplitude). Midazolam, dexmedetomidine, racemic ketamine and esketamine are now executable
+  (educational models). **Educational approximation — not the proprietary BIS algorithm, not validated.**
 - The same bolus acts **much more strongly in hypovolaemia and in the elderly** (instructor panel → heart–lung
   model: *Age* slider, *Volume status*). An 80-year-old at volume status 0.6 falls to ≈ 53/33 with loss of the
   pleth signal; at 0.5 the circulation collapses unless you treat it (vasopressor, fluid bolus). Reason in the
@@ -169,10 +181,12 @@ src/
                        heart–lung interaction, parameters
     rhythms/           sinus, VF, asystole, PEA, rhythm engine
     interventions/     CPR engine, compression sources, quality presets/assessment
+    brain/             cerebral state for the processed EEG (drug depth, stimulation, cerebral O2, EEG bands)
     pharmacology/      formulary (15 categories), units, dosing weights, IV line delivery, PK (published +
                        educational), PD, fluid volume kinetics, order validation, sources
-    devices/           ventilator (4 modes), monitor (measured numerics), alarms, setting limits
-    signals/           ring buffers + ECG, ART, pleth, CO₂, Paw, flow generators
+    devices/           ventilator (4 modes), monitor (measured numerics), alarms, setting limits,
+                       processed-EEG monitor (Simulated BIS, BSV, SQI, EMG, trends)
+    signals/           ring buffers + ECG, ART, pleth, CO₂, Paw, flow and EEG generators
     __tests__/         unit tests
   content/             scenarios, ERC 2025 guideline config, i18n (EN/DE), teaching tooltips
   ui/

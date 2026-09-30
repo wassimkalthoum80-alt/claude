@@ -17,6 +17,11 @@
   height: clamp(52px, 6.9vh, 88px);
 }
 
+/* Five rows (3-lead ECG + EEG): a little smaller than the standard rows, room for the ST line under HR. */
+.compactBis .row {
+  height: clamp(58px, 7.9vh, 100px);
+}
+
 .leadSwitch {
   position: absolute;
   top: 3px;
@@ -174,4 +179,98 @@
   font: 400 clamp(9px, 0.62vw, 11px) / 1 var(--font-ui);
   margin-left: 0.4em;
   opacity: 0.75;
+}
+
+/* Processed EEG row */
+.eegScale {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  z-index: 1;
+  font: 500 9.5px/1 var(--font-num);
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+}
+
+.bis {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 8px;
+  align-items: center;
+  color: var(--eeg);
+}
+
+.bisLabel {
+  grid-column: 1 / -1;
+  font: 500 clamp(9px, 0.62vw, 11px) / 1 var(--font-ui);
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.bisValue {
+  grid-row: 2 / 4;
+  font-size: clamp(26px, 2.3vw, 42px);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.bisStatus {
+  grid-row: 2 / 4;
+  font: 600 clamp(10px, 0.75vw, 13px) / 1.1 var(--font-ui);
+  color: var(--alarm-medium);
+  max-width: 5em;
+}
+
+.bisBars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bisBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bisBarLabel {
+  font: 500 9px/1 var(--font-ui);
+  width: 22px;
+  color: var(--text-dim);
+}
+
+.bisTrack {
+  flex: 1;
+  height: 5px;
+  min-width: 24px;
+  background: rgba(199, 164, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.bisFillSqi,
+.bisFillEmg {
+  display: block;
+  height: 100%;
+}
+
+.bisFillSqi {
+  background: var(--eeg);
+}
+
+.bisFillEmg {
+  background: #e8e8e8;
+}
+
+.bsv {
+  font-size: clamp(10px, 0.75vw, 13px);
+  color: var(--bsv);
+  white-space: nowrap;
+  cursor: help;
+}
+
+.bsvWindow {
+  font-size: 0.8em;
+  color: var(--text-dim);
 }

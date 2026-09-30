@@ -72,6 +72,22 @@ export type {
   PharmacologyState,
 } from './state/PharmacologyState';
 export { SIGNAL_UNITS, type SignalChannel, type ReadonlySignalBank } from './signals/SignalBank';
+// Processed EEG ("Simulated BIS")
+export {
+  BSV_WINDOW_S,
+  SUPPRESSION_UV,
+  SUPPRESSION_MIN_S,
+  burstSuppressionValue,
+  type ReadonlyBisTrends,
+} from './devices/BisMonitor';
+export type {
+  BisState,
+  BisSensorFault,
+  CerebralState,
+  EegBands,
+  PatientFactors,
+  StimulusKind,
+} from './state/BrainState';
 export type { RingBuffer } from './signals/RingBuffer';
 
 export type { SimulationState, ArrestTimers, HeartLungCalibration } from './state/SimulationState';

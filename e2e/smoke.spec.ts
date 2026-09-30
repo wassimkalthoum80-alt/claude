@@ -23,16 +23,16 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
       return lit;
     }),
   );
-  expect(painted).toHaveLength(7); // ECG, pleth, ART, CO2, Paw, flow, volume
+  expect(painted).toHaveLength(8); // ECG, pleth, ART, CO2, EEG, Paw, flow, volume
   for (const lit of painted) expect(lit).toBeGreaterThan(200);
 
   // 5-electrode cable: an extra V5 trace with ST numerics.
   await page.getByTestId('ecg-leads-5').click();
   await page.evaluate(() => window.__resusEngine?.runFor(4));
-  await expect(page.locator('canvas')).toHaveCount(8);
+  await expect(page.locator('canvas')).toHaveCount(9);
   await expect(page.getByText(/ST-V5/)).toBeVisible();
   await page.getByTestId('ecg-leads-3').click();
-  await expect(page.locator('canvas')).toHaveCount(7);
+  await expect(page.locator('canvas')).toHaveCount(8);
 
   // Alarm limits: click the HR numeric, raise the upper HR limit by one step (120 → 125).
   await page.getByRole('button', { name: /HR/ }).first().click();
@@ -122,4 +122,31 @@ test('propofol top-up bolus during TIVA maintenance and a confirmed rate above t
       ).length,
   );
   expect(confirmed).toBe(1);
+});
+
+test('processed EEG: BIS row, detail panel with trend, sensor loss shows "Check sensor"', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?autostart&debug');
+  await page.evaluate(() => window.__resusEngine?.runFor(90));
+  await expect(page.getByTestId('bis-numerics')).toContainText('Simulated BIS');
+  await expect(page.getByTestId('bis-value')).toHaveText(/^\d+$/);
+  await expect(page.getByTestId('bsv')).toHaveAttribute('title', /preceding 63 seconds/);
+
+  await page.getByTestId('bis-numerics').click();
+  await expect(page.getByTestId('bis-panel')).toBeVisible();
+  await page.getByTestId('bis-smoothing').selectOption('30');
+  await page.getByTestId('bis-explain').click();
+  await expect(page.getByTestId('bis-why')).toContainText('Propofol');
+
+  await page.keyboard.press('Backquote');
+  await page.getByTestId('fault-disconnected').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(5));
+  await expect(page.getByTestId('bis-status')).toHaveText('Check sensor');
+  expect(errors).toEqual([]);
 });

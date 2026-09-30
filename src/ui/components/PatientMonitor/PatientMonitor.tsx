@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SignalChannel } from '../../../sim';
 import type { TooltipId } from '../../../content/tooltips/parameters';
+import { bisNumerics } from '../../adapters/bisViewModel';
 import { monitorViewModel } from '../../adapters/viewModels';
 import { useEngine } from '../../hooks/EngineContext';
 import { useUi } from '../../hooks/UiContext';
@@ -82,6 +83,44 @@ function LimitStack({ high, low, className }: { high: string; low: string; class
 const flashClass = (p: 'high' | 'medium' | 'low' | null) =>
   p === 'high' ? 'flash-high' : p === 'medium' ? 'flash-medium' : '';
 
+/** BIS numerics: index, SQI and EMG bars, BSV (with its window while filling) and the sensor status. */
+function BisNumericBlock({ vm }: { vm: ReturnType<typeof bisNumerics> }) {
+  const t = useT();
+  return (
+    <div className={styles.bis} data-testid="bis-numerics">
+      <span className={styles.bisLabel}>{t('bis.label')}</span>
+      {vm.statusKey && vm.status !== 'startup' ? (
+        <span className={styles.bisStatus} data-testid="bis-status">
+          {t(vm.statusKey)}
+        </span>
+      ) : (
+        <span className={`num ${styles.bisValue}`} data-testid="bis-value">
+          {vm.bis}
+        </span>
+      )}
+      <span className={styles.bisBars}>
+        <span className={styles.bisBar}>
+          <span className={styles.bisBarLabel}>{t('bis.sqi')}</span>
+          <span className={styles.bisTrack}>
+            <span className={styles.bisFillSqi} style={{ width: `${vm.sqiBar * 100}%` }} />
+          </span>
+        </span>
+        <span className={styles.bisBar}>
+          <span className={styles.bisBarLabel}>{t('bis.emg')}</span>
+          <span className={styles.bisTrack}>
+            <span className={styles.bisFillEmg} style={{ width: `${vm.emgBar * 100}%` }} />
+          </span>
+        </span>
+      </span>
+      <span className={`num ${styles.bsv}`} title={t('bis.bsvTooltip')} data-testid="bsv">
+        {t('bis.bsv')} {vm.bsv}
+        <span className={styles.unitInline}>%</span>
+        {vm.bsvWindow && <span className={styles.bsvWindow}> {vm.bsvWindow}</span>}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Multiparameter patient monitor: ECG II (+ V5 with a 5-electrode cable), pleth, arterial line, capnogram —
  * waveform left, numerics right. ST is measured in lead II (and V5) like a real monitor.
@@ -90,8 +129,10 @@ export function PatientMonitor() {
   const t = useT();
   const engine = useEngine();
   const vm = useEngineSelector(monitorViewModel, deepEqual);
+  const bis = useEngineSelector(bisNumerics, deepEqual);
   const { setUi } = useUi();
   const five = vm.ecgLeads === 5;
+  const compact = five || bis.connected;
   const open = (param: string) => () => setUi({ limitsOpen: true, limitsFocus: param });
   const L = vm.limits;
 
@@ -122,7 +163,7 @@ export function PatientMonitor() {
 
   return (
     <section
-      className={`hud-panel ${styles.monitor} ${five ? styles.compact : ''}`}
+      className={`hud-panel ${styles.monitor} ${five ? styles.compact : compact ? styles.compactBis : ''}`}
       aria-label="Patient monitor"
     >
       <MonitorRow
@@ -220,6 +261,22 @@ export function PatientMonitor() {
         <span className={`num ${styles.bigValue} ${flashClass(vm.flash.etco2)}`}>{vm.etco2}</span>
         <span className={styles.unit}>mmHg</span>
       </MonitorRow>
+
+      {bis.connected && (
+        <MonitorRow
+          label={t('bis.eeg')}
+          channel="eeg"
+          color="var(--eeg)"
+          scale={{ min: -100, max: 100, padding: 2 }}
+          sweepSpeed={25}
+          grid={{ lines: [-50, 0, 50], color: 'rgba(199, 164, 255, 0.12)' }}
+          tooltip="bis"
+          extra={<span className={styles.eegScale}>{t('bis.scale')}</span>}
+          onOpenLimits={() => setUi({ bisOpen: true })}
+        >
+          <BisNumericBlock vm={bis} />
+        </MonitorRow>
+      )}
     </section>
   );
 }

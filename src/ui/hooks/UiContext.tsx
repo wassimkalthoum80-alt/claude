@@ -20,6 +20,8 @@ export interface UiState {
   limitsFocus: string | null;
   /** pump id whose editor is open (null = closed) */
   pumpEditor: string | null;
+  /** processed-EEG (BIS) detail panel open */
+  bisOpen: boolean;
 }
 
 type UiAction =
@@ -86,6 +88,7 @@ function initialState(): UiState {
     limitsOpen: false,
     limitsFocus: null,
     pumpEditor: null,
+    bisOpen: false,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

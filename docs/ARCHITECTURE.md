@@ -44,6 +44,7 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 | `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole, PEA) and beat scheduling |
 | `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation |
 | `src/sim/pharmacology` | Formulary, units, dosing weights, IV line delivery, PK/PD, fluids, order validation (imports core, state, physiology parameters) |
+| `src/sim/brain` | Cerebral state: hypnotic/GABAergic depth from the shared PD response surface, stimulation and analgesic attenuation, cerebral O₂, patient factors → EEG band amplitudes and suppression drive (imports core, state, pharmacology) |
 | `src/sim/devices` | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms |
 | `src/sim/signals` | Ring buffers and waveform generators |
 | `src/content` | Scenarios, guideline config (ERC 2025), i18n strings, parameter tooltips — plain data |
@@ -155,3 +156,30 @@ The UI imports the simulation only through `src/sim/index.ts`.
   overrides go into the event log for debriefing.
 - `src/ui/adapters/pumpsViewModel.ts` (rack), `pumpForm.ts` (dose ↔ mL) and `pharmacologyViewModel.ts`
   (instructor view, interaction warnings) are pure and unit-tested.
+
+## Processed EEG ("Simulated BIS")
+
+```
+ pumps ─► PharmacologyModel (Ce per moiety) ─► pd.hypnoticComponents ─┬─► effects.hypnosis (resp., haemodynamics)
+                                                                      └─► CerebralModel (10 Hz, patient.brain)
+ STIMULUS ─► brain.nociception ─► arousal / autonomicResponse ─► HeartLungModel (sympathetic drive)
+ MAP, CaO2 ─► brain.cerebralOxygenation                                   │ bands, suppressionDrive, EMG, movement
+                                                                          ▼
+ EEGGenerator (250 Hz, own seeded RNG): cortex × burst–suppression gate + EMG + movement + sensor/artifacts
+                                                                          │ bank.eeg (µV)   bank.eegSuppressed (truth)
+                                                                          ▼
+ BisMonitor (sees only bank.eeg + impedance): detector (< 5 µV ≥ 0.5 s) → 63 s BSV, artifact epochs → SQI,
+ FFT (4 s) → EMG dB + educational index → 10/15/30 s smoothing → devices.bis + BisTrends (1 Hz)
+```
+
+- The brain state is patient state; the sensor condition (`fault`, impedance) and smoothing are device state.
+- The device never reads `patient.brain`: displayed values come only from the signal, so artifacts, EMG and
+  neuromuscular block act on the numbers the way they act on a real monitor.
+- `bank.eegSuppressed` is ground truth for tests and the instructor; the device does not use it.
+- Trend markers are clinical events in the event log (`BOLUS_GIVEN`, `INFUSION_CHANGED`, `STIMULUS_APPLIED`,
+  `BIS_SIGNAL`), so replay and debriefing see the same markers.
+- `SimulationEngine.replay(options, log, untilTime)` rebuilds a run from its command log (scenario timeline
+  commands fire by themselves). With the seeded RNGs, the EEG, BIS and BSV are reproduced exactly, and time
+  acceleration (×2/×5) runs the same ticks.
+- UI: `PatientMonitor` EEG row (±100 µV, 25 mm/s) with BIS/SQI/EMG/BSV; `Bis/BisPanel` (trend, markers,
+  settings, explanations); `InstructorPanel/BrainPanel` (true model values, stimulation, sensor, patient factors).

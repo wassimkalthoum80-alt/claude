@@ -185,6 +185,113 @@ export const en = {
   'hl.reserves': 'Patient reserves',
   'hl.preloadReserve': 'Volume status',
   'hl.age': 'Age',
+  'bis.label': 'Simulated BIS',
+  'bis.eeg': 'EEG',
+  'bis.sqi': 'SQI',
+  'bis.emg': 'EMG',
+  'bis.bsv': 'BSV',
+  'bis.scale': '±100 µV · 25 mm/s',
+  'bis.status.checkSensor': 'Check sensor',
+  'bis.status.lowSqi': 'SQI low',
+  'bis.status.startup': 'BSV window',
+  'bis.bsvTooltip':
+    'Burst suppression ratio: percentage of suppressed EEG during the preceding 63 seconds. Corresponds to SR in the device references.',
+  'bis.panelTitle': 'PROCESSED EEG — SIMULATED BIS',
+  'bis.close': 'Close',
+  'bis.trend': 'Trend',
+  'bis.span': 'Span',
+  'bis.averaging': 'Averaging',
+  'bis.sensor': 'Sensor',
+  'bis.applied': 'Applied',
+  'bis.removed': 'Removed',
+  'bis.showEmg': 'EMG',
+  'bis.showSqi': 'SQI',
+  'bis.impedance': 'Impedance',
+  'bis.window': 'BSV window',
+  'bis.suppressed': 'suppressed',
+  'bis.explain': 'Explain the current values (model output)',
+  'bis.explore': 'Things to try',
+  'bis.explore.1':
+    'Raise, then lower the propofol infusion (P1) and watch BIS follow with a delay.',
+  'bis.explore.2':
+    'Give a propofol bolus during stable anaesthesia — does BSV rise? Does it stay after the EEG is continuous again?',
+  'bis.explore.3': 'Compare the same bolus at age 35 and 80 (instructor panel → Age).',
+  'bis.explore.4': 'Add remifentanil or sufentanil, then apply a stimulus (instructor panel).',
+  'bis.explore.5': 'Stop the opioid and stimulate again: arousal, EMG, heart rate and BIS rise.',
+  'bis.explore.6':
+    'Give rocuronium to the awake patient (no hypnotic): EMG falls — hypnosis does not.',
+  'bis.explore.7':
+    'Instructor: poor contact or electrocautery — SQI falls, BSV becomes unavailable.',
+  'bis.explore.8':
+    'Esketamine during propofol anaesthesia: the index rises although hypnosis is deeper.',
+  'bis.target':
+    'Shaded 40–60: a common target during propofol anaesthesia — context-dependent. It does not guarantee unconsciousness, analgesia or absence of recall, and a lower BIS or higher BSV is not "better".',
+  'bis.disclaimer':
+    'Educational approximation of a processed-EEG monitor — not the proprietary BIS algorithm and not clinically validated.',
+  'bis.m.bolus': 'bolus',
+  'bis.m.infusion': 'infusion',
+  'bis.m.stimulus': 'stimulus',
+  'bis.m.signal': 'signal',
+  'bis.why.off': 'Sensor removed — no EEG is recorded.',
+  'bis.why.checkSensor':
+    'Lead off (high electrode impedance): no values — this is not suppression and not "BIS 0".',
+  'bis.why.poorContact':
+    'Poor electrode contact: mains interference and electrode pops lower SQI; the detector cannot see suppression through the noise, so BSV is withheld.',
+  'bis.why.cautery':
+    'Electrocautery: artifact epochs are excluded — they count neither as EEG nor as suppression.',
+  'bis.why.movement': 'Movement artifact: those epochs are rejected and SQI falls.',
+  'bis.why.startup': 'The 63 s BSV history is still filling ({s} s valid).',
+  'bis.why.drugs': 'Hypnotic effect (model): {drugs} — combined depth {depth}.',
+  'bis.why.synergy':
+    'Opioid–propofol synergy deepens hypnosis; good analgesia does not by itself mean adequate hypnosis.',
+  'bis.why.arousal':
+    'Noxious stimulation reaches the cortex (analgesia {analgesia} %): the EEG lightens and EMG rises.',
+  'bis.why.ketamine':
+    'Ketamine adds fast (beta/gamma) activity — the index can rise despite ongoing anaesthesia.',
+  'bis.why.dex':
+    'Dexmedetomidine: slow waves and spindles; the patient stays arousable — the index does not mean the same as under propofol.',
+  'bis.why.nmbAwake':
+    'Neuromuscular block without hypnosis: EMG falls and so can the index — the patient may be awake.',
+  'bis.why.nmb': 'Neuromuscular block removes EMG; this is not deeper hypnosis.',
+  'bis.why.emgHigh': 'High EMG leaks into the analysed band and can raise the index.',
+  'bis.why.hypoxia':
+    'Severely reduced cerebral O2 delivery slows and suppresses the EEG — not an anaesthetic effect.',
+  'bis.why.suppression':
+    'The GABAergic effect (depth {gaba}) is deep enough for burst suppression; suppressed intervals appear in the EEG.',
+  'bis.why.bsvMemory':
+    'The EEG is continuous again, but BSV still includes suppression from the last 63 s ({s} s).',
+  'bis.why.flat':
+    'Isoelectric EEG: index 0 means no measurable EEG activity here — it is not a diagnosis of brain death.',
+  'brain.title': 'Brain / EEG (true model values)',
+  'brain.note':
+    'Model output in educational units — not measurable at the bedside. The monitor only sees the EEG.',
+  'brain.hypnotic': 'Hypnotic depth',
+  'brain.gaba': 'GABAergic depth',
+  'brain.eeg': 'EEG depth',
+  'brain.suppression': 'Suppression drive',
+  'brain.arousal': 'Cortical arousal',
+  'brain.autonomic': 'Autonomic response',
+  'brain.cerebralO2': 'Cerebral O2 delivery',
+  'brain.emgTrue': 'Frontal EMG (true)',
+  'brain.contrib': 'Contribution to hypnotic depth',
+  'brain.stim': 'Stimulation',
+  'stim.laryngoscopy': 'Laryngoscopy',
+  'stim.incision': 'Incision',
+  'stim.tetanic': 'Tetanic',
+  'stim.surgeryOn': 'Surgery on',
+  'stim.surgeryOff': 'Surgery off',
+  'brain.sensor': 'Sensor condition',
+  'fault.none': 'Good',
+  'fault.poorContact': 'Poor contact',
+  'fault.disconnected': 'Disconnected',
+  'fault.electrocautery': 'Electrocautery',
+  'brain.factors': 'Patient factors',
+  'factor.frailty': 'Frailty',
+  'factor.hypnoticSensitivity': 'Hypnotic sensitivity',
+  'factor.temperatureC': 'Temperature °C',
+  'factor.hepaticFunction': 'Hepatic function',
+  'factor.renalFunction': 'Renal function',
+  'factor.eegAmplitude': 'EEG amplitude',
   'hl.rightVentricularReserve': 'RV reserve',
   'hl.cardiacReserve': 'Myocardial reserve',
   'hl.sympatheticResponse': 'Sympathetic response',

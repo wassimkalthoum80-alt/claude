@@ -1,4 +1,4 @@
-# Simulation assumptions (Milestone 1 + heart–lung interaction + medications phase A)
+# Simulation assumptions (Milestone 1 + heart–lung interaction + medications phase A + processed EEG)
 
 Every physiological simplification in the code is marked `// SIM-ASSUMPTION:` and listed here with the value
 used and the reason. The whole model is **phenomenological and tuned to published target values**. It is built
@@ -276,6 +276,82 @@ does not change the order).
 - Calcium effect, electrolytes and acid–base, blood products and haemostasis, anaphylaxis, arrhythmogenicity,
   cardiac-arrest drug effects (adrenaline in CPR has no ROSC effect: **no automatic ROSC**).
 - Renal/hepatic/age covariates beyond those inside the published PK models.
+
+## Processed EEG — "Simulated BIS" (`src/sim/brain`, `signals/EEGGenerator.ts`, `devices/BisMonitor.ts`)
+
+**Status: educational approximation, not validated.** The index is labelled "Simulated BIS" and is **not** the
+proprietary BIS algorithm; no number below reproduces a commercial monitor. Starting references (not
+re-verified in this session — PubMed and the Medtronic site were not reachable): Medtronic BIS product
+information; Akeju et al. 2014 (PMID 25187999, propofol vs dexmedetomidine EEG); PMID 29945431
+(propofol–sufentanil interaction and processed EEG); Schuller et al. 2015 (PMID 26174308, BIS in awake
+paralysed volunteers).
+
+### Causal chain (nothing sets a BIS value directly)
+
+pump delivery → line → PK effect-site concentrations (existing engine) → shared hypnotic response surface
+(`pd.ts → hypnoticComponents`, also used for `hypnosis`) → brain state (depth, stimulation, cerebral O₂,
+patient factors) → EEG band amplitudes and suppression drive → 250 Hz EEG signal (+ EMG, artifacts) → device:
+spectrum, suppression detector, SQI, EMG → smoothing → displayed values and 1 Hz trends.
+
+### Brain model (educational units: 1 ≈ loss of responsiveness with a GABAergic hypnotic)
+
+| Assumption | Value |
+|---|---|
+| Hypnotic depth | Up + Um + 0.5·Up·Um + Ux + 0.9·Uk + 0.4·Uo + 0.5·(Up + Um + Ux)·Uo; U = Ce/C50 × potency |
+| C50 (educational) | propofol 3.4 µg/mL, midazolam 0.12 µg/mL, dexmedetomidine 1 ng/mL, racemic ketamine 1 µg/mL (esketamine ×2), sufentanil-equivalent 1 ng/mL (remifentanil ×0.1) |
+| Potency modifiers | age ±0.5 %/year around 60 y (0.8–1.25), frailty up to +30 %, +5 %/°C below 37 °C, individual sensitivity 0.5–2; renal failure adds up to +30 % midazolam potency (active metabolite) |
+| GABAergic depth (can suppress) | Up + Um + 0.5·Up·Um + 0.5·(Up + Um)·Uo — opioids alone never suppress; dexmedetomidine and ketamine do not produce burst suppression |
+| EEG depth | GABAergic depth + 0.15·Uo + 0.8·Ux + 0.3·Uk, lightened by arousal (× (1 − 0.6·arousal)), deepened by severe cerebral hypoxia |
+| Burst-suppression threshold | GABAergic depth 2.1, − 0.012/year above 50 y, − 0.4 × frailty, − 0.1/°C below 36 °C (1.3–2.6); suppressed share ((depth − threshold)/2.5)^1.2 |
+| Stimulation | laryngoscopy 1.0, incision 0.9, tetanic 0.6 (decay τ 40 s), surgery 0.5 sustained |
+| Arousal | 1.6 × noxious input × (1 − analgesia) × arousability; arousability = dexmedetomidine share + rest × clamp(1.5 − 0.6·GABAergic depth, 0.1, 1) |
+| Autonomic response | 1.3 × noxious input × (1 − analgesia) × (1 − 0.25·hypnosis) → sympathetic drive in the heart–lung model (weight 0.9, baroreflex-blunted) |
+| Analgesia | opioid Hill (C50 0.2 ng/mL), + ketamine (max 60 %), + dexmedetomidine (max 20 %) |
+| Cerebral O₂ delivery | autoregulated: flow = MAP / 50 mmHg (60 with frailty), capped at 1, × CaO₂/19; τ 8 s. **No universal "low BP = low BIS"** — only below the lower limit |
+| Hypoxic EEG | slowing below 0.6, suppression from 0.55 down to 0.15 (isoelectric) — reversible in the model (no injury model) |
+| Frontal EMG | (0.9·(1 − 0.85·slowing) + 0.8·arousal + 0.2·ketamine) × (1 − 0.95·NMB) × O₂ factor; facial muscles treated like the adductor pollicis (simplification — facial muscles are more resistant in reality) |
+| Movement | when arousal × (1 − NMB) > 0.35, in 2–4 s bouts every 5–10 s |
+| Individual EEG amplitude | 1.1 − 0.006/year above 30 (0.6–1.2); frontal alpha power falls with age |
+
+### EEG generator
+
+| Assumption | Value |
+|---|---|
+| Signal | sum of band-limited noise (two-pole resonators, unit-variance): delta 0.9/2.6 Hz, theta 6 Hz, alpha 8–11 Hz (slows with depth), beta 19 Hz, gamma 36 Hz, spindles 13.5 Hz in 0.6–1.5 s waxing–waning events every 2–6 s |
+| Band amplitudes (µV RMS) | awake: delta 8, theta 5, alpha 5, beta 6, gamma 2 (≈ 12 µV total); propofol unconsciousness: delta up to ≈ 58, frontal alpha up to 18, beta fading — **amplitude rises as the index falls**; benzodiazepines add beta; dexmedetomidine: 35 % smaller slow waves + spindles, no strong alpha, no "paradoxical" beta; ketamine: + beta 5 and gamma 8 × activation |
+| Burst suppression | two-state process: mean suppression Ts = max(1 s, s/(1 − s)·Tb₀), Tb₀ = 1.2 + 1.5·(1 − s) s, mean burst Ts·(1 − s)/s; hazards follow s continuously; bursts ×1.4, suppressed cortex ≈ 1 % residual (≈ 0.5–1 µV) |
+| EMG | broadband resonator (62 Hz, 90 Hz bandwidth), 0.15 + 6 × activity µV RMS — overlaps the 30–47 Hz band |
+| Sensor | 0.35 µV white noise, 0.3 µV mains (50 Hz) |
+| Poor contact | impedance 20 kΩ, mains 7 µV, OU drift (σ 25 µV, τ 3 s), electrode pops 250–600 µV (0.25/s) |
+| Disconnected | impedance 999 kΩ, mains 60 µV, drift 80 µV, pops |
+| Electrocautery | 2–5 s bursts of 300 µV RMS noise every 6–12 s |
+| Determinism | own seeded RNG (derived from the scenario seed), so the EEG cannot perturb other signals; replay and ×2/×5 reproduce it exactly |
+
+### Monitor ("Simulated BIS")
+
+| Assumption | Value |
+|---|---|
+| Suppression detector | high-pass (y = x − x₋₁ + 0.95·y₋₁) then \|EEG\| < 5 µV for ≥ 0.5 s; finds ≈ 90 % of the true suppressed time (each interval loses ≈ 0.2–0.3 s at onset) — tested |
+| BSV | 100 × suppressed / valid seconds of the preceding 63 s (= / 63 when fully valid); shown only when the window is complete, ≥ 50 s valid and SQI ≥ 60; never computed from the index |
+| Artifact epochs | high-passed excursion > 400 µV, raw peak-to-peak > 800 µV, lead-off (> 50 kΩ), or movement (power < 1 Hz > 20 000 µV²): excluded — neither EEG nor suppression |
+| SQI | mean over the last 30 s of epoch quality (0 artifact; valid × impedance factor 1 − (Z − 5 kΩ)/40, 0.2–1) |
+| EMG | 70–110 Hz power, dB re 0.0001 µV² (awake ≈ 50 dB, awake + rocuronium ≈ 39 dB, TIVA ≈ 36 dB, TIVA + rocuronium ≈ 31 dB) |
+| Index | beta ratio log₁₀(P13–30/P0.5–13) through a monotone table (awake without EMG ≈ 88, propofol delta + alpha ≈ 45–60, deeper ≈ 30–40) + up to 25 for fast (30–47 Hz) activity above the expected share (EMG, ketamine) + suppression blend towards 50 − BSR/2 (BSR = mean of 10 s and 63 s windows) |
+| Smoothing | moving average of per-second raw values over 10, 15 (default) or 30 s — a display setting, not drug onset |
+| Unavailable | "Check sensor" on lead-off (no BIS 0, no BSV 100); "SQI low" below 50 %; BSV "--" during the first 63 s |
+| Calibration check (58 y, TIVA) | stable ≈ 45; 50 mg top-up → ≈ 30, BSV ≈ 0–20 % (35 y: 0 %, 80 y: ≈ 40 %); 100 mg → ≈ 25, BSV ≈ 50 %; awake ≈ 93, awake + rocuronium ≈ 91 (EMG −11 dB); esketamine 40 mg on TIVA → index + 20 while hypnosis deepens |
+
+### Not modelled / limitations
+
+- Sevoflurane and other volatile agents (no vaporizer or uptake model yet) — not supported.
+- The index is a single-channel spectral mapping; no bispectrum, no QUAZI, no proprietary features.
+- EEG patterns are qualitative (band amplitudes author-selected), not fitted to recordings; no age-specific
+  spectral changes beyond amplitude and alpha power; no paediatric EEG.
+- Hypoxic/ischaemic EEG changes are reversible in the model; no seizure, no burst-suppression-with-injury
+  patterns. A flat EEG or index 0 is **not** brain death.
+- Hepatic/renal factors act only on the educational midazolam/dexmedetomidine models; published PK models are
+  used unchanged.
+- Nitrous oxide, benzodiazepine antagonism (flumazenil) and dexmedetomidine loading are not modelled.
 
 ## Presentation-only assumptions (UI)
 
