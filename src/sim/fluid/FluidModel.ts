@@ -155,7 +155,8 @@ export class FluidModel {
     const f = patient.fluid;
     const ff = patient.fluidFactors;
     const dtMin = dtS / 60;
-    const t = inp.time;
+    // Ledger entries are binned at the middle of the step (the volume crossed during (t − dt, t]).
+    const t = inp.time - dtS / 2;
     const result: FluidStepResult = { measured: false, drainFinished: null };
 
     this.applyInputs(f, balance, ledger, inp, t, dtMin, ff);
@@ -435,8 +436,8 @@ export class FluidModel {
     };
 
     // Scheduled charting of urine output (documentation only — never a ledger entry).
-    if (t >= balance.nextMeasurementAt - 1e-9) {
-      chartUrine(balance, patient.demographics.weightKg, t);
+    if (inp.time >= balance.nextMeasurementAt - 1e-9) {
+      chartUrine(balance, patient.demographics.weightKg, inp.time);
       result.measured = true;
     }
 

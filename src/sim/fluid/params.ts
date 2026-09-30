@@ -83,7 +83,7 @@ export const FLUID = {
 
   // ── circulation coupling ──
   /** mL per kg of stressed-volume scale: a blood-volume change of this size moves volume status by 1 */
-  stressedScaleFraction: 2 / 7,
+  stressedScaleFraction: 0.45,
   /** mmHg — model venous pressure at normal volume status */
   venousPressure: 6,
   /** mmHg per unit of effective volume status */

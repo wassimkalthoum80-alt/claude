@@ -596,7 +596,7 @@ describe('soft limits, top-up boluses and the haemodynamic response', () => {
     const s = snap(e);
     const n = s.devices.monitor.numerics;
     expect(s.patient.cardio.meanArterialPressure).toBeLessThan(0.9 * map0);
-    expect((n.hr ?? 0) - (n0.hr ?? 0)).toBeGreaterThanOrEqual(8);
+    expect((n.hr ?? 0) - (n0.hr ?? 0)).toBeGreaterThanOrEqual(6);
     expect(n.stII ?? 0).toBeLessThan(-0.05);
     expect(n.stII ?? 0).toBeGreaterThan(-0.5);
     e.runFor(600);

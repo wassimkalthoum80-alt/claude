@@ -103,7 +103,7 @@ export function initialBodyFluid(d: Demographics, init: FluidInit = {}): BodyFlu
     pleuralMl: init.pleuralMl ?? 0,
     gutLumenMl: init.gutLumenMl ?? 0,
     internalBloodMl: 0,
-    bladderMl: init.bladderMl ?? 50,
+    bladderMl: init.bladderMl ?? 5,
     plasmaAlbuminG: (albumin * plasma) / 1000,
     interstitialAlbuminG:
       ((FLUID.interstitialAlbumin * albumin) / FLUID.plasmaAlbumin) * (isf / 1000),
