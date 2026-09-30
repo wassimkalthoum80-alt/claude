@@ -8,7 +8,7 @@ export const CARDIO = {
   /** mmHg */
   msfp: 12,
   // SIM-ASSUMPTION: effective critical closing pressure with intact vascular tone (vascular waterfall).
-  // With tone, the arterial tree drains towards ≈28 mmHg, not towards venous pressure.
+  // With tone, the arterial tree drains towards ≈30 mmHg, not towards venous pressure.
   /** mmHg */
   pcritWithTone: 30,
   // SIM-ASSUMPTION: lumped arterial compliance, tuned so the baseline patient reads 120/70.

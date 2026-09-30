@@ -1,0 +1,141 @@
+.controls {
+  padding: 8px 10px 8px;
+  flex-shrink: 0;
+}
+
+.sliders {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.control + .control {
+  border-left: 1px solid var(--divider);
+}
+
+.label {
+  font: 500 clamp(11px, 0.85vw, 15px) / 1 var(--font-ui);
+  color: var(--text);
+}
+
+.unit {
+  font: 400 clamp(8.5px, 0.58vw, 10.5px) / 1 var(--font-ui);
+  color: var(--text-dim);
+}
+
+.sliderArea {
+  position: relative;
+  height: clamp(66px, 9.2vh, 130px);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 4px;
+}
+
+.slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  cursor: ns-resize;
+}
+
+.slider::-webkit-slider-runnable-track {
+  width: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to top,
+    var(--vent-pressure) var(--pct),
+    rgba(120, 140, 160, 0.25) var(--pct)
+  );
+}
+
+.slider::-moz-range-track {
+  width: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to top,
+    var(--vent-pressure) var(--pct),
+    rgba(120, 140, 160, 0.25) var(--pct)
+  );
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: #cfe6ff;
+  border: 3px solid var(--vent-pressure);
+  box-shadow: 0 0 8px rgba(74, 168, 255, 0.55);
+}
+
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #cfe6ff;
+  border: 3px solid var(--vent-pressure);
+}
+
+.scaleMax,
+.scaleMin {
+  position: absolute;
+  left: calc(50% + 16px);
+  font: 400 clamp(8.5px, 0.58vw, 10.5px) / 1 var(--font-num);
+  color: var(--text-dim);
+}
+
+.scaleMax {
+  top: 0;
+}
+
+.scaleMin {
+  bottom: 0;
+}
+
+.value {
+  font-weight: 500;
+  font-size: clamp(18px, 1.5vw, 28px);
+  line-height: 1;
+  color: var(--vent-value);
+}
+
+.pending {
+  color: var(--vent-pressure);
+}
+
+.pendingNote {
+  font: 400 9px/1 var(--font-ui);
+  color: var(--vent-pressure);
+  min-height: 9px;
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 60%;
+  margin: 8px auto 0;
+  height: 30px;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  color: var(--text-dim);
+  font: 500 clamp(10px, 0.72vw, 13px) / 1 var(--font-ui);
+  letter-spacing: 0.05em;
+  cursor: not-allowed;
+}

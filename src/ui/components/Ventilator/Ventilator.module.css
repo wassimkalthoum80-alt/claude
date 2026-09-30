@@ -1,0 +1,125 @@
+.vent {
+  padding: 8px 10px 10px;
+  flex-shrink: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 2px 8px;
+}
+
+.title {
+  font: 500 clamp(12px, 0.95vw, 17px) / 1 var(--font-ui);
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.mode {
+  font: 500 clamp(11px, 0.85vw, 15px) / 1 var(--font-ui);
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(4px, 0.45vw, 8px);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: clamp(48px, 6.1vh, 78px);
+  padding: 7px 10px 6px;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  cursor: help;
+  min-width: 0;
+}
+
+.tileLabel {
+  font: 500 clamp(11px, 0.85vw, 15px) / 1 var(--font-ui);
+  color: var(--text);
+}
+
+.tileRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tileValue {
+  font-weight: 500;
+  font-size: clamp(22px, 2vw, 36px);
+  line-height: 1;
+  color: var(--vent-value);
+}
+
+.tileUnit {
+  font: 400 clamp(8.5px, 0.58vw, 10.5px) / 1 var(--font-ui);
+  color: var(--text-dim);
+}
+
+.perKg {
+  font-size: clamp(9px, 0.62vw, 11px);
+  letter-spacing: 0.02em;
+}
+
+.tile_ie {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.tile_pplat {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.curves {
+  grid-column: 2 / 4;
+  grid-row: 3 / 5;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: clamp(4px, 0.45vw, 8px);
+}
+
+.curve {
+  position: relative;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  min-height: clamp(74px, 9vh, 122px);
+}
+
+.curveLabel {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  font: 500 clamp(9px, 0.62vw, 11px) / 1 var(--font-ui);
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.curveUnit {
+  color: var(--text-dim);
+}
+
+.axis {
+  position: absolute;
+  left: 6px;
+  transform: translateY(-50%);
+  font: 400 clamp(8.5px, 0.58vw, 10.5px) / 1 var(--font-num);
+  color: var(--text-dim);
+}
+
+.canvasWrap {
+  position: absolute;
+  top: 18px;
+  left: 30px;
+  right: 8px;
+  bottom: 4px;
+}

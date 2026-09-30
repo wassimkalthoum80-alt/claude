@@ -35,7 +35,11 @@ export class VentFlowGenerator {
     let artefact = 0;
     if (k && k.phase === 'compression' && ctx.patient.airway.device === 'ett') {
       // d/dt of −V·sin(πu): gas out while compressing, back in while releasing.
-      const dVdt = (-COMPRESSION_GAS_ML / 1000) * depthScale(ctx) * (Math.PI / k.compressionDurationS) * Math.cos(Math.PI * k.u);
+      const dVdt =
+        (-COMPRESSION_GAS_ML / 1000) *
+        depthScale(ctx) *
+        (Math.PI / k.compressionDurationS) *
+        Math.cos(Math.PI * k.u);
       artefact = dVdt * 60;
     }
     return ctx.patient.resp.flow + artefact + ctx.rng.normal(0, 0.15);

@@ -112,11 +112,23 @@ export class CPREngine {
     const elapsed = t - ev.t;
     if (elapsed < 0) return null;
     if (elapsed < dur) {
-      return { phase: 'compression', u: elapsed / dur, depthCm: ev.depthCm, recoil: ev.recoil, compressionDurationS: dur };
+      return {
+        phase: 'compression',
+        u: elapsed / dur,
+        depthCm: ev.depthCm,
+        recoil: ev.recoil,
+        compressionDurationS: dur,
+      };
     }
     const releaseDur = Math.max(0.05, ev.intervalS - dur);
     const u = (elapsed - dur) / releaseDur;
     if (u >= 1.5) return null; // CPR stopped: no further cycle
-    return { phase: 'release', u: Math.min(1, u), depthCm: ev.depthCm, recoil: ev.recoil, compressionDurationS: dur };
+    return {
+      phase: 'release',
+      u: Math.min(1, u),
+      depthCm: ev.depthCm,
+      recoil: ev.recoil,
+      compressionDurationS: dur,
+    };
   }
 }

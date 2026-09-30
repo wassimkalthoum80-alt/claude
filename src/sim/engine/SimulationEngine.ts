@@ -263,7 +263,15 @@ export class SimulationEngine {
     this.gas.reset(s.patient, s.devices.ventilator);
     this.cpr.reset(s.interventions.cpr);
     this.monitor.reset(s.devices.monitor.numerics);
-    for (const g of [this.ecgGen, this.artGen, this.plethGen, this.co2Gen, this.pawGen, this.flowGen]) g.reset();
+    for (const g of [
+      this.ecgGen,
+      this.artGen,
+      this.plethGen,
+      this.co2Gen,
+      this.pawGen,
+      this.flowGen,
+    ])
+      g.reset();
     if (s.timers.arrestStartTime !== null) this.logEvent('ARREST_START', 0);
   }
 
@@ -362,7 +370,13 @@ export class SimulationEngine {
   }
 
   private appendCommand(command: Command, source: CommandSource): void {
-    this.log.append({ kind: 'command', tick: this.state.tick, t: this.state.time, source, command });
+    this.log.append({
+      kind: 'command',
+      tick: this.state.tick,
+      t: this.state.time,
+      source,
+      command,
+    });
   }
 
   private logEvent(event: ClinicalEventType, t: number): void {

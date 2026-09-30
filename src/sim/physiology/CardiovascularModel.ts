@@ -44,7 +44,8 @@ export class CardiovascularModel {
   /** A spontaneous beat: schedule ventricular ejection (only for perfusing rhythms). */
   onBeat(t: number, cardio: CardioState): void {
     if (!cardio.spontaneousCirculation) return;
-    const sv = cardio.strokeVolume * clamp(cardio.contractility, 0, 2) * clamp(cardio.preload, 0, 2);
+    const sv =
+      cardio.strokeVolume * clamp(cardio.contractility, 0, 2) * clamp(cardio.preload, 0, 2);
     const et = ejectionTime(cardio.heartRate);
     this.pulses.push({ start: t, duration: et, volume: sv, shape: ejectionShape });
     // Dicrotic notch: brief back-flow at aortic valve closure followed by a small rebound wave.
@@ -84,7 +85,12 @@ export class CardiovascularModel {
    * Integrate one fast sub-step. Returns the true arterial pressure at time t.
    * @param kinematics compression in progress (for the thoracic pulse), or null
    */
-  step(t: number, dt: number, cardio: CardioState, kinematics: CompressionKinematics | null): number {
+  step(
+    t: number,
+    dt: number,
+    cardio: CardioState,
+    kinematics: CompressionKinematics | null,
+  ): number {
     let inflow = 0; // mL/s
     for (const p of this.pulses) {
       const u = (t - p.start) / p.duration;

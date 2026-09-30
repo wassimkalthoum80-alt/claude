@@ -21,7 +21,13 @@ export class RespiratoryModel {
   }
 
   /** Constant-flow inflation (VCV). */
-  inflate(dt: number, flowLps: number, peep: number, complianceMlPerCmH2O: number, resistance: number): void {
+  inflate(
+    dt: number,
+    flowLps: number,
+    peep: number,
+    complianceMlPerCmH2O: number,
+    resistance: number,
+  ): void {
     const c = complianceMlPerCmH2O / 1000;
     this.flow = flowLps;
     this.volume += flowLps * dt;
@@ -29,7 +35,13 @@ export class RespiratoryModel {
   }
 
   /** Airway pressure the next inflation step would produce (for pressure limiting). */
-  pressureIfInflated(dt: number, flowLps: number, peep: number, complianceMlPerCmH2O: number, resistance: number): number {
+  pressureIfInflated(
+    dt: number,
+    flowLps: number,
+    peep: number,
+    complianceMlPerCmH2O: number,
+    resistance: number,
+  ): number {
     const c = complianceMlPerCmH2O / 1000;
     return peep + (this.volume + flowLps * dt) / c + resistance * flowLps;
   }

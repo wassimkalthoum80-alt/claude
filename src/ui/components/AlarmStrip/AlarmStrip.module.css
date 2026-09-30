@@ -1,0 +1,73 @@
+.strip {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  min-height: clamp(50px, 6.2vh, 66px);
+}
+
+.col {
+  padding: 7px 10px;
+  min-width: 0;
+}
+
+.col + .col {
+  border-left: 1px solid var(--divider);
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.none {
+  color: var(--text-faint);
+  font: 400 12px/1.3 var(--font-ui);
+}
+
+.alarm {
+  font: 600 clamp(10px, 0.7vw, 12.5px) / 1 var(--font-num);
+  letter-spacing: 0.04em;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.high {
+  background: var(--alarm-high);
+  color: #fff;
+  animation: alarm-flash-high 1s steps(1, end) infinite;
+}
+
+.medium {
+  background: var(--alarm-medium);
+  color: #111;
+}
+
+.low {
+  background: var(--alarm-low);
+  color: #04141a;
+}
+
+.message {
+  font: 500 clamp(9.5px, 0.66vw, 12px) / 1.25 var(--font-num);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.msg_info {
+  color: var(--text-dim);
+}
+.msg_warn {
+  color: var(--warn);
+}
+.msg_bad {
+  color: var(--bad);
+}
+.msg_good {
+  color: var(--good);
+}

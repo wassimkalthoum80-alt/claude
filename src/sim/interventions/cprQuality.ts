@@ -1,4 +1,9 @@
-import type { CprFault, CprQualityAssessment, CprQualityPreset, CprTarget } from '../state/CPRState';
+import type {
+  CprFault,
+  CprQualityAssessment,
+  CprQualityPreset,
+  CprTarget,
+} from '../state/CPRState';
 import type { GuidelineSet } from '../types/guidelines';
 
 /** Instructor presets for the auto-compressor (B3.10). */

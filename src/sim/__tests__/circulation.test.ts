@@ -41,7 +41,8 @@ describe('cardiac arrest without CPR', () => {
     // No upstrokes after onset: no sample exceeds the one 0.3 s earlier by more than 2 mmHg.
     const art = window(e, 'art', t0 + 0.4, t0 + 10);
     let maxRise = -Infinity;
-    for (let i = 38; i < art.length; i++) maxRise = Math.max(maxRise, (art[i] ?? 0) - (art[i - 38] ?? 0));
+    for (let i = 38; i < art.length; i++)
+      maxRise = Math.max(maxRise, (art[i] ?? 0) - (art[i - 38] ?? 0));
     expect(maxRise).toBeLessThan(2);
     expect(mean(window(e, 'art', t0 + 9, t0 + 10))).toBeLessThan(30);
   });
@@ -66,7 +67,9 @@ describe('cardiac arrest without CPR', () => {
     const s = e.getSnapshot();
     expect(s.devices.monitor.numerics.spo2).toBeNull();
     expect(s.devices.monitor.numerics.etco2).toBeLessThanOrEqual(5);
-    expect(s.devices.monitor.alarms.map((a) => a.id)).toEqual(expect.arrayContaining(['VFIB', 'SPO2_NO_PULSE']));
+    expect(s.devices.monitor.alarms.map((a) => a.id)).toEqual(
+      expect.arrayContaining(['VFIB', 'SPO2_NO_PULSE']),
+    );
   });
 
   it('HR shows "---" in VF and 0 in asystole', () => {
@@ -214,13 +217,19 @@ describe('CPR', () => {
 });
 
 describe('CPR quality presets change the physiology (monotonic)', () => {
-  const plateauFor = (preset: 'good' | 'tooSlow' | 'tooFast' | 'tooShallow' | 'incompleteRecoil') => {
+  const plateauFor = (
+    preset: 'good' | 'tooSlow' | 'tooFast' | 'tooShallow' | 'incompleteRecoil',
+  ) => {
     const e = arrestedEngine(60);
     e.dispatch({ type: 'SET_CPR_QUALITY', preset });
     e.dispatch({ type: 'CPR_START' });
     e.runFor(60);
     const s = e.getSnapshot();
-    return { n: s.devices.monitor.numerics, etco2: s.patient.gas.etco2, quality: s.interventions.cpr.quality };
+    return {
+      n: s.devices.monitor.numerics,
+      etco2: s.patient.gas.etco2,
+      quality: s.interventions.cpr.quality,
+    };
   };
 
   const good = plateauFor('good');

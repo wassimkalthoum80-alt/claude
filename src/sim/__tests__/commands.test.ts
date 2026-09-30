@@ -29,7 +29,9 @@ describe('commands and event log', () => {
     e.runFor(2);
     e.dispatch({ type: 'CPR_START' });
     e.runFor(1);
-    const events = e.eventLog.filter((x) => x.kind === 'event').map((x) => (x.kind === 'event' ? x.event : ''));
+    const events = e.eventLog
+      .filter((x) => x.kind === 'event')
+      .map((x) => (x.kind === 'event' ? x.event : ''));
     expect(events).toEqual(['ARREST_START', 'FIRST_COMPRESSION']);
   });
 

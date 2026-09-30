@@ -86,7 +86,11 @@ export class VentilatorDevice {
 
   /** Timing of the breath in progress (s). */
   get timing(): { start: number; inspiratoryTime: number; total: number } {
-    return { start: this.nextBreathStart - this.total, inspiratoryTime: this.ti, total: this.total };
+    return {
+      start: this.nextBreathStart - this.total,
+      inspiratoryTime: this.ti,
+      total: this.total,
+    };
   }
 
   private total = 5;

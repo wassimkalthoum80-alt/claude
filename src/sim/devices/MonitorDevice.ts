@@ -77,7 +77,8 @@ export class MonitorDevice {
     }
     const pi = pleth.length > 0 ? pMax - pMin : 0;
     mon.numerics.perfusionIndex = Math.round(pi * 100) / 100;
-    mon.numerics.spo2 = pi >= PLETH.perfusionIndexThreshold ? Math.round(state.patient.gas.spo2) : null;
+    mon.numerics.spo2 =
+      pi >= PLETH.perfusionIndexThreshold ? Math.round(state.patient.gas.spo2) : null;
   }
 
   private heartRate(state: SimulationState): number | null {

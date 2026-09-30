@@ -3,8 +3,15 @@ import { baselinePatient } from '../../content/scenarios/baselinePatient';
 import { SimulationEngine } from '../engine/SimulationEngine';
 import type { ScenarioDefinition } from '../types/scenario';
 
-export function createEngine(scenario: ScenarioDefinition = baselinePatient, seed?: number): SimulationEngine {
-  return new SimulationEngine({ scenario, guidelines: erc2025, ...(seed !== undefined ? { seed } : {}) });
+export function createEngine(
+  scenario: ScenarioDefinition = baselinePatient,
+  seed?: number,
+): SimulationEngine {
+  return new SimulationEngine({
+    scenario,
+    guidelines: erc2025,
+    ...(seed !== undefined ? { seed } : {}),
+  });
 }
 
 /** Samples of a channel with sim time in [from, to). */

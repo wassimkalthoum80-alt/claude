@@ -32,7 +32,8 @@ export class AlarmEngine {
 
     const kept: Alarm[] = mon.alarms.filter((a) => active.has(a.id));
     for (const id of active) {
-      if (!kept.some((a) => a.id === id)) kept.push({ id, priority: PRIORITY[id], since: state.time });
+      if (!kept.some((a) => a.id === id))
+        kept.push({ id, priority: PRIORITY[id], since: state.time });
     }
     kept.sort((a, b) => RANK[a.priority] - RANK[b.priority] || a.since - b.since);
     mon.alarms = kept;

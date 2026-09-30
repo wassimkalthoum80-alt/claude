@@ -8,7 +8,8 @@ import type { GuidelineSet } from '../../sim/types/guidelines';
 export const erc2025: GuidelineSet = {
   id: 'ERC-2025',
   label: 'ERC Guidelines 2025 — Adult Advanced Life Support',
-  source: 'European Resuscitation Council Guidelines 2025 (adult BLS/ALS); AHA 2025 Guidelines for CPR and ECC',
+  source:
+    'European Resuscitation Council Guidelines 2025 (adult BLS/ALS); AHA 2025 Guidelines for CPR and ECC',
   compressions: {
     rateMin: 100,
     rateMax: 120,

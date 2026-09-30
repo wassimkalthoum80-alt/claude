@@ -39,12 +39,20 @@ export class GasExchangeModel {
       GAS.circulationTauS,
     );
 
-    const va = alveolarVentilation(vent.measured.vte, vent.measured.rrTotal, patient.resp.deadSpace);
+    const va = alveolarVentilation(
+      vent.measured.vte,
+      vent.measured.rrTotal,
+      patient.resp.deadSpace,
+    );
     // Guard against division by ~0 (apnoea): cap the ventilation factor.
     const ventTarget = clamp(this.baselineAlveolarVentilation / Math.max(va, 300), 0.2, 4);
     this.ventilationFactor = approach(this.ventilationFactor, ventTarget, dt, GAS.ventilationTauS);
 
-    const etco2 = clamp(this.baselineEtco2 * this.circulationFactor * this.ventilationFactor, 0, 110);
+    const etco2 = clamp(
+      this.baselineEtco2 * this.circulationFactor * this.ventilationFactor,
+      0,
+      110,
+    );
     patient.gas.etco2 = etco2;
     const relFlow = clamp(patient.cardio.cardiacOutput / CARDIO.referenceCardiacOutput, 0, 1);
     // SIM-ASSUMPTION: a-ET gradient widens as flow falls (dead-space ventilation of unperfused alveoli).

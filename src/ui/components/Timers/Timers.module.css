@@ -1,0 +1,68 @@
+.timers {
+  flex-shrink: 0;
+  padding: 6px 10px 8px;
+}
+
+.title {
+  margin-bottom: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: help;
+}
+
+.cell + .cell {
+  border-left: 1px solid var(--divider);
+  padding-left: 12px;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 clamp(9px, 0.6vw, 11px) / 1 var(--font-ui);
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.value {
+  font-weight: 500;
+  font-size: clamp(20px, 1.6vw, 30px);
+  line-height: 1.05;
+  opacity: 0.55;
+}
+
+.running {
+  opacity: 1;
+}
+
+.noFlow {
+  color: var(--no-flow);
+}
+
+.lowFlow {
+  color: var(--low-flow);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+
+.dotRed {
+  background: var(--no-flow);
+}
+
+.dotBlue {
+  background: var(--low-flow);
+}

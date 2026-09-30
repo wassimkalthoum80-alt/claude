@@ -8,7 +8,7 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
  keyboard / buttons / sliders / scenario timeline
                 │  engine.dispatch(command)            ← the ONLY way to change the simulation
                 ▼
- ┌──────────────────────── SimulationEngine (src/sim/core) ────────────────────────┐
+ ┌──────────────────────── SimulationEngine (src/sim/engine) ──────────────────────┐
  │  EventLog  ◄── every command, stamped with sim time + tick                       │
  │  FixedStepClock (100 ms ticks, accumulator, clamp, pause, ×0/×1/×2/×5)           │
  │                                                                                  │
@@ -32,8 +32,10 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 
 | Folder | Responsibility |
 |---|---|
-| `src/sim/core` | Engine, fixed-step clock, commands, event log, seeded RNG, transient sim events |
-| `src/sim/state` | State types and factories (patient, ventilator, CPR, monitor), guideline & scenario types |
+| `src/sim/core` | Fixed-step clock, seeded RNG, event log, constants (no dependencies) |
+| `src/sim/engine` | `SimulationEngine`: tick orchestration, command application, snapshots, subscriptions |
+| `src/sim/types` | Commands, log entries, scenario, guideline and transient-event types |
+| `src/sim/state` | State types and the initial-state factory (patient, ventilator, CPR, monitor) |
 | `src/sim/physiology` | Cardiovascular, respiratory and gas-exchange models |
 | `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole) and beat scheduling |
 | `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation |
@@ -60,13 +62,29 @@ The UI imports the simulation only through `src/sim/index.ts`.
 
 ## Commands and events
 
-- `Command` (`src/sim/core/commands.ts`): `CPR_START`, `CPR_STOP`, `SET_CPR_QUALITY`, `SET_VENT_SETTING`,
+- `Command` (`src/sim/types/commands.ts`): `CPR_START`, `CPR_STOP`, `SET_CPR_QUALITY`, `SET_VENT_SETTING`,
   `SET_RHYTHM`, `SET_PAUSED`, `SET_TIME_SCALE`, `RESET`. Each carries its source: `user`, `instructor` or `scenario`.
   Commands apply immediately (between ticks) and are logged as `{ seq, tick, t, source, command }`.
 - Clinical milestones (`ARREST_START`, `FIRST_COMPRESSION`, `CIRCULATION_RESTORED`) are written to the same log as
   `event` entries. They drive the end-of-run card now and scoring/debrief later.
 - Transient high-rate events (`beat`, `compression`, `breath`) go to `engine.onEvent()` listeners and are **not**
   logged. The audio uses them.
+- `engine.loadScenario(def)` is session management rather than an in-run command. It starts a new run (t = 0,
+  new seed, empty log), just like constructing a new engine.
+
+## Rendering
+
+- **Numbers** (React): components subscribe with `useEngineSelector(selector, isEqual)`. Snapshots are frozen
+  copies taken only when the state version changes, so a panel re-renders only when its view model changes
+  (at most at 10 Hz, usually about 1 Hz).
+- **Waveforms** (canvas): one `requestAnimationFrame` loop in `EngineProvider` steps the engine and then calls
+  every registered `useFrame` callback. `TraceCanvas` redraws its sweep from the ring buffer on each frame, and
+  React is not involved per frame.
+- **Patient scene**: three stacked SVG layers with identical geometry. The static back layer (room, table,
+  arms) and front layer (head, airway, drape, lines, lighting, player's hands) are painted once. Chest rise and
+  compressions are compositor-only CSS transforms on the middle layer and on the rescuer-hands layer. The frame
+  loop never repaints SVG.
+- Measured cost: ≈ 1.1 ms of main-thread work per frame (engine step + 6 canvases + scene transforms).
 
 ## Seams for later milestones
 

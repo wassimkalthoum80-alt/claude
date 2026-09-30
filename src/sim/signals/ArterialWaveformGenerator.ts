@@ -14,7 +14,10 @@ export class ArterialWaveformGenerator {
   sample(ctx: SignalContext): number {
     const x = ctx.arterialPressure;
     // SIM-ASSUMPTION: optimally damped transducer, modelled as a 12 ms first-order low-pass.
-    this.filtered = this.filtered === null ? x : this.filtered + (x - this.filtered) * (1 - Math.exp(-ctx.dt / 0.012));
+    this.filtered =
+      this.filtered === null
+        ? x
+        : this.filtered + (x - this.filtered) * (1 - Math.exp(-ctx.dt / 0.012));
     return this.filtered + ctx.rng.normal(0, 0.25);
   }
 }

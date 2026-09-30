@@ -18,7 +18,8 @@ const SIM_FORBIDDEN = {
   patterns: [
     {
       regex: '(^|/)(ui|content)(/|$)',
-      message: 'src/sim must not depend on src/ui or src/content — pass data in through the engine.',
+      message:
+        'src/sim must not depend on src/ui or src/content — pass data in through the engine.',
     },
   ],
 };
@@ -58,7 +59,9 @@ export default tseslint.config(
         'error',
         {
           paths: SIM_FORBIDDEN.paths,
-          patterns: [{ regex: '(^|/)ui(/|$)', message: 'Simulation tests must not depend on the UI.' }],
+          patterns: [
+            { regex: '(^|/)ui(/|$)', message: 'Simulation tests must not depend on the UI.' },
+          ],
         },
       ],
     },
@@ -97,6 +100,11 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Context modules export a provider plus its hooks by design (HMR falls back to a full reload).
+    files: ['src/ui/hooks/*Context.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
     files: ['*.config.{js,ts}', 'scripts/**/*.mjs', 'e2e/**/*.ts'],

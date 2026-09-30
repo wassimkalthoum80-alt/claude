@@ -1,0 +1,193 @@
+import type {
+  AlarmId,
+  AlarmPriority,
+  CprQualityAssessment,
+  GuidelineSet,
+  SimulationState,
+} from '../../sim';
+import type { I18nKey } from '../../content/i18n/en';
+import { formatMmSs, formatNum } from './format';
+
+/** Pure view models: snapshot in → display values out. Unit-testable, no React. */
+
+export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
+
+export interface MonitorViewModel {
+  hr: string;
+  spo2: string;
+  artSysDia: string;
+  artMean: string;
+  etco2: string;
+  flash: { hr: AlarmPriority | null; spo2: AlarmPriority | null; art: AlarmPriority | null };
+}
+
+export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel {
+  const n = s.devices.monitor.numerics;
+  const alarms = s.devices.monitor.alarms;
+  const prio = (...ids: AlarmId[]) => alarms.find((a) => ids.includes(a.id))?.priority ?? null;
+  return {
+    hr: formatNum(n.hr, '---'),
+    spo2: formatNum(n.spo2, '--'),
+    artSysDia: n.artSys === null || n.artDia === null ? '--/--' : `${n.artSys}/${n.artDia}`,
+    artMean: formatNum(n.artMean, '--'),
+    etco2: formatNum(n.etco2, '--'),
+    flash: {
+      hr: prio('VFIB', 'ASYSTOLE'),
+      spo2: prio('SPO2_NO_PULSE'),
+      art: prio('ART_LOW'),
+    },
+  };
+}
+
+export interface VentTile {
+  id: 'vt' | 'rr' | 'mv' | 'paw' | 'peep' | 'fio2' | 'ie' | 'pplat';
+  value: string;
+  unit: string;
+}
+
+export interface VentilatorViewModel {
+  mode: string;
+  tiles: VentTile[];
+  vtPerKg: string;
+  vtPerKgTone: Tone;
+  pending: boolean;
+}
+
+export function ventilatorViewModel(
+  s: Readonly<SimulationState>,
+  g: GuidelineSet,
+): VentilatorViewModel {
+  const v = s.devices.ventilator;
+  const m = v.measured;
+  const pbw = s.patient.demographics.pbwKg;
+  const perKg = v.settings.vt / pbw;
+  const pending = (['vt', 'rr', 'peep', 'fio2'] as const).some(
+    (k) => v.settings[k] !== v.active[k],
+  );
+  return {
+    mode: v.mode,
+    tiles: [
+      { id: 'vt', value: formatNum(m.vte), unit: 'mL' },
+      { id: 'rr', value: formatNum(m.rrTotal), unit: '/min' },
+      { id: 'mv', value: formatNum(m.mv, '--', 1), unit: 'L/min' },
+      { id: 'paw', value: formatNum(m.ppeak), unit: 'cmH₂O' },
+      { id: 'peep', value: formatNum(m.peepTotal), unit: 'cmH₂O' },
+      { id: 'fio2', value: formatNum(v.active.fio2), unit: '%' },
+      { id: 'ie', value: `1:${v.active.ieRatio.toFixed(1)}`, unit: '' },
+      { id: 'pplat', value: formatNum(m.pplat), unit: 'cmH₂O' },
+    ],
+    vtPerKg: perKg.toFixed(1),
+    vtPerKgTone:
+      perKg > g.lungProtective.vtPerKgMax
+        ? 'bad'
+        : perKg < g.lungProtective.vtPerKgMin
+          ? 'warn'
+          : 'good',
+    pending,
+  };
+}
+
+export interface CprMetricsViewModel {
+  rate: string;
+  rateTone: Tone;
+  depth: string;
+  depthTone: Tone;
+  ccf: string;
+  ccfTone: Tone;
+  etco2: string;
+  etco2Tone: Tone;
+  qualityKey: I18nKey | null;
+  qualityTone: Tone;
+}
+
+export function cprMetricsViewModel(
+  s: Readonly<SimulationState>,
+  g: GuidelineSet,
+): CprMetricsViewModel {
+  const c = s.interventions.cpr;
+  const t = s.timers;
+  const active = c.active && c.rate !== null;
+  const inRange = (v: number, lo: number, hi: number): Tone =>
+    v >= lo && v <= hi ? 'good' : 'warn';
+  const etco2 = s.devices.monitor.numerics.etco2;
+  const pt = g.physiologicTargets;
+  return {
+    rate: active ? formatNum(c.rate) : '--',
+    rateTone:
+      active && c.rate !== null
+        ? inRange(c.rate, g.compressions.rateMin, g.compressions.rateMax)
+        : 'neutral',
+    depth: active ? formatNum(c.depth, '--', 1) : '--',
+    depthTone:
+      active && c.depth !== null
+        ? inRange(c.depth, g.compressions.depthMinCm, g.compressions.depthMaxCm)
+        : 'neutral',
+    ccf: t.ccf === null ? '--' : formatNum(t.ccf),
+    ccfTone:
+      t.ccf === null
+        ? 'neutral'
+        : t.ccf >= g.compressionFraction.targetPct
+          ? 'good'
+          : t.ccf >= g.compressionFraction.minimumPct
+            ? 'warn'
+            : 'bad',
+    etco2: active ? formatNum(etco2) : '--',
+    etco2Tone:
+      !active || etco2 === null
+        ? 'neutral'
+        : etco2 >= pt.etco2DuringCprMinMmHg
+          ? 'good'
+          : etco2 >= pt.etco2PoorCprMmHg
+            ? 'warn'
+            : 'bad',
+    qualityKey: active && c.quality ? qualityKey(c.quality) : null,
+    qualityTone: active && c.quality ? (c.quality.label === 'GOOD' ? 'good' : 'warn') : 'neutral',
+  };
+}
+
+function qualityKey(q: CprQualityAssessment): I18nKey {
+  return `quality.${q.label}` as const;
+}
+
+export interface TimersViewModel {
+  noFlow: string;
+  lowFlow: string;
+  running: 'noFlow' | 'lowFlow' | null;
+}
+
+export function timersViewModel(s: Readonly<SimulationState>): TimersViewModel {
+  const t = s.timers;
+  const inArrest = t.arrestStartTime !== null && !s.patient.cardio.spontaneousCirculation;
+  return {
+    noFlow: formatMmSs(t.noFlowTime),
+    lowFlow: formatMmSs(t.lowFlowTime),
+    running: inArrest ? (s.interventions.cpr.active ? 'lowFlow' : 'noFlow') : null,
+  };
+}
+
+export interface Message {
+  key: I18nKey;
+  vars?: Record<string, number>;
+  tone: 'info' | 'warn' | 'bad' | 'good';
+}
+
+export function messagesViewModel(s: Readonly<SimulationState>): Message[] {
+  const out: Message[] = [];
+  const inArrest = s.timers.arrestStartTime !== null && !s.patient.cardio.spontaneousCirculation;
+  if (s.control.paused) out.push({ key: 'msg.paused', tone: 'info' });
+  if (inArrest && !s.interventions.cpr.active) out.push({ key: 'msg.noFlow', tone: 'bad' });
+  if (s.interventions.cpr.active) {
+    out.push({ key: 'msg.cprActive', tone: 'good' });
+    out.push({ key: 'msg.artifact', tone: 'warn' });
+  }
+  if (s.patient.rosc && s.patient.cardio.spontaneousCirculation)
+    out.push({ key: 'msg.rosc', tone: 'good' });
+  const v = s.devices.ventilator;
+  if ((['vt', 'rr', 'peep', 'fio2'] as const).some((k) => v.settings[k] !== v.active[k])) {
+    out.push({ key: 'msg.nextBreath', tone: 'info' });
+  }
+  if (s.control.timeScale !== 1 && s.control.timeScale !== 0) {
+    out.push({ key: 'msg.speed', vars: { n: s.control.timeScale }, tone: 'info' });
+  }
+  return out;
+}

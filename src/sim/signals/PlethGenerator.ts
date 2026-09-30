@@ -21,9 +21,15 @@ export class PlethGenerator {
   sample(ctx: SignalContext): number {
     const delaySamples = Math.round(PLETH.pulseTransitS / ctx.dt);
     this.delay.push(ctx.arterialPressure);
-    const delayed = this.delay.length > delaySamples ? (this.delay.shift() ?? ctx.arterialPressure) : ctx.arterialPressure;
+    const delayed =
+      this.delay.length > delaySamples
+        ? (this.delay.shift() ?? ctx.arterialPressure)
+        : ctx.arterialPressure;
 
-    this.baseline = this.baseline === null ? delayed : this.baseline + (delayed - this.baseline) * (1 - Math.exp(-ctx.dt / 1.5));
+    this.baseline =
+      this.baseline === null
+        ? delayed
+        : this.baseline + (delayed - this.baseline) * (1 - Math.exp(-ctx.dt / 1.5));
     const highPassed = delayed - this.baseline;
     this.smoothed += (highPassed - this.smoothed) * (1 - Math.exp(-ctx.dt / 0.05));
 

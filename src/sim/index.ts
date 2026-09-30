@@ -20,7 +20,12 @@ export type {
   AirwayDevice,
   Demographics,
 } from './state/PatientState';
-export type { VentilatorState, VentSettings, VentMeasured, BreathPhase } from './state/VentilatorState';
+export type {
+  VentilatorState,
+  VentSettings,
+  VentMeasured,
+  BreathPhase,
+} from './state/VentilatorState';
 export type {
   CPRState,
   CprQualityPreset,
@@ -28,7 +33,13 @@ export type {
   CprQualityAssessment,
   CprTarget,
 } from './state/CPRState';
-export type { MonitorState, MonitorNumerics, Alarm, AlarmId, AlarmPriority } from './state/MonitorState';
+export type {
+  MonitorState,
+  MonitorNumerics,
+  Alarm,
+  AlarmId,
+  AlarmPriority,
+} from './state/MonitorState';
 export type {
   Command,
   CommandSource,
@@ -41,4 +52,9 @@ export type {
 } from './types/commands';
 export type { SimEvent, CompressionEvent } from './types/events';
 export type { GuidelineSet } from './types/guidelines';
-export type { ScenarioDefinition, PatientInit, ScenarioEvent, ScenarioObjective } from './types/scenario';
+export type {
+  ScenarioDefinition,
+  PatientInit,
+  ScenarioEvent,
+  ScenarioObjective,
+} from './types/scenario';

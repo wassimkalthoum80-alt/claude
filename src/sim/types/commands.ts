@@ -24,10 +24,7 @@ export type CommandSource = 'user' | 'instructor' | 'scenario' | 'system';
 
 /** Clinical milestones the engine writes into the event log itself. */
 export type ClinicalEventType =
-  | 'ARREST_START'
-  | 'CIRCULATION_RESTORED'
-  | 'FIRST_COMPRESSION'
-  | 'SCENARIO_END';
+  'ARREST_START' | 'CIRCULATION_RESTORED' | 'FIRST_COMPRESSION' | 'SCENARIO_END';
 
 export interface CommandLogEntry {
   seq: number;

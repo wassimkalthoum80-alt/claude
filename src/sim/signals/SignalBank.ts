@@ -43,7 +43,16 @@ export class SignalBank {
   }
 
   reset(): void {
-    for (const b of [this.ecg, this.art, this.pleth, this.co2, this.paw, this.flow, this.lungVolume, this.chest]) {
+    for (const b of [
+      this.ecg,
+      this.art,
+      this.pleth,
+      this.co2,
+      this.paw,
+      this.flow,
+      this.lungVolume,
+      this.chest,
+    ]) {
       b.reset();
     }
   }
@@ -51,5 +60,8 @@ export class SignalBank {
 
 /** Read-only view handed to the UI. */
 export type ReadonlySignalBank = Pick<SignalBank, 'channel'> & {
-  readonly [K in SignalChannel]: Pick<RingBuffer, 'rate' | 'count' | 'at' | 'latest' | 'timeOf' | 'indexAt' | 'last' | 'firstAvailable'>;
+  readonly [K in SignalChannel]: Pick<
+    RingBuffer,
+    'rate' | 'count' | 'at' | 'latest' | 'timeOf' | 'indexAt' | 'last' | 'firstAvailable'
+  >;
 };

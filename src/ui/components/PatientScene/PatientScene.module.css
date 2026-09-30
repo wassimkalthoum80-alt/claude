@@ -1,0 +1,29 @@
+.scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Each layer gets its own compositing layer: static layers are painted once and reused. */
+  will-change: transform;
+  pointer-events: none;
+}
+
+.dynamic {
+  contain: strict;
+}
+
+.pallor {
+  transition: opacity 4s ease;
+}
+
+.led {
+  filter: drop-shadow(0 0 6px #ff3b3b);
+}

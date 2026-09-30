@@ -38,6 +38,8 @@ UI commands ──► SimulationEngine ──► SimulationState ──► signa
 | Presentation adapters (state → view models) | `src/ui/adapters` | sim public API, read-only | no |
 | UI components & canvas renderers | `src/ui` | adapters, sim public API | yes |
 
+Implementation note (Milestone 1): the engine itself lives in `src/sim/engine` and shared domain types (commands, scenario, guidelines, events) in `src/sim/types`; the UI imports only `src/sim/index.ts`. See `docs/ARCHITECTURE.md`.
+
 Everything under `src/sim` must run in Node without a browser. That covers unit tests now, and later headless scoring and a Web Worker or server. Enforce the rule with ESLint `no-restricted-imports`.
 
 ### A3. Simulation rules

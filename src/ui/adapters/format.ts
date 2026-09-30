@@ -1,0 +1,16 @@
+/** mm:ss for timers. */
+export function formatMmSs(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds + 1e-6));
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Integer or placeholder ("--" for unmeasurable values, "---" for HR in VF, like real monitors). */
+export function formatNum(
+  value: number | null | undefined,
+  placeholder = '--',
+  digits = 0,
+): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return placeholder;
+  return value.toFixed(digits);
+}
