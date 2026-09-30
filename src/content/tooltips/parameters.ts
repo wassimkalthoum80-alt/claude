@@ -20,7 +20,8 @@ export type TooltipId =
   | 'cprEtco2'
   | 'quality'
   | 'noFlow'
-  | 'lowFlow';
+  | 'lowFlow'
+  | 'st';
 
 export interface Tooltip {
   title: string;
@@ -120,6 +121,11 @@ export const TOOLTIPS: Record<'en' | 'de', Record<TooltipId, Tooltip>> = {
       normal: 'Arrest with compressions',
       cpr: 'CPR provides ≈ 25–30 % of normal cardiac output at best.',
     },
+    st: {
+      title: 'ST segment (mm, 1 mm = 0.1 mV) at J + 60 ms',
+      normal: 'within ±1 mm; alarm at ±2 mm. V5 (5-lead cable) shows lateral ischaemia best',
+      cpr: 'Not measurable during compressions, in VF or asystole.',
+    },
   },
   de: {
     hr: {
@@ -211,6 +217,12 @@ export const TOOLTIPS: Record<'en' | 'de', Record<TooltipId, Tooltip>> = {
       title: 'Low-Flow-Zeit',
       normal: 'Stillstand mit Kompressionen',
       cpr: 'HLW erreicht bestenfalls ≈ 25–30 % des normalen Herzzeitvolumens.',
+    },
+    st: {
+      title: 'ST-Strecke (mm, 1 mm = 0,1 mV) bei J + 60 ms',
+      normal:
+        'innerhalb ±1 mm; Alarm bei ±2 mm. V5 (5-Kanal-Kabel) zeigt laterale Ischämien am besten',
+      cpr: 'Nicht messbar während Kompressionen, bei Kammerflimmern oder Asystolie.',
     },
   },
 };

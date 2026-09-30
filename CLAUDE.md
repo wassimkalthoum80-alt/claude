@@ -58,7 +58,7 @@ Everything under `src/sim` must run in Node without a browser. That covers unit 
 - **Monitor colours:** ECG/HR green, SpO2/pleth cyan, ART red, CO2 yellow. Ventilator pressure is light blue and flow is amber. Alarm priority colours: high = red, medium = yellow, low/advisory = cyan.
 - **Sweep display, not a scrolling chart.** The trace is written by a moving cursor that erases the oldest data just ahead of it. Speeds: ECG, ART and pleth at 25 mm/s; CO2 at 6.25 mm/s. The ventilator shows a fixed window of about 12 s.
 - **Numerics** are averaged and refreshed like a real monitor (HR over several beats, BP per beat, about 1 Hz refresh). No flicker.
-- **ECG electrodes** use IEC (European) colours by default: RA red, LA yellow, LL green, RL black. AHA colours are an option. In the head-end view the patient's right side appears on the **viewer's right**.
+- **ECG electrodes** use IEC (European) colours by default. The 3-electrode cable is RA red, LA yellow, LL green. The 5-electrode cable adds RL/N black and a white chest electrode at V5. AHA colours are an option. In the head-end view the patient's right side appears on the **viewer's right**.
 - The pause menu and footer show: "For education only — not a medical device."
 
 ### A5. Code rules

@@ -8,10 +8,10 @@ import { GloveHand, InterlockedHands } from './Glove';
 import { SceneDefs } from './SceneDefs';
 import styles from './PatientScene.module.css';
 
-/** IEC (Europe) and AHA ECG electrode colours: RA, LA, LL, RL/N. */
+/** IEC (Europe) and AHA ECG electrode colours: RA, LA, LL, RL/N and the chest electrode C/V. */
 const ELECTRODE_COLORS = {
-  IEC: { ra: '#e3342f', la: '#f2c418', ll: '#2fb35a', rl: '#1b1b1b' },
-  AHA: { ra: '#f2f2f2', la: '#1b1b1b', ll: '#e3342f', rl: '#2fb35a' },
+  IEC: { ra: '#e3342f', la: '#f2c418', ll: '#2fb35a', rl: '#1b1b1b', c: '#f4f4f4' },
+  AHA: { ra: '#f2f2f2', la: '#1b1b1b', ll: '#e3342f', rl: '#2fb35a', c: '#8a5a36' },
 } as const;
 
 /*
@@ -23,6 +23,8 @@ const RA = { x: 992, y: 700 };
 const LA = { x: 608, y: 700 };
 const LL = { x: 648, y: 548 };
 const RL = { x: 952, y: 548 };
+/** chest electrode at V5: patient's left anterior axillary line, 5th intercostal space (viewer's left) */
+const V5 = { x: 648, y: 624 };
 const YOKE = { x: 930, y: 770 };
 
 const PALLOR = '#8e9fb0';
@@ -78,6 +80,7 @@ export function PatientScene() {
         rescuerHands: v.rescuerHands,
         skinPerfusion: Math.round(v.skinPerfusion * 20) / 20,
         electrodes: v.electrodes,
+        ecgLeads: v.ecgLeads,
         airway: v.airwayDevice,
       };
     },
@@ -242,14 +245,21 @@ export function PatientScene() {
           <path d={TORSO} fill={PALLOR} opacity={pallor} className={styles.pallor} />
           <ellipse cx="800" cy="640" rx="170" ry="110" fill="#fff4e6" opacity="0.08" />
 
-          {/* ECG electrodes; leads converge on a yoke beside the neck, trunk cable to the monitor */}
-          {(
-            [
-              [LA, ec.la],
-              [RA, ec.ra],
-              [LL, ec.ll],
-              [RL, ec.rl],
-            ] as const
+          {/* ECG electrodes (3: RA red → LA yellow → LL green; 5: + RL black and chest white at V5);
+              leads converge on a yoke beside the neck, trunk cable to the monitor */}
+          {(vis.ecgLeads === 5
+            ? ([
+                [LA, ec.la],
+                [RA, ec.ra],
+                [LL, ec.ll],
+                [RL, ec.rl],
+                [V5, ec.c],
+              ] as const)
+            : ([
+                [LA, ec.la],
+                [RA, ec.ra],
+                [LL, ec.ll],
+              ] as const)
           ).map(([p, color], i) => (
             <g key={i}>
               <path

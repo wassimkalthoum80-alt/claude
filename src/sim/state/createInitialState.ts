@@ -97,6 +97,7 @@ export function createInitialState(
         lowFlowTime: 0,
         asystoleDose: 0,
         arrestCause: null,
+        ischaemia: 0,
       },
       reserves: {
         preloadReserve: 1,
@@ -118,10 +119,13 @@ export function createInitialState(
           spo2: perfusing ? 99 : null,
           etco2: 36,
           ppv: null,
+          stII: null,
+          stV: null,
           perfusionIndex: perfusing ? 1 : 0,
         },
         alarms: [],
         lastRefresh: 0,
+        ecgLeads: scenario.monitor?.ecgLeads ?? 3,
       },
       ventilator: {
         mode: 'VCV',

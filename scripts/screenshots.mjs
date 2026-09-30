@@ -169,6 +169,30 @@ for (const size of sizes) {
   await page.close();
 }
 
+// ECG cable: 3 electrodes (default) and 5 electrodes with V5 + ST; hypoxic ST depression in V5.
+{
+  const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+  page.on('console', (m) => m.type() === 'error' && errors.push(`[ecg] ${m.text()}`));
+  page.on('pageerror', (e) => errors.push(`[ecg] ${e.message}`));
+  const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await run(12);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${outDir}/ecg-1-three-lead.jpg`, type: 'jpeg', quality: 88 });
+  await page.click('[data-testid=ecg-leads-5]');
+  await run(12);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${outDir}/ecg-2-five-lead.jpg`, type: 'jpeg', quality: 88 });
+  await page.evaluate(() =>
+    window.__resusEngine.dispatch({ type: 'SET_CIRCUIT', connected: false }, 'instructor'),
+  );
+  await run(290);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${outDir}/ecg-3-hypoxic-st-depression.jpg`, type: 'jpeg', quality: 88 });
+  await page.close();
+}
+
 await browser.close();
 if (errors.length) {
   console.error('Console errors:\n' + errors.join('\n'));

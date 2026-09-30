@@ -73,6 +73,14 @@ export const ECG = {
   baselineWander: 0.03,
   /** mV — compression artefact at reference depth */
   compressionArtifact: 0.9,
+  /** mV — ST depression in lead II at maximal myocardial ischaemia */
+  stDepressionII: 0.15,
+  /** mV — ST depression in V5 at maximal myocardial ischaemia (lateral subendocardium) */
+  stDepressionV5: 0.3,
+  // SIM-ASSUMPTION: a healthy coronary circulation can raise O2 supply ≈ 2.5-fold before demand outstrips it.
+  coronaryReserve: 2.5,
+  /** s — onset/offset of ischaemic ST changes */
+  ischaemiaTauS: 15,
 } as const;
 
 export const GAS = {

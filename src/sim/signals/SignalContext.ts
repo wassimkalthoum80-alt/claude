@@ -15,6 +15,8 @@ export interface SignalContext {
   kinematics: CompressionKinematics | null;
   /** mV — rhythm component of lead II from the rhythm engine */
   rhythmEcg: number;
+  /** mV — rhythm component of the chest lead V5 */
+  rhythmEcgV: number;
   /** mmHg — true arterial pressure from the cardiovascular model */
   arterialPressure: number;
   breath: { start: number; expirationStart: number; expectedExpiration: number; total: number };

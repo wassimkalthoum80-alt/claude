@@ -5,5 +5,5 @@ export const asystole: RhythmDefinition = {
   id: 'asystole',
   perfusing: false,
   organised: false,
-  ecg: (ctx) => 0.012 * Math.sin(2 * Math.PI * 0.21 * ctx.t),
+  ecg: (ctx) => 0.012 * Math.sin(2 * Math.PI * 0.21 * ctx.t + (ctx.lead === 'V5' ? 1.3 : 0)),
 };

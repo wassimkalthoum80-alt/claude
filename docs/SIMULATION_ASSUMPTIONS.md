@@ -148,6 +148,12 @@ simulation state and shown in the instructor panel.
 | Heart-rate variability | ±1 % beat to beat | Low HRV under general anaesthesia. |
 | VF | 3 random-walk oscillators, 4.6–7.2 Hz; amplitude 0.65 → 0.15 mV with τ = 240 s | Coarse VF becomes fine VF over minutes. |
 | Asystole | near-flat line + wander + noise | — |
+| ECG cable | 3 electrodes (RA red, LA yellow, LL green → lead II) or 5 electrodes (+ RL/N black, chest white at V5; AHA: white/black/red/green/brown). Both leads are always generated; the cable only decides what the monitor shows and measures | Anaesthesia standard: II for rhythm, V5 for lateral ischaemia. |
+| Lead V5 morphology | P 0.08, q −0.1, R 1.5, S −0.16, T 0.36 mV; VF/PEA/asystole projected with other weights | Typical adult V5 amplitudes. |
+| T-wave gate | T wave starts no earlier than J + 50 ms (J = R + 50 ms) | Keeps the ST segment measurable at high rates. |
+| Myocardial ischaemia | 1 − reserve·supply/demand; demand ∝ HR·MAP; supply ∝ CaO₂·(MAP − 10)·diastolic time fraction; reserve 2.5 × myocardial reserve; τ 15 s; 1 during arrest | Heuristic O₂ supply/demand balance. A healthy heart tolerates tachycardia or moderate hypoxaemia alone; hypoxaemic tachycardia, or hypotension with tachycardia in a patient with low reserve, causes ischaemia. |
+| ST depression | −3 mm in V5 and −1.5 mm in II at maximal ischaemia, horizontal, blending into the T wave | Subendocardial ischaemia is seen best in the lateral chest leads. No ST elevation (STEMI) yet. |
+| ST measurement | level at J + 60 ms (J + 40 ms above 100/min) minus the PR segment, median of the last 8 beats, in mm; II always, V5 only with 5 electrodes; "--" in VF, asystole and during CPR; alarm (medium) at ±2 mm | Like commercial ST monitoring. With a 3-electrode cable, lateral ischaemia is often missed — as in reality. |
 | PEA | organised broad complexes (QRS ≈ 160 ms, broad T, no P), ±3 % R–R, no ejection | One representative hypoxic morphology. |
 | ECG compression artefact | 0.9 mV biphasic at 5.3 cm | The rhythm cannot be assessed while compressing. |
 | Arrhythmia detection | perfect: HR "---" in VF, 0 in asystole; in PEA the monitor counts the complexes | Real monitors can misclassify. Later milestones may add artefact-driven errors. |

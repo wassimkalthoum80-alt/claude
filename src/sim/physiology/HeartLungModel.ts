@@ -1,7 +1,33 @@
 import type { HeartLungState, PatientState } from '../state/PatientState';
 import type { HeartLungCalibration } from '../state/SimulationState';
-import { LUNG_PRESETS, OXYGEN } from './parameters';
+import { ECG, LUNG_PRESETS, OXYGEN } from './parameters';
 import { approach, clamp } from './shapes';
+
+/** mL O2/dL — arterial O2 content of the baseline patient (reference for coronary O2 supply) */
+const REFERENCE_CAO2 = 19;
+
+/**
+ * 0..1 myocardial ischaemia from the O2 supply/demand balance of the left ventricle.
+ * SIM-ASSUMPTION (heuristic):
+ *   demand ∝ HR × MAP (rate–pressure product)
+ *   supply ∝ CaO2 × coronary driving pressure (MAP − 10) × diastolic time fraction, × coronary reserve
+ *   ischaemia = 1 − reserve·supply/demand (both relative to the 80/min, MAP 87, CaO2 19 baseline).
+ * A healthy heart (reserve 2.5 × myocardial reserve) tolerates tachycardia or moderate hypoxaemia alone; the
+ * combination (hypoxaemic tachycardia, hypotension with tachycardia) or a low reserve produces ST depression.
+ */
+export function myocardialIschaemia(patient: PatientState): number {
+  const { cardio, gas, reserves } = patient;
+  const hr = Math.max(20, cardio.heartRate);
+  const map = Math.max(0, cardio.meanArterialPressure);
+  const diastolicFraction = (hr: number) => clamp(1 - (hr * (0.49 - 0.0017 * hr)) / 60, 0.05, 1);
+  const demand = (hr * Math.max(20, map)) / (80 * 87);
+  const supply =
+    (gas.cao2 / REFERENCE_CAO2) *
+    clamp((map - 10) / 77, 0, 1.5) *
+    (diastolicFraction(hr) / diastolicFraction(80));
+  const reserve = ECG.coronaryReserve * reserves.cardiacReserve;
+  return clamp(1 - (reserve * supply) / demand, 0, 1);
+}
 
 /** A rhythm change the heart–lung model asks the engine to make (the engine logs and applies it). */
 export type HeartLungTransition =
@@ -58,6 +84,7 @@ export class HeartLungModel {
     hl.lowFlowTime = 0;
     hl.asystoleDose = 0;
     hl.arrestCause = null;
+    hl.ischaemia = 0;
     patient.cardio.preload = hl.preloadFactor;
     patient.cardio.contractility = 1;
     patient.cardio.svrFactor = 1;
@@ -114,6 +141,13 @@ export class HeartLungModel {
       gas.lactate + dt * (0.018 * deficit - ((1 - deficit) * (gas.lactate - 1)) / 600),
       1,
       25,
+    );
+
+    hl.ischaemia = approach(
+      hl.ischaemia,
+      cardio.spontaneousCirculation ? myocardialIschaemia(patient) : 1,
+      dt,
+      ECG.ischaemiaTauS,
     );
 
     if (!cardio.spontaneousCirculation) {

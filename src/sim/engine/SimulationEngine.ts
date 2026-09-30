@@ -10,6 +10,7 @@ import { CardiovascularModel } from '../physiology/CardiovascularModel';
 import { BloodGasModel, type GasExchangeInputs } from '../physiology/BloodGasModel';
 import { HeartLungModel, type HeartLungTransition } from '../physiology/HeartLungModel';
 import { LungStateModel } from '../physiology/LungStateModel';
+import { ECG } from '../physiology/parameters';
 import { clamp } from '../physiology/shapes';
 import { RespiratoryDriveModel } from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
@@ -141,6 +142,10 @@ export class SimulationEngine {
     const cardioState = s.patient.cardio;
     const cprState = s.interventions.cpr;
     const vent = s.devices.ventilator;
+    // SIM-ASSUMPTION: subendocardial ischaemia depresses ST, most in the lateral chest lead (V5 −3 mm,
+    // lead II −1.5 mm at maximal ischaemia).
+    const stII = -ECG.stDepressionII * s.patient.heartLung.ischaemia;
+    const stV = -ECG.stDepressionV5 * s.patient.heartLung.ischaemia;
 
     for (let k = 0; k < SUBSTEPS_PER_TICK; k++) {
       this.substep += 1;
@@ -189,11 +194,13 @@ export class SimulationEngine {
         patient: s.patient,
         vent,
         kinematics,
-        rhythmEcg: this.rhythm.ecg(t, cardioState, this.rng),
+        rhythmEcg: this.rhythm.ecg(t, cardioState, this.rng, 'II', stII),
+        rhythmEcgV: this.rhythm.ecg(t, cardioState, this.rng, 'V5', stV),
         arterialPressure,
         breath: this.ventilator.timing,
       };
       this.bank.ecg.push(this.ecgGen.sample(ctx));
+      this.bank.ecgV.push(this.ecgGen.sampleV(ctx));
       if (this.substep % 2 === 0) {
         ctx.dt = SUBSTEP_S * 2;
         this.bank.art.push(this.artGen.sample(ctx));
@@ -345,6 +352,9 @@ export class SimulationEngine {
         break;
       case 'SET_ARREST_MODEL':
         s.model.arrestModelEnabled = command.enabled;
+        break;
+      case 'SET_ECG_LEADS':
+        s.devices.monitor.ecgLeads = command.leads === 5 ? 5 : 3;
         break;
       case 'SET_RESP_DRIVE':
         s.patient.resp.drive = command.drive;

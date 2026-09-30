@@ -1,7 +1,7 @@
 import type { SeededRng } from '../core/rng';
 import type { CardioState, RhythmId } from '../state/PatientState';
 import { createRhythmRegistry, type RhythmRegistry } from './registry';
-import type { RhythmDefinition } from './types';
+import type { EcgLead, RhythmDefinition } from './types';
 
 /**
  * Schedules QRS complexes for organised rhythms and evaluates the rhythm's ECG component.
@@ -54,9 +54,11 @@ export class RhythmEngine {
     return beats;
   }
 
-  /** mV — rhythm component of lead II. */
-  ecg(t: number, cardio: CardioState, rng: SeededRng): number {
+  /** mV — rhythm component of a lead, with an ST shift (mV) for that lead. */
+  ecg(t: number, cardio: CardioState, rng: SeededRng, lead: EcgLead = 'II', st = 0): number {
     return this.current.ecg({
+      lead,
+      st,
       t,
       lastBeat: this.current.organised ? this.lastBeat : null,
       previousBeat: this.current.organised ? this.previousBeat : null,

@@ -13,6 +13,46 @@
   border-bottom: 1px solid var(--divider);
 }
 
+.compact .row {
+  height: clamp(52px, 6.9vh, 88px);
+}
+
+.leadSwitch {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  z-index: 1;
+  display: inline-flex;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.leadSwitch button {
+  padding: 2px 6px;
+  border: none;
+  background: rgba(6, 10, 14, 0.8);
+  color: var(--text-dim);
+  font: 600 9px/1.2 var(--font-ui);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.leadSwitch button + button {
+  border-left: 1px solid var(--tile-border);
+}
+
+.leadSwitch .leadActive {
+  color: var(--ecg);
+  background: rgba(61, 255, 114, 0.14);
+}
+
+.st {
+  font-size: clamp(11px, 0.85vw, 15px);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
 .row:last-child {
   border-bottom: none;
 }

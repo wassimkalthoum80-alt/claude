@@ -21,6 +21,10 @@ For education only — not a medical device.
 |---|---|
 | ![Breath stacking](docs/screenshots/hl-1-asthma-stacking.jpg) | ![Hypoxic PEA](docs/screenshots/hl-4-hypoxic-pea.jpg) |
 
+| 5-lead ECG: V5 trace, ST-II / ST-V5 | Hypoxaemic tachycardia: ST depression, deepest in V5 |
+|---|---|
+| ![5-lead ECG](docs/screenshots/ecg-2-five-lead.jpg) | ![ST depression](docs/screenshots/ecg-3-hypoxic-st-depression.jpg) |
+
 ## Quick start
 
 Requirements: Node.js ≥ 20.
@@ -80,6 +84,11 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   pleural pressure, recruitment, overdistension, preload/RV/myocardial factors, O₂ debt and low-flow meters). It
   also has live sliders for volume status, RV and myocardial reserve and sympathetic response, a switch for the
   arrest model, and the full heuristic calibration.
+- **ECG cable: 3 or 5 electrodes** (switch in the ECG trace or the pause menu). The 3-lead cable (red, yellow,
+  green) shows lead II. The 5-lead cable adds black (neutral) and white (chest, V5) and a **V5 trace**. The
+  monitor measures **ST** in II (and V5) at J + 60 ms and alarms at ±2 mm. Myocardial ischaemia comes from the
+  heart–lung model (O₂ supply/demand), so hypoxaemic tachycardia depresses ST, most in V5. Lower the myocardial
+  reserve in the instructor panel to simulate a coronary patient.
 - New cases: **Silent disconnection** (hypoxic arrest if unnoticed) and **Breath stacking in severe asthma**
   (low-flow PEA unless expiration is lengthened or the tube is briefly disconnected). The ventilator header has a
   **DISCONNECT / RECONNECT** button for the learner.

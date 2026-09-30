@@ -12,7 +12,11 @@ const PRIORITY: Record<AlarmId, AlarmPriority> = {
   SPO2_LOW: 'medium',
   HR_LOW: 'high',
   HR_HIGH: 'medium',
+  ST_DEVIATION: 'medium',
 };
+
+/** mm — ST deviation (either measured lead) that raises the ST alarm */
+export const ST_ALARM_MM = 2;
 
 /** /min — heart-rate alarm limits (typical adult defaults) */
 export const HR_LOW_LIMIT = 45;
@@ -40,6 +44,8 @@ export class AlarmEngine {
     const hr = mon.numerics.hr;
     if (hr !== null && hr > 0 && hr < HR_LOW_LIMIT) active.add('HR_LOW');
     if (hr !== null && hr > HR_HIGH_LIMIT) active.add('HR_HIGH');
+    const st = [mon.numerics.stII, mon.numerics.stV];
+    if (st.some((v) => v !== null && Math.abs(v) >= ST_ALARM_MM)) active.add('ST_DEVIATION');
     if (mon.numerics.artMean !== null && mon.numerics.artMean < ART_LOW_MAP) active.add('ART_LOW');
     if (mon.numerics.spo2 === null) active.add('SPO2_NO_PULSE');
     if (vent.pressureLimited || vent.measured.ppeak >= vent.active.pmax) active.add('PAW_HIGH');

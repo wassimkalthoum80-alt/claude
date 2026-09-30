@@ -22,7 +22,17 @@ export interface MonitorViewModel {
   etco2: string;
   /** pulse-pressure variation, '' when not measurable */
   ppv: string;
-  flash: { hr: AlarmPriority | null; spo2: AlarmPriority | null; art: AlarmPriority | null };
+  /** electrodes attached (3 → lead II only; 5 → lead II + V5) */
+  ecgLeads: 3 | 5;
+  /** ST deviation in mm with sign ("+0.4", "−1.2", "--") */
+  stII: string;
+  stV: string;
+  flash: {
+    hr: AlarmPriority | null;
+    spo2: AlarmPriority | null;
+    art: AlarmPriority | null;
+    st: AlarmPriority | null;
+  };
 }
 
 export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel {
@@ -36,12 +46,24 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
     artMean: formatNum(n.artMean, '--'),
     etco2: formatNum(n.etco2, '--'),
     ppv: n.ppv === null ? '' : String(n.ppv),
+    ecgLeads: s.devices.monitor.ecgLeads,
+    stII: formatSt(n.stII),
+    stV: formatSt(n.stV),
     flash: {
       hr: prio('VFIB', 'ASYSTOLE', 'HR_LOW', 'HR_HIGH'),
       spo2: prio('SPO2_LOW', 'SPO2_NO_PULSE'),
       art: prio('ART_LOW'),
+      st: prio('ST_DEVIATION'),
     },
   };
+}
+
+/** mm with an explicit sign, as monitors print ST ("+0.4", "−1.2"; "0.0"; "--" when not measurable). */
+export function formatSt(mm: number | null): string {
+  if (mm === null) return '--';
+  const v = Math.round(mm * 10) / 10;
+  if (v === 0) return '0.0';
+  return `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
 }
 
 export interface VentTile {

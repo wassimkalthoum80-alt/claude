@@ -17,6 +17,8 @@ export interface PatientVisualState {
   /** 0..1 skin perfusion (1 = pink, 0 = pale/grey) */
   skinPerfusion: number;
   electrodes: 'IEC' | 'AHA';
+  /** 3 electrodes (RA, LA, LL) or 5 (+ RL/N and the chest electrode at V5) */
+  ecgLeads: 3 | 5;
   lines: { arterial: boolean; iv: boolean; bpCuff: boolean; pulseOximeter: boolean };
 }
 
@@ -30,6 +32,7 @@ export function staticVisualState(
     airwayDevice: s.patient.airway.device,
     skinPerfusion: Math.min(1, s.patient.cardio.cardiacOutput / 5),
     electrodes,
+    ecgLeads: s.devices.monitor.ecgLeads,
     lines: { arterial: true, iv: true, bpCuff: true, pulseOximeter: true },
   };
 }

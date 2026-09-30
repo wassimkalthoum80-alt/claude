@@ -136,6 +136,12 @@ export function heartLungViewModel(s: Readonly<SimulationState>): HeartLungViewM
       tone: tone(hl.myocardialFactor, 0.85, 0.6, false),
     },
     {
+      label: 'hl.ischaemia',
+      value: pct(hl.ischaemia),
+      unit: '%',
+      tone: tone(hl.ischaemia, 0.2, 0.5),
+    },
+    {
       label: 'hl.svr',
       value: pct(c.svrFactor),
       unit: '%',

@@ -3,6 +3,8 @@ import { RingBuffer } from './RingBuffer';
 
 export type SignalChannel =
   | 'ecg'
+  /** mV — chest lead V5 (always generated; displayed only with a 5-electrode cable) */
+  | 'ecgV'
   | 'art'
   | 'pleth'
   | 'co2'
@@ -16,6 +18,7 @@ export type SignalChannel =
 /** Units of each channel, for renderers and tests. */
 export const SIGNAL_UNITS: Record<SignalChannel, string> = {
   ecg: 'mV',
+  ecgV: 'mV',
   art: 'mmHg',
   pleth: 'a.u.',
   co2: 'mmHg',
@@ -30,6 +33,7 @@ const HISTORY_S = 30;
 /** All generated signals. Renderers and the monitor device read from here; only the engine writes. */
 export class SignalBank {
   readonly ecg = new RingBuffer(SUBSTEP_HZ, HISTORY_S);
+  readonly ecgV = new RingBuffer(SUBSTEP_HZ, HISTORY_S);
   readonly art = new RingBuffer(SLOW_SIGNAL_HZ, HISTORY_S);
   readonly pleth = new RingBuffer(SLOW_SIGNAL_HZ, HISTORY_S);
   readonly co2 = new RingBuffer(SLOW_SIGNAL_HZ, HISTORY_S);
@@ -45,6 +49,7 @@ export class SignalBank {
   reset(): void {
     for (const b of [
       this.ecg,
+      this.ecgV,
       this.art,
       this.pleth,
       this.co2,

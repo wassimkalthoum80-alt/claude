@@ -118,6 +118,7 @@ export function PauseMenu() {
   const t = useT();
   const engine = useEngine();
   const { ui, setUi } = useUi();
+  const ecgLeads = useEngineSelector((s: Readonly<SimulationState>) => s.devices.monitor.ecgLeads);
   if (!ui.menuOpen) return null;
 
   const resume = () => {
@@ -185,6 +186,19 @@ export function PauseMenu() {
             >
               {t('menu.off')}
             </button>
+          </div>
+          <span>{t('menu.ecgLeads')}</span>
+          <div className={styles.segmented}>
+            {([3, 5] as const).map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={ecgLeads === n ? styles.segActive : ''}
+                onClick={() => engine.dispatch({ type: 'SET_ECG_LEADS', leads: n }, 'user')}
+              >
+                {t(n === 3 ? 'monitor.leads3' : 'monitor.leads5')}
+              </button>
+            ))}
           </div>
           <span>{t('menu.electrodes')}</span>
           <div className={styles.segmented}>

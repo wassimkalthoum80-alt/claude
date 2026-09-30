@@ -147,6 +147,8 @@ export interface HeartLungState {
   asystoleDose: number;
   /** what caused the last model-driven arrest */
   arrestCause: ArrestCause;
+  /** 0..1 — myocardial ischaemia (O2 supply/demand imbalance); drives ST depression on the ECG */
+  ischaemia: number;
 }
 
 /** Patient reserves the instructor can change live (dimensionless, 1 = normal). */

@@ -17,7 +17,7 @@ export function createEngine(
 /** Samples of a channel with sim time in [from, to). */
 export function window(
   engine: SimulationEngine,
-  channel: 'ecg' | 'art' | 'pleth' | 'co2' | 'paw' | 'flow',
+  channel: 'ecg' | 'ecgV' | 'art' | 'pleth' | 'co2' | 'paw' | 'flow',
   from: number,
   to: number,
 ): number[] {

@@ -4,6 +4,7 @@ import { baselinePatient, vfUnderAnaesthesia } from '../../content/scenarios';
 import { SimulationEngine } from '../../sim';
 import { formatMmSs, formatNum } from './format';
 import { heartLungViewModel } from './heartLungViewModel';
+import { formatSt } from './viewModels';
 import { dynamicVisualState } from './patientVisualState';
 import { buildRunSummary } from './runSummary';
 import {
@@ -104,5 +105,26 @@ describe('heart–lung view model', () => {
     e.runFor(240);
     const later = heartLungViewModel(e.getSnapshot());
     expect(later.blood.find((r) => r.label === 'hl.sao2')?.tone).toBe('bad');
+  });
+});
+
+describe('ST formatting', () => {
+  it('prints mm with an explicit sign, 0.0 for zero and -- when not measurable', () => {
+    expect(formatSt(null)).toBe('--');
+    expect(formatSt(0)).toBe('0.0');
+    expect(formatSt(-0.04)).toBe('0.0');
+    expect(formatSt(1.24)).toBe('+1.2');
+    expect(formatSt(-2)).toBe('−2.0');
+  });
+
+  it('the monitor view model follows the ECG cable', () => {
+    const e = new SimulationEngine({ scenario: baselinePatient, guidelines: erc2025 });
+    e.runFor(12);
+    expect(monitorViewModel(e.getSnapshot()).ecgLeads).toBe(3);
+    expect(monitorViewModel(e.getSnapshot()).stV).toBe('--');
+    e.dispatch({ type: 'SET_ECG_LEADS', leads: 5 });
+    e.runFor(12);
+    expect(monitorViewModel(e.getSnapshot()).ecgLeads).toBe(5);
+    expect(monitorViewModel(e.getSnapshot()).stV).not.toBe('--');
   });
 });

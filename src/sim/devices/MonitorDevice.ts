@@ -11,6 +11,8 @@ const PRESSURE_WINDOW_S = 3;
 const HR_BEATS = 5;
 /** s — window for the pulse-pressure variation */
 const PPV_WINDOW_S = 15;
+/** beats averaged (median) for the ST measurement */
+const ST_BEATS = 8;
 
 /**
  * Patient monitor: measures its numbers from the generated signals, like a real monitor.
@@ -20,6 +22,8 @@ const PPV_WINDOW_S = 15;
  *   lung-to-finger circulation time and is averaged over a few seconds, like a real oximeter
  * - EtCO2 = peak CO2 of the last completed breath; "---" (null) when no breath has been detected for 15 s
  * - PPV = (PPmax − PPmin) / mean PP over the beats of the last 15 s (arterial line, sinus rhythm)
+ * - ST = level at J + 60 ms (J + 40 ms above 100/min) minus the isoelectric PR segment, median of the last
+ *   8 beats, in mm (0.1 mV); lead II always, V5 only with a 5-electrode cable; "--" in VF, asystole and CPR
  */
 export class MonitorDevice {
   private beats: number[] = [];
@@ -76,6 +80,14 @@ export class MonitorDevice {
 
     mon.numerics.hr = this.heartRate(state);
     mon.numerics.ppv = this.pulsePressureVariation(state, signals);
+    const stMeasurable =
+      state.patient.cardio.rhythm !== 'vf' &&
+      state.patient.cardio.rhythm !== 'asystole' &&
+      !state.interventions.cpr.active;
+    const hr = mon.numerics.hr ?? 0;
+    mon.numerics.stII = stMeasurable ? this.stDeviation(state, signals.ecg, hr) : null;
+    mon.numerics.stV =
+      stMeasurable && mon.ecgLeads === 5 ? this.stDeviation(state, signals.ecgV, hr) : null;
 
     const n = Math.round(PRESSURE_WINDOW_S * signals.art.rate);
     const art = signals.art.last(n);
@@ -104,6 +116,38 @@ export class MonitorDevice {
     mon.numerics.perfusionIndex = Math.round(pi * 100) / 100;
     mon.numerics.spo2 =
       pi >= PLETH.perfusionIndexThreshold ? Math.round(clamp(this.spo2Averaged, 0, 100)) : null;
+  }
+
+  /** mm — median ST deviation of the last beats in one lead. */
+  private stDeviation(
+    state: SimulationState,
+    ecg: SignalBank['ecg'],
+    heartRate: number,
+  ): number | null {
+    // SIM-ASSUMPTION: the monitor knows the R-peak times (QRS detector) and places J at R + 50 ms
+    // (R + 90 ms for broad PEA complexes); the ST point moves to J + 40 ms above 100/min, as on most monitors.
+    const broad = state.patient.cardio.rhythm === 'pea';
+    const j = broad ? 0.09 : 0.05;
+    const stPoint = j + (heartRate > 100 ? 0.04 : 0.06);
+    const mean = (from: number, to: number) => {
+      const a = Math.max(ecg.firstAvailable, ecg.indexAt(from));
+      const b = Math.min(ecg.count - 1, ecg.indexAt(to));
+      if (b < a) return null;
+      let sum = 0;
+      for (let i = a; i <= b; i++) sum += ecg.at(i) ?? 0;
+      return sum / (b - a + 1);
+    };
+    const values: number[] = [];
+    const beats = this.ppvBeats.filter((b) => b < state.time - stPoint - 0.02).slice(-ST_BEATS);
+    for (const b of beats) {
+      const iso = mean(b - (broad ? 0.12 : 0.09), b - (broad ? 0.09 : 0.06));
+      const st = mean(b + stPoint - 0.008, b + stPoint + 0.008);
+      if (iso !== null && st !== null) values.push((st - iso) * 10);
+    }
+    if (values.length < 3) return null;
+    values.sort((x, y) => x - y);
+    const median = values[Math.floor(values.length / 2)] ?? 0;
+    return Math.round(median * 10) / 10;
   }
 
   private pulsePressureVariation(state: SimulationState, signals: SignalBank): number | null {

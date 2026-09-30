@@ -17,7 +17,7 @@ export { LUNG_PRESETS } from './physiology/parameters';
 export { DRIVE_PATTERNS } from './physiology/RespiratoryDrive';
 export { saturation, oxygenContent } from './physiology/bloodGas';
 export { HEART_LUNG_CALIBRATION } from './physiology/parameters';
-export { ART_LOW_MAP } from './devices/AlarmEngine';
+export { ART_LOW_MAP, ST_ALARM_MM } from './devices/AlarmEngine';
 export { CPR_PRESETS, assessCprQuality } from './interventions/cprQuality';
 export { SIGNAL_UNITS, type SignalChannel, type ReadonlySignalBank } from './signals/SignalBank';
 export type { RingBuffer } from './signals/RingBuffer';
@@ -59,6 +59,7 @@ export type {
   Alarm,
   AlarmId,
   AlarmPriority,
+  EcgLeadSet,
 } from './state/MonitorState';
 export type {
   Command,

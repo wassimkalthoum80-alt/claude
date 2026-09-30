@@ -26,6 +26,14 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
   expect(painted).toHaveLength(7); // ECG, pleth, ART, CO2, Paw, flow, volume
   for (const lit of painted) expect(lit).toBeGreaterThan(200);
 
+  // 5-electrode cable: an extra V5 trace with ST numerics.
+  await page.getByTestId('ecg-leads-5').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(4));
+  await expect(page.locator('canvas')).toHaveCount(8);
+  await expect(page.getByText(/ST-V5/)).toBeVisible();
+  await page.getByTestId('ecg-leads-3').click();
+  await expect(page.locator('canvas')).toHaveCount(7);
+
   // Instructor triggers VF, the player presses Space.
   await page.keyboard.press('Backquote');
   await page.getByTestId('rhythm-vf').click();

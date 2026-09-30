@@ -1,6 +1,7 @@
 import type { CprQualityPreset } from '../state/CPRState';
 import type { AirwayDevice, LungPreset, PhysiologyReserves, RhythmId } from '../state/PatientState';
 import type { VentSettings } from '../state/VentilatorState';
+import type { EcgLeadSet } from '../state/MonitorState';
 import type { Command } from './commands';
 
 export interface PatientInit {
@@ -48,6 +49,8 @@ export interface ScenarioDefinition {
   patient: PatientInit;
   ventilator: VentSettings;
   cprPreset: CprQualityPreset;
+  /** monitor configuration at the start (default: 3-electrode ECG) */
+  monitor?: { ecgLeads: EcgLeadSet };
   /** scripted commands, fired by the engine with source "scenario" */
   timeline: ScenarioEvent[];
   objectives: ScenarioObjective[];
