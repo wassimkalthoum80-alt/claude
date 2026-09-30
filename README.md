@@ -101,6 +101,22 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 - New cases: **Silent disconnection** (hypoxic arrest if unnoticed) and **Breath stacking in severe asthma**
   (low-flow PEA unless expiration is lengthened or the tube is briefly disconnected). The ventilator header has a
   **DISCONNECT / RECONNECT** button for the learner.
+- **Perfusors and infusomat (medications phase A).** Above the CPR metrics, a rack of pumps runs a TIVA:
+  propofol 2 %, sufentanil and noradrenaline on syringe pumps, two free syringe pumps and a balanced crystalloid on
+  the infusomat. **+ Perfusor / + Infusomat** add pumps and **Flush 5 mL** flushes the IV line. Click a pump to
+  load a drug (search by generic or brand name, grouped by the German categories), pick the indication, and enter
+  either the dose rate or mL/h (the other is converted). Boluses are entered as a dose or in mL, with an
+  administration time. Orders outside the protocol, the syringe content or the pump's limits are **blocked with a
+  message**; with the instructor panel open, an *instructor override* lets you simulate the error on purpose.
+  The rack shows the syringe label colour, dose rate, mL/h, run/stop/bolus and remaining volume, plus the NMT TOF.
+- Drugs reach the patient through the line: the extension and the common line hold drug (dead space), so a
+  syringe starts slowly without carrier flow, and a flush pushes what is in the line. Propofol, sufentanil and
+  remifentanil use published PK models; rocuronium, catecholamines, vasopressin, salbutamol and naloxone use
+  **educational** models. Try a propofol bolus in a hypovolaemic patient (instructor panel → volume status 0.6).
+- **Instructor panel → Pharmacology** shows the true model values: hypnosis, analgesia, respiratory drive, block,
+  drug concentrations, amounts received vs still in the line, fluid balance, Hb, and interaction warnings.
+  About 50 further products are **reference-only** (drug card, not administrable) until they have a supported
+  model. Nothing in the formulary has been clinically reviewed.
 
 | Key | Action |
 |---|---|
@@ -128,7 +144,8 @@ UI commands ──► SimulationEngine ──► SimulationState ──► signa
 
 Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · rules for contributors and AI agents:
 [`CLAUDE.md`](CLAUDE.md) · physiology shortcuts: [`docs/SIMULATION_ASSUMPTIONS.md`](docs/SIMULATION_ASSUMPTIONS.md) ·
-original brief: [`prompts/milestone-01-foundation.md`](prompts/milestone-01-foundation.md).
+original brief: [`prompts/milestone-01-foundation.md`](prompts/milestone-01-foundation.md) · medications brief:
+[`docs/prompts/milestone-02-medications.md`](docs/prompts/milestone-02-medications.md).
 
 ```
 src/
@@ -141,13 +158,16 @@ src/
                        heart–lung interaction, parameters
     rhythms/           sinus, VF, asystole, PEA, rhythm engine
     interventions/     CPR engine, compression sources, quality presets/assessment
+    pharmacology/      formulary (15 categories), units, dosing weights, IV line delivery, PK (published +
+                       educational), PD, fluid volume kinetics, order validation, sources
     devices/           ventilator (4 modes), monitor (measured numerics), alarms, setting limits
     signals/           ring buffers + ECG, ART, pleth, CO₂, Paw, flow generators
     __tests__/         unit tests
   content/             scenarios, ERC 2025 guideline config, i18n (EN/DE), teaching tooltips
   ui/
     adapters/          snapshot → view models (pure, tested)
-    components/        monitor, ventilator, controls, CPR metrics, scene, action bar, overlays…
+    components/        monitor, ventilator, controls, perfusor rack + pump editor, CPR metrics, scene,
+                       action bar, overlays…
     render/            canvas sweep renderer
     hooks/ audio/ theme/
   App.tsx              composition only
@@ -159,8 +179,11 @@ docs/                  architecture, assumptions, reviews, reference image, scre
 
 - CPR is performed by an automatic compressor. The player starts and stops it, and the instructor sets quality
   presets. Player-driven compressions plug into the existing `CompressionSource` interface later.
-- No defibrillation, rhythm-check logic, drugs, airway interaction, ultrasound, ROSC logic or scoring yet (see
-  the roadmap). Those action buttons are visible but locked.
+- No defibrillation, rhythm-check logic, airway interaction, ultrasound, ROSC logic or scoring yet (see
+  the roadmap). Those action buttons are visible but locked. Drugs exist as infusions (phase A); arrest drugs
+  have no effect on ROSC, and there is no automatic ROSC.
+- The pharmacology is an **educational calibration**: PD constants, the educational PK models, the line model and
+  the fluid kinetics are author-selected, and the formulary is unreviewed (see the assumptions document).
 - Lung mechanics are single-compartment (recruitment and overdistension are bounded heuristics). The heart–lung
   interaction uses author-selected calibration for bradycardia/arrest thresholds. It is shown in the instructor
   panel and is **not clinically validated** (see `docs/SIMULATION_ASSUMPTIONS.md` and
@@ -177,7 +200,7 @@ docs/                  architecture, assumptions, reviews, reference image, scre
 | Milestone | Content |
 |---|---|
 | **M2** | VF arrest done properly: 2-min cycles, rhythm check (hands-off timer), defibrillator, shockable/non-shockable, ROSC |
-| **M3** | Drugs (adrenaline, amiodarone…) with PK/PD, timers, IV/IO access |
+| **M3** | Drugs: phase A done (pumps, formulary, PK/PD, fluids). Next: electrolytes/acid–base, blood products and haemostasis, arrest drugs (adrenaline cycles, amiodarone), IV/IO access |
 | **M4** | Airway and ventilation during CPR: BVM, SGA, intubation, capnography confirmation |
 | **M5** | Reversible causes (4 Hs & 4 Ts), POCUS, PEA/VT/bradycardia |
 | **M6** | Anaesthesia crises, richer lung mechanics |

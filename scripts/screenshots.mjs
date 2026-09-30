@@ -87,6 +87,28 @@ for (const size of sizes) {
   await page.close();
 }
 
+// Medications: pump editor for the propofol syringe, and the formulary browser loading rocuronium.
+{
+  const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+  page.on('pageerror', (e) => errors.push(`[meds] ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`[meds] ${m.text()}`));
+  const shot = (name) =>
+    page.screenshot({ path: `${outDir}/meds-${name}.jpg`, type: 'jpeg', quality: 88 });
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await page.evaluate(() => window.__resusEngine.runFor(15));
+  await page.click('[data-testid=pump-P1]');
+  await page.waitForTimeout(400);
+  await shot('1-pump-editor');
+  await page.click('[aria-label=Close]');
+  await page.click('[data-testid=pump-P4]');
+  await page.fill('[data-testid=pump-search]', 'roc');
+  await page.click('[data-testid=product-rocuronium-10]');
+  await page.waitForTimeout(400);
+  await shot('2-formulary');
+  await page.close();
+}
+
 // Ventilator: PRVC with ARDS + spontaneous breathing (loops), and a disconnected CPAP/PS patient desaturating.
 {
   const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });

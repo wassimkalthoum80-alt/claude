@@ -1,4 +1,4 @@
-# Simulation assumptions (Milestone 1 + heart–lung interaction)
+# Simulation assumptions (Milestone 1 + heart–lung interaction + medications phase A)
 
 Every physiological simplification in the code is marked `// SIM-ASSUMPTION:` and listed here with the value
 used and the reason. The whole model is **phenomenological and tuned to published target values**. It is built
@@ -164,6 +164,103 @@ simulation state and shown in the instructor panel.
 | Monitor numerics | HR from the last 5 R–R intervals; ART max/min/mean over 3 s; refresh 1 Hz; EtCO₂ = peak CO₂ per breath, "--" (never 0) when no breath passes the sensor for 15 s (disconnection) | Similar to commercial monitors. |
 | Pleth | ART delayed 0.22 s, baseline-removed, low-passed 50 ms; gain (CO/5)^2; SpO₂ shown only if perfusion index ≥ 0.15 | Unreadable during CPR and in low-output states; still readable at CO ≈ 3 L/min. |
 
+## Medications, infusions and fluids — phase A (`src/sim/pharmacology`, `docs/prompts/milestone-02-medications.md`)
+
+**Status: educational, unvalidated.** Every number below is either transcribed from the cited source
+(`sources.ts`, all marked *unreviewed*) or author-selected for teaching behaviour. Nothing here has been
+checked by a clinician; the drug card says so in the UI. Products without a supported model are
+**reference-only**: searchable with a card, but they cannot be loaded into a pump. No maximum, concentration,
+salt conversion, weight scalar, half-life, EC50 or ke0 was guessed for them.
+
+### Separation of layers
+
+| Layer | Where | Executed? |
+|---|---|---|
+| A. Clinical reference (indications, risks, interactions, considerations) | `formulary/products.ts → reference` | never — shown on the drug card |
+| B. Protocols (indication, route, weight basis, bolus/infusion ranges, min. bolus time) | `formulary/products.ts → protocols` | validation + dose display |
+| C. PK/PD models | `pk.ts`, `pd.ts` | yes — moiety-level, independent of brand |
+| D. Calibration (reference exposure at scenario start) | `PharmacologyState.reference` | yes |
+
+Units are explicit (`units.ts`): dose, rate and concentration units are checked for dimension compatibility and
+converted, never inferred. The dosing weight comes from the protocol's `weightBasis`
+(actual / ideal (Devine) / lean (James) / adjusted (IBW + 0.4 · excess) / none).
+
+### Delivery: ordered ≠ pump-delivered ≠ patient-received
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| Pump maximum rate | syringe 999 mL/h, volumetric 1200 mL/h | typical hardware limits |
+| Manual push rate | 7200 mL/h (2 mL/s) | bolus with duration 0 |
+| Line dead space | each syringe extension 0.5 mL, common line (manifold → cannula) 2 mL | small-bore extension + 3-way manifold |
+| Mixing | extension and common line are each well-mixed compartments; mass is conserved exactly | simpler than plug flow; still gives the delayed start, the bolus effect of a carrier-rate change and drug left in the line |
+| Flush | 1 mL/s of carrier through the common line | the "line flush" button |
+| Priming | a new syringe primes its extension with its own solution; the old content goes to waste | real practice |
+| Start of scenario | line contents at steady state for the running pumps | no artificial wash-in at t = 0 |
+
+### Pharmacokinetics
+
+| Moiety | Model | Provenance |
+|---|---|---|
+| Propofol | Schnider 1998/1999, 3 compartments + ke0 (lean body mass by James) | published |
+| Sufentanil | Gepts 1995, 3 compartments; ke0 0.112 /min | published |
+| Remifentanil | Minto 1997, 3 compartments + ke0 | published |
+| Rocuronium | 2 compartments per kg ideal weight + ke0 0.17 /min, calibrated to label onset (≈ 1.5–2 min) and recovery (TOF ratio 0.9 ≈ 50–70 min after 0.6 mg/kg) | **educational** |
+| Noradrenaline, adrenaline, dobutamine, vasopressin, salbutamol, naloxone | one-compartment *exposure* (V1 = 1/k10: Cp equals the steady-state input rate) with t½ 2.5 / 2 / 2 / 15 / 240 / 60 min and a delayed effect | **educational** (textbook half-lives) |
+| Calcium chloride / gluconate | accounting only (amount and ion load recorded, no effect yet) | — |
+
+All compartments integrate with RK4 in the 4 ms physiology sub-step.
+
+### Pharmacodynamics (all educational)
+
+| Effect | Model and value |
+|---|---|
+| Hypnosis | Hill on U = Up + 0.4·Uo + 0.5·Up·Uo, Up = Ce(propofol)/3.4 µg/mL, Uo = sufentanil-eq./1 ng/mL, γ 3 |
+| Analgesia | Hill on sufentanil-equivalent Ce, C50 0.2 ng/mL, γ 2 (remifentanil ≈ 1/10 of sufentanil) |
+| Respiratory drive | Greco-type surface: drive = 1 / (1 + (Uo + Up + Uo·Up)²), opioid C50 0.3 ng/mL, propofol 3 µg/mL; slows the rate (factor^0.7) more than it weakens each effort (factor^0.3) |
+| Naloxone | competitive antagonist, K = 0.5 µg/kg of effect-delayed naloxone; shorter-acting than long opioids (re-narcotisation) |
+| Neuromuscular block | Hill on Ce(rocuronium), Ce50 1.0 µg/mL, γ 4.5; diaphragm needs 1.7× the concentration; TOF count loses T4/T3/T2/T1 above 75/80/85/95 % block, ratio (1 − block)^2.2 |
+| Haemodynamics | propofol: SVR −35 % max, venous tone −0.3 volume-status units, inotropy −15 %, sympathetic reflexes −80 % max; opioids: bradycardia, small vasodilation, reflexes −20 %; noradrenaline SVR +120 % max; adrenaline β1/β2/α; dobutamine inotropy; vasopressin SVR |
+| Calibration | haemodynamic effects are **relative to the exposures at scenario start** (the baseline patient is calibrated under the running TIVA); hypnosis, analgesia, drive and block are absolute |
+| Bronchodilation | salbutamol removes up to the bronchospasm preset's *excess* resistance only |
+| Lactate | β2 agonists (adrenaline, salbutamol) add aerobic lactate production without an O₂-delivery deficit |
+| Low-pressure reflex (`HeartLungModel.ts`) | a preload deficit adds sympathetic tone: 0.6 at volume status 0.5, linear to 0 at 1.0; blunted by anaesthetics like the baroreflex — so a hypovolaemic patient is compensated awake and decompensates on induction |
+
+Paralysis does not cause apnoea directly on a controlled ventilator; it removes spontaneous effort (diaphragm
+block), so breathing stops only where the patient depended on it.
+
+### Fluids (`fluids.ts`)
+
+| Assumption | Value |
+|---|---|
+| Model | two-space volume kinetics (after Hahn; parameters author-selected) |
+| Crystalloid distribution | plasma → interstitium towards 1 : 3, τ 20 min |
+| Colloid | albumin 5 % holds 1 mL plasma per mL, 20 % holds ≈ 4 mL per mL (drawn from the interstitium); hold leaks with τ 20 h |
+| Losses | 1.25 mL/kg/h baseline + excretion of excess volume, τ 3 h |
+| Preload | plasma change / (20 mL/kg stressed volume) adds to the volume status; Frank–Starling plateau above 1 (at most +50 %) |
+| Haemodilution | Hb scaled by blood volume (70 mL/kg) / (blood volume + plasma change) |
+| Electrolytes | ion load recorded (mmol) from the product composition; no acid–base effect yet |
+
+No fixed "retained fraction" and no fixed BP increment per mL: the effect follows from preload through the
+circulation model.
+
+### Validation and instructor override
+
+Load, rate and bolus orders are checked against the pump type, the route, unit compatibility, the pump's
+hardware limit, the syringe content, the protocol range and the minimum bolus time. Errors block the order and
+are logged (`COMMAND_REJECTED`); warnings (below range, no protocol) are shown but allowed. An instructor can
+deliberately accept a protocol violation (`OVERRIDE_ACCEPTED`, source `instructor`) to simulate an error. The
+learner's input is never silently corrected. The UI converts dose ↔ mL with the exact value (display rounding
+does not change the order).
+
+### Unvalidated / not yet modelled (phases B–D)
+
+- All PD constants and the educational PK models above; the relative-calibration approach itself.
+- Reference-only products (≈ 50, including midazolam, etomidate, ketamine racemate vs esketamine kept separate,
+  fentanyl, succinylcholine, amiodarone, atropine, blood products, coagulation factors, sugammadex).
+- Calcium effect, electrolytes and acid–base, blood products and haemostasis, anaphylaxis, arrhythmogenicity,
+  cardiac-arrest drug effects (adrenaline in CPR has no ROSC effect: **no automatic ROSC**).
+- Renal/hepatic/age covariates beyond those inside the published PK models.
+
 ## Presentation-only assumptions (UI)
 
 | Assumption | Value |
@@ -185,8 +282,10 @@ simulation state and shown in the instructor panel.
 - Obstructive PEA from breath stacking is sticky: disconnecting the patient restores the lung and the preload,
   but return of circulation must be declared by the instructor (in reality circulation often returns within
   30–60 s of disconnection). A reversible-cause ROSC rule belongs in the later ALS engine.
-- Hypoxic bradycardia is driven by the oxygen debt only; no vagal reflexes (e.g. laryngoscopy), no drugs.
+- Hypoxic bradycardia is driven by the oxygen debt only; no vagal reflexes (e.g. laryngoscopy). Drugs act on
+  heart rate only through the phase-A effects listed above.
 - CO₂ production stays constant when O₂ consumption falls; no renal compensation.
-- Hb, VO₂ and blood volume are fixed (no anaemia, fever or haemorrhage inputs yet).
-- Baroreflex acts only below MAP 65 mmHg (not relative to the individual set point), so moderate PEEP-induced
-  hypotension gets no heart-rate response.
+- VO₂ and blood volume are fixed (no fever or haemorrhage inputs yet); Hb changes only by haemodilution.
+- The arterial baroreflex acts only below MAP 65 mmHg (not relative to the individual set point). A separate
+  low-pressure (volume) reflex responds to a preload deficit, so hypovolaemia and PEEP-reduced filling in a
+  hypovolaemic patient do raise the heart rate.

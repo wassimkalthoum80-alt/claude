@@ -43,6 +43,7 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 | `src/sim/physiology` | Cardiovascular, respiratory, lung-state, blood-gas and heart–lung interaction models |
 | `src/sim/rhythms` | Rhythm registry (sinus, VF, asystole, PEA) and beat scheduling |
 | `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation |
+| `src/sim/pharmacology` | Formulary, units, dosing weights, IV line delivery, PK/PD, fluids, order validation (imports core, state, physiology parameters) |
 | `src/sim/devices` | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms |
 | `src/sim/signals` | Ring buffers and waveform generators |
 | `src/content` | Scenarios, guideline config (ERC 2025), i18n strings, parameter tooltips — plain data |
@@ -67,7 +68,9 @@ The UI imports the simulation only through `src/sim/index.ts`.
 ## Commands and events
 
 - `Command` (`src/sim/types/commands.ts`): `CPR_START`, `CPR_STOP`, `SET_CPR_QUALITY`, `SET_VENT_SETTING`,
-  `SET_RHYTHM`, `SET_PAUSED`, `SET_TIME_SCALE`, `RESET`. Each carries its source: `user`, `instructor` or `scenario`.
+  `SET_RHYTHM`, `SET_PAUSED`, `SET_TIME_SCALE`, `RESET`, the alarm-limit commands and the pump commands
+  (`PUMP_LOAD`, `PUMP_UNLOAD`, `PUMP_SET_PROTOCOL`, `PUMP_SET_RATE`, `PUMP_START`, `PUMP_STOP`, `PUMP_BOLUS`,
+  `PUMP_ADD`, `LINE_FLUSH`), among others. Each carries its source: `user`, `instructor` or `scenario`.
   Commands apply immediately (between ticks) and are logged as `{ seq, tick, t, source, command }`.
 - Clinical milestones (`ARREST_START`, `FIRST_COMPRESSION`, `CIRCULATION_RESTORED`) are written to the same log as
   `event` entries. They drive the end-of-run card now and scoring/debrief later.
@@ -124,3 +127,31 @@ The UI imports the simulation only through `src/sim/index.ts`.
   the instructor panel shows exactly what a run uses. `EngineOptions.calibration` overrides values per run.
 - The monitor measures only what a real monitor could: the true SaO₂, PaO₂, PaCO₂, O₂ debt, etc. are shown in the
   instructor panel, never as monitor numerics.
+
+## Medications and fluids (phase A)
+
+```
+ PumpEditor ─ dispatch ─► SimulationEngine.applyPumpCommand ── validate (validation.ts) ──► COMMAND_REJECTED
+   (UI)                         │  source 'instructor' + override ─────────────────────► OVERRIDE_ACCEPTED
+                                ▼
+ devices.pumps (settings, syringe volume)   devices.line (extension + common dead space)
+                                │ 4 ms sub-step
+                                ▼
+ PharmacologyModel.update: delivery.ts (pump → extension → common line → patient, mass-conserving)
+                           pk.ts (RK4, published / educational compartments per moiety)
+                           pd.ts (effects relative to the scenario-start reference exposure)
+                           fluids.ts (volume kinetics, haemodilution)
+                                │ patient.pharmacology.effects, fluids, gas.hb
+                                ▼
+ HeartLungModel (SVR, venous tone, inotropy, chronotropy, reflexes, lactate) · RespiratoryDrive (rate, effort)
+ LungStateModel (bronchodilation) · BloodGasModel (Hb)
+```
+
+- Pumps and the line are **device state**; drug amounts in the body and the effects are **patient state**. Only
+  `PharmacologyModel` writes `patient.pharmacology` and `gas.hb`.
+- The formulary separates clinical reference (shown), protocols (validation and display), models (executed) and
+  sources. Brand products map to a moiety; products without a model are reference-only and cannot be loaded.
+- The engine re-validates every order; the UI validates the same way only to show messages early. Rejections and
+  overrides go into the event log for debriefing.
+- `src/ui/adapters/pumpsViewModel.ts` (rack), `pumpForm.ts` (dose ↔ mL) and `pharmacologyViewModel.ts`
+  (instructor view, interaction warnings) are pure and unit-tested.
