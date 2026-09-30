@@ -1,7 +1,10 @@
 import { criticalClosingPressure } from '../physiology/CardiovascularModel';
-import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS } from '../physiology/parameters';
+import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS, OXYGEN } from '../physiology/parameters';
 import { CPR_PRESETS } from '../interventions/cprQuality';
 import { defaultAlarmLimits } from '../devices/alarmLimits';
+import { emptyPharmacology } from '../pharmacology/PharmacologyModel';
+import { getProduct } from '../pharmacology/formulary/products';
+import type { PumpState } from './PharmacologyState';
 import type { HeartLungCalibration } from './SimulationState';
 import type { ScenarioDefinition } from '../types/scenario';
 import { predictedBodyWeight } from './PatientState';
@@ -64,6 +67,7 @@ export function createInitialState(
       },
       // Gas values are placeholders; the engine replaces them with the model's steady state on load.
       gas: {
+        hb: OXYGEN.hemoglobin,
         paco2: 40,
         tissuePco2: 43,
         etco2: 36,
@@ -107,6 +111,7 @@ export function createInitialState(
         sympatheticResponse: 1,
         ...p.reserves,
       },
+      pharmacology: emptyPharmacology(),
       airway: { device: p.airway },
       rosc: false,
     },
@@ -152,6 +157,8 @@ export function createInitialState(
         circuitConnected: true,
         apnea: false,
       },
+      pumps: initialPumps(scenario),
+      line: { extensionMl: 0.5, commonMl: 2, extension: {}, common: {}, flushRemainingMl: 0 },
     },
     interventions: {
       cpr: {
@@ -183,4 +190,35 @@ export function createInitialState(
       arrestModelEnabled: true,
     },
   };
+}
+
+/** Default rack: 5 empty syringe pumps and 1 empty volumetric pump. */
+const DEFAULT_PUMPS: ScenarioDefinition['pumps'] = [
+  { id: 'P1', kind: 'syringe', productId: null },
+  { id: 'P2', kind: 'syringe', productId: null },
+  { id: 'P3', kind: 'syringe', productId: null },
+  { id: 'P4', kind: 'syringe', productId: null },
+  { id: 'P5', kind: 'syringe', productId: null },
+  { id: 'INF1', kind: 'volumetric', productId: null },
+];
+
+export function initialPumps(scenario: ScenarioDefinition): PumpState[] {
+  return (scenario.pumps ?? DEFAULT_PUMPS ?? []).map((sp) => {
+    const product = sp.productId ? getProduct(sp.productId) : undefined;
+    const loaded = product ? (sp.loadedMl ?? product.containerMl ?? 50) : 0;
+    return {
+      id: sp.id,
+      kind: sp.kind,
+      productId: product ? product.id : null,
+      protocolId: sp.protocolId ?? null,
+      loadedMl: loaded,
+      remainingMl: loaded,
+      rateMlH: sp.rateMlH ?? 0,
+      running: product !== undefined && (sp.running ?? false),
+      bolus: null,
+      deliveredMl: 0,
+      ordered: null,
+      overridden: false,
+    };
+  });
 }

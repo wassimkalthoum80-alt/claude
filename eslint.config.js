@@ -25,7 +25,7 @@ const SIM_FORBIDDEN = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'test-results', 'playwright-report', 'screenshots', 'docs'] },
+  { ignores: ['dist', 'node_modules', 'test-results', 'playwright-report', 'screenshots'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.strict],
     files: ['**/*.{ts,tsx}'],

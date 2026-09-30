@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEngine, max, window } from './helpers';
+import { createEngine, max, window, undruggedPatient } from './helpers';
 
 const measured = (e: ReturnType<typeof createEngine>) =>
   e.getSnapshot().devices.ventilator.measured;
@@ -47,7 +47,7 @@ describe('ventilation modes', () => {
   });
 
   it('CPAP/PS with spontaneous breathing: patient-triggered, flow-cycled breaths at the patient rate', () => {
-    const e = createEngine();
+    const e = createEngine(undruggedPatient);
     e.dispatch({ type: 'SET_VENT_MODE', mode: 'PSV' });
     e.dispatch({ type: 'SET_RESP_DRIVE', drive: 'normal' });
     e.runFor(60);
@@ -60,7 +60,7 @@ describe('ventilation modes', () => {
   });
 
   it('assist/control: a breathing patient triggers extra breaths above the set rate', () => {
-    const e = createEngine();
+    const e = createEngine(undruggedPatient);
     e.dispatch({ type: 'SET_RESP_DRIVE', drive: 'strong' });
     e.runFor(60);
     const s = e.getSnapshot().devices.ventilator;

@@ -34,6 +34,45 @@ export const baselinePatient: ScenarioDefinition = {
     ets: 25,
   },
   cprPreset: 'good',
+  // TIVA running at steady state (the baseline physiology is calibrated under these infusions):
+  // propofol 2 % 24 mL/h = 6 mg/kg/h; sufentanil 5 µg/mL 4.8 mL/h = 0.3 µg/kg/h;
+  // noradrenaline 100 µg/mL 2.4 mL/h = 0.05 µg/kg/min (80 kg); balanced crystalloid 100 mL/h as carrier.
+  pumps: [
+    {
+      id: 'P1',
+      kind: 'syringe',
+      productId: 'propofol-2',
+      protocolId: 'maintenance',
+      rateMlH: 24,
+      running: true,
+    },
+    {
+      id: 'P2',
+      kind: 'syringe',
+      productId: 'sufentanil-5',
+      protocolId: 'maintenance',
+      rateMlH: 4.8,
+      running: true,
+    },
+    {
+      id: 'P3',
+      kind: 'syringe',
+      productId: 'noradrenaline-100',
+      protocolId: 'infusion',
+      rateMlH: 2.4,
+      running: true,
+    },
+    { id: 'P4', kind: 'syringe', productId: null },
+    { id: 'P5', kind: 'syringe', productId: null },
+    {
+      id: 'INF1',
+      kind: 'volumetric',
+      productId: 'sterofundin-iso',
+      protocolId: 'maintenance',
+      rateMlH: 100,
+      running: true,
+    },
+  ],
   timeline: [],
   objectives: [],
 };

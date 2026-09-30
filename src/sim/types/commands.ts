@@ -44,6 +44,32 @@ export type Command =
   /** AutoLimits: set limits around the currently displayed values */
   | { type: 'ALARM_LIMITS_AUTO' }
   | { type: 'ALARM_LIMITS_DEFAULT' }
+  /** load a syringe/bag into a pump (stops it; the old solution stays in the extension) */
+  | { type: 'PUMP_LOAD'; pumpId: string; productId: string; protocolId?: string; loadedMl?: number }
+  | { type: 'PUMP_UNLOAD'; pumpId: string }
+  | { type: 'PUMP_SET_PROTOCOL'; pumpId: string; protocolId: string }
+  /** mL/h; `ordered` records the dose rate as entered; `override` (instructor only) accepts a protocol violation */
+  | {
+      type: 'PUMP_SET_RATE';
+      pumpId: string;
+      rateMlH: number;
+      ordered?: { value: number; unit: string };
+      override?: boolean;
+    }
+  | { type: 'PUMP_START'; pumpId: string }
+  | { type: 'PUMP_STOP'; pumpId: string }
+  /** bolus of `volumeMl` over `durationS` (0 = push) on top of the running rate */
+  | {
+      type: 'PUMP_BOLUS';
+      pumpId: string;
+      volumeMl: number;
+      durationS: number;
+      ordered?: { value: number; unit: string };
+      override?: boolean;
+    }
+  | { type: 'PUMP_ADD'; kind: 'syringe' | 'volumetric' }
+  /** flush the common IV line with carrier (mL) */
+  | { type: 'LINE_FLUSH'; volumeMl: number }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }
   | { type: 'RESET' };
@@ -61,7 +87,13 @@ export type ClinicalEventType =
   /** heart–lung model: arrest from sustained low flow or oxygen debt (detail = cause) */
   | 'PEA_ONSET'
   /** heart–lung model: electrical activity ceased after prolonged PEA */
-  | 'ASYSTOLE_ONSET';
+  | 'ASYSTOLE_ONSET'
+  /** a medication command was blocked by validation (detail = reasons) */
+  | 'COMMAND_REJECTED'
+  /** a medication command violated the protocol and was accepted by instructor override */
+  | 'OVERRIDE_ACCEPTED'
+  /** a syringe/bag ran empty */
+  | 'PUMP_EMPTY';
 
 export interface CommandLogEntry {
   seq: number;

@@ -3,6 +3,13 @@ import { baselinePatient } from '../../content/scenarios/baselinePatient';
 import { SimulationEngine } from '../engine/SimulationEngine';
 import type { ScenarioDefinition } from '../types/scenario';
 
+/** The baseline patient without any running infusions (spontaneous breathing is not drug-suppressed). */
+export const undruggedPatient: ScenarioDefinition = {
+  ...baselinePatient,
+  id: 'baseline-undrugged',
+  pumps: undefined,
+};
+
 export function createEngine(
   scenario: ScenarioDefinition = baselinePatient,
   seed?: number,

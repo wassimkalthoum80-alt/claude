@@ -1,3 +1,5 @@
+import type { PharmacologyState } from './PharmacologyState';
+
 /** Cardiac rhythms known to the rhythm registry. Extend here and in src/sim/rhythms. */
 export type RhythmId = 'sinus' | 'vf' | 'asystole' | 'pea';
 
@@ -76,6 +78,8 @@ export interface RespState {
 }
 
 export interface GasState {
+  /** g/dL — haemoglobin (diluted by infused fluid) */
+  hb: number;
   /** mmHg — arterial PCO2 */
   paco2: number;
   /** mmHg — tissue PCO2 (large, slow CO2 store) */
@@ -170,6 +174,8 @@ export interface PatientState {
   gas: GasState;
   heartLung: HeartLungState;
   reserves: PhysiologyReserves;
+  /** drugs received, their kinetics and effects; infused fluids */
+  pharmacology: PharmacologyState;
   airway: { device: AirwayDevice };
   /** return of spontaneous circulation after an arrest in this run */
   rosc: boolean;

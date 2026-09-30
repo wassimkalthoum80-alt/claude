@@ -11,6 +11,16 @@ import { CardiovascularModel } from '../physiology/CardiovascularModel';
 import { BloodGasModel, type GasExchangeInputs } from '../physiology/BloodGasModel';
 import { HeartLungModel, type HeartLungTransition } from '../physiology/HeartLungModel';
 import { LungStateModel } from '../physiology/LungStateModel';
+import { getProduct } from '../pharmacology/formulary/products';
+import { PharmacologyModel } from '../pharmacology/PharmacologyModel';
+import {
+  bolusRateMlH,
+  protocolOf,
+  validateBolus,
+  validateLoad,
+  validateRate,
+  type Validation,
+} from '../pharmacology/validation';
 import { ECG } from '../physiology/parameters';
 import { clamp } from '../physiology/shapes';
 import { RespiratoryDriveModel } from '../physiology/RespiratoryDrive';
@@ -71,6 +81,7 @@ export class SimulationEngine {
   private readonly lungState = new LungStateModel();
   private readonly bloodGas = new BloodGasModel();
   private readonly heartLung = new HeartLungModel();
+  private readonly pharmacology = new PharmacologyModel();
   private readonly drive = new RespiratoryDriveModel();
   private readonly cpr: CPREngine;
   private readonly monitor = new MonitorDevice();
@@ -174,6 +185,8 @@ export class SimulationEngine {
         s.patient.resp.drive,
         !cardioState.spontaneousCirculation,
         this.rng,
+        s.patient.pharmacology.effects.respiratoryDrive,
+        s.patient.pharmacology.effects.diaphragmBlock,
       );
       if (this.ventilator.step(t, SUBSTEP_S, vent, s.patient.resp)) {
         this.monitor.onBreathStart(this.bank, t, vent.circuitConnected);
@@ -220,6 +233,7 @@ export class SimulationEngine {
     // Slow (10 Hz) physiology and devices.
     this.cardio.slowUpdate(cardioState, TICK_S);
     this.cpr.slowUpdate(cprState, s.time, TICK_S);
+    this.updatePharmacology(TICK_S);
     this.lungState.update(s.patient, this.ventilator.readout(), s.time, TICK_S);
     this.bloodGas.update(s.patient.gas, this.gasInputs(), TICK_S);
     const transition = this.heartLung.update(
@@ -252,7 +266,7 @@ export class SimulationEngine {
       return;
     }
     this.appendCommand(command, source);
-    this.apply(command);
+    this.apply(command, source);
     this.bumpAndNotify();
   }
 
@@ -298,6 +312,7 @@ export class SimulationEngine {
     this.bank.reset();
     const s = this.state;
     this.rhythm.reset(s.patient.cardio.rhythm, 0, s.patient.cardio, this.rng);
+    s.devices.line = this.pharmacology.reset(s.patient, s.devices.pumps);
     this.cardio.reset(s.patient.cardio);
     this.lungState.reset(s.patient, s.devices.ventilator);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
@@ -323,7 +338,7 @@ export class SimulationEngine {
     if (s.timers.arrestStartTime !== null) this.logEvent('ARREST_START', 0);
   }
 
-  private apply(command: Command): void {
+  private apply(command: Command, source: CommandSource): void {
     const s = this.state;
     switch (command.type) {
       case 'CPR_START':
@@ -379,6 +394,17 @@ export class SimulationEngine {
         });
         break;
       }
+      case 'PUMP_LOAD':
+      case 'PUMP_UNLOAD':
+      case 'PUMP_SET_PROTOCOL':
+      case 'PUMP_SET_RATE':
+      case 'PUMP_START':
+      case 'PUMP_STOP':
+      case 'PUMP_BOLUS':
+      case 'PUMP_ADD':
+      case 'LINE_FLUSH':
+        this.applyPumpCommand(command, source);
+        break;
       case 'ALARM_LIMITS_DEFAULT':
         s.devices.monitor.alarmLimits = defaultAlarmLimits();
         break;
@@ -449,6 +475,145 @@ export class SimulationEngine {
     }
   }
 
+  private updatePharmacology(dt: number): void {
+    const s = this.state;
+    const wasRunning = s.devices.pumps.map((p) => p.remainingMl > 1e-9 && p.productId !== null);
+    this.pharmacology.update(s.patient, s.devices.pumps, s.devices.line, dt);
+    s.devices.pumps.forEach((p, i) => {
+      if (wasRunning[i] && p.remainingMl <= 1e-9) this.logEvent('PUMP_EMPTY', s.time, p.id);
+    });
+  }
+
+  /** Medication commands: validated like a real pump/order check; rejections are logged, never corrected. */
+  private applyPumpCommand(command: PumpCommand, source: CommandSource): void {
+    const s = this.state;
+    const pumps = s.devices.pumps;
+    const reject = (v: Validation) => this.logEvent('COMMAND_REJECTED', s.time, v.errors.join(','));
+    const accept = (v: Validation, override: boolean | undefined): boolean => {
+      if (v.errors.length === 0) return true;
+      if (override && source === 'instructor') {
+        this.logEvent('OVERRIDE_ACCEPTED', s.time, v.errors.join(','));
+        return true;
+      }
+      reject(v);
+      return false;
+    };
+    if (command.type === 'PUMP_ADD') {
+      const prefix = command.kind === 'syringe' ? 'P' : 'INF';
+      let n = pumps.filter((p) => p.kind === command.kind).length + 1;
+      while (pumps.some((p) => p.id === `${prefix}${n}`)) n += 1;
+      pumps.push({
+        id: `${prefix}${n}`,
+        kind: command.kind,
+        productId: null,
+        protocolId: null,
+        loadedMl: 0,
+        remainingMl: 0,
+        rateMlH: 0,
+        running: false,
+        bolus: null,
+        deliveredMl: 0,
+        ordered: null,
+        overridden: false,
+      });
+      return;
+    }
+    if (command.type === 'LINE_FLUSH') {
+      if (Number.isFinite(command.volumeMl) && command.volumeMl > 0 && command.volumeMl <= 20)
+        s.devices.line.flushRemainingMl += command.volumeMl;
+      else reject({ errors: ['bolus-invalid'], warnings: [] });
+      return;
+    }
+    const pump = pumps.find((p) => p.id === command.pumpId);
+    if (!pump) return reject({ errors: ['no-product'], warnings: [] });
+    const product = pump.productId ? getProduct(pump.productId) : undefined;
+    const demographics = s.patient.demographics;
+    switch (command.type) {
+      case 'PUMP_LOAD': {
+        const next = getProduct(command.productId);
+        const v = validateLoad(pump, next);
+        if (v.errors.length > 0 || !next) return reject(v);
+        const loaded = command.loadedMl ?? next.containerMl ?? 50;
+        // The new syringe's line is primed with the new solution (the old contents go to waste, not the patient).
+        if (next.moiety && next.concentration && pump.kind === 'syringe') {
+          const line = s.devices.line;
+          line.extension[pump.id] = { [next.moiety]: line.extensionMl * next.concentration.value };
+        }
+        Object.assign(pump, {
+          productId: next.id,
+          protocolId: command.protocolId ?? next.protocols[0]?.id ?? null,
+          loadedMl: loaded,
+          remainingMl: loaded,
+          rateMlH: 0,
+          running: false,
+          bolus: null,
+          ordered: null,
+          overridden: false,
+        });
+        return;
+      }
+      case 'PUMP_UNLOAD':
+        Object.assign(pump, {
+          productId: null,
+          protocolId: null,
+          loadedMl: 0,
+          remainingMl: 0,
+          rateMlH: 0,
+          running: false,
+          bolus: null,
+          ordered: null,
+          overridden: false,
+        });
+        return;
+      case 'PUMP_SET_PROTOCOL':
+        if (product?.protocols.some((p) => p.id === command.protocolId))
+          pump.protocolId = command.protocolId;
+        else reject({ errors: ['no-protocol'], warnings: [] });
+        return;
+      case 'PUMP_SET_RATE': {
+        const v = validateRate(
+          pump,
+          product,
+          protocolOf(product, pump.protocolId),
+          command.rateMlH,
+          demographics,
+        );
+        if (!accept(v, command.override)) return;
+        pump.rateMlH = command.rateMlH;
+        pump.ordered = command.ordered ?? null;
+        pump.overridden = v.errors.length > 0;
+        return;
+      }
+      case 'PUMP_START':
+        if (!product || pump.remainingMl <= 0)
+          return reject({ errors: ['pump-empty'], warnings: [] });
+        pump.running = true;
+        return;
+      case 'PUMP_STOP':
+        pump.running = false;
+        pump.bolus = null;
+        return;
+      case 'PUMP_BOLUS': {
+        const v = validateBolus(
+          pump,
+          product,
+          protocolOf(product, pump.protocolId),
+          command.volumeMl,
+          command.durationS,
+          demographics,
+        );
+        if (!accept(v, command.override)) return;
+        pump.bolus = {
+          remainingMl: command.volumeMl,
+          rateMlH: bolusRateMlH(command.volumeMl, command.durationS),
+        };
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
   private gasInputs(): GasExchangeInputs {
     const p = this.state.patient;
     const vent = this.state.devices.ventilator;
@@ -479,7 +644,7 @@ export class SimulationEngine {
       if (!ev || ev.at > time + 1e-9) break;
       this.timelineIndex += 1;
       this.appendCommand(ev.command, 'scenario');
-      this.apply(ev.command);
+      this.apply(ev.command, 'scenario');
     }
   }
 
@@ -545,6 +710,22 @@ function validReserves(patch: Partial<PhysiologyReserves>): Partial<PhysiologyRe
   }
   return out;
 }
+
+type PumpCommand = Extract<
+  Command,
+  {
+    type:
+      | 'PUMP_LOAD'
+      | 'PUMP_UNLOAD'
+      | 'PUMP_SET_PROTOCOL'
+      | 'PUMP_SET_RATE'
+      | 'PUMP_START'
+      | 'PUMP_STOP'
+      | 'PUMP_BOLUS'
+      | 'PUMP_ADD'
+      | 'LINE_FLUSH';
+  }
+>;
 
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {

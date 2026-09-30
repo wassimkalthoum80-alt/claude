@@ -47,7 +47,24 @@ export function fillingFactor(delta: number, reserve: number, k: HeartLungCalibr
   const x = (-k.pressurePreloadGain * delta) / Math.max(0.25, reserve);
   const relative =
     x <= 0 ? Math.exp(x) : 1 + MAX_FILLING_GAIN * (1 - Math.exp(-x / MAX_FILLING_GAIN));
-  return clamp(reserve * relative, 0.005, 1.5);
+  return clamp(starling(reserve) * relative, 0.005, 1.5);
+}
+
+/**
+ * SIM-ASSUMPTION: Frank–Starling plateau — linear below a normal volume status (1), saturating above it
+ * (at most +50 %), so fluid in a well-filled patient adds less and less stroke volume.
+ */
+export function starling(reserve: number): number {
+  return reserve <= 1 ? reserve : 1 + 0.5 * (1 - Math.exp(-(reserve - 1) / 0.5));
+}
+
+/** Effective volume status: patient reserve + drug venous tone (stressed volume) + infused/lost fluid. */
+export function effectiveVolumeStatus(patient: PatientState): number {
+  const ph = patient.pharmacology;
+  return Math.max(
+    0.1,
+    patient.reserves.preloadReserve + ph.effects.venousTone + ph.fluids.volumeStatus,
+  );
 }
 
 /**
@@ -109,7 +126,7 @@ export class HeartLungModel {
     hl.pleuralPressure = approach(hl.pleuralPressure, pleural, dt, k.pleuralFilterTauS);
     hl.preloadFactor = fillingFactor(
       hl.pleuralPressure - hl.pleuralReference,
-      patient.reserves.preloadReserve,
+      effectiveVolumeStatus(patient),
       k,
     );
     patient.cardio.preload = hl.preloadFactor;
@@ -138,7 +155,11 @@ export class HeartLungModel {
     hl.oxygenDebt = Math.max(0, hl.oxygenDebt + dt * (injuryRate - recovery));
     // SIM-ASSUMPTION: lactate rises with the deficit and clears slowly (τ 10 min) when delivery is adequate.
     gas.lactate = clamp(
-      gas.lactate + dt * (0.018 * deficit - ((1 - deficit) * (gas.lactate - 1)) / 600),
+      gas.lactate +
+        dt *
+          (0.018 * deficit -
+            ((1 - deficit) * (gas.lactate - 1)) / 600 +
+            patient.pharmacology.effects.lactateProduction),
       1,
       25,
     );
@@ -159,7 +180,18 @@ export class HeartLungModel {
     const co2Stress = clamp((gas.paco2 - 45) / 55, 0, 1);
     const pressureStress = clamp((65 - cardio.meanArterialPressure) / 40, 0, 1);
     // SIM-ASSUMPTION: baroreflex weight 0.8 (handoff: 0.4 — too weak: MAP 45 mmHg gave only +11/min).
-    const stress = clamp(hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress, 0, 1.5);
+    const drugs = patient.pharmacology.effects;
+    // Anaesthetics (propofol, opioids) blunt the whole sympathetic response (baro- and chemoreflex) — which is
+    // why a patient who depends on sympathetic tone (hypovolaemia) decompensates on induction. High pressure
+    // slows the heart (reflex bradycardia).
+    // SIM-ASSUMPTION: cardiopulmonary (low-pressure) reflex — a preload deficit raises sympathetic tone
+    // (0.6 at a volume status of 0.5), so the hypovolaemic patient is tachycardic and vasoconstricted before
+    // MAP falls, and loses that compensation on induction.
+    const volumeStress = clamp((1 - effectiveVolumeStatus(patient)) / 0.5, 0, 1) * 0.6;
+    const stress =
+      clamp(hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress + volumeStress, 0, 1.5) *
+      drugs.baroreflex;
+    const highPressure = clamp((cardio.meanArterialPressure - 105) / 40, 0, 1) * drugs.baroreflex;
     const debtFraction = clamp(
       (hl.oxygenDebt - k.bradycardiaDebtS) / (k.arrestDebtS - k.bradycardiaDebtS),
       0,
@@ -170,7 +202,10 @@ export class HeartLungModel {
     // Heart rate: reflex tachycardia first, bradycardia as the oxygen debt grows.
     const bradyFactor = clamp(1 - 0.85 * debtFraction, 0.15, 1);
     hl.heartRateTarget = clamp(
-      (this.baselineHeartRate + 55 * stress * reserves.sympatheticResponse) * bradyFactor,
+      (this.baselineHeartRate * drugs.chronotropy +
+        55 * stress * reserves.sympatheticResponse -
+        25 * highPressure) *
+        bradyFactor,
       15,
       190,
     );
@@ -193,13 +228,21 @@ export class HeartLungModel {
     // Above ≈ 1.45 × baseline rate, shorter filling time costs stroke volume (CO stops rising).
     const hrRatio = Math.max(0.05, cardio.heartRate / this.baselineHeartRate);
     const rateFactor = clamp(hrRatio, 0.1, 1.45) / hrRatio;
-    cardio.contractility = clamp(hl.rvFactor * hl.myocardialFactor * rateFactor, 0.02, 2);
+    // SIM-ASSUMPTION: afterload sensitivity — stroke volume falls ≈ 30 % per doubling of vascular resistance, so a
+    // vasopressor can raise MAP while cardiac output falls.
+    const afterload = clamp(1 - 0.3 * (cardio.svrFactor - 1), 0.55, 1.15);
+    cardio.contractility = clamp(
+      hl.rvFactor * hl.myocardialFactor * rateFactor * drugs.inotropy * afterload,
+      0.02,
+      2.5,
+    );
 
     // Vascular resistance: sympathetic tone up, vasoplegia with debt and acidosis.
     const svrTarget = clamp(
-      1 + 0.18 * stress * reserves.sympatheticResponse - 0.45 * debtFraction - 0.12 * acidosis,
-      0.35,
-      1.4,
+      (1 + 0.18 * stress * reserves.sympatheticResponse - 0.45 * debtFraction - 0.12 * acidosis) *
+        drugs.svr,
+      0.25,
+      3,
     );
     cardio.svrFactor = approach(cardio.svrFactor, svrTarget, dt, k.svrTauS);
 

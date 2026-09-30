@@ -28,6 +28,18 @@ export interface PatientInit {
   airway: AirwayDevice;
 }
 
+export interface ScenarioPump {
+  id: string;
+  kind: 'syringe' | 'volumetric';
+  productId: string | null;
+  protocolId?: string;
+  /** mL/h */
+  rateMlH?: number;
+  running?: boolean;
+  /** mL — default: product container volume */
+  loadedMl?: number;
+}
+
 export interface ScenarioEvent {
   /** s — sim time */
   at: number;
@@ -49,6 +61,11 @@ export interface ScenarioDefinition {
   patient: PatientInit;
   ventilator: VentSettings;
   cprPreset: CprQualityPreset;
+  /**
+   * pumps at the start (default: 5 empty syringe pumps + 1 empty volumetric pump). Running infusions start at
+   * steady state; the patient's baseline physiology is calibrated under them.
+   */
+  pumps?: ScenarioPump[];
   /** monitor configuration at the start (default: 3-electrode ECG) */
   monitor?: { ecgLeads: EcgLeadSet };
   /** scripted commands, fired by the engine with source "scenario" */

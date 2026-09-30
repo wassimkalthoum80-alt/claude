@@ -150,8 +150,14 @@ export class LungStateModel {
       l.compliance *
       this.recruitmentComplianceFactor(l, patient.heartLung.recruitment) *
       this.overdistensionFactor;
-    r.resistance = l.resistance;
-    r.expiratoryResistance = l.expiratoryResistance;
+    // Bronchodilators remove part of the BRONCHOSPASTIC resistance only (the excess over a normal airway);
+    // they do not touch compliance or shunt (an ARDS shunt does not disappear after salbutamol).
+    const relief =
+      l === LUNG_PRESETS.bronchospasm ? patient.pharmacology.effects.bronchodilation : 0;
+    const normal = LUNG_PRESETS.normal;
+    r.resistance = l.resistance - (l.resistance - normal.resistance) * relief;
+    r.expiratoryResistance =
+      l.expiratoryResistance - (l.expiratoryResistance - normal.expiratoryResistance) * relief;
     r.frc = l.frc;
   }
 

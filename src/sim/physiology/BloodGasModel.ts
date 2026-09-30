@@ -43,7 +43,7 @@ const K_BTPS = 863;
 export class BloodGasModel {
   /** Steady state for the given inputs (scenario start). */
   reset(gas: GasState, inp: GasExchangeInputs): void {
-    const hb = OXYGEN.hemoglobin;
+    const hb = gas.hb;
     const va = Math.max(0.5, inp.alveolarVentilation);
     const paco2 = clamp((K_BTPS * GAS.vco2) / 1000 / va, 25, 80);
     const acid = acidBase(paco2, 1);
@@ -94,7 +94,7 @@ export class BloodGasModel {
   }
 
   private substep(gas: GasState, inp: GasExchangeInputs, h: number): void {
-    const hb = OXYGEN.hemoglobin;
+    const hb = gas.hb;
     const q = Math.max(0, inp.cardiacOutput);
     const s = clamp(inp.shunt, 0, 0.95);
     const v = Math.max(0.2, inp.lungGasVolume);
@@ -145,7 +145,7 @@ export class BloodGasModel {
 
   /** Arterial PO2/SaO2, SvO2, DO2 and acid–base from the compartments. */
   private derive(gas: GasState, inp: GasExchangeInputs): void {
-    const hb = OXYGEN.hemoglobin;
+    const hb = gas.hb;
     const acid = acidBase(gas.paco2, gas.lactate);
     gas.ph = acid.ph;
     gas.hco3 = acid.hco3;

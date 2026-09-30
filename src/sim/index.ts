@@ -24,6 +24,50 @@ export {
   type LimitRange,
 } from './devices/alarmLimits';
 export { CPR_PRESETS, assessCprQuality } from './interventions/cprQuality';
+// Medications (phase A)
+export { FORMULARY, getProduct, searchFormulary } from './pharmacology/formulary/products';
+export {
+  DRUG_CATEGORIES,
+  type DrugCategory,
+  type Product,
+  type Protocol,
+  type Route,
+  type ModelInfo,
+} from './pharmacology/formulary/types';
+export { SOURCES, type Source, type SourceId } from './pharmacology/sources';
+export {
+  rateToMlPerH,
+  mlPerHToRate,
+  doseToMl,
+  mlToAmount,
+  convertAmount,
+  parseDoseUnit,
+  unitLabel,
+  type DoseUnit,
+  type RateUnit,
+  type AmountUnit,
+  type Concentration,
+} from './pharmacology/units';
+export { dosingWeight, type WeightBasis } from './pharmacology/bodySize';
+export {
+  validateRate,
+  validateBolus,
+  validateLoad,
+  protocolOf,
+  type Validation,
+  type ValidationCode,
+} from './pharmacology/validation';
+export { PUMP_MAX_RATE, LINE_DEFAULTS } from './pharmacology/delivery';
+export { PD } from './pharmacology/pd';
+export type {
+  PumpState,
+  LineState,
+  DrugEffects,
+  DrugKinetics,
+  FluidState,
+  MoietyId,
+  PharmacologyState,
+} from './state/PharmacologyState';
 export { SIGNAL_UNITS, type SignalChannel, type ReadonlySignalBank } from './signals/SignalBank';
 export type { RingBuffer } from './signals/RingBuffer';
 
@@ -86,4 +130,5 @@ export type {
   PatientInit,
   ScenarioEvent,
   ScenarioObjective,
+  ScenarioPump,
 } from './types/scenario';

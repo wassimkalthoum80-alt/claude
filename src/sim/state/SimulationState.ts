@@ -2,6 +2,7 @@ import type { TimeScale } from '../core/Clock';
 import type { CPRState } from './CPRState';
 import type { MonitorState } from './MonitorState';
 import type { PatientState } from './PatientState';
+import type { LineState, PumpState } from './PharmacologyState';
 import type { VentilatorState } from './VentilatorState';
 
 /**
@@ -55,7 +56,14 @@ export interface SimulationState {
   time: number;
   tick: number;
   patient: PatientState;
-  devices: { monitor: MonitorState; ventilator: VentilatorState };
+  devices: {
+    monitor: MonitorState;
+    ventilator: VentilatorState;
+    /** syringe pumps (Perfusor) and volumetric pumps (Infusomat) */
+    pumps: PumpState[];
+    /** IV line dead space contents */
+    line: LineState;
+  };
   interventions: { cpr: CPRState };
   timers: ArrestTimers;
   scenario: { id: string; seed: number; ended: boolean };
