@@ -18,6 +18,23 @@ searching live in `docs/reference/.text/`, which is git-ignored and regenerated 
 | `EKG-Leitfaden_mediknow.pdf` | 12 | ECG (rhythms, ST changes) |
 | `Labormedizin-Skript_mediknow.pdf` | 84 | Laboratory values |
 
+## Ventilation, ARDS and oesophageal pressure (journal articles supplied by the owner)
+
+These papers will be used for the ventilator (Pes/transpulmonary-pressure monitoring, P-SILI, PEEP titration) and ARDS scenarios.
+
+| File (`docs/reference/`) | Pages | Content |
+|---|---|---|
+| `Peso1.pdf` | 4 | Piquilloud, Beitler, Beloncle. Monitoring esophageal pressure (Intensive Care Med 2024;50:953) |
+| `Pesos2.pdf` | 4 | Carteaux, Haudebourg, Pirracchio. Driving pressure vs transpulmonary pressure (Intensive Care Med 2026) |
+| `Pesos3.pdf` | 2 | Ono. Driving-pressure pitfalls of methods without Pes (Intensive Care Med 2023;49:1147) |
+| `Peso 4.pdf` | 5 | Roca, Telias, Grieco. Bedside strategies to minimise P-SILI and VILI in ARDS (Intensive Care Med 2024;50:597) |
+| `PEEP Peso.pdf` | 4 | Battaglini, Roca, Ferrer. PEEP optimisation in ARDS: physiological evidence and bedside methods (Intensive Care Med 2024;50:762) |
+| `PSILI.pdf` | 19 | Review of patient self-inflicted lung injury (MDPI 2026) |
+| `Physiology Guided ARDS.pdf` | 9 | Physiology-guided ventilation in ARDS (research article, 2025) |
+| `Plens_et_al-2026-Intensive_Care_Medicine.pdf` | 15 | Lung- and diaphragm-protective ventilation in ARDS (Intensive Care Med 2026;52:1895) |
+| `Ehrmann_et_al-2026-Intensive_Care_Medicine.pdf` | 14 | Prone positioning in ARDS (Intensive Care Med 2026;52:1881) |
+| `ventilator screen understanding.pdf` | 5 | Carteaux, Spinelli, Jaber. Understanding lung physiology through the ventilator screen (Intensive Care Med 2026) |
+
 When a parameter or behaviour is based on this material, the code or `docs/SIMULATION_ASSUMPTIONS.md` cites it
 ("Medi Know <script>", source id `mediknowAnaesthesie` in `sources.ts`). Study scripts give mechanisms, doses
 and side effects, not dose–response curves; numerical calibration also uses primary studies and product
