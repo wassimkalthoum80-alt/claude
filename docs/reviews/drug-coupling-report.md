@@ -193,7 +193,7 @@ Web search worked in this session, but direct page fetches were blocked.
 | Propofol induction: MAP −25 to −40 %, little HR change, blunted baroreflex | Induction studies ([Acta Anaesth Scand 2023](https://onlinelibrary.wiley.com/doi/10.1111/aas.14293)) | ✓ (unchanged) |
 | Midazolam peak 3–5 min; sufentanil onset 1–3 min; remifentanil onset 1–1.5 min, CSHT 3–4 min | Midazolam labels ([FDA](https://www.accessdata.fda.gov/drugsatfda_docs/label/2017/208878Orig1s000lbl.pdf)); [Sufentanil FDA label](https://www.accessdata.fda.gov/drugsatfda_docs/label/2014/019050s032lbl.pdf); remifentanil CSHT literature | Midazolam ke0 0.25/min; Gepts and Minto unchanged ✓ |
 | Vagal baroreflex acts within 0.2–0.6 s, sympathetic within 2–5 s | [Baroreflex review, Ann Noninvasive Electrocardiol](https://onlinelibrary.wiley.com/doi/10.1111/j.1542-474X.2008.00219.x) | HR τ 5 s, SVR τ 2 s ✓ |
-| Opioids: chest-wall rigidity with rapid IV injection; remifentanil esterase metabolism; sufentanil most potent, less accumulation than fentanyl | Medi Know Lernkarten "Analgetika" (owner-supplied, local only) | ✓ (unchanged) |
+| Opioids: chest-wall rigidity with rapid IV injection; remifentanil esterase metabolism; sufentanil most potent, less accumulation than fentanyl | Medi Know Lernkarten "Analgetika" and Anästhesie-Skript (owner-supplied, docs/reference) — noradrenaline α1 → afterload ↑, myocardial O₂ demand ↑, reflex bradycardia; bolus 5–10 µg of 1:100 (new `noradrenaline-10` product) | ✓ (unchanged) |
 
 ### New tests (drugCoupling.test.ts)
 

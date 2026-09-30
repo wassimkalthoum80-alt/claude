@@ -377,6 +377,43 @@ export const EXECUTABLE: Product[] = [
     review: 'unreviewed',
   },
   {
+    id: 'noradrenaline-10',
+    genericName: 'Noradrenalin 1:100 (Bolus)',
+    brandNames: ['Arterenol'],
+    aliases: ['norepinephrine bolus', 'Noradrenalin 10 µg/mL', '1 mg/100 mL'],
+    category: 'Vasopressoren / Inotropika',
+    status: 'executable',
+    moiety: 'noradrenaline',
+    formulationLabel: '10 µg/mL (1 mg / 100 mL), 10 mL syringe',
+    concentration: { value: 10, unit: 'microgram' },
+    containerMl: 10,
+    salt: {
+      salt: 'noradrenaline (as base)',
+      saltPerMl: { value: 10, unit: 'microgram' },
+      equivalence: 'Concentration expressed as noradrenaline BASE (see 100 µg/mL product).',
+    },
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'bolus',
+        indication: 'Perioperative Hypotonie (Bolus 5–10 µg)',
+        route: 'IV',
+        weightBasis: 'none',
+        bolus: {
+          dose: { min: 5, typical: 10, max: 10, unit: 'microgram' },
+          durationS: { min: 0, typical: 0 },
+        },
+        notes:
+          'Push and flush (a bolus left in the line dead space arrives late). Acts within ≈ 20–60 s, lasts a few minutes.',
+        sources: ['mediknowAnaesthesie'],
+      },
+    ],
+    reference: NONE,
+    model: CATECHOLAMINE_MODEL('Noradrenaline', '2.5 min'),
+    sources: ['mediknowAnaesthesie', 'smpcNoradrenaline', 'educational'],
+    review: 'unreviewed',
+  },
+  {
     id: 'noradrenaline-20',
     genericName: 'Noradrenalin',
     brandNames: ['Arterenol'],

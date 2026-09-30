@@ -533,3 +533,22 @@ describe('adrenaline dose–response realism', () => {
     expect(snap(e).patient.heartLung.lvDecompensation).toBeGreaterThan(0.5); // acute LV failure follows
   });
 });
+
+describe('noradrenaline perioperative bolus (Medi Know Anästhesie-Skript: 5–10 µg of 1:100)', () => {
+  it('10 µg push + flush is within protocol and raises MAP within seconds, then fades', () => {
+    const e = createEngine(patient());
+    e.runFor(120);
+    const m0 = haemo(e).map;
+    cmd(e, { type: 'PUMP_LOAD', pumpId: 'P1', productId: 'noradrenaline-10' });
+    cmd(e, { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 1, durationS: 0 });
+    cmd(e, { type: 'LINE_FLUSH', volumeMl: 5 });
+    expect(e.eventLog.some((l) => l.kind === 'event' && l.event === 'COMMAND_REJECTED')).toBe(
+      false,
+    );
+    e.runFor(30);
+    const m30 = haemo(e).map;
+    e.runFor(300);
+    expect(m30).toBeGreaterThan(m0 + 6);
+    expect(haemo(e).map).toBeLessThan(m30 - 4);
+  });
+});

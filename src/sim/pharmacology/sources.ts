@@ -82,6 +82,15 @@ export const SOURCES = {
     kind: 'label',
     review: 'unreviewed',
   },
+  mediknowAnaesthesie: {
+    id: 'mediknowAnaesthesie',
+    citation:
+      'Medi Know Anästhesie-Skript (owner-supplied study script, docs/reference): Noradrenalin — α1 vasoconstriction, afterload and myocardial O2 demand rise, reflex bradycardia; bolus 5–10 µg (1:100 = 10 µg/mL); infusion 0.01–0.1 µg/kg/min (mild–moderate) and 0.1–1 µg/kg/min (severe instability).',
+    year: 2024,
+    jurisdiction: 'DE',
+    kind: 'textbook',
+    review: 'unreviewed',
+  },
   smpcNoradrenaline: {
     id: 'smpcNoradrenaline',
     citation:

@@ -7,6 +7,6 @@ playwright-report
 blob-report
 .DS_Store
 
-# Licensed third-party study material (personalised, redistribution not permitted) — kept local only
-docs/reference/pharma/*.pdf
+# Local text extracts of the owner's reference PDFs (regenerated with pypdf)
 docs/reference/pharma/*.txt
+docs/reference/.text/
