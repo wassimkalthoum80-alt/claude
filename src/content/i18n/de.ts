@@ -54,6 +54,7 @@ export const de: Record<I18nKey, string> = {
   'limits.param.hr': 'Herzfrequenz',
   'limits.param.spo2': 'SpO₂',
   'limits.param.desat': 'Desaturation (hohe Priorität)',
+  'limits.param.brady': 'Bradykardie (hohe Priorität)',
   'limits.param.artSys': 'ART systolisch',
   'limits.param.artMean': 'ART Mitteldruck',
   'limits.param.etco2': 'EtCO₂',

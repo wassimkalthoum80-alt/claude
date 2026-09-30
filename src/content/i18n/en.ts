@@ -52,6 +52,7 @@ export const en = {
   'limits.param.hr': 'Heart rate',
   'limits.param.spo2': 'SpO₂',
   'limits.param.desat': 'Desaturation (high priority)',
+  'limits.param.brady': 'Bradycardia (high priority)',
   'limits.param.artSys': 'ART systolic',
   'limits.param.artMean': 'ART mean',
   'limits.param.etco2': 'EtCO₂',

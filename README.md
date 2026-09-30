@@ -94,8 +94,9 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   heart–lung model (O₂ supply/demand), so hypoxaemic tachycardia depresses ST, most in V5. Lower the myocardial
   reserve in the instructor panel to simulate a coronary patient.
 - **Adjustable alarm limits.** Every numeric shows its limits in small print (upper over lower). Click a value
-  on the monitor, press <kbd>L</kbd> or use **LIMITS** in the alarm field to change them. Limits cover HR, SpO₂,
-  desaturation (high priority), ART systolic and mean, EtCO₂ and ST. **Auto** sets limits around the current
+  on the monitor, press <kbd>L</kbd> or use **LIMITS** in the alarm field to change them. Limits cover HR, bradycardia (high
+  priority), SpO₂, desaturation (high priority), ART systolic and mean, EtCO₂ and ST. Between HR LOW and the
+  bradycardia limit the alarm is yellow; below it, red. **Auto** sets limits around the current
   values and **Defaults** restores the adult defaults. Every change is logged for the debrief.
 - New cases: **Silent disconnection** (hypoxic arrest if unnoticed) and **Breath stacking in severe asthma**
   (low-flow PEA unless expiration is lengthened or the tube is briefly disconnected). The ventilator header has a

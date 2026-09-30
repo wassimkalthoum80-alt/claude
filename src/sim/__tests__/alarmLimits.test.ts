@@ -150,3 +150,31 @@ describe('alarm limits: engine', () => {
     expect(fired).toBe(true);
   });
 });
+
+describe('alarm limits: bradycardia escalation', () => {
+  it('HR LOW is medium between the HR low limit and the bradycardia limit, high below it', () => {
+    const d = defaultAlarmLimits();
+    expect(d.brady).toEqual({ low: 45, high: null });
+    const e = createEngine();
+    e.runFor(10);
+    // Push the patient's rate between the limits by raising the limits instead (HR 80).
+    e.dispatch({ type: 'SET_ALARM_LIMIT', param: 'hr', bound: 'low', value: 90 });
+    e.runFor(2);
+    let a = e.getSnapshot().devices.monitor.alarms.find((x) => x.id === 'HR_LOW');
+    expect(a?.priority).toBe('medium');
+    e.dispatch({ type: 'SET_ALARM_LIMIT', param: 'hr', bound: 'low', value: 110 });
+    e.dispatch({ type: 'SET_ALARM_LIMIT', param: 'brady', bound: 'low', value: 100 });
+    e.runFor(2);
+    a = e.getSnapshot().devices.monitor.alarms.find((x) => x.id === 'HR_LOW');
+    expect(a?.priority).toBe('high');
+  });
+
+  it('keeps the bradycardia limit at least 5/min below HR LOW', () => {
+    let l = defaultAlarmLimits();
+    l = setAlarmLimit(l, 'brady', 'low', 80);
+    expect(l.brady.low).toBe(55);
+    l = setAlarmLimit(l, 'hr', 'low', 40);
+    expect(l.hr.low).toBe(40);
+    expect(l.brady.low).toBe(35);
+  });
+});

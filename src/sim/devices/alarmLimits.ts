@@ -16,7 +16,8 @@ export interface LimitSpec {
 /**
  * Adjustable monitor alarm limits (defaults chosen for anaesthetised adults: HR 60–120, SYS 100–160, EtCO2
  * 35–45 — tight on purpose; the ranges are what the knob allows).
- * - hr: HR LOW (high priority) / HR HIGH (medium)
+ * - hr: HR LOW (medium) / HR HIGH (medium)
+ * - brady: bradycardia limit — below it HR LOW escalates to high priority
  * - spo2: SpO2 LOW (medium) / SpO2 HIGH (medium, 100 = effectively off)
  * - desat: desaturation limit — below it SpO2 LOW escalates to high priority
  * - artSys, artMean: ART LOW (high) / ART HIGH (medium) when systolic or mean is outside its limits
@@ -29,6 +30,7 @@ export const ALARM_LIMIT_SPECS: Record<AlarmLimitParam, LimitSpec> = {
     low: { min: 25, max: 150, step: 5, default: 60 },
     high: { min: 60, max: 220, step: 5, default: 120 },
   },
+  brady: { unit: '/min', low: { min: 20, max: 145, step: 5, default: 45 } },
   spo2: {
     unit: '%',
     low: { min: 70, max: 99, step: 1, default: 90 },
@@ -71,9 +73,19 @@ function snap(v: number, r: LimitRange): number {
 }
 
 /**
+ * Critical (high-priority) companion limits: each sits below its parent's LOW limit by at least `gap`.
+ * Between the two limits the parent's LOW alarm is medium priority; below the critical limit it is high.
+ */
+const CRITICAL: Partial<Record<AlarmLimitParam, { parent: AlarmLimitParam; gap: number }>> = {
+  brady: { parent: 'hr', gap: 5 },
+  desat: { parent: 'spo2', gap: 1 },
+};
+
+/**
  * Set one bound and return the new limits. Values are snapped to the knob step and clamped to the range; a low
- * limit always stays at least one step below the high limit (and the desaturation limit below SpO2 LOW), like
- * a real monitor that refuses crossed limits. Invalid input leaves the limits unchanged.
+ * limit always stays at least one step below the high limit, and a critical limit (bradycardia, desaturation)
+ * below its parent's LOW limit, like a real monitor that refuses crossed limits. Invalid input leaves the
+ * limits unchanged.
  */
 export function setAlarmLimit(
   limits: AlarmLimits,
@@ -88,13 +100,22 @@ export function setAlarmLimit(
   const cur = limits[param];
   if (bound === 'low' && cur.high !== null) v = Math.min(v, cur.high - range.step);
   if (bound === 'high' && cur.low !== null) v = Math.max(v, cur.low + range.step);
-  if (param === 'desat' && limits.spo2.low !== null) v = Math.min(v, limits.spo2.low - 1);
+  const crit = CRITICAL[param];
+  const parentLow = crit ? limits[crit.parent].low : null;
+  if (crit && parentLow !== null) v = Math.min(v, parentLow - crit.gap);
   v = snap(v, range);
   const next: AlarmLimits = { ...limits, [param]: { ...cur, [bound]: v } };
-  // Raising SpO2 LOW never leaves the desaturation limit above it, and lowering it pulls desat along.
-  if (param === 'spo2' && bound === 'low' && next.desat.low !== null && next.desat.low >= v) {
-    const d = ALARM_LIMIT_SPECS.desat.low;
-    if (d) next.desat = { low: snap(v - 1, d), high: null };
+  // Lowering a parent's LOW limit pulls its critical limit along so it always stays below.
+  if (bound === 'low') {
+    for (const [child, c] of Object.entries(CRITICAL) as [
+      AlarmLimitParam,
+      { parent: AlarmLimitParam; gap: number },
+    ][]) {
+      const childRange = ALARM_LIMIT_SPECS[child].low;
+      const childLow = next[child].low;
+      if (c.parent === param && childRange && childLow !== null && childLow > v - c.gap)
+        next[child] = { low: snap(v - c.gap, childRange), high: null };
+    }
   }
   return next;
 }

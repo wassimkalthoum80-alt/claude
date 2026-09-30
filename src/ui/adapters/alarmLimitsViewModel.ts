@@ -17,6 +17,7 @@ export interface AlarmLimitRow {
 
 const COLOR: Record<AlarmLimitParam, string> = {
   hr: '--ecg',
+  brady: '--ecg',
   spo2: '--spo2',
   desat: '--spo2',
   artSys: '--art',
@@ -27,6 +28,7 @@ const COLOR: Record<AlarmLimitParam, string> = {
 
 const ALARMS: Record<AlarmLimitParam, AlarmId[]> = {
   hr: ['HR_LOW', 'HR_HIGH'],
+  brady: [],
   spo2: ['SPO2_LOW', 'SPO2_HIGH'],
   desat: [],
   artSys: ['ART_LOW', 'ART_HIGH'],
@@ -51,6 +53,7 @@ export function alarmLimitsViewModel(s: Readonly<SimulationState>): { rows: Alar
         );
   const now: Record<AlarmLimitParam, string> = {
     hr: num(n.hr),
+    brady: num(n.hr),
     spo2: num(n.spo2),
     desat: num(n.spo2),
     artSys: num(n.artSys),
@@ -58,7 +61,7 @@ export function alarmLimitsViewModel(s: Readonly<SimulationState>): { rows: Alar
     etco2: num(n.etco2),
     st: formatSt(worstSt),
   };
-  const desatAlarm = mon.alarms.some((a) => a.id === 'SPO2_LOW' && a.priority === 'high');
+  const critical = (id: AlarmId) => mon.alarms.some((a) => a.id === id && a.priority === 'high');
   return {
     rows: ALARM_LIMIT_PARAMS.map((param) => ({
       param,
@@ -67,7 +70,12 @@ export function alarmLimitsViewModel(s: Readonly<SimulationState>): { rows: Alar
       low: mon.alarmLimits[param].low,
       high: mon.alarmLimits[param].high,
       now: now[param],
-      alarming: param === 'desat' ? desatAlarm : ALARMS[param].some((id) => active.has(id)),
+      alarming:
+        param === 'desat'
+          ? critical('SPO2_LOW')
+          : param === 'brady'
+            ? critical('HR_LOW')
+            : ALARMS[param].some((id) => active.has(id)),
     })),
   };
 }

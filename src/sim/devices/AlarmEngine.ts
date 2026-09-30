@@ -12,7 +12,7 @@ const PRIORITY: Record<AlarmId, AlarmPriority> = {
   SPO2_NO_PULSE: 'medium',
   SPO2_LOW: 'medium',
   SPO2_HIGH: 'medium',
-  HR_LOW: 'high',
+  HR_LOW: 'medium',
   HR_HIGH: 'medium',
   ST_DEVIATION: 'medium',
   ETCO2_LOW: 'medium',
@@ -57,9 +57,12 @@ export class AlarmEngine {
     if (below(n.etco2, lim.etco2.low)) active.add('ETCO2_LOW');
     if (above(n.etco2, lim.etco2.high)) active.add('ETCO2_HIGH');
 
-    // Below the desaturation limit SpO2 LOW becomes a high-priority alarm.
-    const priorityOf = (id: AlarmId): AlarmPriority =>
-      id === 'SPO2_LOW' && below(spo2, lim.desat.low) ? 'high' : PRIORITY[id];
+    // Below the desaturation / bradycardia limit, SpO2 LOW / HR LOW become high-priority alarms.
+    const priorityOf = (id: AlarmId): AlarmPriority => {
+      if (id === 'SPO2_LOW' && below(spo2, lim.desat.low)) return 'high';
+      if (id === 'HR_LOW' && below(n.hr, lim.brady.low)) return 'high';
+      return PRIORITY[id];
+    };
     const kept: Alarm[] = mon.alarms
       .filter((a) => active.has(a.id))
       .map((a) => ({ ...a, priority: priorityOf(a.id) }));

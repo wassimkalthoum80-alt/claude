@@ -137,6 +137,7 @@ describe('alarm limits view model', () => {
     let rows = alarmLimitsViewModel(e.getSnapshot()).rows;
     expect(rows.map((r) => r.param)).toEqual([
       'hr',
+      'brady',
       'spo2',
       'desat',
       'artSys',

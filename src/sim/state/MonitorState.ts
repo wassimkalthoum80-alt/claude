@@ -16,12 +16,13 @@ export type AlarmId =
   | 'ETCO2_HIGH';
 
 /** Parameters with adjustable alarm limits. */
-export type AlarmLimitParam = 'hr' | 'spo2' | 'desat' | 'artSys' | 'artMean' | 'etco2' | 'st';
+export type AlarmLimitParam =
+  'hr' | 'brady' | 'spo2' | 'desat' | 'artSys' | 'artMean' | 'etco2' | 'st';
 export type AlarmLimitBound = 'low' | 'high';
 
 /**
- * Monitor alarm limits (device settings). Units: hr /min; spo2, desat %; artSys, artMean, etco2 mmHg;
- * st mm (± around 0). null = this parameter has no such bound (desat: low only; st: high only).
+ * Monitor alarm limits (device settings). Units: hr, brady /min; spo2, desat %; artSys, artMean, etco2 mmHg;
+ * st mm (± around 0). null = this parameter has no such bound (brady, desat: low only; st: high only).
  */
 export type AlarmLimits = Record<AlarmLimitParam, { low: number | null; high: number | null }>;
 
