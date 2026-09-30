@@ -125,7 +125,7 @@ export class CardiovascularModel {
     const toneTarget = cardio.spontaneousCirculation ? 1 : 0;
     const tau = cardio.spontaneousCirculation ? CARDIO.toneRecoveryTauS : CARDIO.toneLossTauS;
     cardio.vascularTone = approach(cardio.vascularTone, toneTarget, dt, tau);
-    cardio.criticalClosingPressure = criticalClosingPressure(cardio.vascularTone);
+    cardio.criticalClosingPressure = criticalClosingPressure(cardio.vascularTone, cardio.svrFactor);
     cardio.cardiacOutput = (this.flowAverage * 60) / 1000;
     cardio.svr = Math.round(CARDIO.peripheralResistance * cardio.svrFactor * 1333);
     cardio.arterialPressure = this.lastArterialPressure;
@@ -137,8 +137,17 @@ export class CardiovascularModel {
   }
 }
 
-export function criticalClosingPressure(tone: number): number {
-  return CARDIO.msfp + clamp(tone, 0, 1) * (CARDIO.pcritWithTone - CARDIO.msfp);
+/**
+ * SIM-ASSUMPTION: the tone-dependent part of the critical closing pressure scales with vasomotor tone (the SVR
+ * factor, 0.5–1.5): vasodilation (propofol, sympatholysis) lowers it, vasoconstriction (noradrenaline, reflex
+ * tone) raises it. Without this a vasodilator could only lower the pressure above a fixed 30 mmHg waterfall.
+ * @param vasomotor relative vascular resistance (1 = baseline)
+ */
+export function criticalClosingPressure(tone: number, vasomotor = 1): number {
+  return (
+    CARDIO.msfp +
+    clamp(tone, 0, 1) * clamp(vasomotor, 0.5, 1.5) * (CARDIO.pcritWithTone - CARDIO.msfp)
+  );
 }
 
 export function compressionDuration(intervalS: number): number {

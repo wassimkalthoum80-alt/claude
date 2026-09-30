@@ -184,6 +184,7 @@ export const en = {
   'hl.subtitle': 'How ventilation acts on the circulation — live model values (true, not measured)',
   'hl.reserves': 'Patient reserves',
   'hl.preloadReserve': 'Volume status',
+  'hl.age': 'Age',
   'hl.rightVentricularReserve': 'RV reserve',
   'hl.cardiacReserve': 'Myocardial reserve',
   'hl.sympatheticResponse': 'Sympathetic response',

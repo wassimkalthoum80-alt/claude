@@ -32,6 +32,8 @@ export interface HeartLungViewModel {
   meters: Meter[];
   cause: I18nKey | null;
   reserves: PhysiologyReserves;
+  /** years */
+  ageYears: number;
   arrestModelEnabled: boolean;
   calibration: CalibrationRow[];
 }
@@ -199,6 +201,7 @@ export function heartLungViewModel(s: Readonly<SimulationState>): HeartLungViewM
     meters,
     cause: hl.arrestCause === null ? null : (`hl.cause.${hl.arrestCause}` as const),
     reserves: { ...s.patient.reserves },
+    ageYears: s.patient.demographics.ageYears,
     arrestModelEnabled: s.model.arrestModelEnabled,
     calibration,
   };

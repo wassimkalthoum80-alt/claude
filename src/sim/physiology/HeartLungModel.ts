@@ -5,6 +5,14 @@ import { approach, clamp } from './shapes';
 
 /** mL O2/dL — arterial O2 content of the baseline patient (reference for coronary O2 supply) */
 const REFERENCE_CAO2 = 19;
+/**
+ * SIM-ASSUMPTION: reflex sympathetic compensation declines with age (baroreflex sensitivity, β-receptor response):
+ * × (1 − 0.012 · (age − 60)), limited to 0.5–1.25 — 80 y: 0.76, 90 y: 0.64, 35 y: 1.25.
+ */
+export function ageSympatheticFactor(ageYears: number): number {
+  return clamp(1 - 0.012 * (ageYears - 60), 0.5, 1.25);
+}
+
 /** mmHg — MAP below which the arterial baroreflex starts to raise sympathetic tone */
 const BARO_SET_POINT_MMHG = 82;
 /**
@@ -205,12 +213,17 @@ export class HeartLungModel {
     // blood pressure brings a compensatory tachycardia (blunted, not abolished, by the anaesthetic).
     const setPointStress =
       0.6 * clamp((BARO_SET_POINT_MMHG - cardio.meanArterialPressure) / 25, 0, 1);
+    // SIM-ASSUMPTION: the tonic outflow driven by the low-pressure (volume) reflex is suppressed more by
+    // anaesthetics (baroreflex factor squared) than the phasic arterial baroreflex response — the hypovolaemic
+    // patient loses the tone that held the blood pressure, while a normovolaemic patient keeps a reflex tachycardia.
     const stress =
       clamp(
-        hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress + setPointStress + volumeStress,
+        (hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress + setPointStress) *
+          drugs.baroreflex +
+          volumeStress * drugs.baroreflex ** 2,
         0,
         1.5,
-      ) * drugs.baroreflex;
+      ) * ageSympatheticFactor(patient.demographics.ageYears);
     const highPressure = clamp((cardio.meanArterialPressure - 105) / 40, 0, 1) * drugs.baroreflex;
     const debtFraction = clamp(
       (hl.oxygenDebt - k.bradycardiaDebtS) / (k.arrestDebtS - k.bradycardiaDebtS),

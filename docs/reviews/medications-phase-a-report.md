@@ -167,3 +167,26 @@ The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these 
   recovering within ≈ 10 min. It is covered by a unit test and an e2e test.
 - The ST test for a healthy heart in severe shock now allows this minimal change (≤ 0.2 of the ischaemia scale,
   V5 above −0.7 mm) instead of none.
+
+## Update: age and hypovolaemia
+
+- **Age**:
+  - it is now a covariate of the haemodynamic PD (Ce50 × (1 − 0.01·(age − 60))) and of reflex compensation
+    (× (1 − 0.012·(age − 60))), on top of the Schnider PK;
+  - the instructor sets it live with `SET_PATIENT_AGE` (slider in the heart–lung panel, 18–100 y).
+- **Sympatholysis** by propofol is sigmoidal (strong at bolus peaks). The tonic volume-reflex outflow is blunted
+  more (factor squared), so hypovolaemic patients lose their compensation.
+- **Propofol's effect** is weighted towards venodilation, which hits preload-dependent patients hardest.
+- **The critical closing pressure** now follows vascular tone.
+- **Result** for 100 mg under TIVA (fall of mean ART):
+
+  | | normovolaemic | volume status 0.6 |
+  |---|---|---|
+  | 35 y | 20 % | 34 % |
+  | 58 y | 24 % | 39 % |
+  | 80 y | 29 % | 45 % |
+
+  At 80 y and volume status 0.5 the circulation collapses (PEA) if untreated.
+- **Tests**: a unit test checks this gradient, and another checks the age command.
+- **Tried and removed**: a sympathetic venoconstriction term (recruiting unstressed volume). It made breath
+  stacking no longer end in PEA (4 older tests) without improving the gradient.

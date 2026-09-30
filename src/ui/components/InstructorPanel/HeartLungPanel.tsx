@@ -111,6 +111,25 @@ export function HeartLungPanel() {
             ))}
           </div>
 
+          <label className={styles.slider}>
+            <span>{t('hl.age')}</span>
+            <input
+              type="range"
+              min={18}
+              max={100}
+              step={1}
+              value={vm.ageYears}
+              onChange={(e) =>
+                engine.dispatch(
+                  { type: 'SET_PATIENT_AGE', ageYears: Number(e.target.value) },
+                  'instructor',
+                )
+              }
+              data-testid="patient-age"
+            />
+            <span className="num">{vm.ageYears} y</span>
+          </label>
+
           <div className={styles.arrestRow}>
             <span>{t('hl.arrestModel')}</span>
             {[true, false].map((on) => (

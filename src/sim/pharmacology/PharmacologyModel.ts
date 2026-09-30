@@ -37,6 +37,11 @@ export class PharmacologyModel {
     return p;
   }
 
+  /** Age/size changed: PK parameters are recomputed (drug amounts in the body stay). */
+  onDemographicsChanged(): void {
+    this.params.clear();
+  }
+
   /** Scenario start: infusions already running are at steady state (patient calibrated under them). */
   reset(patient: PatientState, pumps: PumpState[]): LineState {
     this.params.clear();
@@ -55,7 +60,12 @@ export class PharmacologyModel {
       ph.drugs[m] = steadyState(this.paramsFor(patient, m), input);
     }
     ph.reference = this.exposures(patient);
-    ph.effects = drugEffects(ph.reference, ph.reference, patient.demographics.weightKg);
+    ph.effects = drugEffects(
+      ph.reference,
+      ph.reference,
+      patient.demographics.weightKg,
+      patient.demographics.ageYears,
+    );
     patient.gas.hb = OXYGEN.hemoglobin;
     return steadyStateLine(pumps, getProduct);
   }
@@ -77,7 +87,12 @@ export class PharmacologyModel {
     const w = patient.demographics.weightKg;
     stepFluids(ph.fluids, step.fluids, step.otherMl, getProduct, w, dtS);
     patient.gas.hb = dilutedHb(OXYGEN.hemoglobin, ph.fluids, w);
-    ph.effects = drugEffects(this.exposures(patient), ph.reference, w);
+    ph.effects = drugEffects(
+      this.exposures(patient),
+      ph.reference,
+      w,
+      patient.demographics.ageYears,
+    );
   }
 
   /** Effect-relevant exposure of each moiety (units: see pd.ts). */

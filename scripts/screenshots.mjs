@@ -121,6 +121,23 @@ for (const size of sizes) {
   await page.evaluate(() => window.__resusEngine.runFor(110));
   await page.waitForTimeout(1200);
   await shot('4-propofol-bolus-effect');
+  // Same bolus in an 80-year-old hypovolaemic patient (instructor: age 80, volume status 0.6).
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await page.click('[data-testid=ecg-leads-5]');
+  await page.keyboard.press('Backquote');
+  await page.fill('[data-testid=patient-age]', '80');
+  await page.fill('[data-testid=reserve-preloadReserve]', '0.6');
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.__resusEngine.runFor(180));
+  await page.click('[data-testid=pump-P1]');
+  await page.fill('[data-testid=pump-bolus-ml]', '5');
+  await page.fill('[data-testid=pump-bolus-duration]', '10');
+  await page.click('[data-testid=pump-give-bolus]');
+  await page.click('[aria-label=Close]');
+  await page.evaluate(() => window.__resusEngine.runFor(120));
+  await page.waitForTimeout(1200);
+  await shot('5-propofol-bolus-elderly-hypovolaemic');
   await page.close();
 }
 

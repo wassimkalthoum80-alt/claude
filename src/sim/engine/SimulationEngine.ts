@@ -368,6 +368,16 @@ export class SimulationEngine {
       case 'SET_RESERVES':
         s.patient.reserves = { ...s.patient.reserves, ...validReserves(command.reserves) };
         break;
+      case 'SET_PATIENT_AGE':
+        if (
+          Number.isFinite(command.ageYears) &&
+          command.ageYears >= 18 &&
+          command.ageYears <= 100
+        ) {
+          s.patient.demographics.ageYears = Math.round(command.ageYears);
+          this.pharmacology.onDemographicsChanged();
+        }
+        break;
       case 'SET_ARREST_MODEL':
         s.model.arrestModelEnabled = command.enabled;
         break;

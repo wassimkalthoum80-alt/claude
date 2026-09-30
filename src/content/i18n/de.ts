@@ -187,6 +187,7 @@ export const de: Record<I18nKey, string> = {
     'Wie die Beatmung auf den Kreislauf wirkt — Modellwerte live (wahr, nicht gemessen)',
   'hl.reserves': 'Reserven des Patienten',
   'hl.preloadReserve': 'Volumenstatus',
+  'hl.age': 'Alter',
   'hl.rightVentricularReserve': 'RV-Reserve',
   'hl.cardiacReserve': 'Myokardreserve',
   'hl.sympatheticResponse': 'Sympathikusantwort',

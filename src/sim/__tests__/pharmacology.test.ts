@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { erc2025 } from '../../content/guidelines/erc2025';
+import { baselinePatient } from '../../content/scenarios';
 import { SimulationEngine } from '../engine/SimulationEngine';
 import { dosingWeight, idealBodyWeight } from '../pharmacology/bodySize';
 import { lineAmount } from '../pharmacology/delivery';
@@ -601,5 +602,44 @@ describe('soft limits, top-up boluses and the haemodynamic response', () => {
     e.runFor(600);
     expect(snap(e).patient.cardio.meanArterialPressure).toBeGreaterThan(0.95 * map0);
     expect(Math.abs(snap(e).devices.monitor.numerics.stII ?? 0)).toBeLessThan(0.15);
+  });
+});
+
+describe('propofol bolus: age and volume status', () => {
+  /** Largest relative fall of the displayed mean ART after 100 mg propofol under TIVA. */
+  const bolusDrop = (ageYears: number, preloadReserve: number) => {
+    const e = new SimulationEngine({
+      scenario: { ...baselinePatient, patient: { ...baselinePatient.patient, ageYears } },
+      guidelines: erc2025,
+    });
+    cmd(e, { type: 'SET_RESERVES', reserves: { preloadReserve } }, 'instructor');
+    e.runFor(180);
+    const before = snap(e).devices.monitor.numerics.artMean ?? 0;
+    cmd(e, { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 5, durationS: 10 });
+    let lowest = before;
+    for (let i = 0; i < 30; i++) {
+      e.runFor(10);
+      lowest = Math.min(lowest, snap(e).devices.monitor.numerics.artMean ?? lowest);
+    }
+    return (before - lowest) / before;
+  };
+
+  it('the same bolus lowers BP much more in hypovolaemia and in the elderly', () => {
+    const young = bolusDrop(35, 1);
+    const hypo = bolusDrop(35, 0.6);
+    const old = bolusDrop(80, 1);
+    const oldHypo = bolusDrop(80, 0.6);
+    expect(young).toBeGreaterThan(0.1);
+    expect(hypo).toBeGreaterThan(young + 0.1);
+    expect(old).toBeGreaterThan(young + 0.05);
+    expect(oldHypo).toBeGreaterThan(Math.max(hypo, old) + 0.08);
+  });
+
+  it('the instructor can change the age; PK and drug sensitivity follow', () => {
+    const e = createEngine();
+    cmd(e, { type: 'SET_PATIENT_AGE', ageYears: 85 }, 'instructor');
+    expect(snap(e).patient.demographics.ageYears).toBe(85);
+    cmd(e, { type: 'SET_PATIENT_AGE', ageYears: 5 }, 'instructor'); // outside 18–100: ignored
+    expect(snap(e).patient.demographics.ageYears).toBe(85);
   });
 });

@@ -114,6 +114,11 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 - Try a **propofol top-up bolus** under TIVA (P1 → Bolus 5 mL over 10 s = 100 mg): blood pressure falls
   (≈ 125/69 → 110/60), the heart rate rises as the baroreflex compensates (≈ 80 → 94/min), and the ST segment
   shows a small rate-related depression (≈ −0.3 mm in II, −0.6 mm in V5), all recovering over ≈ 10 min.
+- The same bolus acts **much more strongly in hypovolaemia and in the elderly** (instructor panel → heart–lung
+  model: *Age* slider, *Volume status*). An 80-year-old at volume status 0.6 falls to ≈ 53/33 with loss of the
+  pleth signal; at 0.5 the circulation collapses unless you treat it (vasopressor, fluid bolus). Reason in the
+  model: older patients are more sensitive to propofol and compensate less, and a hypovolaemic patient's blood
+  pressure depends on sympathetic tone, which the bolus withdraws.
   The rack shows the syringe label colour, dose rate, mL/h, run/stop/bolus and remaining volume, plus the NMT TOF.
 - Drugs reach the patient through the line: the extension and the common line hold drug (dead space), so a
   syringe starts slowly without carrier flow, and a flush pushes what is in the line. Propofol, sufentanil and

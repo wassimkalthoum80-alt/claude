@@ -15,15 +15,21 @@ export const PD = {
     hypnosisCe50: 3.4,
     hypnosisGamma: 3,
     respCe50: 3,
-    svrMax: 0.9,
+    svrMax: 0.6,
     svrCe50: 8,
-    venousMax: 0.8,
+    venousMax: 1.4,
     venousCe50: 8,
     inotropyMax: 0.3,
     inotropyCe50: 10,
-    baroMax: 0.6,
-    baroCe50: 4,
+    // SIM-ASSUMPTION: sympatholysis is sigmoidal (Ce50 6 µg/mL, γ 3): modest at maintenance concentrations, strong at bolus
+    // peaks — so a patient whose blood pressure depends on sympathetic tone (hypovolaemia) loses it on a bolus.
+    baroMax: 0.95,
+    baroCe50: 6,
+    baroGamma: 3,
   },
+  // SIM-ASSUMPTION: age sensitivity of the haemodynamic propofol effects — Ce50 × (1 − 0.01 · (age − 60)),
+  // limited to 0.6–1.3 (80 y: 0.8, 35 y: 1.25); elderly patients need about a third less propofol.
+  ageSensitivity: { referenceAge: 60, perYear: 0.01, min: 0.6, max: 1.3 },
   // SIM-ASSUMPTION: opioid–hypnotic interaction on hypnosis (response surface, educational):
   // U = Up + 0.4·Uo + 0.5·Up·Uo with Up = Ce/3.4 µg/mL and Uo = sufentanil-equivalent / 1 ng/mL.
   hypnosisInteraction: { opioidWeight: 0.4, synergy: 0.5, opioidC50: 1 },
@@ -95,8 +101,15 @@ interface Haemodynamics {
   baroreflex: number;
 }
 
-function haemodynamics(e: Exposures, opioid: number): Haemodynamics {
-  const p = e.propofol ?? 0;
+/** Ce50 multiplier for the haemodynamic propofol effects at a given age (1 at 60 years). */
+export function propofolAgeFactor(ageYears: number): number {
+  const a = PD.ageSensitivity;
+  return Math.min(a.max, Math.max(a.min, 1 - a.perYear * (ageYears - a.referenceAge)));
+}
+
+function haemodynamics(e: Exposures, opioid: number, ageYears: number): Haemodynamics {
+  // Age-scaled propofol concentration (equivalent to scaling every haemodynamic Ce50).
+  const p = (e.propofol ?? 0) / propofolAgeFactor(ageYears);
   const na = e.noradrenaline ?? 0;
   const ad = e.adrenaline ?? 0;
   const dob = e.dobutamine ?? 0;
@@ -133,7 +146,8 @@ function haemodynamics(e: Exposures, opioid: number): Haemodynamics {
     (1 + emax(ad, A.chronoMax, A.chronoEc50)) *
     (1 + emax(dob, D.chronoMax, D.chronoEc50)) *
     (1 + emax(sal, S.chronoMax, S.chronoEc50));
-  const baroreflex = (1 - emax(p, P.baroMax, P.baroCe50)) * (1 - emax(opioid, 0.2, 0.5));
+  const baroreflex =
+    (1 - P.baroMax * hill(p, P.baroCe50, P.baroGamma)) * (1 - emax(opioid, 0.2, 0.5));
   return { svr, venousTone, inotropy, chronotropy, baroreflex };
 }
 
@@ -151,11 +165,16 @@ export function opioidEffect(e: Exposures, weightKg: number): number {
  * SIM-ASSUMPTION: relative haemodynamics keep the calibrated baseline while stopping or changing an infusion
  * moves the patient away from it.
  */
-export function drugEffects(e: Exposures, reference: Exposures, weightKg: number): DrugEffects {
+export function drugEffects(
+  e: Exposures,
+  reference: Exposures,
+  weightKg: number,
+  ageYears = 60,
+): DrugEffects {
   const opioid = opioidEffect(e, weightKg);
   const opioidRef = opioidEffect(reference, weightKg);
-  const now = haemodynamics(e, opioid);
-  const ref = haemodynamics(reference, opioidRef);
+  const now = haemodynamics(e, opioid, ageYears);
+  const ref = haemodynamics(reference, opioidRef, ageYears);
 
   const P = PD.propofol;
   const hi = PD.hypnosisInteraction;

@@ -38,6 +38,8 @@ export type Command =
   | { type: 'SET_RESP_DRIVE'; drive: RespiratoryDrive }
   | { type: 'SET_RHYTHM'; rhythm: RhythmId }
   | { type: 'SET_RESERVES'; reserves: Partial<PhysiologyReserves> }
+  /** years (18–100) — instructor: patient age (PK covariates, age sensitivity of drugs and reflexes) */
+  | { type: 'SET_PATIENT_AGE'; ageYears: number }
   | { type: 'SET_ARREST_MODEL'; enabled: boolean }
   | { type: 'SET_ECG_LEADS'; leads: EcgLeadSet }
   | { type: 'SET_ALARM_LIMIT'; param: AlarmLimitParam; bound: AlarmLimitBound; value: number }
