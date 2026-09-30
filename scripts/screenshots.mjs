@@ -193,6 +193,24 @@ for (const size of sizes) {
   await page.close();
 }
 
+// Alarm limits: small limits beside every numeric, and the limit editor (tightened HR limit → alarm).
+{
+  const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+  page.on('console', (m) => m.type() === 'error' && errors.push(`[limits] ${m.text()}`));
+  page.on('pageerror', (e) => errors.push(`[limits] ${e.message}`));
+  const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
+  await page.goto(`${base}/?autostart&debug`);
+  await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await run(12);
+  await page.getByRole('button', { name: /HR/ }).first().click();
+  for (let i = 0; i < 10; i++) await page.getByTestId('limit-hr-high-down').click();
+  await run(3);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${outDir}/limits-1-editor.jpg`, type: 'jpeg', quality: 88 });
+  await page.getByTestId('alarm-limits').screenshot({ path: `${outDir}/limits-2-panel.jpg`, type: 'jpeg', quality: 90 });
+  await page.close();
+}
+
 await browser.close();
 if (errors.length) {
   console.error('Console errors:\n' + errors.join('\n'));

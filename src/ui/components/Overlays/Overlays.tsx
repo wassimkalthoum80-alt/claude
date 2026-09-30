@@ -14,6 +14,7 @@ const SHORTCUTS: { keys: string; label: I18nKey }[] = [
   { keys: 'P / Esc', label: 'shortcut.pause' },
   { keys: '`', label: 'shortcut.instructor' },
   { keys: 'M', label: 'shortcut.audio' },
+  { keys: 'L', label: 'shortcut.limits' },
   { keys: '1 2 3 4', label: 'shortcut.rhythm' },
 ];
 

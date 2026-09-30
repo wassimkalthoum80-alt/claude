@@ -34,6 +34,14 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
   await page.getByTestId('ecg-leads-3').click();
   await expect(page.locator('canvas')).toHaveCount(7);
 
+  // Alarm limits: click the HR numeric, raise the upper HR limit by one step (120 → 125).
+  await page.getByRole('button', { name: /HR/ }).first().click();
+  await expect(page.getByTestId('alarm-limits')).toBeVisible();
+  await page.getByTestId('limit-hr-high-up').click();
+  await expect(page.getByTestId('limit-hr-high')).toHaveText('125');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('alarm-limits')).toBeHidden();
+
   // Instructor triggers VF, the player presses Space.
   await page.keyboard.press('Backquote');
   await page.getByTestId('rhythm-vf').click();

@@ -14,11 +14,18 @@ export interface UiState {
   instructorOpen: boolean;
   briefingOpen: boolean;
   ventDrawerOpen: boolean;
+  /** alarm-limits panel open */
+  limitsOpen: boolean;
+  /** parameter row to highlight when the panel was opened from a numeric (e.g. 'hr') */
+  limitsFocus: string | null;
 }
 
 type UiAction =
   | { type: 'set'; patch: Partial<UiState> }
-  | { type: 'toggle'; key: 'audio' | 'menuOpen' | 'instructorOpen' | 'ventDrawerOpen' };
+  | {
+      type: 'toggle';
+      key: 'audio' | 'menuOpen' | 'instructorOpen' | 'ventDrawerOpen' | 'limitsOpen';
+    };
 
 const PREFS_KEY = 'resussim.prefs.v1';
 
@@ -74,6 +81,8 @@ function initialState(): UiState {
     instructorOpen: false,
     briefingOpen: !params.has('autostart'),
     ventDrawerOpen: false,
+    limitsOpen: false,
+    limitsFocus: null,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

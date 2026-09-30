@@ -157,7 +157,9 @@ simulation state and shown in the instructor panel.
 | PEA | organised broad complexes (QRS ≈ 160 ms, broad T, no P), ±3 % R–R, no ejection | One representative hypoxic morphology. |
 | ECG compression artefact | 0.9 mV biphasic at 5.3 cm | The rhythm cannot be assessed while compressing. |
 | Arrhythmia detection | perfect: HR "---" in VF, 0 in asystole; in PEA the monitor counts the complexes | Real monitors can misclassify. Later milestones may add artefact-driven errors. |
-| HR alarms | HR LOW < 45/min (high), HR HIGH > 120/min (medium) | Common adult defaults. |
+| Alarm limits (adjustable, logged) | Defaults: HR 45–120/min, SpO₂ 90–100 %, desaturation 85 %, ART systolic 80–160 and mean 60–110 mmHg, EtCO₂ 25–50 mmHg, ST ±2 mm. Knob steps 5 /min, 1 %, 5 mmHg, 1 mmHg, 0.5 mm; low always ≥ 1 step below high; desat below SpO₂ LOW | Typical adult monitor defaults (verify against the local device). |
+| Alarm priorities | HR LOW, ART LOW, SpO₂ below desat: high; HR HIGH, ART HIGH, SpO₂ LOW/HIGH, EtCO₂ LOW/HIGH, ST: medium. EtCO₂ LOW only while breaths are detected (disconnection → APNEA, not EtCO₂ LOW) | Common monitor behaviour. |
+| AutoLimits | HR −25 %/+25 % (+10), systolic ±25 %, mean −20 %/+25 %, SpO₂ low = value − 4 (88–96), EtCO₂ ±8 mmHg; desat and ST unchanged | Similar in spirit to commercial auto-limit functions; exact vendor formulas differ. |
 | PPV | (PPmax − PPmin)/mean PP over the beats of the last 15 s; sinus rhythm, no CPR | As on monitors with PPV. |
 | Monitor numerics | HR from the last 5 R–R intervals; ART max/min/mean over 3 s; refresh 1 Hz; EtCO₂ = peak CO₂ per breath, "--" (never 0) when no breath passes the sensor for 15 s (disconnection) | Similar to commercial monitors. |
 | Pleth | ART delayed 0.22 s, baseline-removed, low-passed 50 ms; gain (CO/5)^2; SpO₂ shown only if perfusion index ≥ 0.15 | Unreadable during CPR and in low-output states; still readable at CO ≈ 3 L/min. |

@@ -1,6 +1,7 @@
 import { criticalClosingPressure } from '../physiology/CardiovascularModel';
 import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS } from '../physiology/parameters';
 import { CPR_PRESETS } from '../interventions/cprQuality';
+import { defaultAlarmLimits } from '../devices/alarmLimits';
 import type { HeartLungCalibration } from './SimulationState';
 import type { ScenarioDefinition } from '../types/scenario';
 import { predictedBodyWeight } from './PatientState';
@@ -126,6 +127,7 @@ export function createInitialState(
         alarms: [],
         lastRefresh: 0,
         ecgLeads: scenario.monitor?.ecgLeads ?? 3,
+        alarmLimits: defaultAlarmLimits(),
       },
       ventilator: {
         mode: 'VCV',

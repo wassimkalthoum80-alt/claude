@@ -3,6 +3,7 @@ import { SUBSTEP_S, SUBSTEPS_PER_TICK, TICK_S } from '../core/constants';
 import { EventLog } from '../core/EventLog';
 import { SeededRng } from '../core/rng';
 import { AlarmEngine } from '../devices/AlarmEngine';
+import { autoAlarmLimits, defaultAlarmLimits, setAlarmLimit } from '../devices/alarmLimits';
 import { MonitorDevice } from '../devices/MonitorDevice';
 import { VentilatorDevice } from '../devices/VentilatorDevice';
 import { CPREngine } from '../interventions/CPREngine';
@@ -355,6 +356,31 @@ export class SimulationEngine {
         break;
       case 'SET_ECG_LEADS':
         s.devices.monitor.ecgLeads = command.leads === 5 ? 5 : 3;
+        break;
+      case 'SET_ALARM_LIMIT': {
+        const mon = s.devices.monitor;
+        mon.alarmLimits = setAlarmLimit(
+          mon.alarmLimits,
+          command.param,
+          command.bound,
+          command.value,
+        );
+        break;
+      }
+      case 'ALARM_LIMITS_AUTO': {
+        const mon = s.devices.monitor;
+        const n = mon.numerics;
+        mon.alarmLimits = autoAlarmLimits(mon.alarmLimits, {
+          hr: n.hr,
+          artSys: n.artSys,
+          artMean: n.artMean,
+          spo2: n.spo2,
+          etco2: n.etco2,
+        });
+        break;
+      }
+      case 'ALARM_LIMITS_DEFAULT':
+        s.devices.monitor.alarmLimits = defaultAlarmLimits();
         break;
       case 'SET_RESP_DRIVE':
         s.patient.resp.drive = command.drive;

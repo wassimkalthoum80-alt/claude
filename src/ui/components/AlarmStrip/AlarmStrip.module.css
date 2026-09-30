@@ -71,3 +71,32 @@
 .msg_good {
   color: var(--good);
 }
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.limitsBtn {
+  padding: 2px 6px;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 10, 14, 0.8);
+  color: var(--text-dim);
+  font: 600 9.5px/1.2 var(--font-ui);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.limitsBtn kbd {
+  font: inherit;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+.limitsBtnActive {
+  color: var(--text);
+  border-color: var(--panel-border-strong);
+}

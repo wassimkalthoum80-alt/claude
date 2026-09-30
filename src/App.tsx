@@ -1,5 +1,6 @@
 import { useMonitorAudio } from './ui/audio/useMonitorAudio';
 import { ActionBar } from './ui/components/ActionBar/ActionBar';
+import { AlarmLimitsPanel } from './ui/components/AlarmLimits/AlarmLimitsPanel';
 import { AlarmStrip } from './ui/components/AlarmStrip/AlarmStrip';
 import { CprMetrics } from './ui/components/CprMetrics/CprMetrics';
 import { IconSliders, IconSpeaker } from './ui/components/icons';
@@ -74,6 +75,7 @@ function Workstation() {
       </div>
 
       <InstructorPanel />
+      <AlarmLimitsPanel />
       <BriefingOverlay />
       <PauseMenu />
       <RunSummaryCard />

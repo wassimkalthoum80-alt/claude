@@ -1,6 +1,6 @@
 import type { Alarm } from '../../../sim';
 import { messagesViewModel } from '../../adapters/viewModels';
-import { useT } from '../../hooks/UiContext';
+import { useT, useUi } from '../../hooks/UiContext';
 import { deepEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import styles from './AlarmStrip.module.css';
 
@@ -12,11 +12,23 @@ export function AlarmStrip() {
   const t = useT();
   const alarms = useEngineSelector(selectAlarms, deepEqual);
   const messages = useEngineSelector(messagesViewModel, deepEqual);
+  const { ui, setUi } = useUi();
 
   return (
     <section className={`hud-panel ${styles.strip}`} aria-live="polite">
       <div className={styles.col}>
-        <div className="hud-title">{t('alarms.title')}</div>
+        <div className={`hud-title ${styles.titleRow}`}>
+          {t('alarms.title')}
+          <button
+            type="button"
+            className={`${styles.limitsBtn} ${ui.limitsOpen ? styles.limitsBtnActive : ''}`}
+            onClick={() => setUi({ limitsOpen: !ui.limitsOpen, limitsFocus: null })}
+            aria-pressed={ui.limitsOpen}
+            data-testid="limits-toggle"
+          >
+            {t('limits.open')} <kbd>L</kbd>
+          </button>
+        </div>
         <div className={styles.items}>
           {alarms.length === 0 && <span className={styles.none}>--</span>}
           {alarms.slice(0, 3).map((a) => (

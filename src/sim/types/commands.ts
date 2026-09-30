@@ -6,7 +6,7 @@ import type {
   RespiratoryDrive,
   RhythmId,
 } from '../state/PatientState';
-import type { EcgLeadSet } from '../state/MonitorState';
+import type { AlarmLimitBound, AlarmLimitParam, EcgLeadSet } from '../state/MonitorState';
 import type { VentMode } from '../state/VentilatorState';
 
 export type VentSettingKey =
@@ -40,6 +40,10 @@ export type Command =
   | { type: 'SET_RESERVES'; reserves: Partial<PhysiologyReserves> }
   | { type: 'SET_ARREST_MODEL'; enabled: boolean }
   | { type: 'SET_ECG_LEADS'; leads: EcgLeadSet }
+  | { type: 'SET_ALARM_LIMIT'; param: AlarmLimitParam; bound: AlarmLimitBound; value: number }
+  /** AutoLimits: set limits around the currently displayed values */
+  | { type: 'ALARM_LIMITS_AUTO' }
+  | { type: 'ALARM_LIMITS_DEFAULT' }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }
   | { type: 'RESET' };

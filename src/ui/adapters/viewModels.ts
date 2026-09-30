@@ -27,16 +27,28 @@ export interface MonitorViewModel {
   /** ST deviation in mm with sign ("+0.4", "−1.2", "--") */
   stII: string;
   stV: string;
+  /** alarm limits as shown next to the numerics ("" when that bound does not exist) */
+  limits: {
+    hr: LimitPair;
+    spo2: LimitPair;
+    artSys: LimitPair;
+    artMean: LimitPair;
+    etco2: LimitPair;
+    /** "±2.0" */
+    st: string;
+  };
   flash: {
     hr: AlarmPriority | null;
     spo2: AlarmPriority | null;
     art: AlarmPriority | null;
+    etco2: AlarmPriority | null;
     st: AlarmPriority | null;
   };
 }
 
 export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel {
   const n = s.devices.monitor.numerics;
+  const lim = s.devices.monitor.alarmLimits;
   const alarms = s.devices.monitor.alarms;
   const prio = (...ids: AlarmId[]) => alarms.find((a) => ids.includes(a.id))?.priority ?? null;
   return {
@@ -49,13 +61,31 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
     ecgLeads: s.devices.monitor.ecgLeads,
     stII: formatSt(n.stII),
     stV: formatSt(n.stV),
+    limits: {
+      hr: limitPair(lim.hr),
+      spo2: limitPair(lim.spo2),
+      artSys: limitPair(lim.artSys),
+      artMean: limitPair(lim.artMean),
+      etco2: limitPair(lim.etco2),
+      st: lim.st.high === null ? '' : `±${lim.st.high.toFixed(1)}`,
+    },
     flash: {
       hr: prio('VFIB', 'ASYSTOLE', 'HR_LOW', 'HR_HIGH'),
-      spo2: prio('SPO2_LOW', 'SPO2_NO_PULSE'),
-      art: prio('ART_LOW'),
+      spo2: prio('SPO2_LOW', 'SPO2_HIGH', 'SPO2_NO_PULSE'),
+      art: prio('ART_LOW', 'ART_HIGH'),
+      etco2: prio('ETCO2_LOW', 'ETCO2_HIGH'),
       st: prio('ST_DEVIATION'),
     },
   };
+}
+
+export interface LimitPair {
+  high: string;
+  low: string;
+}
+
+function limitPair(l: { low: number | null; high: number | null }): LimitPair {
+  return { high: l.high === null ? '' : String(l.high), low: l.low === null ? '' : String(l.low) };
 }
 
 /** mm with an explicit sign, as monitors print ST ("+0.4", "−1.2"; "0.0"; "--" when not measurable). */

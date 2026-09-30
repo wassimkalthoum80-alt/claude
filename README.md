@@ -25,6 +25,10 @@ For education only — not a medical device.
 |---|---|
 | ![5-lead ECG](docs/screenshots/ecg-2-five-lead.jpg) | ![ST depression](docs/screenshots/ecg-3-hypoxic-st-depression.jpg) |
 
+| Alarm limits beside every value, limit editor (HR high limit lowered → HR HIGH) |
+|---|
+| ![Alarm limits](docs/screenshots/limits-1-editor.jpg) |
+
 ## Quick start
 
 Requirements: Node.js ≥ 20.
@@ -89,6 +93,10 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   monitor measures **ST** in II (and V5) at J + 60 ms and alarms at ±2 mm. Myocardial ischaemia comes from the
   heart–lung model (O₂ supply/demand), so hypoxaemic tachycardia depresses ST, most in V5. Lower the myocardial
   reserve in the instructor panel to simulate a coronary patient.
+- **Adjustable alarm limits.** Every numeric shows its limits in small print (upper over lower). Click a value
+  on the monitor, press <kbd>L</kbd> or use **LIMITS** in the alarm field to change them. Limits cover HR, SpO₂,
+  desaturation (high priority), ART systolic and mean, EtCO₂ and ST. **Auto** sets limits around the current
+  values and **Defaults** restores the adult defaults. Every change is logged for the debrief.
 - New cases: **Silent disconnection** (hypoxic arrest if unnoticed) and **Breath stacking in severe asthma**
   (low-flow PEA unless expiration is lengthened or the tube is briefly disconnected). The ventilator header has a
   **DISCONNECT / RECONNECT** button for the learner.
@@ -98,6 +106,7 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 | <kbd>Space</kbd> | Start / stop CPR |
 | <kbd>P</kbd> / <kbd>Esc</kbd> | Pause / menu |
 | <kbd>`</kbd> | Instructor panel |
+| <kbd>L</kbd> | Alarm limits (or click a value on the monitor) |
 | <kbd>M</kbd> | Audio (QRS tone with SpO₂ pitch, alarms, compression clicks) |
 | <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> | Sinus / VF / asystole / PEA (instructor panel open) |
 

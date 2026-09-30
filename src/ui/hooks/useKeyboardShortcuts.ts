@@ -41,6 +41,10 @@ export function useKeyboardShortcuts(): void {
       }
       if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
         if (ui.briefingOpen || s.scenario.ended) return;
+        if (e.key === 'Escape' && ui.limitsOpen && !ui.menuOpen) {
+          setUi({ limitsOpen: false, limitsFocus: null });
+          return;
+        }
         if (e.key === 'Escape' && ui.instructorOpen && !ui.menuOpen) {
           setUi({ instructorOpen: false });
           return;
@@ -59,6 +63,10 @@ export function useKeyboardShortcuts(): void {
         toggleUi('audio');
         return;
       }
+      if (e.key === 'l' || e.key === 'L') {
+        setUi({ limitsOpen: !ui.limitsOpen, limitsFocus: null });
+        return;
+      }
       const rhythm = RHYTHM_KEYS[e.key];
       if (rhythm && ui.instructorOpen)
         engine.dispatch({ type: 'SET_RHYTHM', rhythm }, 'instructor');
@@ -72,5 +80,5 @@ export function useKeyboardShortcuts(): void {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [engine, ui.menuOpen, ui.briefingOpen, ui.instructorOpen, setUi, toggleUi]);
+  }, [engine, ui.menuOpen, ui.briefingOpen, ui.instructorOpen, ui.limitsOpen, setUi, toggleUi]);
 }

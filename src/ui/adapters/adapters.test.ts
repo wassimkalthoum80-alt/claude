@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { erc2025 } from '../../content/guidelines/erc2025';
 import { baselinePatient, vfUnderAnaesthesia } from '../../content/scenarios';
 import { SimulationEngine } from '../../sim';
+import { alarmLimitsViewModel } from './alarmLimitsViewModel';
 import { formatMmSs, formatNum } from './format';
 import { heartLungViewModel } from './heartLungViewModel';
 import { formatSt } from './viewModels';
@@ -126,5 +127,32 @@ describe('ST formatting', () => {
     e.runFor(12);
     expect(monitorViewModel(e.getSnapshot()).ecgLeads).toBe(5);
     expect(monitorViewModel(e.getSnapshot()).stV).not.toBe('--');
+  });
+});
+
+describe('alarm limits view model', () => {
+  it('lists every parameter with its limits, the value it watches and the alarm state', () => {
+    const e = new SimulationEngine({ scenario: baselinePatient, guidelines: erc2025 });
+    e.runFor(15);
+    let rows = alarmLimitsViewModel(e.getSnapshot()).rows;
+    expect(rows.map((r) => r.param)).toEqual([
+      'hr',
+      'spo2',
+      'desat',
+      'artSys',
+      'artMean',
+      'etco2',
+      'st',
+    ]);
+    const hr = rows.find((r) => r.param === 'hr');
+    expect(hr?.low).toBe(45);
+    expect(hr?.alarming).toBe(false);
+    expect(monitorViewModel(e.getSnapshot()).limits.hr).toEqual({ high: '120', low: '45' });
+    e.dispatch({ type: 'SET_ALARM_LIMIT', param: 'hr', bound: 'high', value: 70 });
+    e.runFor(2);
+    rows = alarmLimitsViewModel(e.getSnapshot()).rows;
+    expect(rows.find((r) => r.param === 'hr')?.alarming).toBe(true);
+    expect(monitorViewModel(e.getSnapshot()).limits.hr.high).toBe('70');
+    expect(monitorViewModel(e.getSnapshot()).limits.st).toBe('±2.0');
   });
 });
