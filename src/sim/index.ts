@@ -54,6 +54,9 @@ export {
   validateBolus,
   validateLoad,
   protocolOf,
+  bolusProtocolOf,
+  onlySoftErrors,
+  SOFT_LIMIT_CODES,
   type Validation,
   type ValidationCode,
 } from './pharmacology/validation';

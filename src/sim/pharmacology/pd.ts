@@ -9,18 +9,20 @@ export const PD = {
   // SIM-ASSUMPTION: hypnosis Ce50 3.4 µg/mL, Hill 3 (loss-of-consciousness order of magnitude; educational).
   // Haemodynamics: arterial (SVR) and venous (stressed volume) dilation; the venous part is an absolute loss of
   // volume status, so it hurts a hypovolaemic patient relatively more.
+  // SIM-ASSUMPTION: the haemodynamic Ce50s lie above the maintenance range (≈ 3–5 µg/mL), so a top-up bolus
+  // during TIVA still lowers the blood pressure dose-dependently instead of hitting a saturated Emax.
   propofol: {
     hypnosisCe50: 3.4,
     hypnosisGamma: 3,
     respCe50: 3,
-    svrMax: 0.35,
-    svrCe50: 4,
-    venousMax: 0.3,
-    venousCe50: 5,
-    inotropyMax: 0.15,
-    inotropyCe50: 5,
-    baroMax: 0.8,
-    baroCe50: 2.5,
+    svrMax: 0.9,
+    svrCe50: 8,
+    venousMax: 0.8,
+    venousCe50: 8,
+    inotropyMax: 0.3,
+    inotropyCe50: 10,
+    baroMax: 0.6,
+    baroCe50: 4,
   },
   // SIM-ASSUMPTION: opioid–hypnotic interaction on hypnosis (response surface, educational):
   // U = Up + 0.4·Uo + 0.5·Up·Uo with Up = Ce/3.4 µg/mL and Uo = sufentanil-equivalent / 1 ng/mL.

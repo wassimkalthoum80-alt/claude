@@ -5,13 +5,23 @@ import { approach, clamp } from './shapes';
 
 /** mL O2/dL — arterial O2 content of the baseline patient (reference for coronary O2 supply) */
 const REFERENCE_CAO2 = 19;
+/** mmHg — MAP below which the arterial baroreflex starts to raise sympathetic tone */
+const BARO_SET_POINT_MMHG = 82;
+/**
+ * SIM-ASSUMPTION: the relative supply/demand deficit appears as a small rate-related ST depression even while the
+ * coronary reserve still covers demand (tachycardia with hypotension after a propofol bolus: a few tenths of a
+ * mm). Capped at 0.2 (≈ 0.3 mm in II, 0.6 mm in V5 — below the 1 mm threshold), so only a reduced coronary
+ * reserve produces clinically significant ST depression.
+ */
+const DEMAND_STRAIN_MAX = 0.2;
 
 /**
  * 0..1 myocardial ischaemia from the O2 supply/demand balance of the left ventricle.
  * SIM-ASSUMPTION (heuristic):
  *   demand ∝ HR × MAP (rate–pressure product)
  *   supply ∝ CaO2 × coronary driving pressure (MAP − 10) × diastolic time fraction, × coronary reserve
- *   ischaemia = 1 − reserve·supply/demand (both relative to the 80/min, MAP 87, CaO2 19 baseline).
+ *   ischaemia = 1 − reserve·supply/demand (both relative to the 80/min, MAP 87, CaO2 19 baseline),
+ *   at least min(DEMAND_STRAIN_MAX, 1 − supply/demand) (graded rate-related strain, small ST shifts).
  * A healthy heart (reserve 2.5 × myocardial reserve) tolerates tachycardia or moderate hypoxaemia alone; the
  * combination (hypoxaemic tachycardia, hypotension with tachycardia) or a low reserve produces ST depression.
  */
@@ -26,7 +36,9 @@ export function myocardialIschaemia(patient: PatientState): number {
     clamp((map - 10) / 77, 0, 1.5) *
     (diastolicFraction(hr) / diastolicFraction(80));
   const reserve = ECG.coronaryReserve * reserves.cardiacReserve;
-  return clamp(1 - (reserve * supply) / demand, 0, 1);
+  const ischaemia = clamp(1 - (reserve * supply) / demand, 0, 1);
+  const strain = clamp(1 - supply / demand, 0, 1);
+  return Math.max(ischaemia, Math.min(DEMAND_STRAIN_MAX, strain));
 }
 
 /** A rhythm change the heart–lung model asks the engine to make (the engine logs and applies it). */
@@ -188,9 +200,17 @@ export class HeartLungModel {
     // (0.6 at a volume status of 0.5), so the hypovolaemic patient is tachycardic and vasoconstricted before
     // MAP falls, and loses that compensation on induction.
     const volumeStress = clamp((1 - effectiveVolumeStatus(patient)) / 0.5, 0, 1) * 0.6;
+    // SIM-ASSUMPTION: arterial baroreflex around the set point — a fall of MAP below 82 mmHg raises sympathetic
+    // tone (0.6 at MAP 57), in addition to the strong low-pressure term above; so a propofol-induced fall in
+    // blood pressure brings a compensatory tachycardia (blunted, not abolished, by the anaesthetic).
+    const setPointStress =
+      0.6 * clamp((BARO_SET_POINT_MMHG - cardio.meanArterialPressure) / 25, 0, 1);
     const stress =
-      clamp(hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress + volumeStress, 0, 1.5) *
-      drugs.baroreflex;
+      clamp(
+        hypoxicStress + 0.4 * co2Stress + 0.8 * pressureStress + setPointStress + volumeStress,
+        0,
+        1.5,
+      ) * drugs.baroreflex;
     const highPressure = clamp((cardio.meanArterialPressure - 105) / 40, 0, 1) * drugs.baroreflex;
     const debtFraction = clamp(
       (hl.oxygenDebt - k.bradycardiaDebtS) / (k.arrestDebtS - k.bradycardiaDebtS),

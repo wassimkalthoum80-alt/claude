@@ -14,7 +14,9 @@ import { LungStateModel } from '../physiology/LungStateModel';
 import { getProduct } from '../pharmacology/formulary/products';
 import { PharmacologyModel } from '../pharmacology/PharmacologyModel';
 import {
+  bolusProtocolOf,
   bolusRateMlH,
+  onlySoftErrors,
   protocolOf,
   validateBolus,
   validateLoad,
@@ -489,8 +491,16 @@ export class SimulationEngine {
     const s = this.state;
     const pumps = s.devices.pumps;
     const reject = (v: Validation) => this.logEvent('COMMAND_REJECTED', s.time, v.errors.join(','));
-    const accept = (v: Validation, override: boolean | undefined): boolean => {
+    const accept = (
+      v: Validation,
+      override: boolean | undefined,
+      confirm: boolean | undefined,
+    ): boolean => {
       if (v.errors.length === 0) return true;
+      if (confirm && onlySoftErrors(v)) {
+        this.logEvent('SOFT_LIMIT_CONFIRMED', s.time, v.errors.join(','));
+        return true;
+      }
       if (override && source === 'instructor') {
         this.logEvent('OVERRIDE_ACCEPTED', s.time, v.errors.join(','));
         return true;
@@ -578,7 +588,7 @@ export class SimulationEngine {
           command.rateMlH,
           demographics,
         );
-        if (!accept(v, command.override)) return;
+        if (!accept(v, command.override, command.confirm)) return;
         pump.rateMlH = command.rateMlH;
         pump.ordered = command.ordered ?? null;
         pump.overridden = v.errors.length > 0;
@@ -597,12 +607,13 @@ export class SimulationEngine {
         const v = validateBolus(
           pump,
           product,
-          protocolOf(product, pump.protocolId),
+          bolusProtocolOf(product, pump.protocolId),
           command.volumeMl,
           command.durationS,
           demographics,
         );
-        if (!accept(v, command.override)) return;
+        if (!accept(v, command.override, command.confirm)) return;
+        if (v.errors.length > 0) pump.overridden = true;
         pump.bolus = {
           remainingMl: command.volumeMl,
           rateMlH: bolusRateMlH(command.volumeMl, command.durationS),

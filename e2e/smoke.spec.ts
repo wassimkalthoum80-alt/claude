@@ -58,7 +58,7 @@ test('loads, draws every trace, and starts CPR with Space in VF', async ({ page 
   expect(errors).toEqual([]);
 });
 
-test('perfusor rack: TIVA running, load rocuronium, block invalid bolus, give a valid bolus', async ({
+test('perfusor rack: TIVA running, load rocuronium, soft vs hard limits, give a valid bolus', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -79,8 +79,12 @@ test('perfusor rack: TIVA running, load rocuronium, block invalid bolus, give a 
   await page.getByTestId('pump-load').click();
   await expect(page.getByTestId('pump-P4')).toContainText('Rocuronium');
 
-  // 5 mg/kg is above the protocol maximum: blocked with a message, not corrected.
-  await page.getByTestId('pump-bolus-dose').fill('5');
+  // 0.65 mg/kg is above the protocol maximum (0.6): a soft limit that must be confirmed explicitly.
+  await page.getByTestId('pump-bolus-dose').fill('0.65');
+  await expect(page.getByTestId('pump-soft-limit').first()).toBeVisible();
+  await expect(page.getByTestId('pump-give-bolus')).toHaveText(/Confirm above limit/);
+  // More than the syringe holds: a hard limit, blocked.
+  await page.getByTestId('pump-bolus-ml').fill('80');
   await expect(page.getByTestId('pump-error').first()).toBeVisible();
   await expect(page.getByTestId('pump-give-bolus')).toBeDisabled();
 
@@ -93,4 +97,29 @@ test('perfusor rack: TIVA running, load rocuronium, block invalid bolus, give a 
   await page.getByTestId('add-syringe').click();
   await expect(page.getByTestId('pump-P6')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('propofol top-up bolus during TIVA maintenance and a confirmed rate above the maximum', async ({
+  page,
+}) => {
+  await page.goto('/?autostart&debug');
+  await page.getByTestId('pump-P1').click();
+  await expect(page.getByTestId('pump-protocol')).toHaveValue('maintenance');
+  await page.getByTestId('pump-bolus-ml').fill('5'); // 100 mg of propofol 2 %
+  await page.getByTestId('pump-bolus-duration').fill('10');
+  await expect(page.getByTestId('pump-give-bolus')).toHaveText(/Give bolus/);
+  await page.getByTestId('pump-give-bolus').click();
+  await expect(page.getByTestId('pump-P1')).toHaveAttribute('data-state', 'bolus');
+
+  await page.getByTestId('pump-rate').fill('60'); // ≈ 15 mg/kg/h > 12
+  await expect(page.getByTestId('pump-set-rate')).toHaveText(/Confirm above limit/);
+  await page.getByTestId('pump-set-rate').click();
+  await expect(page.getByTestId('pump-P1')).toContainText('60.0 mL/h');
+  const confirmed = await page.evaluate(
+    () =>
+      window.__resusEngine?.eventLog.filter(
+        (x) => x.kind === 'event' && x.event === 'SOFT_LIMIT_CONFIRMED',
+      ).length,
+  );
+  expect(confirmed).toBe(1);
 });

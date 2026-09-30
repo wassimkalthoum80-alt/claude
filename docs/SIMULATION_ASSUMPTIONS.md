@@ -219,10 +219,12 @@ All compartments integrate with RK4 in the 4 ms physiology sub-step.
 | Respiratory drive | Greco-type surface: drive = 1 / (1 + (Uo + Up + Uo·Up)²), opioid C50 0.3 ng/mL, propofol 3 µg/mL; slows the rate (factor^0.7) more than it weakens each effort (factor^0.3) |
 | Naloxone | competitive antagonist, K = 0.5 µg/kg of effect-delayed naloxone; shorter-acting than long opioids (re-narcotisation) |
 | Neuromuscular block | Hill on Ce(rocuronium), Ce50 1.0 µg/mL, γ 4.5; diaphragm needs 1.7× the concentration; TOF count loses T4/T3/T2/T1 above 75/80/85/95 % block, ratio (1 − block)^2.2 |
-| Haemodynamics | propofol: SVR −35 % max, venous tone −0.3 volume-status units, inotropy −15 %, sympathetic reflexes −80 % max; opioids: bradycardia, small vasodilation, reflexes −20 %; noradrenaline SVR +120 % max; adrenaline β1/β2/α; dobutamine inotropy; vasopressin SVR |
+| Haemodynamics | propofol (Ce50 8 µg/mL, above the maintenance range so a top-up bolus still acts): SVR −90 % max, venous tone −0.8 volume-status units max, inotropy −30 % max (Ce50 10), sympathetic reflexes −60 % max (Ce50 4); opioids: bradycardia, small vasodilation, reflexes −20 %; noradrenaline SVR +120 % max; adrenaline β1/β2/α; dobutamine inotropy; vasopressin SVR |
 | Calibration | haemodynamic effects are **relative to the exposures at scenario start** (the baseline patient is calibrated under the running TIVA); hypnosis, analgesia, drive and block are absolute |
 | Bronchodilation | salbutamol removes up to the bronchospasm preset's *excess* resistance only |
 | Lactate | β2 agonists (adrenaline, salbutamol) add aerobic lactate production without an O₂-delivery deficit |
+| Arterial baroreflex around the set point (`HeartLungModel.ts`) | below MAP 82 mmHg sympathetic tone rises linearly (0.6 at MAP 57), on top of the stronger term below MAP 65; blunted, not abolished, by anaesthetics. A propofol top-up of 100 mg (≈ 1.3 mg/kg) under TIVA gives ≈ −15 % MAP with HR +15/min, recovering within ≈ 10 min |
+| Rate-related ST change (`myocardialIschaemia`) | ST depression ∝ min(0.2, 1 − supply/demand) even while the coronary reserve covers demand: ≤ 0.3 mm in II and ≤ 0.6 mm in V5 (tachycardia + hypotension); larger changes need a reduced coronary reserve |
 | Low-pressure reflex (`HeartLungModel.ts`) | a preload deficit adds sympathetic tone: 0.6 at volume status 0.5, linear to 0 at 1.0; blunted by anaesthetics like the baroreflex — so a hypovolaemic patient is compensated awake and decompensates on induction |
 
 Paralysis does not cause apnoea directly on a controlled ventilator; it removes spontaneous effort (diaphragm
@@ -246,9 +248,19 @@ circulation model.
 ### Validation and instructor override
 
 Load, rate and bolus orders are checked against the pump type, the route, unit compatibility, the pump's
-hardware limit, the syringe content, the protocol range and the minimum bolus time. Errors block the order and
-are logged (`COMMAND_REJECTED`); warnings (below range, no protocol) are shown but allowed. An instructor can
-deliberately accept a protocol violation (`OVERRIDE_ACCEPTED`, source `instructor`) to simulate an error. The
+hardware limit, the syringe content, the protocol range and the minimum bolus time. Like the drug library of a
+smart pump there are two kinds of limit:
+
+- **soft limits** — above the protocol maximum (rate or bolus) and faster than the minimum bolus time: the order
+  is held until the user explicitly confirms it (`SOFT_LIMIT_CONFIRMED` in the log; the pump row shows "!");
+- **hard limits** — wrong pump, reference-only product, route, unit mismatch, above the pump's hardware rate,
+  more than the syringe holds: blocked (`COMMAND_REJECTED`); only an instructor override passes them
+  (`OVERRIDE_ACCEPTED`, source `instructor`) to simulate a device error.
+
+Warnings (below range, no protocol) are shown but allowed. A bolus can be given in every protocol: if the
+selected protocol has no bolus (e.g. propofol maintenance) the product's bolus specification from another
+protocol applies (propofol induction limits and weight basis); products without any bolus specification take a
+bolus in mL only. The
 learner's input is never silently corrected. The UI converts dose ↔ mL with the exact value (display rounding
 does not change the order).
 

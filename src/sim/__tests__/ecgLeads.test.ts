@@ -97,7 +97,7 @@ describe('ST segment and myocardial ischaemia', () => {
     expect(sawAlarm3).toBe(false); // a 3-electrode cable misses lateral ischaemia
   });
 
-  it('a patient with little myocardial (coronary) reserve shows ST depression with tachycardia and hypotension', () => {
+  it('with tachycardia and hypotension a low coronary reserve gives marked ST depression, a healthy heart only a minimal one', () => {
     const healthy = createEngine();
     const cad = createEngine();
     cad.dispatch({ type: 'SET_RESERVES', reserves: { cardiacReserve: 0.3 } });
@@ -107,7 +107,8 @@ describe('ST segment and myocardial ischaemia', () => {
       e.dispatch({ type: 'SET_VENT_SETTING', key: 'peep', value: 15 });
       e.runFor(120);
     }
-    expect(healthy.getSnapshot().patient.heartLung.ischaemia).toBeLessThan(0.1);
+    expect(healthy.getSnapshot().patient.heartLung.ischaemia).toBeLessThanOrEqual(0.2 + 1e-9);
+    expect(numerics(healthy).stV ?? 0).toBeGreaterThan(-0.7); // below the 1 mm clinical threshold
     expect(cad.getSnapshot().patient.heartLung.ischaemia).toBeGreaterThan(0.3);
     expect(numerics(cad).stV ?? 0).toBeLessThan(-0.8);
   });

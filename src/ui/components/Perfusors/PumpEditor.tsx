@@ -1,7 +1,10 @@
 import { useCallback, useState } from 'react';
 import {
+  bolusProtocolOf,
   getProduct,
+  onlySoftErrors,
   protocolOf,
+  SOFT_LIMIT_CODES,
   unitLabel,
   validateBolus,
   validateRate,
@@ -34,17 +37,69 @@ function Messages({ v }: { v: Validation }) {
   const t = useT();
   return (
     <>
-      {v.errors.map((c) => (
-        <p key={c} className={styles.error} data-testid="pump-error">
-          {t(`val.${c}`)}
-        </p>
-      ))}
+      {v.errors.map((c) =>
+        SOFT_LIMIT_CODES.includes(c) ? (
+          <p key={c} className={styles.soft} data-testid="pump-soft-limit">
+            {t(`val.${c}`)} {t('pump.softLimit')}
+          </p>
+        ) : (
+          <p key={c} className={styles.error} data-testid="pump-error">
+            {t(`val.${c}`)}
+          </p>
+        ),
+      )}
       {v.warnings.map((c) => (
         <p key={c} className={styles.warning}>
           {t(`val.${c}`)}
         </p>
       ))}
     </>
+  );
+}
+
+type Order = Extract<Command, { type: 'PUMP_SET_RATE' }> | Extract<Command, { type: 'PUMP_BOLUS' }>;
+
+/**
+ * Sends an order like a smart pump: valid → sent; only soft limits exceeded → the button asks for an explicit
+ * confirmation (logged); hard limits → disabled unless the instructor override is on.
+ */
+function OrderButton({
+  v,
+  order,
+  override,
+  send,
+  label,
+  testId,
+  disabled = false,
+}: {
+  v: Validation;
+  order: Order;
+  override: boolean;
+  send: (c: Command) => void;
+  label: string;
+  testId: string;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  const soft = onlySoftErrors(v);
+  const blocked = v.errors.length > 0 && !soft && !override;
+  const confirm = soft && !override;
+  return (
+    <button
+      type="button"
+      className={confirm ? styles.confirm : styles.primary}
+      disabled={disabled || blocked}
+      onClick={() =>
+        send({
+          ...order,
+          ...(confirm ? { confirm: true } : {}),
+          ...(override && v.errors.length > 0 ? { override: true } : {}),
+        })
+      }
+      data-testid={testId}
+    >
+      {confirm ? t('pump.confirmAbove') : label}
+    </button>
   );
 }
 
@@ -74,7 +129,6 @@ function RateForm({ pump, product, protocol, demographics, override, send }: For
       ? doseRateToMlH(product, protocol, demographics, typedDose)
       : parseNumber(mlhText);
   const v = validateRate(pump, product, protocol, mlh, demographics);
-  const blocked = v.errors.length > 0 && !override;
   const range = protocol?.infusion?.rate;
 
   return (
@@ -137,25 +191,19 @@ function RateForm({ pump, product, protocol, demographics, override, send }: For
       )}
       <Messages v={v} />
       <div className={styles.buttons}>
-        <button
-          type="button"
-          className={styles.primary}
-          disabled={blocked}
-          onClick={() =>
-            send({
-              type: 'PUMP_SET_RATE',
-              pumpId: pump.id,
-              rateMlH: mlh,
-              ...(unit && Number.isFinite(typedDose)
-                ? { ordered: { value: typedDose, unit } }
-                : {}),
-              ...(override ? { override: true } : {}),
-            })
-          }
-          data-testid="pump-set-rate"
-        >
-          {t('pump.setRate')}
-        </button>
+        <OrderButton
+          v={v}
+          order={{
+            type: 'PUMP_SET_RATE',
+            pumpId: pump.id,
+            rateMlH: mlh,
+            ...(unit && Number.isFinite(typedDose) ? { ordered: { value: typedDose, unit } } : {}),
+          }}
+          override={override}
+          send={send}
+          label={t('pump.setRate')}
+          testId="pump-set-rate"
+        />
         {pump.running ? (
           <button
             type="button"
@@ -181,48 +229,59 @@ function RateForm({ pump, product, protocol, demographics, override, send }: For
   );
 }
 
-/** Bolus: dose ↔ mL and administration time, validated against the syringe content and the protocol. */
-function BolusForm({ pump, product, protocol, demographics, override, send }: FormProps) {
+/**
+ * Bolus: dose ↔ mL and administration time, validated against the syringe content and the bolus specification.
+ * Available in every protocol: during maintenance the product's bolus specification (e.g. propofol induction) sets
+ * the limits; products without one take a bolus in mL only.
+ */
+function BolusForm({ pump, product, demographics, override, send }: Omit<FormProps, 'protocol'>) {
   const t = useT();
-  const bolus = protocol?.bolus;
+  const bolusProtocol = bolusProtocolOf(product, pump.protocolId);
+  const bolus = bolusProtocol?.bolus;
   const [mlText, setMlText] = useState('');
   const [doseText, setDoseText] = useState('');
   const [durText, setDurText] = useState(String(bolus?.durationS.typical ?? 0));
   const [edited, setEdited] = useState<'dose' | 'ml'>('ml');
-  if (!protocol || !bolus) return null;
   const typedDose = parseNumber(doseText);
   const ml =
-    edited === 'dose'
-      ? bolusDoseToMl(product, protocol, demographics, typedDose)
+    edited === 'dose' && bolusProtocol
+      ? bolusDoseToMl(product, bolusProtocol, demographics, typedDose)
       : parseNumber(mlText);
   const dur = parseNumber(durText);
-  const v = validateBolus(pump, product, protocol, ml, dur, demographics);
-  const blocked = v.errors.length > 0 && !override;
+  const v = validateBolus(pump, product, bolusProtocol, ml, dur, demographics);
+  const borrowed = bolusProtocol !== undefined && bolusProtocol.id !== pump.protocolId;
 
   return (
     <div className={styles.section}>
       <div className={styles.sectionTitle}>{t('pump.bolus')}</div>
       <div className={styles.inputs}>
-        <label className={styles.field}>
-          <span>{t('pump.bolusDose')}</span>
-          <span className={styles.inputUnit}>
-            <input
-              inputMode="decimal"
-              value={doseText}
-              onChange={(e) => {
-                setEdited('dose');
-                setDoseText(e.target.value);
-                setMlText(
-                  fmtMl(
-                    bolusDoseToMl(product, protocol, demographics, parseNumber(e.target.value)),
-                  ),
-                );
-              }}
-              data-testid="pump-bolus-dose"
-            />
-            <small>{unitLabel(bolus.dose.unit)}</small>
-          </span>
-        </label>
+        {bolusProtocol && bolus && (
+          <label className={styles.field}>
+            <span>{t('pump.bolusDose')}</span>
+            <span className={styles.inputUnit}>
+              <input
+                inputMode="decimal"
+                value={doseText}
+                onChange={(e) => {
+                  setEdited('dose');
+                  setDoseText(e.target.value);
+                  setMlText(
+                    fmtMl(
+                      bolusDoseToMl(
+                        product,
+                        bolusProtocol,
+                        demographics,
+                        parseNumber(e.target.value),
+                      ),
+                    ),
+                  );
+                }}
+                data-testid="pump-bolus-dose"
+              />
+              <small>{unitLabel(bolus.dose.unit)}</small>
+            </span>
+          </label>
+        )}
         <label className={styles.field}>
           <span>mL</span>
           <span className={styles.inputUnit}>
@@ -232,11 +291,17 @@ function BolusForm({ pump, product, protocol, demographics, override, send }: Fo
               onChange={(e) => {
                 setEdited('ml');
                 setMlText(e.target.value);
-                setDoseText(
-                  fmtDose(
-                    mlToBolusDose(product, protocol, demographics, parseNumber(e.target.value)),
-                  ),
-                );
+                if (bolusProtocol)
+                  setDoseText(
+                    fmtDose(
+                      mlToBolusDose(
+                        product,
+                        bolusProtocol,
+                        demographics,
+                        parseNumber(e.target.value),
+                      ),
+                    ),
+                  );
               }}
               data-testid="pump-bolus-ml"
             />
@@ -250,42 +315,45 @@ function BolusForm({ pump, product, protocol, demographics, override, send }: Fo
               inputMode="decimal"
               value={durText}
               onChange={(e) => setDurText(e.target.value)}
+              data-testid="pump-bolus-duration"
             />
             <small>s</small>
           </span>
         </label>
       </div>
-      <p className={styles.hint}>
-        {t('pump.range', {
-          min: bolus.dose.min,
-          max: bolus.dose.max ?? t('pump.noMax'),
-          unit: unitLabel(bolus.dose.unit),
-          typ: bolus.dose.typical,
-        })}{' '}
-        · ≥ {bolus.durationS.min} s
-      </p>
+      {bolusProtocol && bolus ? (
+        <p className={styles.hint}>
+          {borrowed && `${t('pump.bolusFrom', { indication: bolusProtocol.indication })} · `}
+          {t('pump.range', {
+            min: bolus.dose.min,
+            max: bolus.dose.max ?? t('pump.noMax'),
+            unit: unitLabel(bolus.dose.unit),
+            typ: bolus.dose.typical,
+          })}{' '}
+          · ≥ {bolus.durationS.min} s
+        </p>
+      ) : (
+        <p className={styles.hint}>{t('pump.bolusNoSpec')}</p>
+      )}
       {mlText !== '' && <Messages v={v} />}
       <div className={styles.buttons}>
-        <button
-          type="button"
-          className={styles.primary}
-          disabled={blocked || mlText === ''}
-          onClick={() =>
-            send({
-              type: 'PUMP_BOLUS',
-              pumpId: pump.id,
-              volumeMl: ml,
-              durationS: dur,
-              ...(Number.isFinite(typedDose)
-                ? { ordered: { value: typedDose, unit: bolus.dose.unit } }
-                : {}),
-              ...(override ? { override: true } : {}),
-            })
-          }
-          data-testid="pump-give-bolus"
-        >
-          {t('pump.giveBolus')}
-        </button>
+        <OrderButton
+          v={v}
+          order={{
+            type: 'PUMP_BOLUS',
+            pumpId: pump.id,
+            volumeMl: ml,
+            durationS: dur,
+            ...(bolus && Number.isFinite(typedDose)
+              ? { ordered: { value: typedDose, unit: bolus.dose.unit } }
+              : {}),
+          }}
+          override={override}
+          send={send}
+          label={t('pump.giveBolus')}
+          testId="pump-give-bolus"
+          disabled={mlText === ''}
+        />
       </div>
     </div>
   );
@@ -426,7 +494,6 @@ function PumpEditorPanel({ pumpId }: { pumpId: string }) {
             key={`b:${formKey}`}
             pump={pump}
             product={product}
-            protocol={protocol}
             demographics={demographics}
             override={useOverride}
             send={send}

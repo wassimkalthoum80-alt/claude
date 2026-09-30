@@ -150,3 +150,20 @@ The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these 
 - **D**: arrest drugs in the ALS engine (adrenaline cycles, amiodarone), anaphylaxis, sugammadex, and scoring
   and debriefing from the event log.
 - Clinical review of the formulary and of every PD constant before the simulator is used for teaching.
+
+## Update: soft limits, top-up boluses, haemodynamic response
+
+- **Soft vs hard limits** (smart-pump drug library): rates or boluses above the protocol maximum, and boluses
+  faster than the minimum time, can be given after an explicit **Confirm above limit** (`SOFT_LIMIT_CONFIRMED`).
+  Hard limits stay blocked unless the instructor overrides them.
+- **Bolus in every protocol**: during propofol maintenance the induction bolus specification sets the limits;
+  products without one take a bolus in mL.
+- **Haemodynamics of a propofol bolus**:
+  - propofol's haemodynamic Ce50 was raised above the maintenance range (it was saturated);
+  - an arterial baroreflex around a set point of MAP 82 mmHg was added;
+  - a small rate-related ST term was added (capped at 0.2 of the ischaemia scale).
+
+  A 100 mg top-up under TIVA gives ART 125/69 → 110/60, HR 80 → 94/min and ST −0.3 mm (II) / −0.6 mm (V5),
+  recovering within ≈ 10 min. It is covered by a unit test and an e2e test.
+- The ST test for a healthy heart in severe shock now allows this minimal change (≤ 0.2 of the ischaemia scale,
+  V5 above −0.7 mm) instead of none.

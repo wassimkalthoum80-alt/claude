@@ -37,6 +37,22 @@ export interface Validation {
   warnings: ValidationCode[];
 }
 
+/**
+ * Soft limits (like the drug library of a real smart pump): exceeding the protocol maximum or the minimum bolus
+ * time is allowed after an explicit confirmation, which is logged. Everything else (hardware limit, units, volume,
+ * wrong pump, reference-only product) is a hard limit that only an instructor override can pass.
+ */
+export const SOFT_LIMIT_CODES: readonly ValidationCode[] = [
+  'above-protocol-max',
+  'bolus-above-max',
+  'bolus-duration',
+];
+
+/** All errors are soft limits (and there is at least one). */
+export function onlySoftErrors(v: Validation): boolean {
+  return v.errors.length > 0 && v.errors.every((c) => SOFT_LIMIT_CODES.includes(c));
+}
+
 const ok = (): Validation => ({ errors: [], warnings: [] });
 
 /** Can this product go into this pump? */
@@ -57,6 +73,20 @@ export function protocolOf(
   protocolId: string | null,
 ): Protocol | undefined {
   return product?.protocols.find((p) => p.id === protocolId);
+}
+
+/**
+ * The protocol whose bolus specification applies: the selected protocol if it defines a bolus, otherwise the
+ * product's first protocol that does (e.g. a propofol top-up bolus during TIVA maintenance uses the induction
+ * bolus limits and its weight basis). Undefined when the product has no bolus specification at all.
+ */
+export function bolusProtocolOf(
+  product: Product | undefined,
+  protocolId: string | null,
+): Protocol | undefined {
+  const selected = protocolOf(product, protocolId);
+  if (selected?.bolus) return selected;
+  return product?.protocols.find((p) => p.bolus !== undefined);
 }
 
 /** Validate a continuous rate (mL/h) against the pump and the selected protocol. */

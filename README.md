@@ -106,8 +106,14 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   the infusomat. **+ Perfusor / + Infusomat** add pumps and **Flush 5 mL** flushes the IV line. Click a pump to
   load a drug (search by generic or brand name, grouped by the German categories), pick the indication, and enter
   either the dose rate or mL/h (the other is converted). Boluses are entered as a dose or in mL, with an
-  administration time. Orders outside the protocol, the syringe content or the pump's limits are **blocked with a
-  message**; with the instructor panel open, an *instructor override* lets you simulate the error on purpose.
+  administration time. Boluses work in every protocol (a propofol top-up during TIVA maintenance uses the
+  induction bolus limits). Like a smart pump, a dose **above the protocol maximum is a soft limit**: the button
+  becomes **Confirm above limit** and the confirmation is logged. Hard limits (more than the syringe holds, above
+  the pump's maximum rate, wrong pump or units) are blocked; with the instructor panel open, an *instructor
+  override* lets you simulate even those on purpose.
+- Try a **propofol top-up bolus** under TIVA (P1 → Bolus 5 mL over 10 s = 100 mg): blood pressure falls
+  (≈ 125/69 → 110/60), the heart rate rises as the baroreflex compensates (≈ 80 → 94/min), and the ST segment
+  shows a small rate-related depression (≈ −0.3 mm in II, −0.6 mm in V5), all recovering over ≈ 10 min.
   The rack shows the syringe label colour, dose rate, mL/h, run/stop/bolus and remaining volume, plus the NMT TOF.
 - Drugs reach the patient through the line: the extension and the common line hold drug (dead space), so a
   syringe starts slowly without carrier flow, and a flush pushes what is in the line. Propofol, sufentanil and

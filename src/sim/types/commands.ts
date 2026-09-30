@@ -48,12 +48,16 @@ export type Command =
   | { type: 'PUMP_LOAD'; pumpId: string; productId: string; protocolId?: string; loadedMl?: number }
   | { type: 'PUMP_UNLOAD'; pumpId: string }
   | { type: 'PUMP_SET_PROTOCOL'; pumpId: string; protocolId: string }
-  /** mL/h; `ordered` records the dose rate as entered; `override` (instructor only) accepts a protocol violation */
+  /**
+   * mL/h; `ordered` records the dose rate as entered; `confirm` accepts a soft-limit violation (above the protocol
+   * maximum) after the user confirmed it; `override` (instructor only) also passes hard limits
+   */
   | {
       type: 'PUMP_SET_RATE';
       pumpId: string;
       rateMlH: number;
       ordered?: { value: number; unit: string };
+      confirm?: boolean;
       override?: boolean;
     }
   | { type: 'PUMP_START'; pumpId: string }
@@ -65,6 +69,7 @@ export type Command =
       volumeMl: number;
       durationS: number;
       ordered?: { value: number; unit: string };
+      confirm?: boolean;
       override?: boolean;
     }
   | { type: 'PUMP_ADD'; kind: 'syringe' | 'volumetric' }
@@ -92,6 +97,8 @@ export type ClinicalEventType =
   | 'COMMAND_REJECTED'
   /** a medication command violated the protocol and was accepted by instructor override */
   | 'OVERRIDE_ACCEPTED'
+  /** a medication order above a soft limit (protocol maximum, bolus time) was confirmed by the user */
+  | 'SOFT_LIMIT_CONFIRMED'
   /** a syringe/bag ran empty */
   | 'PUMP_EMPTY';
 

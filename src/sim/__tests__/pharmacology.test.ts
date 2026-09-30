@@ -555,3 +555,51 @@ describe('reproducibility', () => {
     expect(run()).toEqual(run());
   });
 });
+
+describe('soft limits, top-up boluses and the haemodynamic response', () => {
+  it('a rate above the protocol maximum needs an explicit confirmation; hard limits still need the instructor', () => {
+    const e = createEngine(); // TIVA: P1 propofol 2 % (maintenance 4–12 mg/kg/h)
+    cmd(e, { type: 'PUMP_SET_RATE', pumpId: 'P1', rateMlH: 60 }); // ≈ 15 mg/kg/h
+    expect(snap(e).devices.pumps[0]?.rateMlH).toBe(24);
+    cmd(e, { type: 'PUMP_SET_RATE', pumpId: 'P1', rateMlH: 60, confirm: true });
+    expect(snap(e).devices.pumps[0]?.rateMlH).toBe(60);
+    expect(snap(e).devices.pumps[0]?.overridden).toBe(true);
+    cmd(e, { type: 'PUMP_SET_RATE', pumpId: 'P1', rateMlH: 1500, confirm: true }); // above pump hardware
+    expect(snap(e).devices.pumps[0]?.rateMlH).toBe(60);
+    const ev = events(e).map((x) => x.event);
+    expect(ev).toContain('SOFT_LIMIT_CONFIRMED');
+    expect(ev.filter((x) => x === 'COMMAND_REJECTED')).toHaveLength(2);
+  });
+
+  it('a propofol bolus can be given during TIVA maintenance (limits from the induction bolus)', () => {
+    const e = createEngine();
+    const before = snap(e).devices.pumps[0]?.deliveredMl ?? 0;
+    cmd(e, { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 2.5, durationS: 10 }); // 50 mg
+    e.runFor(15);
+    expect((snap(e).devices.pumps[0]?.deliveredMl ?? 0) - before).toBeGreaterThan(2.5);
+    expect(events(e).map((x) => x.event)).not.toContain('COMMAND_REJECTED');
+    // Above the induction maximum (2.5 mg/kg lean): blocked until confirmed.
+    cmd(e, { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 12, durationS: 10 });
+    expect(snap(e).devices.pumps[0]?.bolus).toBeNull();
+    cmd(e, { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 12, durationS: 10, confirm: true });
+    expect(snap(e).devices.pumps[0]?.bolus).not.toBeNull();
+  });
+
+  it('a propofol top-up bolus lowers BP with a compensatory tachycardia and a minimal ST change, then recovers', () => {
+    const e = createEngine();
+    e.runFor(120);
+    const n0 = snap(e).devices.monitor.numerics;
+    const map0 = snap(e).patient.cardio.meanArterialPressure;
+    cmd(e, { type: 'PUMP_BOLUS', pumpId: 'P1', volumeMl: 5, durationS: 10 }); // 100 mg ≈ 1.3 mg/kg
+    e.runFor(120);
+    const s = snap(e);
+    const n = s.devices.monitor.numerics;
+    expect(s.patient.cardio.meanArterialPressure).toBeLessThan(0.9 * map0);
+    expect((n.hr ?? 0) - (n0.hr ?? 0)).toBeGreaterThanOrEqual(8);
+    expect(n.stII ?? 0).toBeLessThan(-0.05);
+    expect(n.stII ?? 0).toBeGreaterThan(-0.5);
+    e.runFor(600);
+    expect(snap(e).patient.cardio.meanArterialPressure).toBeGreaterThan(0.95 * map0);
+    expect(Math.abs(snap(e).devices.monitor.numerics.stII ?? 0)).toBeLessThan(0.15);
+  });
+});

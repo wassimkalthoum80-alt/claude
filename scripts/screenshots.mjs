@@ -106,6 +106,21 @@ for (const size of sizes) {
   await page.click('[data-testid=product-rocuronium-10]');
   await page.waitForTimeout(400);
   await shot('2-formulary');
+  // Propofol top-up bolus under TIVA: BP falls, reflex tachycardia, minimal ST change (5-lead).
+  await page.click('[aria-label=Close]');
+  await page.click('[data-testid=ecg-leads-5]');
+  await page.evaluate(() => window.__resusEngine.runFor(120));
+  await page.click('[data-testid=pump-P1]');
+  await page.fill('[data-testid=pump-bolus-ml]', '5');
+  await page.fill('[data-testid=pump-bolus-duration]', '10');
+  await page.click('[data-testid=pump-give-bolus]');
+  await page.fill('[data-testid=pump-rate]', '60');
+  await page.waitForTimeout(300);
+  await shot('3-soft-limit');
+  await page.click('[aria-label=Close]');
+  await page.evaluate(() => window.__resusEngine.runFor(110));
+  await page.waitForTimeout(1200);
+  await shot('4-propofol-bolus-effect');
   await page.close();
 }
 
