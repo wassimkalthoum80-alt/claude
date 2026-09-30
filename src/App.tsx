@@ -2,6 +2,7 @@ import { useMonitorAudio } from './ui/audio/useMonitorAudio';
 import { ActionBar } from './ui/components/ActionBar/ActionBar';
 import { AlarmLimitsPanel } from './ui/components/AlarmLimits/AlarmLimitsPanel';
 import { AlarmStrip } from './ui/components/AlarmStrip/AlarmStrip';
+import { Clock } from './ui/components/Clock/Clock';
 import { CprMetrics } from './ui/components/CprMetrics/CprMetrics';
 import { IconSliders, IconSpeaker } from './ui/components/icons';
 import { InstructorPanel } from './ui/components/InstructorPanel/InstructorPanel';
@@ -55,6 +56,7 @@ function Workstation() {
           >
             {t('instructor.open')} <kbd>`</kbd>
           </button>
+          <Clock />
           <button
             type="button"
             className={styles.chip}

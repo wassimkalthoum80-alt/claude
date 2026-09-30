@@ -1,0 +1,41 @@
+/* Digital wall clock beside the instructor button (styled like the other top-bar chips). */
+.clock {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: rgba(3, 5, 7, 0.85);
+  cursor: default;
+  user-select: none;
+}
+
+.digits {
+  font: 600 16px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: #ff5a4f;
+  text-shadow: 0 0 6px rgba(255, 70, 60, 0.55);
+}
+
+.seconds {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.colon {
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .colon {
+    animation: none;
+  }
+}

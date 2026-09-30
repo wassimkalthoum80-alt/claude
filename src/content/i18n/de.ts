@@ -188,6 +188,8 @@ export const de: Record<I18nKey, string> = {
   'hl.reserves': 'Reserven des Patienten',
   'hl.preloadReserve': 'Volumenstatus',
   'hl.age': 'Alter',
+  'clock.label': 'Uhrzeit',
+  'clock.caseTime': 'Fallzeit',
   'bis.label': 'Simulierter BIS',
   'bis.eeg': 'EEG',
   'bis.sqi': 'SQI',

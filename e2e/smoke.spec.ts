@@ -150,3 +150,15 @@ test('processed EEG: BIS row, detail panel with trend, sensor loss shows "Check 
   await expect(page.getByTestId('bis-status')).toHaveText('Check sensor');
   expect(errors).toEqual([]);
 });
+
+test('digital wall clock next to the instructor button shows the local time', async ({ page }) => {
+  await page.goto('/?autostart&debug');
+  const clock = page.getByTestId('wall-clock');
+  await expect(clock).toBeVisible();
+  await expect(clock).toHaveText(/^\d{2}:\d{2}:\d{2}$/);
+  const first = await clock.textContent();
+  await expect(clock).not.toHaveText(first ?? '', { timeout: 2500 });
+  const box = await clock.boundingBox();
+  const instr = await page.getByTestId('instructor-toggle').boundingBox();
+  expect(box && instr && box.x > instr.x && box.x - (instr.x + instr.width) < 20).toBe(true);
+});

@@ -150,6 +150,8 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
 | <kbd>M</kbd> | Audio (QRS tone with SpO₂ pitch, alarms, compression clicks) |
 | <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> | Sinus / VF / asystole / PEA (instructor panel open) |
 
+A digital wall clock (real local time) sits next to the instructor button; its tooltip shows the elapsed case time.
+
 Language: English and German (menu or `?lang=de`). ECG lead colours: IEC (default) or AHA.
 
 ## Architecture in one picture
