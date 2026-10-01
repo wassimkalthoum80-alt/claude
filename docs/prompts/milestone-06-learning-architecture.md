@@ -235,8 +235,10 @@ models for phenylephrine, nitroglycerin, urapidil, β-blockers.
 
 1. **Navigation and session model.** HOME screen, module menus, session start/end, app shell; cases removed from
    the workspace; Instructor mode = today's sandbox; phone layout supported. No physiology changes.
-2. **Physiology Lab.** Ventilation Lab and Drug/Haemodynamic Lab with phenotypes; "What changed and why";
-   compact timeline.
+2. **Time, events and the Physiology Lab** (amended, see `milestone-06b-time-events-scenarios.md` and
+   `docs/design/time-and-events.md`): simulation vs. monitor time, auto speed and "Advance time"; Event
+   Director, nurse card, notifications, investigations with turnaround, hints, compact timeline, trend view;
+   three polished scenarios (healthy lungs, severe asthma, hypovolaemia); "What changed and why".
 3. **Session framework, scoring, debrief, progression.** Objectives/conditions, assessment rules, scores,
    stars, XP, mastery, profile, history, local storage.
 4. **Resuscitation module** on the existing ALS engine (several cause-specific arrests, scored).
