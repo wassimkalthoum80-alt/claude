@@ -67,6 +67,9 @@ import type {
   SimulationState,
 } from '../state/SimulationState';
 import type { AlarmId } from '../state/MonitorState';
+import type { DirectorMessage, DirectorRule } from '../types/director';
+import { EventDirector } from '../director/EventDirector';
+import { ABG_TURNAROUND_S, drawAbg } from '../director/labs';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
 import type { SimEvent } from '../types/events';
 import type { GuidelineSet } from '../types/guidelines';
@@ -79,9 +82,16 @@ export interface EngineOptions {
   seed?: number;
   /** overrides heart–lung calibration values (tests, instructor experiments); stored in the state */
   calibration?: Partial<HeartLungCalibration>;
+  /** general Event Director rules for every scenario (content); the scenario adds its own */
+  directorRules?: readonly DirectorRule[];
 }
 
 type Listener = () => void;
+
+/** XOR salt deriving the lab RNG stream from the session seed. */
+const LAB_SEED_SALT = 0x1ab5eed;
+/** Director messages kept in the state (older ones remain in the event log). */
+const MAX_MESSAGES = 50;
 
 /**
  * The single owner of simulation state (CLAUDE.md A1).
@@ -138,6 +148,12 @@ export class SimulationEngine {
   private highAlarms = new Set<AlarmId>();
   /** an arrest started since the last interrupt check */
   private arrestThisTick = false;
+  /** a Director message asked to interrupt accelerated time since the last check */
+  private directorInterrupt = false;
+  private readonly director = new EventDirector();
+  private readonly directorRules: readonly DirectorRule[];
+  /** separate stream for analyser imprecision, so ordering a test never perturbs the physiology */
+  private labRng: SeededRng;
 
   private readonly listeners = new Set<Listener>();
   private readonly eventListeners = new Set<(e: SimEvent) => void>();
@@ -150,6 +166,8 @@ export class SimulationEngine {
     this.scenarioDef = options.scenario;
     this.seed = options.seed ?? options.scenario.seed;
     this.calibration = { ...options.calibration };
+    this.directorRules = options.directorRules ?? [];
+    this.labRng = new SeededRng((this.seed ^ LAB_SEED_SALT) >>> 0);
     this.cpr = new CPREngine(options.guidelines);
     // eslint-disable-next-line @typescript-eslint/no-this-alias -- the controller acts on the engine's state via this host
     const engine = this;
@@ -385,6 +403,7 @@ export class SimulationEngine {
     while (this.physio.count < Math.floor(s.time + 1e-9)) this.physio.record(s);
     this.alarms.update(s);
     this.checkScenarioEnd();
+    this.updateDirector();
     this.checkAccelerationInterrupt();
     this.version += 1;
   }
@@ -427,6 +446,8 @@ export class SimulationEngine {
     }
     this.appendCommand(command, source);
     this.apply(command, source);
+    if (source === 'user' || source === 'instructor')
+      this.director.onCommand(command.type, this.state.time);
     this.bumpAndNotify();
   }
 
@@ -475,6 +496,10 @@ export class SimulationEngine {
     this.clock.timeScale = 1;
     this.highAlarms = new Set();
     this.arrestThisTick = false;
+    this.directorInterrupt = false;
+    this.director.reset();
+    this.director.setRules([...this.directorRules, ...(scenario.director ?? [])]);
+    this.labRng = new SeededRng((seed ^ LAB_SEED_SALT) >>> 0);
     this.log.clear();
     this.bank.reset();
     this.trendBank.reset();
@@ -712,6 +737,23 @@ export class SimulationEngine {
       case 'SET_AUTO_SPEED':
         s.control.autoSpeed = command.on;
         break;
+      case 'ORDER_TEST': {
+        const orders = s.director.orders;
+        orders.push({
+          id: (orders[orders.length - 1]?.id ?? 0) + 1,
+          test: command.test,
+          drawnAt: s.time,
+          readyAt: s.time + this.labRng.uniform(ABG_TURNAROUND_S.min, ABG_TURNAROUND_S.max),
+          result: drawAbg(s, this.labRng),
+          viewed: false,
+        });
+        break;
+      }
+      case 'VIEW_RESULT': {
+        const o = s.director.orders.find((x) => x.id === command.orderId);
+        if (o && o.readyAt <= s.time) o.viewed = true;
+        break;
+      }
       case 'RESET':
         break;
     }
@@ -991,6 +1033,48 @@ export class SimulationEngine {
     };
   }
 
+  /** Event Director rules and finished investigations → messages (sim time, deterministic). */
+  private updateDirector(): void {
+    const s = this.state;
+    const window = Math.min(3600, s.time);
+    const sum = (cats: readonly Parameters<FluidLedger['total']>[0][]) =>
+      cats.reduce((a, c) => a + this.ledger.total(c), 0);
+    const fired: DirectorMessage[] = this.director.evaluate({
+      state: s,
+      urineWindowMl: this.ledger.sum('urine', s.time - window, s.time + 1e-9),
+      urineWindowS: window,
+      balanceMl: sum(INPUT_CATEGORIES) - sum(OUTPUT_CATEGORIES) - sum(ESTIMATED_CATEGORIES),
+    });
+    for (const o of s.director.orders) {
+      if (o.readyAt > s.time - TICK_S + 1e-9 && o.readyAt <= s.time + 1e-9) {
+        this.logEvent('TEST_RESULT', s.time, `${o.test}#${o.id}`);
+        fired.push(
+          this.director.systemMessage({
+            ruleId: `result:${o.id}`,
+            t: s.time,
+            source: 'lab',
+            priority: 'passive',
+            textKey: `msg.lab.${o.test}Ready`,
+            vars: {},
+            actions: ['open-labs'],
+          }),
+        );
+      }
+    }
+    if (fired.length === 0) return;
+    const rules = new Map(
+      this.directorRules.concat(this.scenarioDef.director ?? []).map((r) => [r.id, r]),
+    );
+    for (const m of fired) {
+      s.director.messages.push(m);
+      if (!m.ruleId.startsWith('result:')) this.logEvent('DIRECTOR_MESSAGE', s.time, m.ruleId);
+      const rule = rules.get(m.ruleId);
+      if (m.priority === 'critical' || rule?.interrupt) this.directorInterrupt = true;
+    }
+    if (s.director.messages.length > MAX_MESSAGES)
+      s.director.messages.splice(0, s.director.messages.length - MAX_MESSAGES);
+  }
+
   private currentHighAlarms(): Set<AlarmId> {
     return new Set(
       this.state.devices.monitor.alarms.filter((a) => a.priority === 'high').map((a) => a.id),
@@ -1015,6 +1099,8 @@ export class SimulationEngine {
       }
     }
     this.highAlarms = high;
+    if (this.directorInterrupt) reason = 'event';
+    this.directorInterrupt = false;
     if (this.arrestThisTick) reason = 'arrest';
     if (s.scenario.ended) reason = 'end';
     this.arrestThisTick = false;

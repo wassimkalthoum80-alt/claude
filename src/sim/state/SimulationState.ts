@@ -3,6 +3,7 @@ import type { BalanceChartState } from './BodyFluidState';
 import type { BisState } from './BrainState';
 import type { CPRState } from './CPRState';
 import type { AlarmId, MonitorState } from './MonitorState';
+import type { DirectorState } from '../types/director';
 import type { PatientState } from './PatientState';
 import type { LineState, PumpState } from './PharmacologyState';
 import type { VentilatorState } from './VentilatorState';
@@ -77,12 +78,14 @@ export interface SimulationState {
   timers: ArrestTimers;
   scenario: { id: string; seed: number; ended: boolean };
   control: SimControl;
+  /** Event Director messages and investigations of this session */
+  director: DirectorState;
   /** model configuration, visible to the instructor (heuristic calibration — not clinically validated) */
   model: { calibration: HeartLungCalibration; arrestModelEnabled: boolean };
 }
 
 /** Why accelerated time stopped (Advance time ended or live speed dropped back to ×1). */
-export type InterruptReason = 'limit' | 'alarm' | 'arrest' | 'end' | 'user';
+export type InterruptReason = 'limit' | 'alarm' | 'arrest' | 'event' | 'end' | 'user';
 
 /** Simulation-clock control: pause, live speed, Advance time, automatic return to real time. */
 export interface SimControl {

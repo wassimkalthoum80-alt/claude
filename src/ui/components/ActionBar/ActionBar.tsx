@@ -8,6 +8,7 @@ import {
   IconBolt,
   IconCpr,
   IconDrip,
+  IconFlask,
   IconLungs,
   IconPause,
   IconProbe,
@@ -33,6 +34,7 @@ const BEFORE_FLUIDS: PanelAction[] = [
 ];
 const AFTER_FLUIDS: PanelAction[] = [
   { id: 'ultrasound', key: 'action.ultrasound', icon: IconProbe },
+  { id: 'labs', key: 'action.labs', icon: IconFlask },
   { id: 'procedures', key: 'action.procedures', icon: IconTools },
 ];
 
@@ -40,6 +42,7 @@ const selectBar = (s: Readonly<SimulationState>) => ({
   cprActive: s.interventions.cpr.active,
   checking: s.interventions.resus.rhythmCheck !== null,
   charged: s.devices.defib.charge === 'charged',
+  unreadResult: s.director.orders.some((o) => o.readyAt <= s.time && !o.viewed),
 });
 
 export function ActionBar() {
@@ -51,6 +54,7 @@ export function ActionBar() {
   const badge: Partial<Record<ActionPanelId, boolean>> = {
     rhythm: bar.checking,
     defib: bar.charged,
+    labs: bar.unreadResult,
   };
   const panelButton = ({ id, key, icon: Icon }: PanelAction) => (
     <button

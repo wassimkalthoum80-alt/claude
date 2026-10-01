@@ -1,3 +1,4 @@
+import type { TestKind } from './director';
 import type { TimeScale } from '../core/Clock';
 import type { DoseUnit } from '../pharmacology/units';
 import type { BisSensorFault, PatientFactors, StimulusKind } from '../state/BrainState';
@@ -152,6 +153,10 @@ export type Command =
   | { type: 'ADVANCE_STOP' }
   /** clinical events return accelerated time to ×1 */
   | { type: 'SET_AUTO_SPEED'; on: boolean }
+  /** draw a sample; the result arrives after the test's turnaround time */
+  | { type: 'ORDER_TEST'; test: TestKind }
+  /** the learner opened a result */
+  | { type: 'VIEW_RESULT'; orderId: number }
   | { type: 'RESET' };
 
 export type CommandType = Command['type'];
@@ -160,7 +165,11 @@ export type CommandSource = 'user' | 'instructor' | 'scenario' | 'system';
 
 /** Clinical milestones the engine writes into the event log itself. */
 export type ClinicalEventType =
-  /** Advance time finished; detail = reason (limit | alarm | arrest | end | user) */
+  /** an Event Director message; detail = rule id */
+  | 'DIRECTOR_MESSAGE'
+  /** an investigation result became available; detail = test#order */
+  | 'TEST_RESULT'
+  /** Advance time finished; detail = reason (limit | alarm | arrest | event | end | user) */
   | 'ADVANCE_END'
   /** live speed ×2/×5 returned to ×1 by a clinical event; detail = reason */
   | 'REAL_TIME_RESTORED'

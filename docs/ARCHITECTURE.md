@@ -94,6 +94,14 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   for a clinical interrupt (a high-priority alarm that was not active before, an arrest, the case end) and stops
   with `ADVANCE_END` (reason in the log) or at the target. With `control.autoSpeed` the same check returns ×2/×5 to
   ×1 (`REAL_TIME_RESTORED`). Both are sim-state decisions, so replay reproduces them.
+- **Event Director:** `EventDirector` (`src/sim/director`) evaluates data rules (`DirectorRule`: metric thresholds
+  held for a duration, alarms, learner commands, inaction, all/any) every tick and writes `DirectorMessage`s to
+  `state.director.messages` (`DIRECTOR_MESSAGE` in the log). General rules come in through
+  `EngineOptions.directorRules`, scenario rules through `ScenarioDefinition.director`. Critical or `interrupt`
+  messages stop Advance time / return to ×1. `ORDER_TEST` draws a blood gas now (true values + analyser
+  imprecision from a separate seeded lab RNG, so ordering never perturbs the physiology); the result appears at
+  `readyAt` with a lab message (`TEST_RESULT`), `VIEW_RESULT` records that it was read. UI: `Notifications`
+  (passive notice / nurse card / critical alert) and `LabsPanel`.
 - **Determinism:** one seeded RNG (mulberry32) inside the engine. Same seed + same commands at the same ticks =
   same run.
 

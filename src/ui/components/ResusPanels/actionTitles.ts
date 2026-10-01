@@ -8,5 +8,6 @@ export const ACTION_TITLES: Record<ActionPanelId, I18nKey> = {
   airway: 'action.airway',
   drugs: 'action.drugs',
   ultrasound: 'action.ultrasound',
+  labs: 'action.labs',
   procedures: 'action.procedures',
 };

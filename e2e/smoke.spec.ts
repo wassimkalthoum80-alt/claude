@@ -425,3 +425,29 @@ test('Advance time: 5 minutes run in a few seconds, then live ×1 with a notice;
   await expect(page.getByTestId('advance-running')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('Event Director: blood gas with turnaround, passive lab notice, critical SpO₂ alert', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?autostart&debug');
+  await page.getByTestId('action-labs').click();
+  await page.getByTestId('order-abg').click();
+  await expect(page.getByTestId('abg-pending')).toContainText('Pending');
+  await page.getByTestId('action-labs').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(185));
+  await expect(page.getByTestId('passive-notice')).toContainText('Arterial blood gas available');
+  await page.getByRole('button', { name: 'Open result' }).click();
+  await expect(page.getByTestId('abg-1')).toContainText('PaCO₂');
+  await expect(page.getByTestId('abg-pending')).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.__resusEngine?.dispatch({ type: 'SET_CIRCUIT', connected: false }, 'instructor');
+    window.__resusEngine?.runFor(170);
+  });
+  await expect(page.getByTestId('critical-alert')).toContainText('SpO₂');
+  await page.getByTestId('critical-alert').click();
+  await expect(page.getByTestId('critical-alert')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

@@ -50,7 +50,8 @@ export type Screen = 'home' | 'module' | 'session';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
 export type MobileTab = 'monitor' | 'patient' | 'vent' | 'pumps' | 'actions';
 
-export type ActionPanelId = 'rhythm' | 'defib' | 'airway' | 'drugs' | 'ultrasound' | 'procedures';
+export type ActionPanelId =
+  'rhythm' | 'defib' | 'airway' | 'drugs' | 'ultrasound' | 'labs' | 'procedures';
 
 type UiAction =
   | { type: 'set'; patch: Partial<UiState> }

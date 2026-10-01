@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { erc2025 } from '../../content/guidelines/erc2025';
+import { GENERAL_DIRECTOR_RULES } from '../../content/director/generalRules';
 import { baselinePatient } from '../../content/scenarios';
 import { DisplayStream, SimulationEngine } from '../../sim';
 
@@ -38,7 +39,11 @@ declare global {
  */
 export function EngineProvider({ children }: { children: ReactNode }) {
   const [value] = useState<EngineContextValue>(() => {
-    const engine = new SimulationEngine({ scenario: baselinePatient, guidelines: erc2025 });
+    const engine = new SimulationEngine({
+      scenario: baselinePatient,
+      guidelines: erc2025,
+      directorRules: GENERAL_DIRECTOR_RULES,
+    });
     return { engine, display: new DisplayStream(engine.signals), frameCallbacks: new Set() };
   });
 

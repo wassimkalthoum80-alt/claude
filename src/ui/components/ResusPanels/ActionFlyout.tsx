@@ -1,4 +1,5 @@
 import { useT, useUi, type ActionPanelId } from '../../hooks/UiContext';
+import { LabsPanel } from './LabsPanel';
 import { ACTION_TITLES } from './actionTitles';
 import { AirwayPanel } from './AirwayPanel';
 import { DefibPanel } from './DefibPanel';
@@ -45,6 +46,8 @@ export function ActionPanelBody({ id }: { id: ActionPanelId }) {
       return <DrugsPanel />;
     case 'ultrasound':
       return <UltrasoundPanel />;
+    case 'labs':
+      return <LabsPanel />;
     case 'procedures':
       return <ProceduresPanel />;
   }

@@ -208,3 +208,16 @@ export {
   type RhythmClass,
 } from './interventions/resuscitation';
 export { tamponadeFilling, obstructiveFilling, lungCollapse } from './physiology/obstruction';
+export type {
+  AbgResult,
+  DirectorCondition,
+  DirectorMessage,
+  DirectorMetric,
+  DirectorRule,
+  DirectorState,
+  MessageAction,
+  MessagePriority,
+  MessageSource,
+  TestKind,
+  TestOrder,
+} from './types/director';

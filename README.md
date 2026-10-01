@@ -83,6 +83,14 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   event (a new high-priority alarm, a cardiac arrest, the end of the case) and returns to live ×1 with a short
   notice; **Stop** ends it any time. **Auto speed** (pause menu, on by default) also returns ×2/×5 to ×1 at a
   clinical event: "Clinical event — simulation returned to real time".
+- **Event Director** (`src/sim/director`, rules in `src/content/director/generalRules.ts`): the bedside talks.
+  Nurse Anna reports what she sees ("Doctor, the blood pressure keeps falling — mean pressure 52 mmHg"), the
+  monitor raises large critical alerts (SpO₂ < 85 %, VF, asystole) that return accelerated time to ×1, and the
+  lab sends small notices. Rules read the measured values (thresholds held for a time, actions, inaction) and
+  never change physiology; the nurse never names a diagnosis.
+- **BLOOD GAS / LAB** (action bar): draw an arterial blood gas; the result (pH, PaCO₂, PaO₂, HCO₃⁻, BE, SaO₂,
+  lactate, Hb, Na⁺, K⁺, Cl⁻, glucose, P/F) arrives 2–3 simulated minutes later with the values at the time of
+  sampling and flags outside the reference range.
 
 ## How to play
 

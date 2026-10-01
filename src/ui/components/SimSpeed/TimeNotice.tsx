@@ -16,7 +16,7 @@ const selectInterrupt = (s: Readonly<SimulationState>) => ({
 
 /**
  * Brief notice when accelerated time ends: "Clinical event — simulation returned to real time" (amber, an alarm
- * or arrest stopped it) or "Advanced 15:00 — back in real time" (the target was reached).
+ * arrest or clinical message stopped it) or "Advanced 15:00 — back in real time" (the target was reached).
  */
 export function TimeNotice() {
   const t = useT();
@@ -35,7 +35,7 @@ export function TimeNotice() {
     i.reason !== 'end' &&
     i.t !== null
   ) {
-    const urgent = i.reason === 'alarm' || i.reason === 'arrest';
+    const urgent = i.reason !== 'limit';
     const text = urgent
       ? t('interrupt.event')
       : t('interrupt.limit', { n: formatCaseTime(i.t - (lastFrom ?? i.t)) });

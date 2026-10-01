@@ -6,6 +6,7 @@ import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
 import type { FluidInit } from '../fluid/init';
 import type { PatientConditions } from '../state/ResuscitationState';
+import type { DirectorRule } from './director';
 
 export interface PatientInit {
   sex: 'male' | 'female';
@@ -84,4 +85,6 @@ export interface ScenarioDefinition {
   padsAttached?: boolean;
   /** end the run (and show the summary) this many seconds after arrest onset */
   endAfterArrestS?: number;
+  /** Event Director rules of this scenario (added to the engine's general rules) */
+  director?: readonly DirectorRule[];
 }

@@ -67,6 +67,13 @@ export const IconProbe = (p: IconProps) => (
   </svg>
 );
 
+export const IconFlask = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" />
+    <path d="M7.5 15h9" />
+  </svg>
+);
+
 export const IconTools = (p: IconProps) => (
   <svg {...base} {...p}>
     <path d="M14.5 6.5a4 4 0 0 0 5 5L21 13l-8 8-3-3 5.5-5.5M9.5 17.5 3 11l2-2 6.5 6.5" />

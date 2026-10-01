@@ -37,6 +37,14 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 | The monitor display, beep and chest animation run on a real-time display clock; the physiology runs ×2/×5 | display copies the most recent complete beat/compression (cardiac channels), breath (CO₂, Paw, flow, volume) or 1 s chunk (EEG; cardiac without beats for > 2.5 s; respiratory without breaths for > 15 s) | A real monitor never sweeps faster than 25 mm/s. Time compression is a training aid; the displayed beats and breaths are real simulated ones at their real duration. At ×1 the display is an exact copy. |
 | Displayed subset at ×N | roughly every Nth beat/breath; beat-to-beat variability and the phase between breathing and beats are thinned/approximate | Numerics are still measured from every simulated beat and breath (CLAUDE.md A1), so number and curve agree. |
 
+## Event Director and blood gas (`src/sim/director`, `src/content/director`)
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| Nurse/monitor messages are triggered by thresholds on measured values held for a time | MAP < 55 for 60 s; HR < 45 for 30 s; HR > 130 for 60 s; Ppeak > 35 for 30 s; EtCO₂ > 55 for 60 s; urine < 0.5 mL/kg/h over the last hour (after 1 h); SpO₂ < 85 % for 15 s (critical); VF / asystole alarm (critical) | Educational defaults for prompting reassessment; cooldowns 2–60 min avoid repetition. CLINICAL REVIEW. |
+| Point-of-care ABG | turnaround 120–180 s (seeded); analyser imprecision pH ±0.005, PCO₂ ±0.7 mmHg, PO₂ ±2 %, lactate ±0.1, Na/Cl ±1, K ±0.05, glucose ±0.1 mmol/L (1 SD); BE by Van Slyke (CLSI C46) | Values are the simulated arterial values at the moment of sampling; the delay is sampling + transport + measurement. |
+| Reference flags | pH 7.35–7.45, PaCO₂ 35–45, PaO₂ ≥ 80, HCO₃⁻ 22–26, BE ±2, SaO₂ ≥ 94, lactate ≤ 2, Hb 12–17, Na 135–145, K 3.5–5.0, Cl 98–107, glucose 4–8 | Common adult ranges; local laboratories differ. |
+
 ## Cardiovascular (`CardiovascularModel.ts`, `parameters.ts → CARDIO`)
 
 | Assumption                                                                                                                                                          | Value                                                                                | Rationale                                                                                                                                                       |

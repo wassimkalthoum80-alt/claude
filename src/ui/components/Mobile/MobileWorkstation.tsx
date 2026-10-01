@@ -9,6 +9,7 @@ import { Clock } from '../Clock/Clock';
 import { SimSpeed } from '../SimSpeed/SimSpeed';
 import { AdvanceTime } from '../SimSpeed/AdvanceTime';
 import { TimeNotice } from '../SimSpeed/TimeNotice';
+import { Notifications } from '../Notifications/Notifications';
 import { CprMetrics } from '../CprMetrics/CprMetrics';
 import {
   IconBolt,
@@ -17,6 +18,7 @@ import {
   IconLungs,
   IconPause,
   IconProbe,
+  IconFlask,
   IconPulse,
   IconSpeaker,
   IconStop,
@@ -50,6 +52,7 @@ const ACTIONS: { id: ActionPanelId; icon: Icon }[] = [
   { id: 'airway', icon: IconLungs },
   { id: 'drugs', icon: IconSyringe },
   { id: 'ultrasound', icon: IconProbe },
+  { id: 'labs', icon: IconFlask },
   { id: 'procedures', icon: IconTools },
 ];
 
@@ -58,6 +61,7 @@ const selectBar = (s: Readonly<SimulationState>) => ({
   checking: s.interventions.resus.rhythmCheck !== null,
   charged: s.devices.defib.charge === 'charged',
   alarm: s.devices.monitor.alarms.some((a) => a.priority === 'high'),
+  unreadResult: s.director.orders.some((o) => o.readyAt <= s.time && !o.viewed),
 });
 
 /**
@@ -76,7 +80,11 @@ export function MobileWorkstation() {
     user({ type: 'SET_PAUSED', paused: true });
     setUi({ menuOpen: true });
   };
-  const badge: Partial<Record<ActionPanelId, boolean>> = { rhythm: s.checking, defib: s.charged };
+  const badge: Partial<Record<ActionPanelId, boolean>> = {
+    rhythm: s.checking,
+    defib: s.charged,
+    labs: s.unreadResult,
+  };
 
   return (
     <div className={styles.shell} data-testid="mobile-layout">
@@ -118,6 +126,7 @@ export function MobileWorkstation() {
         </button>
       </header>
       <TimeNotice />
+      <Notifications />
       <div className={styles.bannerRow}>
         <PatientBanner compact />
       </div>
