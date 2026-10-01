@@ -40,7 +40,12 @@ export function AlarmLimitsPanel() {
   };
 
   return (
-    <aside className={styles.panel} aria-label={t('limits.title')} data-testid="alarm-limits">
+    <aside
+      className={styles.panel}
+      aria-label={t('limits.title')}
+      data-testid="alarm-limits"
+      data-sheet
+    >
       <header className={styles.header}>
         <span className={styles.title}>{t('limits.title')}</span>
         <button

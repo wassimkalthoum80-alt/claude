@@ -26,7 +26,14 @@ export interface UiState {
   balanceOpen: boolean;
   /** ALS action panel shown next to the action bar (one at a time) */
   actionPanel: ActionPanelId | null;
+  /** screen layout: automatic (phone layout on small screens), or forced desktop / phone */
+  layout: LayoutPref;
+  /** visible screen of the phone layout */
+  mobileTab: MobileTab;
 }
+
+export type LayoutPref = 'auto' | 'desktop' | 'mobile';
+export type MobileTab = 'monitor' | 'patient' | 'vent' | 'pumps' | 'actions';
 
 export type ActionPanelId = 'rhythm' | 'defib' | 'airway' | 'drugs' | 'ultrasound' | 'procedures';
 
@@ -48,6 +55,9 @@ function loadPrefs(): Partial<UiState> {
       ...(p.language === 'en' || p.language === 'de' ? { language: p.language } : {}),
       ...(typeof p.audio === 'boolean' ? { audio: p.audio } : {}),
       ...(p.electrodes === 'IEC' || p.electrodes === 'AHA' ? { electrodes: p.electrodes } : {}),
+      ...(p.layout === 'auto' || p.layout === 'desktop' || p.layout === 'mobile'
+        ? { layout: p.layout }
+        : {}),
     };
   } catch {
     return {};
@@ -58,7 +68,12 @@ function savePrefs(s: UiState): void {
   try {
     window.localStorage.setItem(
       PREFS_KEY,
-      JSON.stringify({ language: s.language, audio: s.audio, electrodes: s.electrodes }),
+      JSON.stringify({
+        language: s.language,
+        audio: s.audio,
+        electrodes: s.electrodes,
+        layout: s.layout,
+      }),
     );
   } catch {
     // Storage unavailable (private mode, blocked): preferences simply do not persist.
@@ -73,7 +88,8 @@ function reducer(state: UiState, action: UiAction): UiState {
   if (
     next.language !== state.language ||
     next.audio !== state.audio ||
-    next.electrodes !== state.electrodes
+    next.electrodes !== state.electrodes ||
+    next.layout !== state.layout
   ) {
     savePrefs(next);
   }
@@ -97,6 +113,8 @@ function initialState(): UiState {
     bisOpen: false,
     balanceOpen: false,
     actionPanel: null,
+    layout: 'auto',
+    mobileTab: 'monitor',
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

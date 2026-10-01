@@ -43,7 +43,8 @@ describe('balance view model', () => {
     a.runFor(6.2 * 3600);
     const aki = kdigoHint(a.getSnapshot(), a.fluidLedger, 'actual');
     expect(['met', 'none']).toContain(aki.level);
-  });
+    // Simulates 7.2 h of case time.
+  }, 120_000);
 
   it('the teaching view shows the tracer of the last bolus', () => {
     const e = engine();

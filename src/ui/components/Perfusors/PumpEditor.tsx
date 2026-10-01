@@ -388,6 +388,7 @@ function PumpEditorPanel({ pumpId }: { pumpId: string }) {
   return (
     <aside
       className={styles.panel}
+      data-sheet
       aria-label={t('pump.title', { id: pump.id })}
       data-testid="pump-editor"
     >

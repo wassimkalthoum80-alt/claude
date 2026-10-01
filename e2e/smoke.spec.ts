@@ -245,3 +245,28 @@ test('ALS panels: rhythm check → shockable → defibrillator shock; ultrasound
   await expect(page.getByTestId('auscultation')).toContainText('breath sounds');
   expect(errors).toEqual([]);
 });
+
+test('phone layout: tabs, floating CPR button, ALS panel inline, desktop layout forced from the menu', async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await ctx.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?autostart&debug');
+  await expect(page.getByTestId('mobile-layout')).toBeVisible();
+  await page.getByTestId('cpr-button').tap();
+  await expect(page.getByTestId('cpr-button')).toHaveText(/STOP CPR/);
+  for (const tab of ['patient', 'vent', 'pumps', 'actions', 'monitor']) {
+    await page.getByTestId(`tab-${tab}`).tap();
+  }
+  await page.getByTestId('tab-actions').tap();
+  await page.getByTestId('action-rhythm').tap();
+  await expect(page.getByTestId('panel-rhythm')).toBeVisible();
+  // Force the desktop layout from the pause menu (kept as a preference).
+  await page.getByRole('button', { name: /PAUSE/i }).first().tap();
+  await page.getByTestId('layout-switch').getByRole('button', { name: 'Desktop' }).tap();
+  await expect(page.getByTestId('mobile-layout')).toHaveCount(0);
+  expect(errors).toEqual([]);
+  await ctx.close();
+});

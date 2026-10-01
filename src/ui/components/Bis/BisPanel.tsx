@@ -67,7 +67,12 @@ export function BisPanel() {
   const markers = trendMarkers(engine.eventLog).slice(-6).reverse();
 
   return (
-    <aside className={styles.panel} aria-label={t('bis.panelTitle')} data-testid="bis-panel">
+    <aside
+      className={styles.panel}
+      aria-label={t('bis.panelTitle')}
+      data-testid="bis-panel"
+      data-sheet
+    >
       <header className={styles.header}>
         <span className={styles.title}>{t('bis.panelTitle')}</span>
         <button

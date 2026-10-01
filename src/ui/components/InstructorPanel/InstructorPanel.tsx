@@ -66,6 +66,7 @@ export function InstructorPanel() {
       className={styles.panel}
       aria-label={t('instructor.title')}
       data-testid="instructor-panel"
+      data-sheet
     >
       <header className={styles.header}>
         <span className={styles.title}>{t('instructor.title')}</span>

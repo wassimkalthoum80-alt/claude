@@ -871,6 +871,17 @@ export const en = {
   'inst.myocardium':
     'Myocardium: ischaemic time {it} s · coronary perfusion {cpp} % · viability {via} % · shock readiness {rd} %',
   'inst.refib': 'VF recurs in {n} s',
+  'menu.layout': 'Layout',
+  'menu.layout.auto': 'Auto',
+  'menu.layout.desktop': 'Desktop',
+  'menu.layout.mobile': 'Phone',
+  'mobile.monitor': 'Monitor',
+  'mobile.patient': 'Patient',
+  'mobile.vent': 'Ventilator',
+  'mobile.pumps': 'Pumps',
+  'mobile.actions': 'Actions',
+  'mobile.instructor': 'INSTRUCTOR',
+  'mobile.tabs': 'Screens',
 } as const;
 
 export type I18nKey = keyof typeof en;

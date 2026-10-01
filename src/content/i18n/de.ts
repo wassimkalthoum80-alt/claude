@@ -874,4 +874,15 @@ export const de: Record<I18nKey, string> = {
   'inst.myocardium':
     'Myokard: Ischämiezeit {it} s · Koronarperfusion {cpp} % · Vitalität {via} % · Schockbereitschaft {rd} %',
   'inst.refib': 'VF kehrt in {n} s zurück',
+  'menu.layout': 'Layout',
+  'menu.layout.auto': 'Automatisch',
+  'menu.layout.desktop': 'Desktop',
+  'menu.layout.mobile': 'Handy',
+  'mobile.monitor': 'Monitor',
+  'mobile.patient': 'Patient',
+  'mobile.vent': 'Beatmung',
+  'mobile.pumps': 'Pumpen',
+  'mobile.actions': 'Maßnahmen',
+  'mobile.instructor': 'INSTRUKTOR',
+  'mobile.tabs': 'Ansichten',
 };

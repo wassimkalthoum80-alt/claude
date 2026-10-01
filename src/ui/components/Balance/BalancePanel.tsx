@@ -63,7 +63,12 @@ export function BalancePanel() {
   const user = (c: Parameters<typeof engine.dispatch>[0]) => engine.dispatch(c, 'user');
 
   return (
-    <aside className={styles.panel} aria-label={t('bal.title')} data-testid="balance-panel">
+    <aside
+      className={styles.panel}
+      aria-label={t('bal.title')}
+      data-testid="balance-panel"
+      data-sheet
+    >
       <header className={styles.header}>
         <span className={styles.title}>{t('bal.title')}</span>
         <button

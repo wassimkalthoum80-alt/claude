@@ -201,6 +201,19 @@ export function PauseMenu() {
               </button>
             ))}
           </div>
+          <span>{t('menu.layout')}</span>
+          <div className={styles.segmented} data-testid="layout-switch">
+            {(['auto', 'desktop', 'mobile'] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                className={ui.layout === l ? styles.segActive : ''}
+                onClick={() => setUi({ layout: l })}
+              >
+                {t(`menu.layout.${l}`)}
+              </button>
+            ))}
+          </div>
           <span>{t('menu.electrodes')}</span>
           <div className={styles.segmented}>
             {(['IEC', 'AHA'] as const).map((e) => (

@@ -20,14 +20,46 @@ import { VentilatorControls } from './ui/components/VentilatorControls/Ventilato
 import { EngineProvider } from './ui/hooks/EngineContext';
 import { UiProvider, useT, useUi } from './ui/hooks/UiContext';
 import { useKeyboardShortcuts } from './ui/hooks/useKeyboardShortcuts';
+import { usePhoneLayout } from './ui/hooks/useLayout';
+import { MobileWorkstation } from './ui/components/Mobile/MobileWorkstation';
 import styles from './App.module.css';
 
-/** Composition only — no simulation logic here (CLAUDE.md A5). */
+/** Panels and overlays shared by both layouts (sheets on the phone, floating panels on the desktop). */
+function SharedOverlays() {
+  return (
+    <>
+      <InstructorPanel />
+      <AlarmLimitsPanel />
+      <PumpEditor />
+      <BisPanel />
+      <BalancePanel />
+      <BriefingOverlay />
+      <PauseMenu />
+      <RunSummaryCard />
+    </>
+  );
+}
+
+/** Chooses the desktop or the phone layout; both run the same engine. */
 function Workstation() {
-  const t = useT();
-  const { ui, toggleUi } = useUi();
   useKeyboardShortcuts();
   useMonitorAudio();
+  const phone = usePhoneLayout();
+  if (phone) {
+    return (
+      <div className="mobileApp">
+        <MobileWorkstation />
+        <SharedOverlays />
+      </div>
+    );
+  }
+  return <DesktopWorkstation />;
+}
+
+/** Composition only — no simulation logic here (CLAUDE.md A5). */
+function DesktopWorkstation() {
+  const t = useT();
+  const { ui, toggleUi } = useUi();
 
   return (
     <div className={styles.app}>
@@ -82,15 +114,8 @@ function Workstation() {
         <footer className={styles.footer}>{t('app.disclaimer')}</footer>
       </div>
 
-      <InstructorPanel />
-      <AlarmLimitsPanel />
-      <PumpEditor />
-      <BisPanel />
-      <BalancePanel />
       <ActionFlyout />
-      <BriefingOverlay />
-      <PauseMenu />
-      <RunSummaryCard />
+      <SharedOverlays />
     </div>
   );
 }

@@ -189,6 +189,14 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
     rate), lost IV access, forced tube misplacement and the hidden myocardial state (ischaemic time, coronary
     perfusion, viability, shock readiness).
 
+**Phone layout.** On a phone (portrait or landscape) the app switches to a layout of its own: a top bar
+(instructor, case clock, sound, pause/menu), one screen at a time — **Monitor**, **Patient**, **Ventilator**,
+**Pumps** (perfusors and fluid balance) and **Actions** (the six ALS panels inline) — chosen in a bottom tab bar,
+and a **CPR button that is always in reach**. Detail panels (instructor, alarm limits, pump editor, BIS, balance)
+open as full-screen sheets. In landscape the monitor sits beside alarms, timers and CPR metrics. Tablets and
+computers keep the desktop layout. Pause menu → **Layout**: *Auto* (default), *Desktop* or *Phone* (remembered on
+the device). Both layouts run the same simulation.
+
 | Key | Action |
 |---|---|
 | <kbd>Space</kbd> | Start / stop CPR |
