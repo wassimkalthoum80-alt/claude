@@ -209,6 +209,12 @@ with cardiac reserve 0.5; at MAP ≈ 63 the same patient gets a troponin rise wi
 restored (≈ 15–25 % after an hour at MAP ≈ 55): urine output stays low. Both are shown in the instructor panel →
 heart–lung model (myocardial injury, troponin, AKI).
 
+**Patient banner and history.** Sex, age, weight, height, BMI and predicted body weight are always visible: in the
+top bar on wide screens, at the bottom centre on narrower desktops and under the top bar on phones. They follow
+instructor changes (e.g. the age slider) live. **HISTORY** (ANAMNESE) opens the case history: diagnosis and
+procedure, ASA class, allergies, pre-existing conditions, long-term medication, findings and fasting status — one
+fictitious history per scenario (`src/content/patients/histories.ts`), consistent with the case physiology.
+
 | Key | Action |
 |---|---|
 | <kbd>Space</kbd> | Start / stop CPR |

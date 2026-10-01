@@ -30,6 +30,8 @@ export interface UiState {
   layout: LayoutPref;
   /** visible screen of the phone layout */
   mobileTab: MobileTab;
+  /** patient history ("Anamnese") panel open */
+  historyOpen: boolean;
 }
 
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
@@ -115,6 +117,7 @@ function initialState(): UiState {
     actionPanel: null,
     layout: 'auto',
     mobileTab: 'monitor',
+    historyOpen: false,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

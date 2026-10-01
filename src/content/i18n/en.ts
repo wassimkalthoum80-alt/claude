@@ -885,6 +885,22 @@ export const en = {
   'mobile.actions': 'Actions',
   'mobile.instructor': 'INSTRUCTOR',
   'mobile.tabs': 'Screens',
+  'pt.male': 'Male',
+  'pt.female': 'Female',
+  'pt.years': 'y',
+  'pt.pbw': 'PBW',
+  'pt.pbwHint': 'Predicted body weight (ARDSNet) — basis for tidal volume',
+  'pt.history': 'HISTORY',
+  'pt.historyTitle': 'History & pre-existing conditions',
+  'pt.diagnosis': 'Diagnosis and procedure',
+  'pt.allergies': 'Allergies',
+  'pt.conditions': 'Pre-existing conditions',
+  'pt.medications': 'Long-term medication',
+  'pt.findings': 'Findings',
+  'pt.fasting': 'Fasting status',
+  'pt.notes': 'Notes',
+  'pt.fictitious':
+    'Fictitious patient for training. Values change live (instructor) — the banner always shows the current age, weight and height.',
 } as const;
 
 export type I18nKey = keyof typeof en;

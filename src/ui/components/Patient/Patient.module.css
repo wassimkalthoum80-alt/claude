@@ -1,0 +1,153 @@
+.banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: rgba(6, 10, 14, 0.8);
+  color: var(--text);
+  font: 500 12px/1 var(--font-ui);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.compact {
+  gap: 7px;
+  font-size: 11.5px;
+}
+
+.sex {
+  font-size: 15px;
+  color: #7fd4ff;
+}
+
+.fact b {
+  font-weight: 600;
+}
+
+.secondary {
+  color: var(--text-dim);
+}
+
+.historyButton {
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid #7fd4ff;
+  border-radius: 11px;
+  background: rgba(127, 212, 255, 0.12);
+  color: #7fd4ff;
+  font: 600 11px/1 var(--font-ui);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.historyButton[aria-pressed='true'] {
+  background: rgba(127, 212, 255, 0.28);
+}
+
+.panel {
+  position: absolute;
+  top: calc(var(--edge) + 40px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 2 * var(--edge) - 60px);
+  overflow-y: auto;
+  z-index: 32;
+  padding: 12px 14px;
+  background: rgba(8, 12, 17, 0.97);
+  border: 1px solid var(--panel-border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  font: 500 13px/1.4 var(--font-ui);
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.title {
+  font: 600 13px/1 var(--font-ui);
+  letter-spacing: 0.08em;
+  color: #7fd4ff;
+  text-transform: uppercase;
+}
+
+.caseId {
+  flex: 1;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.close {
+  width: 28px;
+  height: 26px;
+  background: none;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  font-variant-numeric: tabular-nums;
+}
+
+.asa {
+  color: #ffd84a;
+  font-weight: 600;
+}
+
+.section {
+  margin-top: 10px;
+}
+
+.sectionTitle {
+  font: 600 10.5px/1 var(--font-ui);
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.text,
+.textDim {
+  margin: 0;
+}
+
+.textDim {
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.allergy {
+  color: #ff8a8a;
+}
+
+.list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.list li {
+  margin: 2px 0;
+}
+
+.disclaimer {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}

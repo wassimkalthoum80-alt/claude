@@ -270,3 +270,23 @@ test('phone layout: tabs, floating CPR button, ALS panel inline, desktop layout 
   expect(errors).toEqual([]);
   await ctx.close();
 });
+
+test('patient banner shows age, weight and height at all times and opens the history', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?autostart&debug');
+  await expect(page.getByTestId('pt-age')).toHaveText(/58/);
+  await expect(page.getByTestId('pt-weight')).toHaveText(/80/);
+  await expect(page.getByTestId('pt-height')).toHaveText(/178/);
+  // The banner follows instructor changes of the patient.
+  await page.evaluate(() =>
+    window.__resusEngine?.dispatch({ type: 'SET_PATIENT_AGE', ageYears: 81 }, 'instructor'),
+  );
+  await expect(page.getByTestId('pt-age')).toHaveText(/81/);
+  await page.getByTestId('history-button').click();
+  await expect(page.getByTestId('history-panel')).toBeVisible();
+  await expect(page.getByTestId('history-conditions')).toContainText('hypertension');
+  expect(errors).toEqual([]);
+});

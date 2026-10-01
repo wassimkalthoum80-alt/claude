@@ -42,6 +42,16 @@
   border-color: var(--panel-border-strong);
 }
 
+.bannerRow {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--panel-border);
+  background: rgba(6, 10, 14, 0.95);
+  overflow-x: auto;
+}
+
 .content {
   flex: 1 1 auto;
   min-height: 0;

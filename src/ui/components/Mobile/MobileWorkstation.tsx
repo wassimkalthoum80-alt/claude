@@ -20,6 +20,7 @@ import {
   IconSyringe,
   IconTools,
 } from '../icons';
+import { PatientBanner } from '../Patient/PatientBanner';
 import { PatientMonitor } from '../PatientMonitor/PatientMonitor';
 import { PatientScene } from '../PatientScene/PatientScene';
 import { PerfusorRack } from '../Perfusors/PerfusorRack';
@@ -105,6 +106,9 @@ export function MobileWorkstation() {
           <IconPause width={16} height={16} />
         </button>
       </header>
+      <div className={styles.bannerRow}>
+        <PatientBanner compact />
+      </div>
 
       <main className={styles.content}>
         {tab === 'monitor' && (

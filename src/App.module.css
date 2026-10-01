@@ -161,3 +161,27 @@
     display: none;
   }
 }
+
+/* Patient banner: in the top bar on wide screens, bottom centre (above the disclaimer) on narrower desktops so it
+   never covers the monitor. */
+.bannerWide {
+  display: inline-flex;
+}
+
+.bannerNarrow {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+@media (max-width: 1399px) {
+  .bannerWide {
+    display: none;
+  }
+  .bannerNarrow {
+    display: block;
+  }
+}
