@@ -66,6 +66,32 @@ export type HeartLungTransition =
 /** s — ischaemic-arrhythmia burden at which ventricular fibrillation starts (model threshold, not a law). */
 export const ARRHYTHMIA_THRESHOLD_S = 90;
 
+/**
+ * Myocardial injury from sustained ischaemia (type-2 myocardial infarction: supply/demand mismatch in hypotension,
+ * tachycardia, hypoxaemia, anaemia — or a coronary patient).
+ * SIM-ASSUMPTION: injury accrues above an ischaemia level of 0.25 at 0.0005/s × ((ischaemia − 0.25)/0.75)^1.3,
+ * faster with a small cardiac reserve: ≈ 0.08 after 50 min at ischaemia 0.33, ≈ 0.3 after 30 min at 0.6,
+ * ≈ 0.3 after 10 min of maximal ischaemia. It is irreversible within a case, lowers LV function
+ * (−70 % of contractile mass at injury 1) and makes the myocardium electrically unstable.
+ */
+export const MYOCARDIAL_INJURY = {
+  threshold: 0.25,
+  ratePerS: 0.0005,
+  exponent: 1.3,
+  contractileLoss: 0.7,
+} as const;
+
+/** ng/L — hs-cTnT upper reference limit (99th percentile). */
+export const TROPONIN_BASELINE_NG_L = 14;
+
+/**
+ * ng/L — hs-cTnT the current injury would produce once released.
+ * SIM-ASSUMPTION: 14 + 4000 × injury (injury 0.05 ≈ 210, 0.1 ≈ 410, 0.3 ≈ 1200 ng/L); release τ 90 min.
+ */
+export function troponinTarget(injury: number): number {
+  return TROPONIN_BASELINE_NG_L + 4000 * injury;
+}
+
 /** The most filling that negative pleural pressure can add (s-shaped venous-return response). */
 const MAX_FILLING_GAIN = 0.15;
 
@@ -143,6 +169,8 @@ export class HeartLungModel {
     hl.ischaemia = 0;
     hl.lvDecompensation = 0;
     hl.arrhythmiaDose = 0;
+    hl.myocardialInjury = 0;
+    hl.troponin = TROPONIN_BASELINE_NG_L;
     patient.cardio.preload = hl.preloadFactor;
     patient.cardio.contractility = 1;
     patient.cardio.svrFactor = 1;
@@ -215,6 +243,9 @@ export class HeartLungModel {
       dt,
       ECG.ischaemiaTauS,
     );
+
+    // Troponin release lags the injury (τ 90 min).
+    hl.troponin += ((troponinTarget(hl.myocardialInjury) - hl.troponin) * dt) / 5400;
 
     if (!cardio.spontaneousCirculation) {
       return this.updateArrest(patient, k, deficit, severeHypoxia, arrestEnabled, dt);
@@ -327,8 +358,19 @@ export class HeartLungModel {
     // healthy ventricle largely holds its stroke volume against a higher pressure (homeometric autoregulation),
     // a weak or decompensating one loses much more; no floor, so extreme vasoconstriction drives cardiac output
     // down (overdose: severe hypertension, reflex bradycardia, falling CO).
+    // Myocardial injury: sustained ischaemia destroys contractile mass (irreversible within a case).
+    const M = MYOCARDIAL_INJURY;
+    const injuryDrive = clamp((hl.ischaemia - M.threshold) / (1 - M.threshold), 0, 1) ** M.exponent;
+    hl.myocardialInjury = clamp(
+      hl.myocardialInjury +
+        (dt * M.ratePerS * injuryDrive) / Math.max(0.3, reserves.cardiacReserve),
+      0,
+      1,
+    );
     const lvEffective =
-      clamp(patient.fluidFactors.lvFunction, 0.2, 1) * (1 - 0.6 * hl.lvDecompensation);
+      clamp(patient.fluidFactors.lvFunction, 0.2, 1) *
+      (1 - 0.6 * hl.lvDecompensation) *
+      (1 - M.contractileLoss * hl.myocardialInjury);
     const afterload =
       cardio.svrFactor >= 1
         ? 1 / (1 + (0.12 * (cardio.svrFactor - 1)) / Math.max(0.15, lvEffective) ** 1.5)
@@ -388,9 +430,15 @@ export class HeartLungModel {
       Math.max(0, drugs.direct.inotropy - 1) + Math.max(0, drugs.direct.chronotropy - 1);
     // Extreme β1 stimulation (e.g. 1 mg adrenaline IV with a beating heart — far above infusion exposures used in
     // septic shock) is arrhythmogenic by itself.
+    // SIM-ASSUMPTION: ischaemic electrical instability — moderate ischaemia (> 0.25) builds the burden in proportion to
+    // the injured myocardium (0.12 + 2 × injury per s at full ischaemia): prolonged hypotension in a coronary patient
+    // ends in ventricular fibrillation after tens of minutes, a healthy heart with brief ischaemia does not.
+    const instability =
+      clamp((hl.ischaemia - M.threshold) / 0.5, 0, 1) * (0.12 + 2 * hl.myocardialInjury);
     const arrhythmogenic =
       clamp((hl.ischaemia - 0.7) / 0.3, 0, 1) * (1 + 2 * catecholamineDrive) +
-      1.5 * clamp(catecholamineDrive - 1.6, 0, 1);
+      1.5 * clamp(catecholamineDrive - 1.6, 0, 1) +
+      instability;
     hl.arrhythmiaDose = Math.max(
       0,
       hl.arrhythmiaDose + dt * (arrhythmogenic > 0 ? arrhythmogenic : -hl.arrhythmiaDose / 120),

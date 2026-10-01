@@ -131,7 +131,9 @@ export class BloodGasModel {
     // SIM-ASSUMPTION: perfusion-limited exchange and excretion scale with relative flow (no V/Q analysis).
     const perfusion = clamp(q / CARDIO.referenceCardiacOutput, 0, 1);
     const exchange = GAS.co2Exchange * perfusion * (gas.tissuePco2 - gas.paco2);
-    const excretion = ((va * gas.paco2) / K_BTPS) * perfusion;
+    const excretion =
+      ((va * gas.paco2) / K_BTPS) *
+      clamp(q / (GAS.excretionFullFlow * CARDIO.referenceCardiacOutput), 0, 1);
     gas.paco2 = Math.max(
       1,
       gas.paco2 + ((exchange - excretion) / (60 * GAS.centralCo2Capacity)) * h,

@@ -179,6 +179,10 @@ export interface HeartLungState {
   /** s — ischaemic-arrhythmia burden (severe ischaemia × catecholamine drive); ventricular fibrillation at the
    * model threshold */
   arrhythmiaDose: number;
+  /** 0..1 — irreversible myocardial injury (necrosis, "infarct size") accumulated from sustained ischaemia */
+  myocardialInjury: number;
+  /** ng/L — high-sensitivity cardiac troponin T (released from the injured myocardium with a delay) */
+  troponin: number;
 }
 
 /** Patient reserves the instructor can change live (dimensionless, 1 = normal). */

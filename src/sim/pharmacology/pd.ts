@@ -20,9 +20,9 @@ export const PD = {
     hypnosisCe50: 3.4,
     hypnosisGamma: 3,
     respCe50: 3,
-    svrMax: 0.6,
+    svrMax: 0.45,
     svrCe50: 8,
-    venousMax: 1.4,
+    venousMax: 0.45,
     venousCe50: 8,
     inotropyMax: 0.3,
     inotropyCe50: 10,
@@ -31,6 +31,11 @@ export const PD = {
     baroMax: 0.95,
     baroCe50: 6,
     baroGamma: 3,
+    // SIM-ASSUMPTION: injection-rate dependence — the circulatory (and respiratory) depression follows the effect-site
+    // concentration plus 35 % of the excess of the fast cardiovascular compartment over it (Ce + 0.35·max(0, Cv − Ce)).
+    // At steady state Cv = Ce (maintenance calibration unchanged); a rapid push peaks Cv far above Ce, so the same
+    // dose given faster lowers the blood pressure more (2 mg/kg in 5 s vs over 2 min).
+    fastWeight: 1,
   },
   // SIM-ASSUMPTION (educational, not validated): hypnotic potencies of the drugs added for the BIS module, as the
   // effect-site concentration giving 1 educational unit of hypnotic depth (≈ loss of responsiveness alone):
@@ -91,14 +96,16 @@ export const PD = {
     analgesiaC50: 0.2,
     analgesiaGamma: 2,
     respC50: 0.3,
-    bradyMax: 0.12,
+    bradyMax: 0.3,
     bradyC50: 0.4,
-    svrMax: 0.05,
+    svrMax: 0.1,
     venousMax: 0.03,
     // SIM-ASSUMPTION: chest-wall rigidity at high effect-site exposure (sufentanil-equivalent Ce50 1 ng/mL, Hill 4);
     // abolished by neuromuscular block; stiffens the chest wall by up to 60 %.
     rigidityCe50: 1,
     rigidityGamma: 4,
+    /** weight of the fast compartment's excess for rigidity (injection-rate dependence) */
+    rigidityFastWeight: 0.25,
   },
   // SIM-ASSUMPTION: Greco-type response surface for the respiratory drive: drive = 1/(1 + (Uo + Up + β·Uo·Up)^γ).
   respInteraction: { synergy: 1, gamma: 2 },
@@ -233,6 +240,14 @@ export function propofolAgeFactor(ageYears: number): number {
   return Math.min(a.max, Math.max(a.min, 1 - a.perYear * (ageYears - a.referenceAge)));
 }
 
+/**
+ * Exposure that includes the rate-dependent fast component: Ce + w·max(0, Cv − Ce). Equal to Ce at steady state;
+ * higher during a rapid bolus.
+ */
+export function rateWeighted(ce: number, cv: number, w: number): number {
+  return ce + w * Math.max(0, cv - ce);
+}
+
 export function haemodynamics(
   e: Exposures,
   opioid: number,
@@ -240,9 +255,14 @@ export function haemodynamics(
   betaBlockade = 0,
   plasma: Exposures = e,
   alphaResponsiveness = 1,
+  /** fast (cardiovascular) effect-site exposures; default = effect site (no rate dependence) */
+  fast: Exposures = e,
 ): Haemodynamics {
-  // Age-scaled propofol concentration (equivalent to scaling every haemodynamic Ce50).
-  const p = (e.propofol ?? 0) / propofolAgeFactor(ageYears);
+  // Age-scaled propofol concentration (equivalent to scaling every haemodynamic Ce50), including the fast component
+  // that makes a rapid injection act more strongly.
+  const p =
+    rateWeighted(e.propofol ?? 0, fast.propofol ?? 0, PD.propofol.fastWeight) /
+    propofolAgeFactor(ageYears);
   const beta = 1 - PD.betaBlockade.maxBlock * Math.min(1, Math.max(0, betaBlockade));
   // α1 responsiveness (septic vasoplegia, acidosis: receptor down-regulation) acts as a reduced effective
   // concentration at the vascular α receptors; vasopressin (V1) is spared.
@@ -429,13 +449,15 @@ export function drugEffects(
     } = TYPICAL_FACTORS,
   plasma: Exposures = e,
   referencePlasma: Exposures = reference,
+  /** fast (cardiovascular) effect-site exposures (rate dependence of propofol and opioid rigidity) */
+  fast: Exposures = e,
 ): DrugEffects {
   const bb = factors.betaBlockade ?? 0;
   const beta = 1 - PD.betaBlockade.maxBlock * Math.min(1, Math.max(0, bb));
   const opioid = opioidEffect(e, weightKg);
   const opioidRef = opioidEffect(reference, weightKg);
   const alphaResp = factors.alphaResponsiveness ?? 1;
-  const now = haemodynamics(e, opioid, ageYears, bb, plasma, alphaResp);
+  const now = haemodynamics(e, opioid, ageYears, bb, plasma, alphaResp, fast);
   const ref = haemodynamics(reference, opioidRef, ageYears, bb, referencePlasma, alphaResp);
 
   const P = PD.propofol;
@@ -449,8 +471,9 @@ export function drugEffects(
       (1 - emax(hc.ux, PD.dexmedetomidine.analgesiaMax, 1));
   const uo = opioid / PD.opioid.respC50;
   // Ketamine spares the respiratory drive; dexmedetomidine depresses it little; midazolam behaves like propofol.
+  // A rapid propofol push depresses breathing more (apnoea), like the circulation.
   const up =
-    (e.propofol ?? 0) / P.respCe50 +
+    rateWeighted(e.propofol ?? 0, fast.propofol ?? 0, P.fastWeight) / P.respCe50 +
     (e.midazolam ?? 0) / PD.midazolam.respC50 +
     PD.dexmedetomidine.respWeight * hc.ux;
   const { synergy, gamma } = PD.respInteraction;
@@ -467,7 +490,14 @@ export function drugEffects(
   const S = PD.salbutamol;
   const O = PD.opioid;
   // Chest-wall rigidity needs intact neuromuscular transmission.
-  const rigidity = hill(opioid, O.rigidityCe50, O.rigidityGamma) * (1 - block);
+  // SIM-ASSUMPTION: rigidity follows the rate-weighted opioid exposure — a fast push of a high dose stiffens the chest
+  // wall more than the same dose given slowly (Medi Know Analgetika: rigidity with rapid IV injection).
+  const opioidFast = rateWeighted(
+    opioid,
+    opioidEffect(fast, weightKg),
+    PD.opioid.rigidityFastWeight,
+  );
+  const rigidity = hill(opioidFast, O.rigidityCe50, O.rigidityGamma) * (1 - block);
   return {
     hypnosis,
     analgesia,

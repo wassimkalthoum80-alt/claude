@@ -112,8 +112,11 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   the pump's maximum rate, wrong pump or units) are blocked; with the instructor panel open, an *instructor
   override* lets you simulate even those on purpose.
 - Try a **propofol top-up bolus** under TIVA (P1 → Bolus 5 mL over 10 s = 100 mg): blood pressure falls
-  (≈ 125/69 → 110/60), the heart rate rises as the baroreflex compensates (≈ 80 → 94/min), and the ST segment
-  shows a small rate-related depression (≈ −0.3 mm in II, −0.6 mm in V5), all recovering over ≈ 10 min.
+  (≈ 124/69 → 99/54), the heart rate rises a little as the baroreflex compensates (≈ 80 → 84/min), all
+  recovering over ≈ 10 min. **A bolus acts by dose and by injection speed:** in the undrugged 58-year-old,
+  1 / 2 / 3 mg/kg over 20 s lower MAP by ≈ 27 / 41 / 47 % (survivable); the same 1 mg/kg pushed in 5 s lowers
+  it by ≈ 31 % within a minute, given over 2 min by ≈ 23 % after ≈ 2.5 min. Opioid chest-wall rigidity likewise
+  grows with the dose of a fast push.
 - **Processed EEG ("Simulated BIS").** The monitor has an EEG row (±100 µV, 25 mm/s) with the index, SQI and
   EMG bars and the burst suppression value (BSV, % of suppressed EEG in the preceding 63 s). Click it for the
   detail panel: BIS/BSV trend with markers for boluses, infusion changes, stimulation and signal events,
@@ -150,8 +153,9 @@ URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?deb
   baseline / drug / reflex / net, model-generated explanations and aligned trends with bolus, rate and flush
   markers.
 - The same bolus acts **much more strongly in hypovolaemia and in the elderly** (instructor panel → heart–lung
-  model: *Age* slider, *Volume status*). An 80-year-old at volume status 0.6 falls to ≈ 53/33 with loss of the
-  pleth signal; at 0.5 the circulation collapses unless you treat it (vasopressor, fluid bolus). Reason in the
+  model: *Age* slider, *Volume status*). An 80-year-old at volume status 0.6 falls to ≈ 68/41 with loss of the
+  pleth signal; without TIVA, 1 mg/kg drops the MAP to ≈ 43 and a 2 mg/kg induction dose ends in cardiac arrest
+  unless you treat it (vasopressor, fluid bolus). Reason in the
   model: older patients are more sensitive to propofol and compensate less, and a hypovolaemic patient's blood
   pressure depends on sympathetic tone, which the bolus withdraws.
   The rack shows the syringe label colour, dose rate, mL/h, run/stop/bolus and remaining volume, plus the NMT TOF.
@@ -196,6 +200,14 @@ and a **CPR button that is always in reach**. Detail panels (instructor, alarm l
 open as full-screen sheets. In landscape the monitor sits beside alarms, timers and CPR metrics. Tablets and
 computers keep the desktop layout. Pause menu → **Layout**: *Auto* (default), *Desktop* or *Phone* (remembered on
 the device). Both layouts run the same simulation.
+
+**Consequences of prolonged hypotension.** Sustained myocardial ischaemia (hypotension with tachycardia,
+hypoxaemia, anaemia — most of all in a coronary patient, *cardiac reserve* < 1) causes irreversible myocardial
+injury: hs-troponin T rises over the following hour, LV function falls and the injured, ischaemic myocardium
+becomes electrically unstable until ventricular fibrillation occurs (≈ 15–30 min at MAP ≈ 57–61 and HR ≈ 120–130
+with cardiac reserve 0.5; at MAP ≈ 63 the same patient gets a troponin rise without VF). Renal hypoperfusion causes acute kidney injury that persists after the blood pressure is
+restored (≈ 15–25 % after an hour at MAP ≈ 55): urine output stays low. Both are shown in the instructor panel →
+heart–lung model (myocardial injury, troponin, AKI).
 
 | Key | Action |
 |---|---|

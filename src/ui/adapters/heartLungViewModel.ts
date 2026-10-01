@@ -144,6 +144,24 @@ export function heartLungViewModel(s: Readonly<SimulationState>): HeartLungViewM
       tone: tone(hl.ischaemia, 0.2, 0.5),
     },
     {
+      label: 'hl.injury',
+      value: pct(hl.myocardialInjury),
+      unit: '%',
+      tone: tone(hl.myocardialInjury, 0.02, 0.1),
+    },
+    {
+      label: 'hl.troponin',
+      value: fixed(hl.troponin, 0),
+      unit: 'ng/L',
+      tone: tone(hl.troponin, 14, 52),
+    },
+    {
+      label: 'hl.aki',
+      value: pct(s.patient.fluid.renal.injury),
+      unit: '%',
+      tone: tone(s.patient.fluid.renal.injury, 0.05, 0.25),
+    },
+    {
       label: 'hl.svr',
       value: pct(c.svrFactor),
       unit: '%',

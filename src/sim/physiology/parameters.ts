@@ -104,6 +104,11 @@ export const GAS = {
   tissueCo2Capacity: 0.04,
   /** L/min per mmHg — tissue → blood CO2 exchange at normal flow */
   co2Exchange: 0.06,
+  // SIM-ASSUMPTION: pulmonary CO2 excretion is limited by blood flow only in low-flow states (below 35 % of the
+  // reference cardiac output — CPR, shock); above that the arterial PCO2 is set by alveolar ventilation. The clinical
+  // audit found PaCO2 43 → 56 mmHg at unchanged ventilation when propofol lowered CO to 70 % (excretion ∝ flow).
+  /** relative cardiac output at and above which excretion is not flow-limited */
+  excretionFullFlow: 0.35,
   /** mmol/L */
   baselineBicarbonate: 24,
 } as const;

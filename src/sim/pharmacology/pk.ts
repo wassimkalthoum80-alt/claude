@@ -264,8 +264,15 @@ export function pkParams(
 }
 
 export function emptyKinetics(): DrugKinetics {
-  return { a0: 0, a1: 0, a2: 0, a3: 0, cp: 0, ce: 0, received: 0 };
+  return { a0: 0, a1: 0, a2: 0, a3: 0, cp: 0, ce: 0, cv: 0, received: 0 };
 }
+
+/**
+ * 1/min — equilibration of the fast (cardiovascular) effect site.
+ * SIM-ASSUMPTION: t½ ≈ 14 s — the myocardium and vascular smooth muscle see the arterial concentration within one or
+ * two circulation times, much faster than the brain (propofol ke0 0.46/min, t½ ≈ 1.5 min). Educational value.
+ */
+export const FAST_EFFECT_KE0_PER_MIN = 3;
 
 /** Steady state for a constant input (unit/min) at normal flow: all compartments at C = I/CL1. */
 export function steadyState(p: MammillaryParams, inputPerMin: number): DrugKinetics {
@@ -279,14 +286,15 @@ export function steadyState(p: MammillaryParams, inputPerMin: number): DrugKinet
     a3: c * v3,
     cp: c,
     ce: c,
+    cv: c,
     received: 0,
   };
 }
 
-type Vec = [number, number, number, number, number];
+type Vec = [number, number, number, number, number, number];
 
 function deriv(p: MammillaryParams, y: Vec, input: number, flow: number): Vec {
-  const [a0, a1, a2, a3, ce] = y;
+  const [a0, a1, a2, a3, ce, cv] = y;
   const transfer = DEPOT_TRANSFER_PER_MIN * flow * a0;
   return [
     input - transfer,
@@ -294,6 +302,7 @@ function deriv(p: MammillaryParams, y: Vec, input: number, flow: number): Vec {
     p.k12 * a1 - p.k21 * a2,
     p.k13 * a1 - p.k31 * a3,
     p.ke0 * (a1 / p.v1 - ce),
+    FAST_EFFECT_KE0_PER_MIN * (a1 / p.v1 - cv),
   ];
 }
 
@@ -309,19 +318,20 @@ export function stepKinetics(
   /** relative cardiac output (1 = normal); moves drug from the venous depot to the central compartment */
   flow = 1,
 ): void {
-  const y: Vec = [s.a0, s.a1, s.a2, s.a3, s.ce];
+  const y: Vec = [s.a0, s.a1, s.a2, s.a3, s.ce, s.cv];
   const add = (a: Vec, b: Vec, h: number): Vec => [
     a[0] + b[0] * h,
     a[1] + b[1] * h,
     a[2] + b[2] * h,
     a[3] + b[3] * h,
     a[4] + b[4] * h,
+    a[5] + b[5] * h,
   ];
   const k1 = deriv(p, y, input, flow);
   const k2 = deriv(p, add(y, k1, dtMin / 2), input, flow);
   const k3 = deriv(p, add(y, k2, dtMin / 2), input, flow);
   const k4 = deriv(p, add(y, k3, dtMin), input, flow);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     y[i] = Math.max(
       0,
       (y[i] ?? 0) +
@@ -333,6 +343,7 @@ export function stepKinetics(
   s.a2 = y[2];
   s.a3 = y[3];
   s.ce = y[4];
+  s.cv = y[5];
   s.cp = s.a1 / p.v1;
 }
 

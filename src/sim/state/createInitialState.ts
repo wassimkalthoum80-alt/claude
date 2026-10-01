@@ -1,5 +1,6 @@
 import { criticalClosingPressure } from '../physiology/CardiovascularModel';
 import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS, OXYGEN } from '../physiology/parameters';
+import { TROPONIN_BASELINE_NG_L } from '../physiology/HeartLungModel';
 import { CPR_PRESETS } from '../interventions/cprQuality';
 import { defaultAlarmLimits } from '../devices/alarmLimits';
 import { emptyPharmacology } from '../pharmacology/PharmacologyModel';
@@ -118,6 +119,8 @@ export function createInitialState(
         vasoconstrictionLactate: 0,
         lvDecompensation: 0,
         arrhythmiaDose: 0,
+        myocardialInjury: 0,
+        troponin: TROPONIN_BASELINE_NG_L,
       },
       reserves: {
         preloadReserve: 1,

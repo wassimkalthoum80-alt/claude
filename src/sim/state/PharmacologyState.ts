@@ -37,6 +37,12 @@ export interface DrugKinetics {
   cp: number;
   /** effect-site concentration (or delayed exposure) */
   ce: number;
+  /**
+   * fast (cardiovascular) effect-site concentration: heart and vessels see arterial blood without the blood–brain
+   * equilibration delay, so this follows the plasma peak of a bolus (ke0 3/min). It drives the injection-rate
+   * dependence of propofol's circulatory depression and of opioid rigidity.
+   */
+  cv: number;
   /** cumulative amount that reached the patient (patient-received dose) */
   received: number;
 }

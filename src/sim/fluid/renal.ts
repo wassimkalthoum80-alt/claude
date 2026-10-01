@@ -35,7 +35,10 @@ export const RENAL = {
   toleranceRatePerMin: 0.004,
   toleranceTauMin: 360,
   /** 1/min — acquired injury at zero perfusion (hypoperfusion × time) */
-  injuryRatePerMin: 0.0015,
+  injuryRatePerMin: 0.012,
+  /** relative filtration below which ischaemic tubular injury begins */
+  injuryThreshold: 0.85,
+  injuryExponent: 1.3,
 } as const;
 
 export interface RenalInputs {
@@ -102,13 +105,14 @@ export function stepRenal(r: RenalState, inp: RenalInputs, dtMin: number): Renal
   const kidney = clamp(inp.kidneyFunction, 0.05, 1) * (1 - r.injury);
   r.gfrRelative = perfusion * congestionFactor(inp.venousPressure) * kidney;
 
-  // SIM-ASSUMPTION: acquired injury accumulates with hypoperfusion (below 60 % filtration pressure) over time and
-  // does not recover within a scenario; diuretics do not repair it.
-  r.injury = clamp(
-    r.injury + dtMin * RENAL.injuryRatePerMin * clamp((0.6 - perfusion) / 0.6, 0, 1),
-    0,
-    0.95,
-  );
+  // SIM-ASSUMPTION: acquired (ischaemic tubular) injury accumulates with hypoperfusion below 85 % filtration over
+  // time — 0.012/min × ((0.85 − perfusion)/0.85)^1.3: ≈ 0.25 after 60 min at MAP 55, ≈ 0.55 after 60 min at
+  // MAP 45, negligible at MAP ≥ 65 (intra-operative MAP < 55–65 mmHg is associated with AKI: Walsh 2013, Salmasi
+  // 2017). It does not recover within a scenario; diuretics do not repair it.
+  const drive =
+    clamp((RENAL.injuryThreshold - perfusion) / RENAL.injuryThreshold, 0, 1) **
+    RENAL.injuryExponent;
+  r.injury = clamp(r.injury + dtMin * RENAL.injuryRatePerMin * drive, 0, 0.95);
 
   // Antidiuresis: hypovolaemia, hypotension, hyperosmolality and surgical stress raise ADH; vasopressin acts on
   // V2 receptors independently of its vascular (V1) effect.

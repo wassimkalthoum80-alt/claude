@@ -67,6 +67,7 @@ export class PharmacologyModel {
       { ...patient.factors, alphaResponsiveness: alphaResponsiveness(patient) },
       ph.referencePlasma,
       ph.referencePlasma,
+      ph.reference,
     );
     return steadyStateLine(pumps, getProduct);
   }
@@ -96,6 +97,7 @@ export class PharmacologyModel {
       { ...patient.factors, alphaResponsiveness: alphaResponsiveness(patient) },
       plasmaExposures(patient),
       ph.referencePlasma,
+      fastExposures(patient),
     );
     return step;
   }
@@ -120,6 +122,15 @@ export function effectSiteExposures(patient: PatientState): Exposures {
   const out: Exposures = {};
   for (const [m, k] of Object.entries(patient.pharmacology.drugs) as [MoietyId, DrugKinetics][]) {
     out[m] = k.ce * (EXPOSURE_SCALE[m] ?? 1);
+  }
+  return out;
+}
+
+/** Fast (cardiovascular) effect-site concentrations — follow a bolus peak within seconds (rate dependence). */
+export function fastExposures(patient: PatientState): Exposures {
+  const out: Exposures = {};
+  for (const [m, k] of Object.entries(patient.pharmacology.drugs) as [MoietyId, DrugKinetics][]) {
+    out[m] = k.cv * (EXPOSURE_SCALE[m] ?? 1);
   }
   return out;
 }
