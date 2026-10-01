@@ -76,6 +76,9 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   *Resume*, *Restart session*, *End session* (back to the module menu), *Main menu* and the settings. Case lists
   are no longer in the pause menu or the instructor panel.
 - Outside a session the engine is paused and no workstation is mounted. Desktop and phone layouts both have HOME.
+- **SIM TIME ×1 / ×2 / ×5** in the top bar (every session): the physiology runs faster, but the monitor keeps
+  sweeping at 25 mm/s and beeping at the real heart rate — it shows the most recent real beats and breaths
+  (`DisplayStream`). Time feels faster; the monitor never looks fast-forwarded.
 
 ## How to play
 

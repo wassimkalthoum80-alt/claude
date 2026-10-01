@@ -6,6 +6,7 @@ import { useT, useUi, type ActionPanelId, type MobileTab } from '../../hooks/UiC
 import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { AlarmStrip } from '../AlarmStrip/AlarmStrip';
 import { Clock } from '../Clock/Clock';
+import { SimSpeed } from '../SimSpeed/SimSpeed';
 import { CprMetrics } from '../CprMetrics/CprMetrics';
 import {
   IconBolt,
@@ -94,6 +95,7 @@ export function MobileWorkstation() {
           </span>
         )}
         <Clock />
+        <SimSpeed compact />
         <button
           type="button"
           className={styles.chip}

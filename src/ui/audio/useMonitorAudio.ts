@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useEngine, useFrame } from '../hooks/EngineContext';
+import { useDisplay, useEngine, useFrame } from '../hooks/EngineContext';
 import { useUi } from '../hooks/UiContext';
 import { AudioEngine } from './AudioEngine';
 import { pulseTonePitch } from './tones';
@@ -10,11 +10,12 @@ const PULSE_TRANSIT_S = 0.22;
 
 /**
  * Wires the simulation to the monitor sounds while audio is on.
- * Beeps are queued in sim time and played when the renderers reach that moment, so sound and sweep
- * stay in sync (also when paused or time-scaled).
+ * Beeps follow the beats of the display stream (display time), so sound and sweep stay in sync and keep a
+ * real-time rhythm when the simulation runs ×2/×5. Alarms are timed in sim time.
  */
 export function useMonitorAudio(): void {
   const engine = useEngine();
+  const display = useDisplay();
   const { ui } = useUi();
   const [audio] = useState(() => new AudioEngine());
   const lastAlarm = useRef<{ priority: string; at: number }>({ priority: '', at: -Infinity });
@@ -27,7 +28,7 @@ export function useMonitorAudio(): void {
       return;
     }
     audio.resume();
-    const off = engine.onEvent((ev) => {
+    const off = display.onEvent((ev) => {
       if (ev.type === 'beat') queue.current.push({ t: ev.t, kind: 'beat' });
       if (ev.type === 'compression') queue.current.push({ t: ev.t, kind: 'compression' });
     });
@@ -47,7 +48,7 @@ export function useMonitorAudio(): void {
       off();
       offTick();
     };
-  }, [engine, audio, ui.audio]);
+  }, [engine, display, audio, ui.audio]);
 
   useFrame((renderTime) => {
     const q = queue.current;

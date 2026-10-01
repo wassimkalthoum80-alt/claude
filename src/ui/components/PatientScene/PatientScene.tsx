@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import type { SimulationState } from '../../../sim';
 import { dynamicVisualState, staticVisualState } from '../../adapters/patientVisualState';
-import { useEngine, useFrame } from '../../hooks/EngineContext';
+import { useDisplay, useFrame } from '../../hooks/EngineContext';
 import { useUi } from '../../hooks/UiContext';
 import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { GloveHand, InterlockedHands } from './Glove';
@@ -71,7 +71,7 @@ function toScreen(vx: number, vy: number, w: number, h: number): [number, number
  * frame and it contains no SVG filters; the static back and front layers are painted once and composited.
  */
 export function PatientScene() {
-  const engine = useEngine();
+  const display = useDisplay();
   const { ui } = useUi();
   const selectStatic = useCallback(
     (s: Readonly<SimulationState>) => {
@@ -107,7 +107,7 @@ export function PatientScene() {
 
   // Per-frame animation uses CSS transforms on whole layers only: compositor work, no SVG repaint.
   useFrame((renderTime) => {
-    const d = dynamicVisualState(engine.signals, renderTime);
+    const d = dynamicVisualState(display.signals, renderTime);
     const { w, h } = size.current;
     if (w === 0) return;
     const rise = Math.min(1.6, d.chestRise);

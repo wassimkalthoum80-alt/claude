@@ -1,0 +1,77 @@
+/* Simulation speed control in the top bar (styled like the other chips). */
+.group,
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: rgba(3, 5, 7, 0.85);
+  font: 600 12px/1 var(--font-num);
+  color: var(--text-dim);
+  user-select: none;
+}
+
+.group {
+  padding: 0 4px 0 10px;
+  gap: 2px;
+}
+
+.group button {
+  height: 22px;
+  min-width: 30px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.group button:hover {
+  color: var(--text);
+}
+
+.group .active {
+  background: rgba(54, 200, 255, 0.16);
+  color: var(--spo2);
+}
+
+.tag {
+  margin-right: 4px;
+  font: 500 10px/1 var(--font-ui);
+  letter-spacing: 0.1em;
+}
+
+.chip {
+  height: 32px;
+  border-radius: 16px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+/* Accelerated: amber, so a faster clock is never overlooked. */
+.fast {
+  border-color: rgba(255, 178, 30, 0.55);
+}
+
+.fast .active,
+.chip.fast {
+  color: var(--vent-flow);
+}
+
+.group.fast .active {
+  background: rgba(255, 178, 30, 0.16);
+}
+
+/* Medium desktops: the label goes, the buttons stay (the message strip still reads "SIM TIME ×5"). */
+@media (max-width: 1700px) {
+  .group .tag {
+    display: none;
+  }
+
+  .group {
+    padding-left: 4px;
+  }
+}

@@ -151,3 +151,10 @@
   font-size: 11px;
   color: var(--text-faint);
 }
+
+/* Medium desktops: BMI and PBW leave the top bar (age, weight and height always stay; both are in the history). */
+@media (max-width: 1599px) {
+  .banner:not(.compact) .secondary {
+    display: none;
+  }
+}

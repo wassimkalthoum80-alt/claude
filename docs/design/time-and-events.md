@@ -1,22 +1,22 @@
 # Design: three clocks, the Event Director and scenarios (milestone 6, phase 2)
 
-Status: **proposal for the owner's review — no code written yet.** Brief:
+Status: approved by the owner. **Step 1 (display stream, display clock, SIM TIME control) implemented**; steps 2–5 next. Brief:
 `docs/prompts/milestone-06b-time-events-scenarios.md`.
 
 ## 1. What the code does today (inspected)
 
-| Part | Today | Consequence at ×2 / ×5 |
-|---|---|---|
-| `FixedStepClock` (`src/sim/core/Clock.ts`) | accumulator, real ms × `timeScale` → whole 100 ms ticks; clamp 250 ms/frame | correct: physiology runs N× faster |
-| `SimulationEngine.tick()` | 25 sub-steps of 4 ms: rhythm beats, CPR compressions, respiratory drive, ventilator, heart–lung, Windkessel; every sub-step pushes ECG/EEG samples, every 2nd ART, pleth, CO₂, Paw, flow, volume, chest | ring buffers fill N× faster |
-| `MonitorDevice.update` | measures numerics from the buffers (ART per beat, EtCO₂ per breath, HR from beats) | numerics correct in sim time |
-| `SweepRenderer` / `LoopRenderer` | draw buffers up to `engine.renderTime` (sim time) at 25 / 6.25 mm/s of **sim** time | **the sweep runs N× faster — the "fast-forwarded video" the owner describes** |
-| `useMonitorAudio` | beep at each beat time ≤ renderTime | **N× beeps per second** |
-| `PatientScene` | chest/CPR animation from sim time | N× faster breathing animation |
-| Scenario `timeline` | commands at fixed sim times (`fireTimeline`) | fine, but only time-based |
-| `EventLog` | every command and clinical event, sim-time stamped; `replay()` deterministic | reused as is |
-| Trends | `physioTrends` 1 Hz, BIS trends 1 Hz | reused for the 5/15/60-min view |
-| Cost | ≈ 1.9 ms of computation per simulated second (Node) ≈ ×500 real time | "Advance 15 min" ≈ 2–5 s of computing |
+| Part                                       | Today                                                                                                                                                                                                   | Consequence at ×2 / ×5                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `FixedStepClock` (`src/sim/core/Clock.ts`) | accumulator, real ms × `timeScale` → whole 100 ms ticks; clamp 250 ms/frame                                                                                                                             | correct: physiology runs N× faster                                            |
+| `SimulationEngine.tick()`                  | 25 sub-steps of 4 ms: rhythm beats, CPR compressions, respiratory drive, ventilator, heart–lung, Windkessel; every sub-step pushes ECG/EEG samples, every 2nd ART, pleth, CO₂, Paw, flow, volume, chest | ring buffers fill N× faster                                                   |
+| `MonitorDevice.update`                     | measures numerics from the buffers (ART per beat, EtCO₂ per breath, HR from beats)                                                                                                                      | numerics correct in sim time                                                  |
+| `SweepRenderer` / `LoopRenderer`           | draw buffers up to `engine.renderTime` (sim time) at 25 / 6.25 mm/s of **sim** time                                                                                                                     | **the sweep runs N× faster — the "fast-forwarded video" the owner describes** |
+| `useMonitorAudio`                          | beep at each beat time ≤ renderTime                                                                                                                                                                     | **N× beeps per second**                                                       |
+| `PatientScene`                             | chest/CPR animation from sim time                                                                                                                                                                       | N× faster breathing animation                                                 |
+| Scenario `timeline`                        | commands at fixed sim times (`fireTimeline`)                                                                                                                                                            | fine, but only time-based                                                     |
+| `EventLog`                                 | every command and clinical event, sim-time stamped; `replay()` deterministic                                                                                                                            | reused as is                                                                  |
+| Trends                                     | `physioTrends` 1 Hz, BIS trends 1 Hz                                                                                                                                                                    | reused for the 5/15/60-min view                                               |
+| Cost                                       | ≈ 1.9 ms of computation per simulated second (Node) ≈ ×500 real time                                                                                                                                    | "Advance 15 min" ≈ 2–5 s of computing                                         |
 
 ## 2. Three clocks
 
@@ -43,11 +43,11 @@ for today's experience and every existing test.
 At ×N the display needs 1 s of waveform per real second, but the simulation produced N s. The display stream copies
 **whole physiological segments** from the simulation buffers, always the **most recent complete** one:
 
-| Channel group | Segment | Fallback when no segment boundary for > 2 s |
-|---|---|---|
-| Cardiac: ECG II, ECG V5, ART, pleth | one cardiac cycle (beat to beat) or one compression cycle during CPR | fixed 1 s chunks (VF, asystole) |
-| Respiratory: Paw, flow, volume, CO₂, chest | one breath (breath start to breath start) | fixed 1 s chunks (apnoea, disconnection) |
-| EEG | fixed 1 s chunks | — |
+| Channel group                              | Segment                                                              | Fallback when no segment boundary for > 2 s |
+| ------------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------- |
+| Cardiac: ECG II, ECG V5, ART, pleth        | one cardiac cycle (beat to beat) or one compression cycle during CPR | fixed 1 s chunks (VF, asystole)             |
+| Respiratory: Paw, flow, volume, CO₂, chest | one breath (breath start to breath start)                            | fixed 1 s chunks (apnoea, disconnection)    |
+| EEG                                        | fixed 1 s chunks                                                     | —                                           |
 
 So at ×5 the monitor shows real beats and real breaths at their real duration (HR 128 still looks like 128),
 taken from the current physiology; as HR falls to 110 the copied beats get longer. Roughly every Nth beat is
@@ -106,16 +106,16 @@ learner opens it. Only tests the engine can answer exist (ABG with lactate, Hb, 
 
 ## 4. UI pieces
 
-| Component | Purpose |
-|---|---|
-| Sim clock chip | "SIM TIME ×5", clinical clock (14:32:10), speed buttons, Advance menu, auto-speed indicator |
-| Notification stack | passive (small, top), important (nurse card), critical (large, auto ×1) — max 1 card at a time, queue |
-| Nurse card | portrait, name, state (routine/concerned/urgent/assisting/reporting), one sentence, 1–3 action buttons |
-| Results inbox | ABG and later results; unread badge |
-| Hint button | 4 progressive levels per scenario problem; beginner/intermediate only |
-| Timeline drawer | event log + vital snapshots ("500 mL crystalloid — SV 44 → 53 mL") |
-| Trend view | 5 / 15 / 60 min from the 1 Hz trends (HR, MAP, SpO₂, EtCO₂, CO, venous pressure, drug rates, vent settings) |
-| Experiment cards (lab) | optional guided experiments ("double the RR — what happens to PaCO₂?"), accept/ignore |
+| Component              | Purpose                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Sim clock chip         | "SIM TIME ×5", clinical clock (14:32:10), speed buttons, Advance menu, auto-speed indicator                 |
+| Notification stack     | passive (small, top), important (nurse card), critical (large, auto ×1) — max 1 card at a time, queue       |
+| Nurse card             | portrait, name, state (routine/concerned/urgent/assisting/reporting), one sentence, 1–3 action buttons      |
+| Results inbox          | ABG and later results; unread badge                                                                         |
+| Hint button            | 4 progressive levels per scenario problem; beginner/intermediate only                                       |
+| Timeline drawer        | event log + vital snapshots ("500 mL crystalloid — SV 44 → 53 mL")                                          |
+| Trend view             | 5 / 15 / 60 min from the 1 Hz trends (HR, MAP, SpO₂, EtCO₂, CO, venous pressure, drug rates, vent settings) |
+| Experiment cards (lab) | optional guided experiments ("double the RR — what happens to PaCO₂?"), accept/ignore                       |
 
 All texts EN/DE, nothing re-renders at 60 fps (cards update on events, sweep in rAF as today).
 

@@ -30,6 +30,13 @@ All tunable constants live in `src/sim/physiology/parameters.ts`.
 "Diastolic component" means diastolic pressure **above the no-flow equilibrium pressure** (≈ MSFP). This is a
 proxy for coronary perfusion pressure, which is the quantity that actually collapses during a pause.
 
+## Monitor display at ×2 / ×5 (`DisplayStream.ts`)
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| The monitor display, beep and chest animation run on a real-time display clock; the physiology runs ×2/×5 | display copies the most recent complete beat/compression (cardiac channels), breath (CO₂, Paw, flow, volume) or 1 s chunk (EEG; cardiac without beats for > 2.5 s; respiratory without breaths for > 15 s) | A real monitor never sweeps faster than 25 mm/s. Time compression is a training aid; the displayed beats and breaths are real simulated ones at their real duration. At ×1 the display is an exact copy. |
+| Displayed subset at ×N | roughly every Nth beat/breath; beat-to-beat variability and the phase between breathing and beats are thinned/approximate | Numerics are still measured from every simulated beat and breath (CLAUDE.md A1), so number and curve agree. |
+
 ## Cardiovascular (`CardiovascularModel.ts`, `parameters.ts → CARDIO`)
 
 | Assumption                                                                                                                                                          | Value                                                                                | Rationale                                                                                                                                                       |

@@ -3,6 +3,7 @@ import { ActionBar } from './ui/components/ActionBar/ActionBar';
 import { AlarmLimitsPanel } from './ui/components/AlarmLimits/AlarmLimitsPanel';
 import { AlarmStrip } from './ui/components/AlarmStrip/AlarmStrip';
 import { Clock } from './ui/components/Clock/Clock';
+import { SimSpeed } from './ui/components/SimSpeed/SimSpeed';
 import { CprMetrics } from './ui/components/CprMetrics/CprMetrics';
 import { IconSliders, IconSpeaker } from './ui/components/icons';
 import { InstructorPanel } from './ui/components/InstructorPanel/InstructorPanel';
@@ -102,6 +103,7 @@ function DesktopWorkstation() {
             </button>
           )}
           <Clock />
+          <SimSpeed />
           <button
             type="button"
             className={styles.chip}

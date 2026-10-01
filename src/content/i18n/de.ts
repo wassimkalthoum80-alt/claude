@@ -27,7 +27,10 @@ export const de: Record<I18nKey, string> = {
   'msg.paused': 'SIMULATION PAUSIERT',
   'msg.nextBreath': 'NEUE EINSTELLUNGEN AB NÄCHSTEM ATEMZUG',
   'msg.artifact': 'EKG: HLW-ARTEFAKT — RHYTHMUS NICHT BEURTEILBAR',
-  'msg.speed': 'SIM-TEMPO ×{n}',
+  'speed.short': 'SIM-ZEIT',
+  'speed.label': 'Simulationstempo',
+  'speed.hint': 'Die Physiologie läuft schneller; der Monitor bleibt in Echtzeit.',
+  'msg.speed': 'SIM-ZEIT ×{n} — Monitor in Echtzeit',
   'msg.instructorHint': 'Taste ` öffnet das Instruktor-Panel',
   'msg.rosc': 'SPONTANKREISLAUF',
 

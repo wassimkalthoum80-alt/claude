@@ -25,7 +25,10 @@ export const en = {
   'msg.paused': 'SIMULATION PAUSED',
   'msg.nextBreath': 'NEW SETTINGS APPLY AT NEXT BREATH',
   'msg.artifact': 'ECG: CPR ARTEFACT — RHYTHM NOT READABLE',
-  'msg.speed': 'SIM SPEED ×{n}',
+  'speed.short': 'SIM TIME',
+  'speed.label': 'Simulation speed',
+  'speed.hint': 'Physiology runs faster; the monitor keeps real time.',
+  'msg.speed': 'SIM TIME ×{n} — monitor in real time',
   'msg.instructorHint': 'Press ` for the instructor panel',
   'msg.rosc': 'SPONTANEOUS CIRCULATION',
 

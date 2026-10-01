@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { SignalChannel } from '../../../sim';
-import { useEngine, useFrame } from '../../hooks/EngineContext';
+import { useDisplay, useFrame } from '../../hooks/EngineContext';
 import { drawLoop, type LoopAxis } from '../../render/LoopRenderer';
 
 interface Props {
@@ -15,10 +15,9 @@ interface Props {
 
 /** Ventilator loop (P–V or F–V), redrawn every frame from the signal buffers. */
 export function LoopCanvas({ x, y, xAxis, yAxis, colorVar, label }: Props) {
-  const engine = useEngine();
+  const display = useDisplay();
   const ref = useRef<HTMLCanvasElement>(null);
   const color = useRef<string | null>(null);
-  const breaths = useRef<{ current: number; previous: number }>({ current: 0, previous: 0 });
 
   useFrame((renderTime) => {
     const canvas = ref.current;
@@ -34,20 +33,14 @@ export function LoopCanvas({ x, y, xAxis, yAxis, colorVar, label }: Props) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     color.current ??= getComputedStyle(canvas).getPropertyValue(colorVar).trim() || '#4aa8ff';
-    // Track breath starts from the snapshot (current + previous breath).
-    const start = engine.getSnapshot().devices.ventilator.breathStartTime;
-    const b = breaths.current;
-    if (start !== b.current) {
-      b.previous = b.current;
-      b.current = start;
-    }
-    const shown = Math.min(b.current, renderTime);
+    // Current and previous breath as shown on the display clock.
+    const shown = Math.min(display.breathStart, renderTime);
     drawLoop(
       ctx,
-      engine.signals[x],
-      engine.signals[y],
+      display.signals[x],
+      display.signals[y],
       shown,
-      b.previous,
+      display.previousBreathStart,
       renderTime,
       w,
       h,

@@ -1,13 +1,18 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { erc2025 } from '../../content/guidelines/erc2025';
 import { baselinePatient } from '../../content/scenarios';
-import { SimulationEngine } from '../../sim';
+import { DisplayStream, SimulationEngine } from '../../sim';
 
-/** Called once per animation frame with the time the renderers should draw up to. */
-export type FrameCallback = (renderTime: number) => void;
+/**
+ * Called once per animation frame with the **display time** the renderers should draw up to. Display time
+ * runs with real time even when the simulation runs ×2/×5 (see DisplayStream); renderers read the display
+ * stream's buffers (`useDisplay().signals`) with it.
+ */
+export type FrameCallback = (displayTime: number) => void;
 
 interface EngineContextValue {
   engine: SimulationEngine;
+  display: DisplayStream;
   frameCallbacks: Set<FrameCallback>;
 }
 
@@ -17,6 +22,8 @@ declare global {
   interface Window {
     /** Exposed with ?debug for automated screenshots and smoke tests. */
     __resusEngine?: SimulationEngine;
+    /** ?debug: the monitor display stream (real-time display clock). */
+    __resusDisplay?: DisplayStream;
     /** ?debug: moving average of the main-thread work per frame (ms). */
     __resusFrameMs?: number;
   }
@@ -27,13 +34,14 @@ declare global {
  * step the engine with real elapsed time, then let every renderer draw.
  */
 export function EngineProvider({ children }: { children: ReactNode }) {
-  const [value] = useState<EngineContextValue>(() => ({
-    engine: new SimulationEngine({ scenario: baselinePatient, guidelines: erc2025 }),
-    frameCallbacks: new Set<FrameCallback>(),
-  }));
+  const [value] = useState<EngineContextValue>(() => {
+    const engine = new SimulationEngine({ scenario: baselinePatient, guidelines: erc2025 });
+    return { engine, display: new DisplayStream(engine.signals), frameCallbacks: new Set() };
+  });
 
   useEffect(() => {
-    const { engine, frameCallbacks } = value;
+    const { engine, display, frameCallbacks } = value;
+    const offMarks = engine.onEvent((e) => display.mark(e));
     let raf = 0;
     let last = performance.now();
     const debug = new URLSearchParams(window.location.search).has('debug');
@@ -42,9 +50,13 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       last = now;
       const t0 = performance.now();
       // CLAUDE.md A3: the simulation does not advance while the tab is hidden.
-      if (!document.hidden) engine.step(dt);
-      const renderTime = engine.renderTime;
-      for (const cb of frameCallbacks) cb(renderTime);
+      if (!document.hidden) {
+        engine.step(dt);
+        const c = engine.getSnapshot().control;
+        display.advance(dt / 1000, engine.renderTime, c.paused || c.timeScale === 0);
+      }
+      const displayTime = display.time;
+      for (const cb of frameCallbacks) cb(displayTime);
       if (debug) {
         // Main-thread cost of one frame (engine step + all canvas/scene updates), EMA in ms.
         const cost = performance.now() - t0;
@@ -57,8 +69,12 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       last = performance.now();
     };
     document.addEventListener('visibilitychange', onVisibility);
-    if (new URLSearchParams(window.location.search).has('debug')) window.__resusEngine = engine;
+    if (new URLSearchParams(window.location.search).has('debug')) {
+      window.__resusEngine = engine;
+      window.__resusDisplay = display;
+    }
     return () => {
+      offMarks();
       cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVisibility);
     };
@@ -75,6 +91,11 @@ function useEngineContext(): EngineContextValue {
 
 export function useEngine(): SimulationEngine {
   return useEngineContext().engine;
+}
+
+/** The monitor display stream: real-time-paced copies of the simulated waveforms, beats and breaths. */
+export function useDisplay(): DisplayStream {
+  return useEngineContext().display;
 }
 
 /** Run `callback` every animation frame (after the engine stepped). The latest callback is always used. */

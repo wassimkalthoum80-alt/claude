@@ -185,3 +185,10 @@
     display: block;
   }
 }
+
+/* Medium desktops: keyboard hints leave the top-bar chips so the bar stays clear of the side panels. */
+@media (max-width: 1700px) {
+  .topCenter .chip kbd {
+    display: none;
+  }
+}

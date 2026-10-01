@@ -371,3 +371,33 @@ test('phone layout: HOME and module menus fit the screen and start a session', a
   expect(errors).toEqual([]);
   await ctx.close();
 });
+
+test('sim time ×5: physiology runs five times faster, the monitor sweep stays real-time', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?autostart&debug');
+  await page.waitForFunction(() => (window.__resusDisplay?.time ?? 0) > 1);
+  await page.getByTestId('sim-speed-5').click();
+  await expect(page.getByTestId('sim-speed-5')).toHaveAttribute('aria-pressed', 'true');
+  const t0 = await page.evaluate(() => ({
+    sim: window.__resusEngine?.getSnapshot().time ?? 0,
+    display: window.__resusDisplay?.time ?? 0,
+    wall: performance.now(),
+  }));
+  await page.waitForTimeout(3000);
+  const t1 = await page.evaluate(() => ({
+    sim: window.__resusEngine?.getSnapshot().time ?? 0,
+    display: window.__resusDisplay?.time ?? 0,
+    wall: performance.now(),
+  }));
+  const wall = (t1.wall - t0.wall) / 1000;
+  const display = t1.display - t0.display;
+  const sim = t1.sim - t0.sim;
+  expect(display).toBeGreaterThan(wall * 0.8);
+  expect(display).toBeLessThan(wall * 1.1);
+  expect(sim / display).toBeGreaterThan(3.5);
+  await expect(page.getByText(/SIM TIME ×5/)).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -81,8 +81,14 @@ HOME ──► module menu ──► session intro ──► workspace ──►
 - **Sub-steps:** each tick integrates the fast dynamics (arterial Windkessel, lung mechanics, compression and beat
   events) in 25 sub-steps of 4 ms, and the generators write their samples there. Waveforms are never sampled at the
   tick rate.
-- **Render time:** the renderers draw up to `engine.renderTime = time − 1 tick + α·tick` (α = accumulator fraction).
-  This delay of one tick lets the sweep cursor move smoothly between ticks instead of jumping every 100 ms.
+- **Render time:** `engine.renderTime = time − 1 tick + α·tick` (α = accumulator fraction) is the newest simulated
+  moment the display may read.
+- **Display time (monitor clock):** renderers, the beep and the patient animation do not read the simulation
+  buffers directly. `DisplayStream` (`src/sim/signals/DisplayStream.ts`) runs its own clock at real time and copies
+  whole beats, compressions and breaths from the simulated signals into display buffers — at ×1 sample for sample,
+  at ×2/×5 always the most recent complete segment. So the sweep stays at 25 mm/s and the beep at the real heart
+  rate while the physiology runs faster. Display only; numerics are measured from the simulated signals.
+  Design: `docs/design/time-and-events.md`.
 - **Determinism:** one seeded RNG (mulberry32) inside the engine. Same seed + same commands at the same ticks =
   same run.
 

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { SignalChannel } from '../../../sim';
-import { useEngine, useFrame } from '../../hooks/EngineContext';
+import { useDisplay, useFrame } from '../../hooks/EngineContext';
 import {
   drawSweep,
   sweepWindow,
@@ -23,7 +23,7 @@ export interface TraceCanvasProps {
 }
 
 /**
- * One waveform. Draws from the engine's ring buffer in the shared rAF loop — React renders this
+ * One waveform. Draws from the display stream's ring buffer (real-time paced at every simulation speed) in the shared rAF loop — React renders this
  * component once; the canvas is repainted every frame without re-rendering.
  */
 export function TraceCanvas({
@@ -36,7 +36,7 @@ export function TraceCanvas({
   grid,
   label,
 }: TraceCanvasProps) {
-  const engine = useEngine();
+  const display = useDisplay();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const resolved = useRef<{ from: string; to: string } | null>(null);
 
@@ -66,7 +66,7 @@ export function TraceCanvas({
     const win = windowS ?? sweepWindow(cssW, sweepSpeed);
     drawSweep(
       ctx,
-      engine.signals[channel],
+      display.signals[channel],
       renderTime,
       win,
       Math.min(0.35, win * 0.04),

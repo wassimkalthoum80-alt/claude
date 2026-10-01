@@ -71,6 +71,7 @@ export type {
   PharmacologyState,
 } from './state/PharmacologyState';
 export { SIGNAL_UNITS, type SignalChannel, type ReadonlySignalBank } from './signals/SignalBank';
+export { DisplayStream, type DisplayEvent } from './signals/DisplayStream';
 // Processed EEG ("Simulated BIS")
 export {
   BSV_WINDOW_S,

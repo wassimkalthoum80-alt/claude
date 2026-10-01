@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { CardiacUltrasound, LungUltrasound } from '../../adapters/resusViewModel';
-import { useEngine } from '../../hooks/EngineContext';
+import { useDisplay, useEngine } from '../../hooks/EngineContext';
 import styles from './ResusPanels.module.css';
 
 const W = 400;
@@ -188,6 +188,7 @@ export function UltrasoundCanvas(props: {
   lung: LungUltrasound;
 }) {
   const engine = useEngine();
+  const display = useDisplay();
   const ref = useRef<HTMLCanvasElement>(null);
   const latest = useRef(props);
   useEffect(() => {
@@ -201,7 +202,8 @@ export function UltrasoundCanvas(props: {
     let raf = 0;
     const draw = () => {
       const p = latest.current;
-      const t = engine.renderTime;
+      // Display clock: the probe image moves in real time at every simulation speed.
+      const t = display.time;
       if (p.view === 'cardiac') drawCardiac(ctx, p.cardiac, t);
       else
         drawLung(ctx, p.lung, t, p.cardiac.rate || engine.getSnapshot().patient.cardio.heartRate);
@@ -209,7 +211,7 @@ export function UltrasoundCanvas(props: {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [engine]);
+  }, [engine, display]);
 
   return (
     <canvas ref={ref} width={W} height={H} className={styles.canvas} data-testid="us-canvas" />

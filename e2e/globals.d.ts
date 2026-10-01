@@ -5,9 +5,11 @@ interface Window {
     dispatch(command: { type: string; [key: string]: unknown }, source?: string): void;
     readonly eventLog: readonly { kind: string; event?: string }[];
     getSnapshot(): {
+      time: number;
       devices: { defib: { shocks: number } };
       control: { paused: boolean };
       scenario: { id: string };
     };
   };
+  __resusDisplay?: { readonly time: number };
 }
