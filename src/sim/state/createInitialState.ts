@@ -247,7 +247,7 @@ export function createInitialState(
       ccf: perfusing ? null : 0,
     },
     scenario: { id: scenario.id, seed, ended: false },
-    control: { paused: false, timeScale: 1 },
+    control: { paused: false, timeScale: 1, autoSpeed: true, advance: null, interrupt: null },
     model: {
       calibration: { ...HEART_LUNG_CALIBRATION, ...calibration },
       arrestModelEnabled: true,

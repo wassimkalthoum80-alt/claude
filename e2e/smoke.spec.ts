@@ -401,3 +401,27 @@ test('sim time ×5: physiology runs five times faster, the monitor sweep stays r
   await expect(page.getByText(/SIM TIME ×5/)).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('Advance time: 5 minutes run in a few seconds, then live ×1 with a notice; stop works', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?autostart&debug');
+  await page.waitForFunction(() => (window.__resusDisplay?.time ?? 0) > 0.5);
+  await page.getByTestId('advance-button').click();
+  await page.getByTestId('advance-5').click();
+  await expect(page.getByTestId('advance-running')).toBeVisible();
+  await expect(page.getByTestId('time-notice')).toContainText('Advanced 05:00', {
+    timeout: 30_000,
+  });
+  const t = await page.evaluate(() => window.__resusEngine?.getSnapshot().time ?? 0);
+  expect(t).toBeGreaterThan(300);
+  await expect(page.getByTestId('sim-speed-1')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByTestId('advance-button').click();
+  await page.getByTestId('advance-60').click();
+  await page.getByTestId('advance-stop').click();
+  await expect(page.getByTestId('advance-running')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

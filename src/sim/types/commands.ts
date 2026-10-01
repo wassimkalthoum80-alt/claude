@@ -147,6 +147,11 @@ export type Command =
   | { type: 'SET_IV_ACCESS'; access: 'iv' | 'io' | 'none' }
   | { type: 'SET_PAUSED'; paused: boolean }
   | { type: 'SET_TIME_SCALE'; scale: TimeScale }
+  /** run the simulation headless as fast as possible for up to `seconds` (stops early at clinical events) */
+  | { type: 'ADVANCE_TIME'; seconds: number }
+  | { type: 'ADVANCE_STOP' }
+  /** clinical events return accelerated time to ×1 */
+  | { type: 'SET_AUTO_SPEED'; on: boolean }
   | { type: 'RESET' };
 
 export type CommandType = Command['type'];
@@ -155,6 +160,10 @@ export type CommandSource = 'user' | 'instructor' | 'scenario' | 'system';
 
 /** Clinical milestones the engine writes into the event log itself. */
 export type ClinicalEventType =
+  /** Advance time finished; detail = reason (limit | alarm | arrest | end | user) */
+  | 'ADVANCE_END'
+  /** live speed ×2/×5 returned to ×1 by a clinical event; detail = reason */
+  | 'REAL_TIME_RESTORED'
   | 'ARREST_START'
   | 'CIRCULATION_RESTORED'
   | 'FIRST_COMPRESSION'

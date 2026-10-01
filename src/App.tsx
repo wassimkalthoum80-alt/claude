@@ -4,6 +4,8 @@ import { AlarmLimitsPanel } from './ui/components/AlarmLimits/AlarmLimitsPanel';
 import { AlarmStrip } from './ui/components/AlarmStrip/AlarmStrip';
 import { Clock } from './ui/components/Clock/Clock';
 import { SimSpeed } from './ui/components/SimSpeed/SimSpeed';
+import { AdvanceTime } from './ui/components/SimSpeed/AdvanceTime';
+import { TimeNotice } from './ui/components/SimSpeed/TimeNotice';
 import { CprMetrics } from './ui/components/CprMetrics/CprMetrics';
 import { IconSliders, IconSpeaker } from './ui/components/icons';
 import { InstructorPanel } from './ui/components/InstructorPanel/InstructorPanel';
@@ -104,6 +106,7 @@ function DesktopWorkstation() {
           )}
           <Clock />
           <SimSpeed />
+          <AdvanceTime />
           <button
             type="button"
             className={styles.chip}
@@ -129,6 +132,7 @@ function DesktopWorkstation() {
         </div>
 
         <footer className={styles.footer}>{t('app.disclaimer')}</footer>
+        <TimeNotice />
       </div>
 
       <ActionFlyout />

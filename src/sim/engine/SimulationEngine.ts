@@ -1,5 +1,5 @@
 import { FixedStepClock } from '../core/Clock';
-import { SUBSTEP_S, SUBSTEPS_PER_TICK, TICK_S } from '../core/constants';
+import { MAX_ADVANCE_S, SUBSTEP_S, SUBSTEPS_PER_TICK, TICK_S } from '../core/constants';
 import { EventLog } from '../core/EventLog';
 import { SeededRng } from '../core/rng';
 import { AlarmEngine } from '../devices/AlarmEngine';
@@ -61,7 +61,12 @@ import {
 } from '../signals/VentilatorWaveformGenerators';
 import { createInitialState } from '../state/createInitialState';
 import type { PhysiologyReserves, RhythmId } from '../state/PatientState';
-import type { HeartLungCalibration, SimulationState } from '../state/SimulationState';
+import type {
+  HeartLungCalibration,
+  InterruptReason,
+  SimulationState,
+} from '../state/SimulationState';
+import type { AlarmId } from '../state/MonitorState';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
 import type { SimEvent } from '../types/events';
 import type { GuidelineSet } from '../types/guidelines';
@@ -129,6 +134,10 @@ export class SimulationEngine {
   private substep = 0;
   private timelineIndex = 0;
   private baselineHeartRate: number;
+  /** high-priority alarms active at the previous tick (accelerated-time interrupts fire on new ones) */
+  private highAlarms = new Set<AlarmId>();
+  /** an arrest started since the last interrupt check */
+  private arrestThisTick = false;
 
   private readonly listeners = new Set<Listener>();
   private readonly eventListeners = new Set<(e: SimEvent) => void>();
@@ -223,6 +232,11 @@ export class SimulationEngine {
 
   /** Advance by elapsed real time (ms). Returns the number of ticks run. */
   step(realDeltaMs: number): number {
+    // Advance time runs through advanceTicks(), not the real-time clock.
+    if (this.state.control.advance) {
+      this.clock.advance(0);
+      return 0;
+    }
     const ticks = this.clock.advance(realDeltaMs);
     for (let i = 0; i < ticks; i++) {
       this.tick();
@@ -230,6 +244,26 @@ export class SimulationEngine {
     }
     if (ticks > 0) this.notify();
     return ticks;
+  }
+
+  /** True while Advance time is running (the host calls advanceTicks() each frame instead of step()). */
+  get advancing(): boolean {
+    return this.state.control.advance !== null && !this.state.control.paused;
+  }
+
+  /**
+   * Advance time: run up to `maxTicks` ticks as fast as possible. The host calls this repeatedly within a
+   * per-frame compute budget. Stops by itself at the target time or at a clinical event (see tick()).
+   * Returns the number of ticks run.
+   */
+  advanceTicks(maxTicks: number): number {
+    let n = 0;
+    while (n < maxTicks && this.advancing) {
+      this.tick();
+      n += 1;
+    }
+    if (n > 0) this.notify();
+    return n;
   }
 
   /** Run exactly one 100 ms tick (tests, headless use). */
@@ -351,6 +385,7 @@ export class SimulationEngine {
     while (this.physio.count < Math.floor(s.time + 1e-9)) this.physio.record(s);
     this.alarms.update(s);
     this.checkScenarioEnd();
+    this.checkAccelerationInterrupt();
     this.version += 1;
   }
 
@@ -438,6 +473,8 @@ export class SimulationEngine {
     this.clock.reset();
     this.clock.paused = false;
     this.clock.timeScale = 1;
+    this.highAlarms = new Set();
+    this.arrestThisTick = false;
     this.log.clear();
     this.bank.reset();
     this.trendBank.reset();
@@ -662,6 +699,19 @@ export class SimulationEngine {
         this.clock.timeScale = command.scale;
         s.control.timeScale = command.scale;
         break;
+      case 'ADVANCE_TIME': {
+        const seconds = Math.min(MAX_ADVANCE_S, Math.max(0, command.seconds));
+        if (!Number.isFinite(seconds) || seconds < TICK_S || s.scenario.ended) break;
+        s.control.advance = { from: s.time, until: s.time + seconds };
+        this.highAlarms = this.currentHighAlarms();
+        break;
+      }
+      case 'ADVANCE_STOP':
+        if (s.control.advance) this.endAdvance('user');
+        break;
+      case 'SET_AUTO_SPEED':
+        s.control.autoSpeed = command.on;
+        break;
       case 'RESET':
         break;
     }
@@ -694,6 +744,7 @@ export class SimulationEngine {
           ccf: 0,
         };
         this.logEvent('ARREST_START', s.time);
+        this.arrestThisTick = true;
       }
     } else if (!wasPerfusing) {
       // Return of circulation is always an explicit external event (instructor/scenario), never automatic.
@@ -938,6 +989,59 @@ export class SimulationEngine {
       lungGasVolume: p.gas.lungGasVolume,
       alveolarDeadSpace: p.gas.alveolarDeadSpace,
     };
+  }
+
+  private currentHighAlarms(): Set<AlarmId> {
+    return new Set(
+      this.state.devices.monitor.alarms.filter((a) => a.priority === 'high').map((a) => a.id),
+    );
+  }
+
+  /**
+   * Accelerated time (Advance time, or ×2/×5 with auto speed on) stops at a clinical event: a high-priority alarm
+   * that was not active before, a cardiac arrest, or the end of the case. Deterministic (sim state only).
+   */
+  private checkAccelerationInterrupt(): void {
+    const s = this.state;
+    const c = s.control;
+    const high = this.currentHighAlarms();
+    let reason: InterruptReason | null = null;
+    let alarm: AlarmId | undefined;
+    for (const id of high) {
+      if (!this.highAlarms.has(id)) {
+        reason = 'alarm';
+        alarm = id;
+        break;
+      }
+    }
+    this.highAlarms = high;
+    if (this.arrestThisTick) reason = 'arrest';
+    if (s.scenario.ended) reason = 'end';
+    this.arrestThisTick = false;
+
+    if (c.advance) {
+      if (reason) this.endAdvance(reason, alarm);
+      else if (s.time >= c.advance.until - 1e-9) this.endAdvance('limit');
+      return;
+    }
+    if (reason && reason !== 'end' && c.autoSpeed && c.timeScale > 1) {
+      c.timeScale = 1;
+      this.clock.timeScale = 1;
+      c.interrupt = { t: s.time, reason, ...(alarm ? { alarm } : {}) };
+      this.logEvent('REAL_TIME_RESTORED', s.time, alarm ? `${reason}:${alarm}` : reason);
+    }
+  }
+
+  private endAdvance(reason: InterruptReason, alarm?: AlarmId): void {
+    const s = this.state;
+    s.control.advance = null;
+    s.control.interrupt = { t: s.time, reason, ...(alarm ? { alarm } : {}) };
+    // Back to live time at ×1: the learner looks at the patient after the jump.
+    s.control.timeScale = 1;
+    this.clock.timeScale = 1;
+    this.clock.reset();
+    this.logEvent('ADVANCE_END', s.time, alarm ? `${reason}:${alarm}` : reason);
+    this.version += 1;
   }
 
   private updateTimers(dt: number): void {

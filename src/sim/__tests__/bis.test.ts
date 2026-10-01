@@ -332,6 +332,8 @@ describe('time: pause, acceleration and replay', () => {
     a.runFor(30);
     propofolBolus(a, 100);
     a.runFor(120);
+    // Pure acceleration: auto speed would (correctly) return to ×1 at the bolus's hypotension alarm.
+    cmd(b, { type: 'SET_AUTO_SPEED', on: false });
     cmd(b, { type: 'SET_TIME_SCALE', scale: 5 });
     b.runFor(30);
     propofolBolus(b, 100);

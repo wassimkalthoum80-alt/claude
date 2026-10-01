@@ -6,6 +6,7 @@ import styles from './SimSpeed.module.css';
 
 const SPEEDS = [1, 2, 5] as const;
 const scaleOf = (s: Readonly<SimulationState>) => s.control.timeScale;
+const advancingOf = (s: Readonly<SimulationState>) => s.control.advance !== null;
 
 /**
  * Simulation speed (×1 / ×2 / ×5). Physiology runs faster; the monitor keeps sweeping and beeping in real time
@@ -15,8 +16,12 @@ export function SimSpeed({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const engine = useEngine();
   const scale = useEngineSelector(scaleOf);
+  // While Advance time runs, its progress chip takes this place.
+  const advancing = useEngineSelector(advancingOf);
   const set = (n: (typeof SPEEDS)[number]) =>
     engine.dispatch({ type: 'SET_TIME_SCALE', scale: n }, 'user');
+
+  if (advancing) return null;
 
   if (compact) {
     const i = SPEEDS.findIndex((n) => n === scale);
@@ -30,7 +35,7 @@ export function SimSpeed({ compact = false }: { compact?: boolean }) {
         title={t('speed.hint')}
         data-testid="sim-speed"
       >
-        <span className={styles.tag}>{t('speed.short')}</span>×{scale === 0 ? 1 : scale}
+        ×{scale === 0 ? 1 : scale}
       </button>
     );
   }

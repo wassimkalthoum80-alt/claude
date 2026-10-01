@@ -89,6 +89,11 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   at ×2/×5 always the most recent complete segment. So the sweep stays at 25 mm/s and the beep at the real heart
   rate while the physiology runs faster. Display only; numerics are measured from the simulated signals.
   Design: `docs/design/time-and-events.md`.
+- **Advance time:** `ADVANCE_TIME { seconds }` puts the engine in advance mode; the host then calls
+  `engine.advanceTicks(n)` within a 10 ms per-frame budget instead of `step()`. After every tick the engine checks
+  for a clinical interrupt (a high-priority alarm that was not active before, an arrest, the case end) and stops
+  with `ADVANCE_END` (reason in the log) or at the target. With `control.autoSpeed` the same check returns ×2/×5 to
+  ×1 (`REAL_TIME_RESTORED`). Both are sim-state decisions, so replay reproduces them.
 - **Determinism:** one seeded RNG (mulberry32) inside the engine. Same seed + same commands at the same ticks =
   same run.
 

@@ -7,6 +7,8 @@ import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { AlarmStrip } from '../AlarmStrip/AlarmStrip';
 import { Clock } from '../Clock/Clock';
 import { SimSpeed } from '../SimSpeed/SimSpeed';
+import { AdvanceTime } from '../SimSpeed/AdvanceTime';
+import { TimeNotice } from '../SimSpeed/TimeNotice';
 import { CprMetrics } from '../CprMetrics/CprMetrics';
 import {
   IconBolt,
@@ -96,6 +98,7 @@ export function MobileWorkstation() {
         )}
         <Clock />
         <SimSpeed compact />
+        <AdvanceTime compact />
         <button
           type="button"
           className={styles.chip}
@@ -114,6 +117,7 @@ export function MobileWorkstation() {
           <IconPause width={16} height={16} />
         </button>
       </header>
+      <TimeNotice />
       <div className={styles.bannerRow}>
         <PatientBanner compact />
       </div>

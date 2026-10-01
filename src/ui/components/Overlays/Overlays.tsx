@@ -126,6 +126,7 @@ export function PauseMenu() {
   const { ui, setUi } = useUi();
   const session = useSession();
   const ecgLeads = useEngineSelector((s: Readonly<SimulationState>) => s.devices.monitor.ecgLeads);
+  const autoSpeed = useEngineSelector((s: Readonly<SimulationState>) => s.control.autoSpeed);
   if (!ui.menuOpen) return null;
 
   const resume = () => {
@@ -192,6 +193,19 @@ export function PauseMenu() {
             >
               {t('menu.off')}
             </button>
+          </div>
+          <span>{t('menu.autoSpeed')}</span>
+          <div className={styles.segmented} data-testid="auto-speed">
+            {([true, false] as const).map((on) => (
+              <button
+                key={String(on)}
+                type="button"
+                className={autoSpeed === on ? styles.segActive : ''}
+                onClick={() => engine.dispatch({ type: 'SET_AUTO_SPEED', on }, 'user')}
+              >
+                {t(on ? 'menu.on' : 'menu.off')}
+              </button>
+            ))}
           </div>
           <span>{t('menu.ecgLeads')}</span>
           <div className={styles.segmented}>

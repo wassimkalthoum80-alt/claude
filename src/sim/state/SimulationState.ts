@@ -2,7 +2,7 @@ import type { TimeScale } from '../core/Clock';
 import type { BalanceChartState } from './BodyFluidState';
 import type { BisState } from './BrainState';
 import type { CPRState } from './CPRState';
-import type { MonitorState } from './MonitorState';
+import type { AlarmId, MonitorState } from './MonitorState';
 import type { PatientState } from './PatientState';
 import type { LineState, PumpState } from './PharmacologyState';
 import type { VentilatorState } from './VentilatorState';
@@ -76,7 +76,22 @@ export interface SimulationState {
   interventions: { cpr: CPRState; resus: ResuscitationState };
   timers: ArrestTimers;
   scenario: { id: string; seed: number; ended: boolean };
-  control: { paused: boolean; timeScale: TimeScale };
+  control: SimControl;
   /** model configuration, visible to the instructor (heuristic calibration — not clinically validated) */
   model: { calibration: HeartLungCalibration; arrestModelEnabled: boolean };
+}
+
+/** Why accelerated time stopped (Advance time ended or live speed dropped back to ×1). */
+export type InterruptReason = 'limit' | 'alarm' | 'arrest' | 'end' | 'user';
+
+/** Simulation-clock control: pause, live speed, Advance time, automatic return to real time. */
+export interface SimControl {
+  paused: boolean;
+  timeScale: TimeScale;
+  /** a clinical event (new high-priority alarm, arrest, case end) returns ×2/×5 to ×1 and stops Advance time */
+  autoSpeed: boolean;
+  /** Advance time in progress: the engine runs headless as fast as possible until `until` (s, sim time) */
+  advance: { from: number; until: number } | null;
+  /** the last interruption of accelerated time (shown briefly by the UI); null = none since load */
+  interrupt: { t: number; reason: InterruptReason; alarm?: AlarmId } | null;
 }

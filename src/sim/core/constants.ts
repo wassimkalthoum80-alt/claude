@@ -12,3 +12,5 @@ export const SUBSTEPS_PER_TICK = Math.round(TICK_S * SUBSTEP_HZ);
 export const SLOW_SIGNAL_HZ = 125;
 /** Maximum real time consumed by a single frame before clamping (ms). */
 export const MAX_FRAME_MS = 250;
+/** s — longest single Advance time (1 h of simulated time). */
+export const MAX_ADVANCE_S = 3600;

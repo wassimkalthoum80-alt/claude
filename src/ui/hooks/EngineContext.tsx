@@ -3,6 +3,9 @@ import { erc2025 } from '../../content/guidelines/erc2025';
 import { baselinePatient } from '../../content/scenarios';
 import { DisplayStream, SimulationEngine } from '../../sim';
 
+/** ms of main-thread time per frame spent on Advance time (keeps the page responsive). */
+const ADVANCE_BUDGET_MS = 10;
+
 /**
  * Called once per animation frame with the **display time** the renderers should draw up to. Display time
  * runs with real time even when the simulation runs ×2/×5 (see DisplayStream); renderers read the display
@@ -51,7 +54,14 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       const t0 = performance.now();
       // CLAUDE.md A3: the simulation does not advance while the tab is hidden.
       if (!document.hidden) {
-        engine.step(dt);
+        if (engine.advancing) {
+          // Advance time: run the simulation headless within a per-frame compute budget (≈ ×100–×300).
+          const t1 = performance.now();
+          while (engine.advancing && performance.now() - t1 < ADVANCE_BUDGET_MS)
+            engine.advanceTicks(10);
+        } else {
+          engine.step(dt);
+        }
         const c = engine.getSnapshot().control;
         display.advance(dt / 1000, engine.renderTime, c.paused || c.timeScale === 0);
       }

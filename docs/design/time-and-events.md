@@ -1,6 +1,6 @@
 # Design: three clocks, the Event Director and scenarios (milestone 6, phase 2)
 
-Status: approved by the owner. **Step 1 (display stream, display clock, SIM TIME control) implemented**; steps 2–5 next. Brief:
+Status: approved by the owner. **Steps 1–2 implemented** (display stream and SIM TIME control; Advance time with interrupts and auto speed). Steps 3–5 next. Interrupts currently come from high-priority alarms, arrest and case end; Director events join in step 3. Brief:
 `docs/prompts/milestone-06b-time-events-scenarios.md`.
 
 ## 1. What the code does today (inspected)

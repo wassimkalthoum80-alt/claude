@@ -79,6 +79,10 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
 - **SIM TIME ×1 / ×2 / ×5** in the top bar (every session): the physiology runs faster, but the monitor keeps
   sweeping at 25 mm/s and beeping at the real heart rate — it shows the most recent real beats and breaths
   (`DisplayStream`). Time feels faster; the monitor never looks fast-forwarded.
+- **ADVANCE** (⏩): jump 1, 5, 15 or 60 simulated minutes in a few seconds. It stops by itself at a clinical
+  event (a new high-priority alarm, a cardiac arrest, the end of the case) and returns to live ×1 with a short
+  notice; **Stop** ends it any time. **Auto speed** (pause menu, on by default) also returns ×2/×5 to ×1 at a
+  clinical event: "Clinical event — simulation returned to real time".
 
 ## How to play
 
