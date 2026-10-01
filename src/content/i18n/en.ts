@@ -1129,6 +1129,63 @@ export const en = {
   'tl.src.event': '',
   'tl.src.user': 'You',
   'tl.src.system': '',
+  'scenario.healthyLungs.title': 'Healthy lungs — guided ventilation experiments',
+  'scenario.healthyLungs.briefing':
+    'Ventilated adult with healthy lungs under general anaesthesia. Change anything you like — or take the experiment cards (EXPERIMENTS below the scene) and see what each change does to gas exchange and circulation.',
+  'scenario.asthmaLab.title': 'Severe asthma — dynamic hyperinflation',
+  'scenario.asthmaLab.briefing':
+    'Handover from the emergency department: young adult with severe asthma, intubated 20 minutes ago because of exhaustion. Since intubation the blood pressure has been falling progressively. The patient is yours.',
+  'scenario.postopBleeding.title': 'Hypovolaemia — bleeding after abdominal surgery',
+  'scenario.postopBleeding.briefing':
+    'ICU, three hours after an open abdominal operation. Ventilated and sedated, noradrenaline running at a low dose. The nurse is worried: the patient is tachycardic and the drain has been filling. Assess, treat and decide what the problem really needs.',
+  'dir.asthma.bpFalling': 'The blood pressure has fallen again — mean {map} mmHg.',
+  'dir.asthma.silentChest': 'I can barely hear any air movement on the chest.',
+  'dir.asthma.flow':
+    'The expiratory flow does not seem to return to baseline before the next breath.',
+  'dir.bleed.drain':
+    'The drain has produced another {bloodLossLast30} mL of blood in the last 30 minutes.',
+  'dir.bleed.pale':
+    'The patient looks pale and the hands are cold. Heart rate {hr}, mean pressure {map}.',
+  'act.title': 'CASE',
+  'act.callSurgeon': 'Call the surgeon (re-look laparotomy)',
+  'act.callSurgeon.start':
+    'I have called the surgeon — they will take the patient back to theatre.',
+  'act.callSurgeon.done':
+    'Surgeon: “A bleeding vessel at the anastomosis is ligated. The bleeding has stopped.”',
+  'act.pending': 'requested — about {n}',
+  'act.done': 'done',
+  'hint.bleed.title': 'Why is the patient hypotensive and tachycardic?',
+  'hint.bleed.1': 'Look at the drain and the fluid balance.',
+  'hint.bleed.2':
+    'How does the heart rate and pressure respond to a fluid challenge? What does a blood gas show (Hb, lactate)?',
+  'hint.bleed.3':
+    'Ongoing bleeding causes hypovolaemia: low preload, low stroke volume, compensatory tachycardia. A vasopressor raises the pressure but not the volume.',
+  'hint.bleed.4':
+    'Restore volume (fluid, red cells as the Hb falls) and stop the source: call the surgeon.',
+  'exp.title': 'EXPERIMENTS',
+  'exp.button': 'EXPERIMENTS',
+  'exp.start': 'Try it',
+  'exp.waiting': 'Waiting for your change…',
+  'exp.settling': 'Measuring — result in {n} (Advance time if you like)',
+  'exp.result': 'Result',
+  'exp.why': 'Why?',
+  'exp.intro': 'Optional: pick a question, make the change, watch the patient.',
+  'exp.rrDouble.q': 'What happens to CO₂ when you double the breathing rate?',
+  'exp.rrDouble.do': 'Set RR from 12 to 24 /min. The result is read 5 minutes later.',
+  'exp.rrDouble.why':
+    'Alveolar ventilation roughly doubles, so the CO₂ washed out per minute doubles and PaCO₂ falls towards about two thirds within minutes (EtCO₂ follows; a blood gas confirms PaCO₂). Faster breaths also shorten expiration and raise the mean airway pressure.',
+  'exp.peep15.q': 'What happens to the blood pressure when PEEP goes from 5 to 15 cmH₂O?',
+  'exp.peep15.do': 'Set PEEP to 15 cmH₂O. The result is read 2 minutes later.',
+  'exp.peep15.why':
+    'Higher intrathoracic pressure lowers venous return, so stroke volume and MAP fall and the heart rate rises. Healthy lungs have little to recruit, so oxygenation hardly changes — the price is circulatory. EtCO₂ falls as cardiac output falls.',
+  'exp.vtDown.q': 'What happens when you reduce VT from 500 to 300 mL at the same rate?',
+  'exp.vtDown.do': 'Set VT to 300 mL. The result is read 5 minutes later.',
+  'exp.vtDown.why':
+    'Minute ventilation falls by 40 %, but alveolar ventilation falls more, because the dead space (about 150 mL) stays the same. CO₂ rises clearly; airway pressures fall.',
+  'exp.fio2.q': 'What happens to SpO₂ when you breathe the patient on room air?',
+  'exp.fio2.do': 'Set FiO₂ to 21 %. The result is read 3 minutes later.',
+  'exp.fio2.why':
+    'With healthy lungs the saturation barely falls — haemoglobin is almost full already at a normal PaO₂. What you lose is the oxygen reserve: the time until desaturation after a disconnection becomes much shorter.',
 } as const;
 
 export type I18nKey = keyof typeof en;

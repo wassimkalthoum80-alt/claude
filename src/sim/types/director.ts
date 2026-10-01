@@ -29,6 +29,8 @@ export type DirectorMetric =
   | 'urineMlKgH'
   /** mL — charted fluid balance since the start (in − out − estimated losses) */
   | 'balance'
+  /** mL — blood lost to drains/suction in the last 30 simulated minutes */
+  | 'bloodLossLast30'
   /** s — sim time since the case started */
   | 'time';
 
@@ -72,6 +74,54 @@ export interface DirectorRule {
   oneTime?: boolean;
   /** s — minimum sim time between two firings (default 300) */
   cooldownS?: number;
+  /**
+   * engine commands issued when the rule fires (source "scenario") — for consequences with a stated mechanism,
+   * e.g. barotrauma after sustained very high airway pressure. Never used to script a value the model computes.
+   */
+  commands?: readonly Command[];
+  /** difficulties at which the message is shown (default all); commands always apply */
+  levels?: readonly Difficulty[];
+  /** do not create a visible message (commands only) */
+  silent?: boolean;
+}
+
+/** Difficulty changes the help, never the physiology (set by the session, logged). */
+export type Difficulty = 'beginner' | 'intermediate' | 'expert';
+
+/** A case action with a delay, e.g. calling the surgeon for a re-laparotomy. */
+export interface ScenarioAction {
+  id: string;
+  /** i18n keys: button label, message when requested, message when done */
+  labelKey: string;
+  startKey: string;
+  doneKey: string;
+  /** s — sim time until the commands take effect */
+  delayS: number;
+  /** applied (source "scenario") when the action completes */
+  commands: readonly Command[];
+}
+
+/** A guided experiment card (Physiology Lab): question → the learner changes something → measured result. */
+export interface Experiment {
+  id: string;
+  /** i18n keys */
+  questionKey: string;
+  doKey: string;
+  explainKey: string;
+  /** the learner command that answers the card (first match after the card was started) */
+  match: { command: Command['type']; key?: string };
+  /** monitor trend channels shown before → after */
+  watch: readonly ('hr' | 'map' | 'spo2' | 'etco2' | 'ppeak')[];
+  /** s — time after the action at which the result is read */
+  settleS: number;
+}
+
+export interface ExperimentRun {
+  id: string;
+  /** s */
+  startedAt: number;
+  /** s — sim time of the matching learner command, null while waiting */
+  actionAt: number | null;
 }
 
 export interface DirectorMessage {
@@ -159,4 +209,12 @@ export interface DirectorState {
   orders: TestOrder[];
   /** hints revealed so far (scoring may lower the educational score slightly) */
   hints: HintUse[];
+  /** case actions requested and not yet complete */
+  pendingActions: { id: string; dueAt: number }[];
+  /** case actions completed */
+  actionsDone: string[];
+  /** guided experiments started */
+  experiments: ExperimentRun[];
+  /** session difficulty (help level) */
+  difficulty: Difficulty;
 }

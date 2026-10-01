@@ -1132,4 +1132,63 @@ export const de: Record<I18nKey, string> = {
   'tl.src.event': '',
   'tl.src.user': 'Du',
   'tl.src.system': '',
+  'scenario.healthyLungs.title': 'Gesunde Lunge — geführte Beatmungsexperimente',
+  'scenario.healthyLungs.briefing':
+    'Beatmeter Erwachsener mit gesunder Lunge in Allgemeinanästhesie. Verändere, was du möchtest — oder nimm die Experimentkarten (EXPERIMENTE unter der Szene) und sieh, was jede Änderung mit Gasaustausch und Kreislauf macht.',
+  'scenario.asthmaLab.title': 'Schweres Asthma — dynamische Überblähung',
+  'scenario.asthmaLab.briefing':
+    'Übergabe aus der Notaufnahme: junger Erwachsener mit schwerem Asthma, vor 20 Minuten wegen Erschöpfung intubiert. Seit der Intubation fällt der Blutdruck zunehmend. Der Patient gehört jetzt dir.',
+  'scenario.postopBleeding.title': 'Hypovolämie — Blutung nach Bauchoperation',
+  'scenario.postopBleeding.briefing':
+    'Intensivstation, drei Stunden nach einer offenen Bauchoperation. Beatmet und sediert, Noradrenalin läuft niedrig dosiert. Die Pflege ist besorgt: der Patient ist tachykard und die Drainage füllt sich. Beurteile, behandle und entscheide, was das Problem wirklich braucht.',
+  'dir.asthma.bpFalling': 'Der Blutdruck ist wieder gefallen — Mitteldruck {map} mmHg.',
+  'dir.asthma.silentChest': 'Ich höre über der Lunge kaum noch Atemgeräusch.',
+  'dir.asthma.flow':
+    'Der exspiratorische Fluss scheint vor dem nächsten Atemzug nicht auf null zurückzukehren.',
+  'dir.bleed.drain':
+    'Aus der Drainage sind in den letzten 30 Minuten weitere {bloodLossLast30} mL Blut gekommen.',
+  'dir.bleed.pale':
+    'Der Patient ist blass und hat kalte Hände. Herzfrequenz {hr}, Mitteldruck {map}.',
+  'act.title': 'FALL',
+  'act.callSurgeon': 'Chirurgen rufen (Relaparotomie)',
+  'act.callSurgeon.start':
+    'Ich habe den Chirurgen angerufen — er nimmt den Patienten wieder in den OP.',
+  'act.callSurgeon.done':
+    'Chirurg: „Ein blutendes Gefäß an der Anastomose ist umstochen. Die Blutung steht.“',
+  'act.pending': 'angefordert — etwa {n}',
+  'act.done': 'erledigt',
+  'hint.bleed.title': 'Warum ist der Patient hypoton und tachykard?',
+  'hint.bleed.1': 'Schau auf die Drainage und die Bilanz.',
+  'hint.bleed.2':
+    'Wie reagieren Herzfrequenz und Druck auf eine Volumengabe? Was zeigt eine BGA (Hb, Laktat)?',
+  'hint.bleed.3':
+    'Eine anhaltende Blutung führt zur Hypovolämie: niedrige Vorlast, kleines Schlagvolumen, kompensatorische Tachykardie. Ein Vasopressor hebt den Druck, aber nicht das Volumen.',
+  'hint.bleed.4':
+    'Volumen ersetzen (Flüssigkeit, Erythrozyten bei fallendem Hb) und die Quelle stoppen: den Chirurgen rufen.',
+  'exp.title': 'EXPERIMENTE',
+  'exp.button': 'EXPERIMENTE',
+  'exp.start': 'Ausprobieren',
+  'exp.waiting': 'Warte auf deine Änderung…',
+  'exp.settling': 'Messe — Ergebnis in {n} (gern vorspulen)',
+  'exp.result': 'Ergebnis',
+  'exp.why': 'Warum?',
+  'exp.intro': 'Freiwillig: wähle eine Frage, nimm die Änderung vor, beobachte den Patienten.',
+  'exp.rrDouble.q': 'Was passiert mit dem CO₂, wenn du die Atemfrequenz verdoppelst?',
+  'exp.rrDouble.do':
+    'Stelle die AF von 12 auf 24 /min. Das Ergebnis wird 5 Minuten später abgelesen.',
+  'exp.rrDouble.why':
+    'Die alveoläre Ventilation verdoppelt sich etwa, also auch das pro Minute abgeatmete CO₂; der PaCO₂ fällt innerhalb von Minuten auf etwa zwei Drittel (das EtCO₂ folgt, eine BGA bestätigt den PaCO₂). Schnellere Atemzüge verkürzen außerdem die Exspiration und erhöhen den Mitteldruck.',
+  'exp.peep15.q': 'Was passiert mit dem Blutdruck, wenn der PEEP von 5 auf 15 cmH₂O steigt?',
+  'exp.peep15.do': 'Stelle den PEEP auf 15 cmH₂O. Das Ergebnis wird 2 Minuten später abgelesen.',
+  'exp.peep15.why':
+    'Höherer intrathorakaler Druck senkt den venösen Rückstrom: Schlagvolumen und MAP fallen, die Herzfrequenz steigt. Eine gesunde Lunge hat wenig zu rekrutieren, die Oxygenierung ändert sich kaum — der Preis ist hämodynamisch. Das EtCO₂ fällt mit dem Herzzeitvolumen.',
+  'exp.vtDown.q':
+    'Was passiert, wenn du das Tidalvolumen bei gleicher Frequenz von 500 auf 300 mL senkst?',
+  'exp.vtDown.do': 'Stelle das VT auf 300 mL. Das Ergebnis wird 5 Minuten später abgelesen.',
+  'exp.vtDown.why':
+    'Das Minutenvolumen fällt um 40 %, die alveoläre Ventilation aber stärker, weil der Totraum (etwa 150 mL) gleich bleibt. Das CO₂ steigt deutlich, die Atemwegsdrücke fallen.',
+  'exp.fio2.q': 'Was passiert mit der SpO₂ bei Raumluft?',
+  'exp.fio2.do': 'Stelle die FiO₂ auf 21 %. Das Ergebnis wird 3 Minuten später abgelesen.',
+  'exp.fio2.why':
+    'Bei gesunder Lunge fällt die Sättigung kaum — das Hämoglobin ist schon bei normalem PaO₂ fast voll. Verloren geht die Sauerstoffreserve: nach einer Diskonnektion fällt die Sättigung viel früher.',
 };

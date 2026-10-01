@@ -250,3 +250,20 @@
   bottom: calc(68px + env(safe-area-inset-bottom));
   transform: none;
 }
+
+/* Experiments */
+.expDo {
+  margin: 0 0 6px;
+  font: 500 13.5px/1.45 var(--font-ui);
+  color: var(--text);
+}
+
+.expWhy {
+  margin: 8px 0 0;
+  font: 400 13.5px/1.5 var(--font-ui);
+  color: var(--text);
+}
+
+.expWhy strong {
+  color: var(--alarm-low);
+}

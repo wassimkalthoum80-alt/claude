@@ -1,4 +1,4 @@
-import type { TestKind } from './director';
+import type { Difficulty, TestKind } from './director';
 import type { TimeScale } from '../core/Clock';
 import type { DoseUnit } from '../pharmacology/units';
 import type { BisSensorFault, PatientFactors, StimulusKind } from '../state/BrainState';
@@ -159,6 +159,12 @@ export type Command =
   | { type: 'VIEW_RESULT'; orderId: number }
   /** reveal the next level of a scenario hint (levels are revealed in order) */
   | { type: 'REQUEST_HINT'; topic: string }
+  /** request a case action (takes effect after its delay) */
+  | { type: 'SCENARIO_ACTION'; id: string }
+  /** start a guided experiment card */
+  | { type: 'EXPERIMENT_START'; id: string }
+  /** session difficulty (help level only; set by the session at start) */
+  | { type: 'SET_DIFFICULTY'; difficulty: Difficulty }
   | { type: 'RESET' };
 
 export type CommandType = Command['type'];
@@ -167,6 +173,8 @@ export type CommandSource = 'user' | 'instructor' | 'scenario' | 'system';
 
 /** Clinical milestones the engine writes into the event log itself. */
 export type ClinicalEventType =
+  /** a case action took effect; detail = action id */
+  | 'SCENARIO_ACTION_DONE'
   /** an Event Director message; detail = rule id */
   | 'DIRECTOR_MESSAGE'
   /** an investigation result became available; detail = test#order */

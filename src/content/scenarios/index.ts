@@ -4,8 +4,19 @@ import { baselinePatient } from './baselinePatient';
 import { unnoticedDisconnection } from './unnoticedDisconnection';
 import { vfUnderAnaesthesia } from './vfUnderAnaesthesia';
 import { FLUID_SCENARIOS } from './fluidScenarios';
+import { healthyLungsLab } from './healthyLungsLab';
+import { asthmaHyperinflation } from './asthmaHyperinflation';
+import { postopBleeding } from './postopBleeding';
 
-export { asthmaBreathStacking, baselinePatient, unnoticedDisconnection, vfUnderAnaesthesia };
+export {
+  asthmaBreathStacking,
+  asthmaHyperinflation,
+  baselinePatient,
+  healthyLungsLab,
+  postopBleeding,
+  unnoticedDisconnection,
+  vfUnderAnaesthesia,
+};
 export * from './fluidScenarios';
 
 export const SCENARIOS: readonly ScenarioDefinition[] = [
@@ -13,5 +24,8 @@ export const SCENARIOS: readonly ScenarioDefinition[] = [
   vfUnderAnaesthesia,
   unnoticedDisconnection,
   asthmaBreathStacking,
+  healthyLungsLab,
+  asthmaHyperinflation,
+  postopBleeding,
   ...FLUID_SCENARIOS,
 ];

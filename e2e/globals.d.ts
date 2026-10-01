@@ -8,7 +8,7 @@ interface Window {
       time: number;
       devices: { defib: { shocks: number } };
       control: { paused: boolean };
-      scenario: { id: string };
+      scenario: { id: string; seed: number; variant: string | null };
     };
   };
   __resusDisplay?: { readonly time: number };

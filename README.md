@@ -62,7 +62,7 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
 
 | Module | Now | Scored | Instructor panel |
 |---|---|---|---|
-| **Physiology Lab** | Ventilation Lab (healthy lungs, asthma, ARDS), Haemodynamics & Drug Lab (free; phenotypes in preparation), Fluids & Balance Lab (7 presets) | no | yes |
+| **Physiology Lab** | Ventilation Lab (healthy lungs with experiments, severe asthma, ARDS), Haemodynamics & Drug Lab (free, post-operative bleeding; other phenotypes in preparation), Fluids & Balance Lab (7 presets) | no | yes |
 | **Skills Training** | Ventilation troubleshooting: silent disconnection (more exercises and the arrhythmia trainer in preparation) | yes | hidden |
 | **Resuscitation** | Sudden VF under anaesthesia (cause-specific arrests in preparation) | yes | hidden |
 | **Clinical Challenges** | categories shown, validated cases in preparation (max. 5, owner-reviewed) | yes | hidden |
@@ -96,6 +96,11 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   the trend view shows HR, arterial pressure (mean with systolic/diastolic band), SpO₂, EtCO₂ and peak airway
   pressure over the last 5 / 15 / 60 simulated minutes with your actions marked; hints (when the case has them,
   not in expert sessions) open one level at a time, from where to look to what may help, and are recorded.
+- **Three polished Physiology Lab cases** (milestone 6b): *Healthy lungs — guided ventilation experiments*
+  (four experiment cards: RR doubled, PEEP 15, VT 300, FiO₂ 21 % — question, change, measured result, why);
+  *Severe asthma — dynamic hyperinflation* (five patients, a different one on every restart; nurse, ventilator
+  and hint layers; barotrauma in one variant); *Hypovolaemia — bleeding after abdominal surgery* (four patients;
+  fluid vs noradrenaline vs **Call the surgeon** in the procedures panel).
 
 ## How to play
 

@@ -5,6 +5,7 @@ import { useEngineSelector } from '../../hooks/useEngineSelector';
 import { HintView } from './HintView';
 import { hintsAvailable } from './hints';
 import { TimelineView } from './TimelineView';
+import { ExperimentView } from './ExperimentView';
 import { TrendView } from './TrendView';
 import styles from './SessionTools.module.css';
 
@@ -40,16 +41,20 @@ export function SessionTools() {
         {tool('timeline', t('tools.timeline'))}
         {tool('trends', t('tools.trends'))}
         {showHints && tool('hint', t('hint.button'))}
+        {(engine.scenario.experiments?.length ?? 0) > 0 && tool('experiments', t('exp.button'))}
       </div>
       {ui.drawer && (
         <aside className={styles.drawer} data-sheet data-testid={`drawer-${ui.drawer}`}>
           <header className={styles.header}>
             <span className={styles.title}>
-              {ui.drawer === 'timeline'
-                ? t('tl.title')
-                : ui.drawer === 'trends'
-                  ? t('trend.title')
-                  : t('hint.title')}
+              {
+                {
+                  timeline: t('tl.title'),
+                  trends: t('trend.title'),
+                  hint: t('hint.title'),
+                  experiments: t('exp.title'),
+                }[ui.drawer]
+              }
             </span>
             <button
               type="button"
@@ -64,6 +69,7 @@ export function SessionTools() {
             {ui.drawer === 'timeline' && <TimelineView />}
             {ui.drawer === 'trends' && <TrendView />}
             {ui.drawer === 'hint' && <HintView />}
+            {ui.drawer === 'experiments' && <ExperimentView />}
           </div>
         </aside>
       )}

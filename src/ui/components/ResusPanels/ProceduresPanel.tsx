@@ -3,6 +3,7 @@ import type { ProcedureKind, Side } from '../../../sim';
 import { lastProcedure } from '../../adapters/resusViewModel';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT } from '../../hooks/UiContext';
+import { CaseActions } from './CaseActions';
 import styles from './ResusPanels.module.css';
 
 /** Bedside procedures for the reversible causes (4 H / HITS) and vascular access. */
@@ -35,6 +36,7 @@ export function ProceduresPanel() {
 
   return (
     <div>
+      <CaseActions />
       <div className={styles.section}>
         <div className={styles.sectionTitle}>{t('proc.chest')}</div>
         <div className={styles.grid2}>

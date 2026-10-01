@@ -76,7 +76,8 @@ export interface SimulationState {
   };
   interventions: { cpr: CPRState; resus: ResuscitationState };
   timers: ArrestTimers;
-  scenario: { id: string; seed: number; ended: boolean };
+  /** variant = id of the patient variation drawn from the seed (null when the scenario has none) */
+  scenario: { id: string; variant: string | null; seed: number; ended: boolean };
   control: SimControl;
   /** Event Director messages and investigations of this session */
   director: DirectorState;

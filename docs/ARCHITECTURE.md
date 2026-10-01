@@ -106,6 +106,12 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   settings at 1 Hz (4 h); `buildTimeline` (`src/ui/adapters/timeline.ts`, pure) turns the event log + these trends
   into entries with before → after values (3 min window). `ScenarioDefinition.hints` holds progressive hint topics;
   `REQUEST_HINT` reveals the next level (`state.director.hints`, for scoring in phase 3). UI: `SessionTools`.
+- **Scenario framework additions:** `variants` (drawn from the seed by `resolveVariant`, merged into the scenario;
+  `state.scenario.variant`), rule `commands` (consequences with a mechanism, source `scenario`, replay-safe),
+  rule `levels` (help by difficulty, set with `SET_DIFFICULTY`), a scenario rule replaces a general rule with the
+  same id, `actions` (`SCENARIO_ACTION`, applied after a delay), `experiments` (`EXPERIMENT_START`; the first
+  matching learner command answers the card). Sessions of cases with variants use a fresh seed, and a restart
+  draws a new one.
 - **Determinism:** one seeded RNG (mulberry32) inside the engine. Same seed + same commands at the same ticks =
   same run.
 

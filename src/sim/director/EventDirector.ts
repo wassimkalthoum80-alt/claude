@@ -16,6 +16,8 @@ export interface DirectorInputs {
   urineWindowS: number;
   /** mL — charted balance since the start */
   balanceMl: number;
+  /** mL — blood lost to drains/suction in the last 30 min */
+  bloodLossLast30Ml: number;
 }
 
 const DEFAULT_COOLDOWN_S = 300;
@@ -47,6 +49,8 @@ export function directorMetric(m: DirectorMetric, i: DirectorInputs): number | n
         : null;
     case 'balance':
       return i.balanceMl;
+    case 'bloodLossLast30':
+      return i.bloodLossLast30Ml;
     case 'time':
       return s.time;
   }
@@ -62,6 +66,7 @@ const METRICS: readonly DirectorMetric[] = [
   'urineLastHour',
   'urineMlKgH',
   'balance',
+  'bloodLossLast30',
   'time',
 ];
 
@@ -97,10 +102,10 @@ export class EventDirector {
     this.lastCommandAt = t;
   }
 
-  /** Rules that fire now, as messages (oldest rule first). */
-  evaluate(i: DirectorInputs): DirectorMessage[] {
+  /** Rules that fire now, each with its message (oldest rule first). */
+  evaluate(i: DirectorInputs): { rule: DirectorRule; message: DirectorMessage }[] {
     const t = i.state.time;
-    const out: DirectorMessage[] = [];
+    const out: { rule: DirectorRule; message: DirectorMessage }[] = [];
     for (const rule of this.rules) {
       // Every condition is evaluated every tick so held-durations stay correct.
       const matched = this.test(rule.when, rule, rule.id, i, t);
@@ -111,7 +116,7 @@ export class EventDirector {
         if (t - last < (rule.cooldownS ?? DEFAULT_COOLDOWN_S)) continue;
       }
       this.lastFired.set(rule.id, t);
-      out.push(this.message(rule, i, t));
+      out.push({ rule, message: this.message(rule, i, t) });
     }
     return out;
   }

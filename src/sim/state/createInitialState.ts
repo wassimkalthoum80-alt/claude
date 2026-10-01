@@ -26,6 +26,7 @@ export function createInitialState(
   const p = scenario.patient;
   const lungPreset = p.lungPreset ?? 'normal';
   const lung = LUNG_PRESETS[lungPreset];
+  const severity = lungPreset === 'bronchospasm' ? (p.obstructionSeverity ?? 1) : 1;
   const perfusing = p.rhythm === 'sinus';
   const tone = perfusing ? 1 : 0;
   const co = perfusing ? (p.strokeVolume * p.heartRate) / 1000 : 0;
@@ -60,10 +61,15 @@ export function createInitialState(
       },
       resp: {
         compliance: lung.compliance,
-        resistance: lung.resistance,
-        expiratoryResistance: lung.expiratoryResistance,
+        resistance: obstructedResistance(lung.resistance, LUNG_PRESETS.normal.resistance, severity),
+        expiratoryResistance: obstructedResistance(
+          lung.expiratoryResistance,
+          LUNG_PRESETS.normal.expiratoryResistance,
+          severity,
+        ),
         spontaneousBreathing: false,
         lungPreset,
+        obstructionSeverity: severity,
         drive: 'none',
         pmus: 0,
         frc: lung.frc,
@@ -246,9 +252,17 @@ export function createInitialState(
       firstCompressionTime: null,
       ccf: perfusing ? null : 0,
     },
-    scenario: { id: scenario.id, seed, ended: false },
+    scenario: { id: scenario.id, variant: null, seed, ended: false },
     control: { paused: false, timeScale: 1, autoSpeed: true, advance: null, interrupt: null },
-    director: { messages: [], orders: [], hints: [] },
+    director: {
+      messages: [],
+      orders: [],
+      hints: [],
+      pendingActions: [],
+      actionsDone: [],
+      experiments: [],
+      difficulty: 'beginner',
+    },
     model: {
       calibration: { ...HEART_LUNG_CALIBRATION, ...calibration },
       arrestModelEnabled: true,
@@ -302,4 +316,9 @@ export function initialDefibrillator(energyJ: number, padsAttached: boolean): De
     lastShockJ: null,
     aed: { phase: 'idle', phaseEndsAt: null },
   };
+}
+
+/** cmH2O·s/L — preset resistance with its excess over a normal airway scaled by the obstruction severity. */
+function obstructedResistance(preset: number, normal: number, severity: number): number {
+  return normal + (preset - normal) * severity;
 }

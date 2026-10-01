@@ -182,9 +182,12 @@ export class LungStateModel {
     const relief =
       l === LUNG_PRESETS.bronchospasm ? patient.pharmacology.effects.bronchodilation : 0;
     const normal = LUNG_PRESETS.normal;
-    r.resistance = l.resistance - (l.resistance - normal.resistance) * relief;
+    // SIM-ASSUMPTION: bronchospasm severity scales the resistance excess over a normal airway (scenario variants).
+    const severity = l === LUNG_PRESETS.bronchospasm ? r.obstructionSeverity : 1;
+    r.resistance = normal.resistance + (l.resistance - normal.resistance) * severity * (1 - relief);
     r.expiratoryResistance =
-      l.expiratoryResistance - (l.expiratoryResistance - normal.expiratoryResistance) * relief;
+      normal.expiratoryResistance +
+      (l.expiratoryResistance - normal.expiratoryResistance) * severity * (1 - relief);
     r.frc = l.frc;
   }
 

@@ -482,3 +482,49 @@ test('session tools: timeline with before → after, trend charts, progressive h
   expect(hints).toBeGreaterThan(1);
   expect(errors).toEqual([]);
 });
+
+test('Physiology Lab cases: experiment card, new asthma patient on restart, call the surgeon', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByTestId('module-lab').click();
+  await page.getByTestId('entry-vent-free').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(20));
+  await page.getByTestId('tool-experiments').click();
+  await page.getByTestId('exp-start-peep-15').click();
+  await page.evaluate(() => {
+    window.__resusEngine?.dispatch({ type: 'SET_VENT_SETTING', key: 'peep', value: 15 }, 'user');
+  });
+  await expect(page.getByTestId('exp-settling')).toBeVisible();
+  await page.evaluate(() => window.__resusEngine?.runFor(130));
+  await expect(page.getByTestId('exp-result')).toContainText('MAP');
+  await expect(page.getByTestId('exp-peep-15')).toContainText('venous return');
+
+  // Severe asthma: a restart brings another patient (new seed each time).
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-home').click();
+  await page.getByTestId('module-lab').click();
+  await page.getByTestId('entry-vent-asthma').click();
+  await page.getByTestId('start-button').click();
+  const seeds = new Set<number>();
+  for (let i = 0; i < 3; i++) {
+    seeds.add(await page.evaluate(() => window.__resusEngine?.getSnapshot().scenario.seed ?? 0));
+    await page.keyboard.press('p');
+    await page.getByTestId('menu-restart').click();
+  }
+  expect(seeds.size).toBe(3);
+
+  // Hypovolaemia: the surgeon can be called from the procedures panel.
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-home').click();
+  await page.getByTestId('module-lab').click();
+  await page.getByTestId('entry-haemo-hypovolaemia').click();
+  await page.getByTestId('start-button').click();
+  await page.getByTestId('action-procedures').click();
+  await page.getByTestId('case-action-call-surgeon').click();
+  await expect(page.getByTestId('case-actions')).toContainText('requested');
+  expect(errors).toEqual([]);
+});

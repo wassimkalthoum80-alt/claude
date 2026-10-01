@@ -152,6 +152,99 @@ export const HISTORIES: Record<string, PatientHistory> = {
       'Beatmungseinstellungen vom Transportbeatmungsgerät übernommen.',
     ),
   },
+  'lab-healthy-lungs': {
+    ...SANDBOX,
+    caseId: 'SIM-3001',
+    notes: t(
+      'Physiology Lab: experiment freely; nothing here is scored.',
+      'Physiologie-Labor: frei experimentieren; hier wird nichts bewertet.',
+    ),
+  },
+  'asthma-hyperinflation': {
+    caseId: 'SIM-3002',
+    diagnosis: t(
+      'Acute severe asthma, hypercapnic respiratory failure, intubated for exhaustion',
+      'Schwerer akuter Asthmaanfall, hyperkapnisches Versagen, wegen Erschöpfung intubiert',
+    ),
+    procedure: t(
+      'Intubated in the emergency department 20 min ago; handed over to ICU',
+      'Vor 20 min in der Notaufnahme intubiert; Übergabe an die Intensivstation',
+    ),
+    asa: 'IV E',
+    allergies: [t('House-dust mite, grass pollen', 'Hausstaubmilbe, Gräserpollen')],
+    conditions: [
+      t(
+        'Severe allergic asthma since childhood, previous ICU admissions',
+        'Schweres allergisches Asthma seit der Kindheit, frühere Intensivaufenthalte',
+      ),
+      t(
+        'Hours of increasing dyspnoea before arrival, little oral intake',
+        'Stundenlang zunehmende Dyspnoe vor Aufnahme, kaum getrunken',
+      ),
+    ],
+    medications: [
+      t('Budesonide/formoterol inhaler 2-0-2', 'Budesonid/Formoterol-Inhalator 2-0-2'),
+      t(
+        'Emergency department: salbutamol nebulised ×3, prednisolone 100 mg IV, magnesium 2 g IV',
+        'Notaufnahme: Salbutamol vernebelt ×3, Prednisolon 100 mg i.v., Magnesium 2 g i.v.',
+      ),
+    ],
+    findings: [
+      t(
+        'Before intubation: severe respiratory acidosis, silent chest, exhausted',
+        'Vor Intubation: schwere respiratorische Azidose, „silent chest“, erschöpft',
+      ),
+      t(
+        'Chest X-ray in the ED: hyperinflation, no pneumothorax',
+        'Röntgen-Thorax in der Notaufnahme: Überblähung, kein Pneumothorax',
+      ),
+    ],
+    fasting: t('Unknown (emergency)', 'Unbekannt (Notfall)'),
+    notes: t(
+      'Ventilator settings taken over from the transport ventilator. The patient differs from session to session.',
+      'Beatmungseinstellungen vom Transportbeatmungsgerät übernommen. Der Patient ist von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'postop-bleeding': {
+    caseId: 'SIM-3003',
+    diagnosis: t(
+      'Rectal carcinoma; 3 h after open low anterior resection',
+      'Rektumkarzinom; 3 h nach offener tiefer anteriorer Rektumresektion',
+    ),
+    procedure: t(
+      'ICU, planned post-operative ventilation; propofol and sufentanil sedation, noradrenaline low dose',
+      'Intensivstation, geplante Nachbeatmung; Sedierung mit Propofol und Sufentanil, Noradrenalin niedrig dosiert',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+      t('Type 2 diabetes, oral therapy', 'Diabetes mellitus Typ 2, orale Therapie'),
+    ],
+    medications: [
+      t('Ramipril 5 mg 1-0-0 (paused)', 'Ramipril 5 mg 1-0-0 (pausiert)'),
+      t('Metformin 1000 mg 1-0-1 (paused)', 'Metformin 1000 mg 1-0-1 (pausiert)'),
+      t(
+        'Thromboprophylaxis: enoxaparin 40 mg s.c. at 18:00',
+        'Thromboseprophylaxe: Enoxaparin 40 mg s.c. um 18:00',
+      ),
+    ],
+    findings: [
+      t(
+        'Intra-operative blood loss 600 mL; two drains in the pelvis',
+        'Intraoperativer Blutverlust 600 mL; zwei Drainagen im kleinen Becken',
+      ),
+      t(
+        'Pre-operative Hb 13.8 g/dL, coagulation normal',
+        'Präoperatives Hb 13,8 g/dL, Gerinnung normal',
+      ),
+    ],
+    fasting: t('Fasting since surgery', 'Nüchtern seit der Operation'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
   'fluid-maintenance': {
     ...SANDBOX,
     caseId: 'SIM-2001',

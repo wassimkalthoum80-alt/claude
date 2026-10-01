@@ -151,6 +151,7 @@ export type {
   ScenarioObjective,
   ScenarioPump,
 } from './types/scenario';
+export type { ScenarioVariant } from './types/scenario';
 // Fluid balance ("Bilanzierung & Flüssigkeitsverteilung")
 export {
   INPUT_CATEGORIES,
@@ -215,6 +216,10 @@ export type {
   DirectorMetric,
   DirectorRule,
   DirectorState,
+  Difficulty as SimDifficulty,
+  Experiment,
+  ExperimentRun,
+  ScenarioAction,
   HintTopic,
   HintUse,
   MessageAction,

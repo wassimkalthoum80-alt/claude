@@ -1,6 +1,6 @@
 # Design: three clocks, the Event Director and scenarios (milestone 6, phase 2)
 
-Status: approved by the owner. **Steps 1–4 implemented** (display stream and SIM TIME control; Advance time with interrupts and auto speed; Event Director with general rules, nurse card, three notification levels, ABG with turnaround; progressive hints, timeline with before → after, 5/15/60-min trends). Step 5 (the three polished scenarios) next. Brief:
+Status: approved by the owner. **All five steps implemented** (display stream and SIM TIME; Advance time and auto speed; Event Director, nurse, notifications, ABG; hints, timeline, trends; the three Physiology Lab cases with variants, case actions and experiments). Awaiting the owner's clinical review of the cases. Brief:
 `docs/prompts/milestone-06b-time-events-scenarios.md`.
 
 ## 1. What the code does today (inspected)

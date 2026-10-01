@@ -48,7 +48,7 @@ export interface UiState {
   drawer: SessionDrawer | null;
 }
 
-export type SessionDrawer = 'timeline' | 'trends' | 'hint';
+export type SessionDrawer = 'timeline' | 'trends' | 'hint' | 'experiments';
 
 export type Screen = 'home' | 'module' | 'session';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';

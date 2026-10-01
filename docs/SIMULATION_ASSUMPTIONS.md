@@ -45,6 +45,17 @@ proxy for coronary perfusion pressure, which is the quantity that actually colla
 | Point-of-care ABG | turnaround 120–180 s (seeded); analyser imprecision pH ±0.005, PCO₂ ±0.7 mmHg, PO₂ ±2 %, lactate ±0.1, Na/Cl ±1, K ±0.05, glucose ±0.1 mmol/L (1 SD); BE by Van Slyke (CLSI C46) | Values are the simulated arterial values at the moment of sampling; the delay is sampling + transport + measurement. |
 | Reference flags | pH 7.35–7.45, PaCO₂ 35–45, PaO₂ ≥ 80, HCO₃⁻ 22–26, BE ±2, SaO₂ ≥ 94, lactate ≤ 2, Hb 12–17, Na 135–145, K 3.5–5.0, Cl 98–107, glucose 4–8 | Common adult ranges; local laboratories differ. |
 
+## Physiology Lab cases (`src/content/scenarios/{healthyLungsLab,asthmaHyperinflation,postopBleeding}.ts`)
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| Bronchospasm severity | multiplier 0.85–1.3 of the bronchospasm preset's resistance excess over a normal airway (`obstructionSeverity`, default 1 = unchanged) | Lets asthma variants differ in obstruction; bronchodilators still remove the same fraction of the excess. |
+| Barotrauma (one asthma variant only) | right tension pneumothorax (tension 0.6) after 180 s of peak airway pressure > 50 cmH₂O | Educational trigger with a stated mechanism; prevented by lowering the pressures. Not a calibrated barotrauma risk. |
+| Variants | drawn from the session seed (Murmur3-mixed); a new seed per session and per restart for cases with variants | Same seed → same patient (replay, scoring); a restart brings another patient. |
+| Post-operative bleeding | blood already lost 700–1000 mL; ongoing drain bleeding 4–7 mL/min; pre-bleeding HR 72–80 /min (the reflex adds the tachycardia) | Class II–III haemorrhage that is fluid responsive; untreated the brisk variant decompensates after 15–30 min. |
+| Surgical haemostasis | re-look laparotomy stops the bleeding 20 simulated minutes after "Call the surgeon" | Transfer, anaesthesia and surgery compressed into one delay; the patient stays at the bedside in the simulator. |
+| Experiment results | before = 10 s mean before the change; after = 10 s mean at the settle time (2–5 min) | Measured monitor values, so the card shows what the monitor showed. |
+
 ## Cardiovascular (`CardiovascularModel.ts`, `parameters.ts → CARDIO`)
 
 | Assumption                                                                                                                                                          | Value                                                                                | Rationale                                                                                                                                                       |

@@ -67,8 +67,9 @@ import type {
   SimulationState,
 } from '../state/SimulationState';
 import type { AlarmId } from '../state/MonitorState';
-import type { DirectorMessage, DirectorRule } from '../types/director';
+import type { DirectorMessage, DirectorRule, Difficulty } from '../types/director';
 import { EventDirector } from '../director/EventDirector';
+import { mergeRules, resolveVariant } from './variants';
 import { MonitorTrends, type ReadonlyMonitorTrends } from '../devices/MonitorTrends';
 import { ABG_TURNAROUND_S, drawAbg } from '../director/labs';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
@@ -106,6 +107,10 @@ const MAX_MESSAGES = 50;
 export class SimulationEngine {
   readonly guidelines: GuidelineSet;
   private scenarioDef: ScenarioDefinition;
+  /** the scenario with the variant drawn from the seed applied (what the engine actually runs) */
+  private active: ScenarioDefinition;
+  /** help level of the session; survives RESET like the seed */
+  private difficulty: Difficulty = 'beginner';
   private seed: number;
   private readonly calibration: Partial<HeartLungCalibration>;
   private state: SimulationState;
@@ -166,6 +171,7 @@ export class SimulationEngine {
   constructor(options: EngineOptions) {
     this.guidelines = options.guidelines;
     this.scenarioDef = options.scenario;
+    this.active = options.scenario;
     this.seed = options.seed ?? options.scenario.seed;
     this.calibration = { ...options.calibration };
     this.directorRules = options.directorRules ?? [];
@@ -454,8 +460,10 @@ export class SimulationEngine {
     }
     this.appendCommand(command, source);
     this.apply(command, source);
-    if (source === 'user' || source === 'instructor')
+    if (source === 'user' || source === 'instructor') {
       this.director.onCommand(command.type, this.state.time);
+      this.matchExperiments(command);
+    }
     this.bumpAndNotify();
   }
 
@@ -488,7 +496,9 @@ export class SimulationEngine {
 
   // ───────────────────────────── internals ─────────────────────────────
 
-  private load(scenario: ScenarioDefinition, seed: number): void {
+  private load(base: ScenarioDefinition, seed: number): void {
+    const { scenario, variant } = resolveVariant(base, seed);
+    this.active = scenario;
     this.rng = new SeededRng(seed);
     this.state = createInitialState(
       scenario,
@@ -496,6 +506,8 @@ export class SimulationEngine {
       this.calibration,
       this.guidelines.defibrillation.firstShockJ,
     );
+    this.state.scenario.variant = variant;
+    this.state.director.difficulty = this.difficulty;
     this.baselineHeartRate = scenario.patient.heartRate;
     this.substep = 0;
     this.timelineIndex = 0;
@@ -506,7 +518,7 @@ export class SimulationEngine {
     this.arrestThisTick = false;
     this.directorInterrupt = false;
     this.director.reset();
-    this.director.setRules([...this.directorRules, ...(scenario.director ?? [])]);
+    this.director.setRules(mergeRules(this.directorRules, scenario.director ?? []));
     this.labRng = new SeededRng((seed ^ LAB_SEED_SALT) >>> 0);
     this.log.clear();
     this.bank.reset();
@@ -759,13 +771,42 @@ export class SimulationEngine {
         break;
       }
       case 'REQUEST_HINT': {
-        const topic = this.scenarioDef.hints?.find((h) => h.id === command.topic);
+        const topic = this.active.hints?.find((h) => h.id === command.topic);
         if (!topic) break;
         const used = s.director.hints.filter((h) => h.topic === topic.id).length;
         if (used < topic.levels.length)
           s.director.hints.push({ topic: topic.id, level: used + 1, t: s.time });
         break;
       }
+      case 'SCENARIO_ACTION': {
+        const a = this.active.actions?.find((x) => x.id === command.id);
+        const d = s.director;
+        if (!a || d.actionsDone.includes(a.id) || d.pendingActions.some((p) => p.id === a.id))
+          break;
+        d.pendingActions.push({ id: a.id, dueAt: s.time + a.delayS });
+        d.messages.push(
+          this.director.systemMessage({
+            ruleId: `action-start:${a.id}`,
+            t: s.time,
+            source: 'nurse',
+            priority: 'passive',
+            textKey: a.startKey,
+            vars: {},
+            actions: [],
+          }),
+        );
+        break;
+      }
+      case 'EXPERIMENT_START': {
+        const exists = this.active.experiments?.some((x) => x.id === command.id);
+        if (exists)
+          s.director.experiments.push({ id: command.id, startedAt: s.time, actionAt: null });
+        break;
+      }
+      case 'SET_DIFFICULTY':
+        this.difficulty = command.difficulty;
+        s.director.difficulty = command.difficulty;
+        break;
       case 'VIEW_RESULT': {
         const o = s.director.orders.find((x) => x.id === command.orderId);
         if (o && o.readyAt <= s.time) o.viewed = true;
@@ -1050,22 +1091,36 @@ export class SimulationEngine {
     };
   }
 
-  /** Event Director rules and finished investigations → messages (sim time, deterministic). */
+  /** Event Director rules, finished investigations and due case actions → messages (sim time, deterministic). */
   private updateDirector(): void {
     const s = this.state;
+    const d = s.director;
     const window = Math.min(3600, s.time);
     const sum = (cats: readonly Parameters<FluidLedger['total']>[0][]) =>
       cats.reduce((a, c) => a + this.ledger.total(c), 0);
-    const fired: DirectorMessage[] = this.director.evaluate({
+    const fired = this.director.evaluate({
       state: s,
       urineWindowMl: this.ledger.sum('urine', s.time - window, s.time + 1e-9),
       urineWindowS: window,
       balanceMl: sum(INPUT_CATEGORIES) - sum(OUTPUT_CATEGORIES) - sum(ESTIMATED_CATEGORIES),
+      bloodLossLast30Ml: this.ledger.sum('bloodLoss', s.time - 1800, s.time + 1e-9),
     });
-    for (const o of s.director.orders) {
+    const show: DirectorMessage[] = [];
+    for (const { rule, message } of fired) {
+      this.logEvent('DIRECTOR_MESSAGE', s.time, rule.id);
+      for (const c of rule.commands ?? []) {
+        this.appendCommand(c, 'scenario');
+        this.apply(c, 'scenario');
+      }
+      const visible = !rule.silent && (!rule.levels || rule.levels.includes(d.difficulty));
+      if (visible) show.push(message);
+      if (visible && (message.priority === 'critical' || rule.interrupt))
+        this.directorInterrupt = true;
+    }
+    for (const o of d.orders) {
       if (o.readyAt > s.time - TICK_S + 1e-9 && o.readyAt <= s.time + 1e-9) {
         this.logEvent('TEST_RESULT', s.time, `${o.test}#${o.id}`);
-        fired.push(
+        show.push(
           this.director.systemMessage({
             ruleId: `result:${o.id}`,
             t: s.time,
@@ -1078,18 +1133,42 @@ export class SimulationEngine {
         );
       }
     }
-    if (fired.length === 0) return;
-    const rules = new Map(
-      this.directorRules.concat(this.scenarioDef.director ?? []).map((r) => [r.id, r]),
-    );
-    for (const m of fired) {
-      s.director.messages.push(m);
-      if (!m.ruleId.startsWith('result:')) this.logEvent('DIRECTOR_MESSAGE', s.time, m.ruleId);
-      const rule = rules.get(m.ruleId);
-      if (m.priority === 'critical' || rule?.interrupt) this.directorInterrupt = true;
+    for (const p of d.pendingActions.filter((x) => x.dueAt <= s.time + 1e-9)) {
+      const action = this.active.actions?.find((a) => a.id === p.id);
+      d.pendingActions = d.pendingActions.filter((x) => x !== p);
+      if (!action) continue;
+      d.actionsDone.push(action.id);
+      for (const c of action.commands) {
+        this.appendCommand(c, 'scenario');
+        this.apply(c, 'scenario');
+      }
+      this.logEvent('SCENARIO_ACTION_DONE', s.time, action.id);
+      show.push(
+        this.director.systemMessage({
+          ruleId: `action:${action.id}`,
+          t: s.time,
+          source: 'consultant',
+          priority: 'important',
+          textKey: action.doneKey,
+          vars: {},
+          actions: [],
+        }),
+      );
     }
-    if (s.director.messages.length > MAX_MESSAGES)
-      s.director.messages.splice(0, s.director.messages.length - MAX_MESSAGES);
+    if (show.length === 0) return;
+    d.messages.push(...show);
+    if (d.messages.length > MAX_MESSAGES) d.messages.splice(0, d.messages.length - MAX_MESSAGES);
+  }
+
+  /** The first matching learner command after an experiment card was started answers it. */
+  private matchExperiments(command: Command): void {
+    for (const run of this.state.director.experiments) {
+      if (run.actionAt !== null) continue;
+      const exp = this.active.experiments?.find((x) => x.id === run.id);
+      if (!exp || exp.match.command !== command.type) continue;
+      if (exp.match.key && !('key' in command && command.key === exp.match.key)) continue;
+      run.actionAt = this.state.time;
+    }
   }
 
   private currentHighAlarms(): Set<AlarmId> {
@@ -1158,7 +1237,7 @@ export class SimulationEngine {
   }
 
   private fireTimeline(time: number): void {
-    const events = this.scenarioDef.timeline;
+    const events = this.active.timeline;
     while (this.timelineIndex < events.length) {
       const ev = events[this.timelineIndex];
       if (!ev || ev.at > time + 1e-9) break;
@@ -1170,7 +1249,7 @@ export class SimulationEngine {
 
   private checkScenarioEnd(): void {
     const s = this.state;
-    const limit = this.scenarioDef.endAfterArrestS;
+    const limit = this.active.endAfterArrestS;
     if (limit === undefined || s.scenario.ended || s.timers.arrestStartTime === null) return;
     if (s.time - s.timers.arrestStartTime >= limit - 1e-9) {
       s.scenario.ended = true;

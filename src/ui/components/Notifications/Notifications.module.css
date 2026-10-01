@@ -58,7 +58,8 @@
   left: 50%;
   bottom: 64px;
   transform: translateX(-50%);
-  z-index: 26;
+  /* above action panels and drawers: the nurse must be readable */
+  z-index: 35;
   display: flex;
   gap: 12px;
   width: min(460px, calc(100% - 32px));

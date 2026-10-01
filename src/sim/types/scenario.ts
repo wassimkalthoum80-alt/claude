@@ -6,7 +6,7 @@ import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
 import type { FluidInit } from '../fluid/init';
 import type { PatientConditions } from '../state/ResuscitationState';
-import type { DirectorRule, HintTopic } from './director';
+import type { DirectorRule, Experiment, HintTopic, ScenarioAction } from './director';
 
 export interface PatientInit {
   sex: 'male' | 'female';
@@ -23,6 +23,8 @@ export interface PatientInit {
   strokeVolume: number;
   /** lung condition at the start (mechanics, shunt, recruitability); default 'normal' */
   lungPreset?: LungPreset;
+  /** severity of a bronchospasm (multiplier of its resistance excess, default 1) */
+  obstructionSeverity?: number;
   /** patient reserves (volume status, RV, myocardium, sympathetic response); default all 1 */
   reserves?: Partial<PhysiologyReserves>;
   /** mmHg — starting PaCO2 (e.g. hypercapnia on arrival); default: steady state of the start ventilation */
@@ -89,4 +91,26 @@ export interface ScenarioDefinition {
   director?: readonly DirectorRule[];
   /** progressive hints for the problems of this scenario */
   hints?: readonly HintTopic[];
+  /**
+   * patient variations, one drawn from the session seed at load (milestone 6b § 20): the learning objective stays,
+   * the exact course differs, so a sequence of clicks cannot be memorised. Same seed → same variant.
+   */
+  variants?: readonly ScenarioVariant[];
+  /** case-specific actions with a delay (e.g. "call the surgeon"), shown in the procedures panel */
+  actions?: readonly ScenarioAction[];
+  /** optional guided experiments of a Physiology Lab case */
+  experiments?: readonly Experiment[];
+}
+
+export interface ScenarioVariant {
+  id: string;
+  /** relative probability (default 1) */
+  weight?: number;
+  /** merged into the scenario's patient (reserves and factors merged field by field) */
+  patient?: Partial<PatientInit>;
+  ventilator?: Partial<VentSettings>;
+  /** merged into the scenario's fluid start (factors merged field by field) */
+  fluid?: FluidInit;
+  /** additional Event Director rules of this variant */
+  director?: readonly DirectorRule[];
 }

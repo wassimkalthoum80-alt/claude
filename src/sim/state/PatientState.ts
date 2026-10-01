@@ -67,6 +67,11 @@ export interface RespState {
   spontaneousBreathing: boolean;
   /** lung condition selected by the instructor */
   lungPreset: LungPreset;
+  /**
+   * multiplier of the bronchospastic resistance excess over a normal airway (1 = the bronchospasm preset;
+   * 0.7 milder, 1.4 more severe). No effect for the other presets.
+   */
+  obstructionSeverity: number;
   /** spontaneous breathing effort (forced to 'none' during cardiac arrest) */
   drive: RespiratoryDrive;
   /** cmH2O — current inspiratory muscle pressure (patient effort) */
