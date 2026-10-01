@@ -6,7 +6,8 @@ const TREND_HOURS = 4;
 
 /**
  * Bedside trend channels: what the monitor and the ventilator display (measured numerics and settings) — the
- * learner's trend view. Units: hr /min; sys, dia, map, etco2 mmHg; spo2 %; ppeak, peep cmH2O; fio2 %; rr /min.
+ * learner's trend view. Units: hr /min; sys, dia, map, etco2 mmHg; spo2 %; ppeak, peep, pplat, drivingPressure
+ * cmH2O; fio2 %; rr (set), rrTotal (measured) /min.
  * NaN = not measurable at that moment ("--" on the monitor).
  */
 export const MONITOR_TREND_CHANNELS = [
@@ -20,6 +21,9 @@ export const MONITOR_TREND_CHANNELS = [
   'peep',
   'fio2',
   'rr',
+  'pplat',
+  'drivingPressure',
+  'rrTotal',
 ] as const;
 export type MonitorTrendChannel = (typeof MONITOR_TREND_CHANNELS)[number];
 
@@ -56,6 +60,12 @@ export class MonitorTrends {
       peep: v.settings.peep,
       fio2: v.settings.fio2,
       rr: v.settings.rr,
+      pplat: v.circuitConnected && v.measured.pplat !== null ? v.measured.pplat : NaN,
+      drivingPressure:
+        v.circuitConnected && v.measured.pplat !== null
+          ? v.measured.pplat - v.measured.peepTotal
+          : NaN,
+      rrTotal: v.circuitConnected ? v.measured.rrTotal : NaN,
     };
     for (const c of MONITOR_TREND_CHANNELS) this.channels[c].push(values[c]);
   }

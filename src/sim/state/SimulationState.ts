@@ -86,7 +86,8 @@ export interface SimulationState {
 }
 
 /** Why accelerated time stopped (Advance time ended or live speed dropped back to ×1). */
-export type InterruptReason = 'limit' | 'alarm' | 'arrest' | 'event' | 'end' | 'user';
+/** 'slowed' = a clinical concern reduced ×5 to ×2 (not back to real time) */
+export type InterruptReason = 'limit' | 'alarm' | 'arrest' | 'event' | 'slowed' | 'end' | 'user';
 
 /** Simulation-clock control: pause, live speed, Advance time, automatic return to real time. */
 export interface SimControl {

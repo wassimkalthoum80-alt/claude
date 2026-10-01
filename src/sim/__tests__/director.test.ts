@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GENERAL_DIRECTOR_RULES } from '../../content/director/generalRules';
+import { OBSERVATION_DEFAULTS } from '../../content/director/observationDefaults';
 import { erc2025 } from '../../content/guidelines/erc2025';
 import { baselinePatient, unnoticedDisconnection } from '../../content/scenarios';
 import { SimulationEngine } from '../engine/SimulationEngine';
@@ -11,6 +12,7 @@ const withRules = (rules: DirectorRule[], base: ScenarioDefinition = baselinePat
     scenario: { ...base, director: rules },
     guidelines: erc2025,
     directorRules: GENERAL_DIRECTOR_RULES,
+    observation: OBSERVATION_DEFAULTS,
   });
 
 const messages = (e: SimulationEngine) => e.getSnapshot().director.messages;
@@ -72,14 +74,29 @@ describe('Event Director', () => {
     expect(messages(e).filter((m) => m.ruleId === 'idle')).toHaveLength(1);
   });
 
-  it('general rules: a disconnection produces a critical SpO₂ alert before the arrest', () => {
+  it('clinical observation: a disconnection is reported as a trend, then urgent, then critical', () => {
     const e = withRules([], unnoticedDisconnection);
     e.runFor(330);
-    const ids = messages(e).map((m) => m.ruleId);
-    expect(ids).toContain('monitor-spo2-critical');
-    const critical = messages(e).find((m) => m.ruleId === 'monitor-spo2-critical');
+    const spo2 = messages(e).filter((m) => m.parts?.[0]?.channel === 'spo2Low');
+    expect(spo2.map((m) => m.urgency)).toEqual(expect.arrayContaining([1, 3, 4]));
+    const critical = spo2.find((m) => m.urgency === 4);
     expect(critical?.priority).toBe('critical');
-    expect(critical?.vars.spo2).toBeLessThan(85);
+    expect(critical?.parts?.[0]?.value).toBeLessThan(80);
+    // Escalation, not repetition: the trend is reported once.
+    expect(spo2.filter((m) => m.urgency === 1)).toHaveLength(1);
+  });
+
+  it('cardiac arrest: the nurse calls "no pulse" with a button to start compressions', () => {
+    const e = withRules([]);
+    e.runFor(5);
+    e.dispatch({ type: 'SET_RHYTHM', rhythm: 'vf' }, 'instructor');
+    e.runFor(1);
+    const arrest = messages(e).find((m) => m.ruleId === 'obs:arrest:vf');
+    expect(arrest).toMatchObject({
+      priority: 'critical',
+      textKey: 'obs.arrest.vf',
+      actions: ['start-cpr'],
+    });
   });
 
   it('an interrupting message stops Advance time with reason "event"', () => {
@@ -106,6 +123,7 @@ describe('Event Director', () => {
       scenario: unnoticedDisconnection,
       guidelines: erc2025,
       directorRules: GENERAL_DIRECTOR_RULES,
+      observation: OBSERVATION_DEFAULTS,
     };
     const a = new SimulationEngine(options);
     a.runFor(20);

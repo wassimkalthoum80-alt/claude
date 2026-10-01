@@ -83,7 +83,16 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   event (a new high-priority alarm, a cardiac arrest, the end of the case) and returns to live ×1 with a short
   notice; **Stop** ends it any time. **Auto speed** (pause menu, on by default) also returns ×2/×5 to ×1 at a
   clinical event: "Clinical event — simulation returned to real time".
-- **Event Director** (`src/sim/director`, rules in `src/content/director/generalRules.ts`): the bedside talks.
+- **Clinical observation — the nurse** (milestone 6c, `src/sim/director/ObservationEngine.ts`, defaults in
+  `src/content/director/observationDefaults.ts`): Nurse Anna watches the measured values like an experienced ICU
+  nurse — absolute value, persistence, trend against the patient's own baseline, case targets and what she already
+  said. Four levels: a small trend notice (no speed change), a concern card (×5 → ×2, stops Advance time), an
+  urgent red-framed card (×1) and a critical alert (×1). Episodes with hysteresis and escalation instead of
+  repeats; several findings become one sentence ("The patient is deteriorating: saturation 82 %, mean pressure 50,
+  heart rate 150"). "No pulse!" comes with a **Start compressions** button — the learner decides. Expert sessions
+  hear only what would naturally be said ("MAP 51."). Cases set their targets (permissive hypercapnia in asthma,
+  SpO₂ 88–92 % in ARDS).
+- **Event Director** (`src/sim/director`, case rules in the scenarios): the bedside talks.
   Nurse Anna reports what she sees ("Doctor, the blood pressure keeps falling — mean pressure 52 mmHg"), the
   monitor raises large critical alerts (SpO₂ < 85 %, VF, asystole) that return accelerated time to ×1, and the
   lab sends small notices. Rules read the measured values (thresholds held for a time, actions, inaction) and

@@ -58,7 +58,7 @@ export type MessagePriority = 'passive' | 'important' | 'critical';
 
 /** Buttons a message may offer (the UI maps them to panels; none of them acts on the patient by itself). */
 export type MessageAction =
-  'open-labs' | 'order-abg' | 'open-balance' | 'open-airway' | 'open-ultrasound';
+  'open-labs' | 'order-abg' | 'open-balance' | 'open-airway' | 'open-ultrasound' | 'start-cpr';
 
 export interface DirectorRule {
   id: string;
@@ -136,6 +136,11 @@ export interface DirectorMessage {
   /** metric values at the time of the message (rounded), for the text */
   vars: Partial<Record<DirectorMetric, number>>;
   actions: readonly MessageAction[];
+  /** clinical observation (milestone 6c): urgency 1–4 and the observed channels with their current values */
+  urgency?: 1 | 2 | 3 | 4;
+  parts?: readonly { channel: string; level: number; value: number }[];
+  /** 'combined' = several observations in one sentence (text = intro + parts) */
+  kind?: 'single' | 'combined' | 'resolved';
 }
 
 /** Investigations the engine can answer. */

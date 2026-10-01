@@ -181,6 +181,8 @@ export type ClinicalEventType =
   | 'TEST_RESULT'
   /** Advance time finished; detail = reason (limit | alarm | arrest | event | end | user) */
   | 'ADVANCE_END'
+  /** live speed ×5 reduced to ×2 by a clinical concern */
+  | 'SPEED_REDUCED'
   /** live speed ×2/×5 returned to ×1 by a clinical event; detail = reason */
   | 'REAL_TIME_RESTORED'
   | 'ARREST_START'

@@ -70,6 +70,12 @@ import type { AlarmId } from '../state/MonitorState';
 import type { DirectorMessage, DirectorRule, Difficulty } from '../types/director';
 import { EventDirector } from '../director/EventDirector';
 import { mergeRules, resolveVariant } from './variants';
+import {
+  mergeObservation,
+  ObservationEngine,
+  type TrendSource,
+} from '../director/ObservationEngine';
+import type { ObservationConfig } from '../types/observation';
 import { MonitorTrends, type ReadonlyMonitorTrends } from '../devices/MonitorTrends';
 import { ABG_TURNAROUND_S, drawAbg } from '../director/labs';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
@@ -86,6 +92,8 @@ export interface EngineOptions {
   calibration?: Partial<HeartLungCalibration>;
   /** general Event Director rules for every scenario (content); the scenario adds its own */
   directorRules?: readonly DirectorRule[];
+  /** default thresholds of the nurse's clinical observation (content); none = the nurse stays silent */
+  observation?: ObservationConfig;
 }
 
 type Listener = () => void;
@@ -158,6 +166,13 @@ export class SimulationEngine {
   /** a Director message asked to interrupt accelerated time since the last check */
   private directorInterrupt = false;
   private readonly director = new EventDirector();
+  private readonly observation = new ObservationEngine();
+  private readonly observationDefaults: ObservationConfig;
+  /** bedside trend samples already observed */
+  private observedCount = 0;
+  private wasCirculating = true;
+  /** a clinical concern asked to slow ×5 to ×2 (and stop Advance time) since the last check */
+  private slowDown = false;
   private readonly directorRules: readonly DirectorRule[];
   /** separate stream for analyser imprecision, so ordering a test never perturbs the physiology */
   private labRng: SeededRng;
@@ -175,6 +190,7 @@ export class SimulationEngine {
     this.seed = options.seed ?? options.scenario.seed;
     this.calibration = { ...options.calibration };
     this.directorRules = options.directorRules ?? [];
+    this.observationDefaults = options.observation ?? {};
     this.labRng = new SeededRng((this.seed ^ LAB_SEED_SALT) >>> 0);
     this.cpr = new CPREngine(options.guidelines);
     // eslint-disable-next-line @typescript-eslint/no-this-alias -- the controller acts on the engine's state via this host
@@ -507,6 +523,7 @@ export class SimulationEngine {
       this.guidelines.defibrillation.firstShockJ,
     );
     this.state.scenario.variant = variant;
+    this.wasCirculating = this.state.patient.cardio.spontaneousCirculation;
     this.state.director.difficulty = this.difficulty;
     this.baselineHeartRate = scenario.patient.heartRate;
     this.substep = 0;
@@ -519,6 +536,9 @@ export class SimulationEngine {
     this.directorInterrupt = false;
     this.director.reset();
     this.director.setRules(mergeRules(this.directorRules, scenario.director ?? []));
+    this.observation.configure(mergeObservation(this.observationDefaults, scenario.observation));
+    this.observedCount = 0;
+    this.slowDown = false;
     this.labRng = new SeededRng((seed ^ LAB_SEED_SALT) >>> 0);
     this.log.clear();
     this.bank.reset();
@@ -1155,9 +1175,81 @@ export class SimulationEngine {
         }),
       );
     }
+    show.push(...this.observe());
     if (show.length === 0) return;
     d.messages.push(...show);
     if (d.messages.length > MAX_MESSAGES) d.messages.splice(0, d.messages.length - MAX_MESSAGES);
+  }
+
+  /**
+   * The nurse's clinical observation (milestone 6c): once per simulated second on the measured trends, plus the
+   * arrest and return-of-circulation announcements. Observes only — never changes the patient.
+   */
+  private observe(): DirectorMessage[] {
+    const s = this.state;
+    const out: DirectorMessage[] = [];
+    const circulating = s.patient.cardio.spontaneousCirculation;
+    if (Object.keys(this.observationDefaults).length > 0 && circulating !== this.wasCirculating) {
+      const rhythm = s.patient.cardio.rhythm;
+      out.push(
+        this.director.systemMessage({
+          ruleId: circulating ? 'obs:rosc' : `obs:arrest:${rhythm}`,
+          t: s.time,
+          source: 'nurse',
+          priority: circulating ? 'important' : 'critical',
+          textKey: circulating ? 'obs.rosc' : `obs.arrest.${rhythm}`,
+          vars: {},
+          actions: circulating ? [] : ['start-cpr'],
+          urgency: circulating ? 2 : 4,
+        }),
+      );
+      this.logEvent('DIRECTOR_MESSAGE', s.time, out[0]?.ruleId);
+    }
+    this.wasCirculating = circulating;
+    if (this.bedside.count <= this.observedCount) return out;
+    this.observedCount = this.bedside.count;
+    const trends = this.bedside.channels;
+    const source: TrendSource = {
+      count: this.bedside.count,
+      at: (metric, i) => trends[metric].at(i) ?? NaN,
+    };
+    const kg = s.patient.demographics.weightKg;
+    const m = this.observation.evaluate({
+      trends: source,
+      arrest: !circulating,
+      urineRate: (windowS) =>
+        s.time + 1e-9 < windowS
+          ? null
+          : this.ledger.sum('urine', s.time - windowS, s.time + 1e-9) / kg / (windowS / 3600),
+    });
+    if (!m) return out;
+    const first = m.parts[0];
+    const ruleId = `obs:${m.parts.map((p) => p.channel).join('+')}:${m.kind === 'resolved' ? 'ok' : m.level}`;
+    out.push(
+      this.director.systemMessage({
+        ruleId,
+        t: s.time,
+        source: m.source,
+        priority: m.level >= 4 ? 'critical' : m.level >= 2 ? 'important' : 'passive',
+        textKey:
+          m.kind === 'combined'
+            ? `obs.combined.${m.level}`
+            : m.kind === 'resolved'
+              ? `obs.${first?.channel}.resolved`
+              : `obs.${first?.channel}.${first?.level}`,
+        vars: {},
+        actions: [],
+        urgency: m.level,
+        parts: m.parts,
+        kind: m.kind,
+      }),
+    );
+    this.logEvent('DIRECTOR_MESSAGE', s.time, ruleId);
+    if (m.kind !== 'resolved') {
+      if (m.level >= 3) this.directorInterrupt = true;
+      else if (m.level === 2) this.slowDown = true;
+    }
+    return out;
   }
 
   /** The first matching learner command after an experiment card was started answers it. */
@@ -1201,9 +1293,19 @@ export class SimulationEngine {
     if (s.scenario.ended) reason = 'end';
     this.arrestThisTick = false;
 
+    const slow = this.slowDown;
+    this.slowDown = false;
     if (c.advance) {
       if (reason) this.endAdvance(reason, alarm);
+      else if (slow) this.endAdvance('event');
       else if (s.time >= c.advance.until - 1e-9) this.endAdvance('limit');
+      return;
+    }
+    if (!reason && slow && c.autoSpeed && c.timeScale === 5) {
+      c.timeScale = 2;
+      this.clock.timeScale = 2;
+      c.interrupt = { t: s.time, reason: 'slowed' };
+      this.logEvent('SPEED_REDUCED', s.time);
       return;
     }
     if (reason && reason !== 'end' && c.autoSpeed && c.timeScale > 1) {

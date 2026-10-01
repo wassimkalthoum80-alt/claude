@@ -91,17 +91,18 @@ export const asthmaHyperinflation: ScenarioDefinition = {
       },
     },
   ],
-  director: [
-    {
-      // replaces the general "MAP < 55" message in this case
-      id: 'nurse-map-low',
-      when: { metric: 'map', op: '<', value: 60, forS: 30 },
-      source: 'nurse',
-      priority: 'important',
-      textKey: 'dir.asthma.bpFalling',
-      interrupt: true,
-      cooldownS: 240,
+  // Permissive hypercapnia: high EtCO₂ is expected and tolerated while the circulation is protected.
+  observation: {
+    etco2High: {
+      levels: {
+        1: { beyond: 70, delta: 5 },
+        2: { beyond: 75, forS: 60 },
+        3: { beyond: 90, forS: 30 },
+      },
+      recover: { beyond: 70, forS: 120 },
     },
+  },
+  director: [
     {
       id: 'asthma-silent-chest',
       when: {

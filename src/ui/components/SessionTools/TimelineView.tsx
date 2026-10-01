@@ -6,6 +6,7 @@ import { buildTimeline, type TimelineEntry } from '../../adapters/timeline';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT } from '../../hooks/UiContext';
 import { useEngineSelector } from '../../hooks/useEngineSelector';
+import { messageText } from '../Notifications/messageText';
 import styles from './SessionTools.module.css';
 
 const second = (s: Readonly<SimulationState>) => Math.floor(s.time);
@@ -27,7 +28,7 @@ export function TimelineView() {
   const detail = (e: TimelineEntry) => {
     if (e.kind === 'DIRECTOR_MESSAGE') {
       const m = messages.find((x) => x.ruleId === e.detail && Math.abs(x.t - e.t) < 0.05);
-      return m && isKey(m.textKey) ? t(m.textKey, m.vars) : '';
+      return m ? messageText(t, m, engine.getSnapshot().director.difficulty) : '';
     }
     return e.detail;
   };

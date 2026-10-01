@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { erc2025 } from '../../content/guidelines/erc2025';
 import { GENERAL_DIRECTOR_RULES } from '../../content/director/generalRules';
+import { OBSERVATION_DEFAULTS } from '../../content/director/observationDefaults';
 import { baselinePatient } from '../../content/scenarios';
 import { DisplayStream, SimulationEngine } from '../../sim';
 
@@ -43,6 +44,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       scenario: baselinePatient,
       guidelines: erc2025,
       directorRules: GENERAL_DIRECTOR_RULES,
+      observation: OBSERVATION_DEFAULTS,
     });
     return { engine, display: new DisplayStream(engine.signals), frameCallbacks: new Set() };
   });

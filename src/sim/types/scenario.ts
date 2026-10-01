@@ -7,6 +7,7 @@ import type { Command } from './commands';
 import type { FluidInit } from '../fluid/init';
 import type { PatientConditions } from '../state/ResuscitationState';
 import type { DirectorRule, Experiment, HintTopic, ScenarioAction } from './director';
+import type { ObservationOverrides } from './observation';
 
 export interface PatientInit {
   sex: 'male' | 'female';
@@ -100,6 +101,8 @@ export interface ScenarioDefinition {
   actions?: readonly ScenarioAction[];
   /** optional guided experiments of a Physiology Lab case */
   experiments?: readonly Experiment[];
+  /** case targets for the nurse's clinical observation (e.g. permissive hypercapnia, SpO2 88–92 %) */
+  observation?: ObservationOverrides;
 }
 
 export interface ScenarioVariant {

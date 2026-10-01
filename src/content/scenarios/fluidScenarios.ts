@@ -90,6 +90,17 @@ export const fluidArdsLeak: ScenarioDefinition = {
     lungWaterChangeMl: 250,
     factors: { lungLeak: 0.7, capillaryLeak: 0.3, humidification: 'heated' },
   },
+  // Lung-protective target: SpO₂ 88–92 % is accepted, the nurse does not report it.
+  observation: {
+    spo2Low: {
+      levels: {
+        2: { beyond: 87, forS: 30 },
+        3: { beyond: 83, forS: 15 },
+        4: { beyond: 75, forS: 10 },
+      },
+      recover: { beyond: 89, forS: 60 },
+    },
+  },
 };
 
 export const fluidAki: ScenarioDefinition = {

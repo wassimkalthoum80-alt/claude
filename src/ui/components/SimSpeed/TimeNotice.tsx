@@ -36,9 +36,12 @@ export function TimeNotice() {
     i.t !== null
   ) {
     const urgent = i.reason !== 'limit';
-    const text = urgent
-      ? t('interrupt.event')
-      : t('interrupt.limit', { n: formatCaseTime(i.t - (lastFrom ?? i.t)) });
+    const text =
+      i.reason === 'slowed'
+        ? t('interrupt.slowed')
+        : urgent
+          ? t('interrupt.event')
+          : t('interrupt.limit', { n: formatCaseTime(i.t - (lastFrom ?? i.t)) });
     setShown({ key, text, urgent });
   }
 

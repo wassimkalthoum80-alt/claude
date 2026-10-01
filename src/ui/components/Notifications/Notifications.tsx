@@ -5,6 +5,7 @@ import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi } from '../../hooks/UiContext';
 import { deepEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { NursePortrait } from './NursePortrait';
+import { messageText } from './messageText';
 import styles from './Notifications.module.css';
 
 /** s (sim) — older important / passive messages are not shown any more (e.g. after Advance time) */
@@ -16,6 +17,7 @@ const PASSIVE_SHOW_MS = 8000;
 const select = (s: Readonly<SimulationState>) => ({
   messages: s.director.messages,
   now: Math.floor(s.time / 5) * 5,
+  difficulty: s.director.difficulty,
 });
 
 const keyOf = (m: DirectorMessage) => `${m.id}@${m.t}`;
@@ -29,7 +31,7 @@ export function Notifications() {
   const t = useT();
   const engine = useEngine();
   const { setUi } = useUi();
-  const { messages, now } = useEngineSelector(select, deepEqual);
+  const { messages, now, difficulty } = useEngineSelector(select, deepEqual);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
   // A restart empties the message list: forget what was dismissed (ids and times repeat deterministically).
   const [seen, setSeen] = useState(0);
@@ -41,9 +43,10 @@ export function Notifications() {
 
   const open = messages.filter((m) => !dismissed.has(keyOf(m)));
   const critical = [...open].reverse().find((m) => m.priority === 'critical');
-  const important = open.find(
-    (m) => m.priority === 'important' && now - m.t <= IMPORTANT_MAX_AGE_S,
-  );
+  // The most urgent waiting card first (then the oldest), so a deterioration is never queued behind a trend.
+  const important = open
+    .filter((m) => m.priority === 'important' && now - m.t <= IMPORTANT_MAX_AGE_S)
+    .sort((a, b) => (b.urgency ?? 2) - (a.urgency ?? 2) || a.t - b.t)[0];
   const passive = open
     .filter((m) => m.priority === 'passive' && now - m.t <= PASSIVE_MAX_AGE_S)
     .slice(-3);
@@ -55,9 +58,10 @@ export function Notifications() {
     else if (a === 'open-airway') setUi({ actionPanel: 'airway', mobileTab: 'actions' });
     else if (a === 'open-ultrasound') setUi({ actionPanel: 'ultrasound', mobileTab: 'actions' });
     else if (a === 'open-balance') setUi({ balanceOpen: true });
+    else if (a === 'start-cpr') engine.dispatch({ type: 'CPR_START' }, 'user');
   };
 
-  const text = (m: DirectorMessage) => t(m.textKey as I18nKey, m.vars);
+  const text = (m: DirectorMessage) => messageText(t, m, difficulty);
 
   return (
     <>
@@ -79,7 +83,9 @@ export function Notifications() {
 
       {important && (
         <div
-          className={`${styles.card} ${important.source === 'nurse' ? styles.nurse : ''}`}
+          className={`${styles.card} ${important.source === 'nurse' ? styles.nurse : ''} ${
+            (important.urgency ?? 0) >= 3 ? styles.urgent : ''
+          }`}
           role="dialog"
           aria-live="assertive"
           data-testid="nurse-card"
@@ -116,15 +122,30 @@ export function Notifications() {
       )}
 
       {critical && (
-        <button
-          type="button"
-          className={styles.critical}
-          onClick={() => dismiss(keyOf(critical))}
-          data-testid="critical-alert"
-        >
-          {text(critical)}
-          <span className={styles.criticalHint}>{t('msg.dismiss')}</span>
-        </button>
+        <div className={styles.critical} role="alert" data-testid="critical-alert">
+          <span>{text(critical)}</span>
+          <span className={styles.criticalActions}>
+            {critical.actions.map((a) => (
+              <button
+                key={a}
+                type="button"
+                className={styles.criticalAction}
+                onClick={() => act(critical, a)}
+                data-testid={`critical-${a}`}
+              >
+                {t(`msgAction.${a}` as I18nKey)}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={styles.criticalHint}
+              onClick={() => dismiss(keyOf(critical))}
+              data-testid="critical-ok"
+            >
+              {t('msg.dismiss')}
+            </button>
+          </span>
+        </div>
       )}
     </>
   );

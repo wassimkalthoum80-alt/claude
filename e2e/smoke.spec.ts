@@ -444,10 +444,10 @@ test('Event Director: blood gas with turnaround, passive lab notice, critical Sp
 
   await page.evaluate(() => {
     window.__resusEngine?.dispatch({ type: 'SET_CIRCUIT', connected: false }, 'instructor');
-    window.__resusEngine?.runFor(170);
+    window.__resusEngine?.runFor(200);
   });
-  await expect(page.getByTestId('critical-alert')).toContainText('SpO₂');
-  await page.getByTestId('critical-alert').click();
+  await expect(page.getByTestId('critical-alert')).toContainText('Saturation');
+  await page.getByTestId('critical-ok').click();
   await expect(page.getByTestId('critical-alert')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

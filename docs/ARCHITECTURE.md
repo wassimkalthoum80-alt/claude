@@ -102,6 +102,15 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   imprecision from a separate seeded lab RNG, so ordering never perturbs the physiology); the result appears at
   `readyAt` with a lab message (`TEST_RESULT`), `VIEW_RESULT` records that it was read. UI: `Notifications`
   (passive notice / nurse card / critical alert) and `LabsPanel`.
+- **Clinical observation (nurse):** `ObservationEngine` (`src/sim/director`) is evaluated once per simulated
+  second on `MonitorTrends` (+ ledger urine rate). Per channel (`mapLow`, `spo2Low`, `hrHigh/Low`, `ppeakHigh`,
+  `etco2High/Low`, `pplatHigh`, `drivingPressureHigh`, `rrHigh`, `urineLow`) a level 1–4 is computed from
+  absolute-held, baseline-delta and rapid-change paths; an episode opens at the first level, closes after a held
+  recovery (hysteresis), announces escalations at once and reminders after the cooldown; announcements of one
+  second (and serious open findings) become one combined message; a 20 s window absorbs findings that are neither
+  more urgent nor more important. Config = `EngineOptions.observation` (defaults, content) merged with
+  `ScenarioDefinition.observation` (case targets). Level 2 → ×5 to ×2 (`SPEED_REDUCED`) and stops Advance time;
+  levels 3–4 → ×1. Arrest/ROSC announcements come from the circulation state. All logged (`DIRECTOR_MESSAGE`).
 - **Timeline, trends, hints:** `MonitorTrends` (`src/sim/devices`) records the measured numerics and ventilator
   settings at 1 Hz (4 h); `buildTimeline` (`src/ui/adapters/timeline.ts`, pure) turns the event log + these trends
   into entries with before → after values (3 min window). `ScenarioDefinition.hints` holds progressive hint topics;

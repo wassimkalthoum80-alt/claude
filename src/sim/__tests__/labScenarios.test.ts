@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GENERAL_DIRECTOR_RULES } from '../../content/director/generalRules';
+import { OBSERVATION_DEFAULTS } from '../../content/director/observationDefaults';
 import { erc2025 } from '../../content/guidelines/erc2025';
 import { asthmaHyperinflation, healthyLungsLab, postopBleeding } from '../../content/scenarios';
 import { SimulationEngine } from '../engine/SimulationEngine';
@@ -10,6 +11,7 @@ const make = (scenario: ScenarioDefinition, seed?: number) =>
     scenario,
     guidelines: erc2025,
     directorRules: GENERAL_DIRECTOR_RULES,
+    observation: OBSERVATION_DEFAULTS,
     ...(seed !== undefined ? { seed } : {}),
   });
 
@@ -90,13 +92,12 @@ describe('Severe asthma — dynamic hyperinflation (every variant)', () => {
       e.getSnapshot().director.messages.some((m) => m.ruleId === 'asthma-flow-observation');
     expect(has(beginner)).toBe(true);
     expect(has(expert)).toBe(false);
-    // The scenario's own falling-pressure message replaces the general one.
-    expect(
-      beginner.getSnapshot().director.messages.some((m) => m.textKey === 'dir.asthma.bpFalling'),
-    ).toBe(true);
-    expect(beginner.getSnapshot().director.messages.some((m) => m.textKey === 'dir.mapLow')).toBe(
-      false,
-    );
+    // The nurse reports the falling pressure (clinical observation); permissive hypercapnia is not reported.
+    const msgs = beginner.getSnapshot().director.messages;
+    expect(msgs.some((m) => m.parts?.some((p) => p.channel === 'mapLow'))).toBe(true);
+    expect(msgs.some((m) => m.parts?.some((p) => p.channel === 'etco2High'))).toBe(false);
+    // No burst: at most one observation message per 10 s on average in the first 2.5 minutes.
+    expect(msgs.filter((m) => m.ruleId.startsWith('obs:')).length).toBeLessThanOrEqual(15);
   });
 });
 
