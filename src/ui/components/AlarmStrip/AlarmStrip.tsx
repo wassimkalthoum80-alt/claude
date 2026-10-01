@@ -42,7 +42,9 @@ export function AlarmStrip() {
       <div className={styles.col}>
         <div className="hud-title">{t('messages.title')}</div>
         <div className={styles.items}>
-          {messages.length === 0 && <span className={styles.none}>{t('msg.instructorHint')}</span>}
+          {messages.length === 0 && ui.session?.instructorPanel && (
+            <span className={styles.none}>{t('msg.instructorHint')}</span>
+          )}
           {messages.slice(0, 3).map((m) => (
             <span key={m.key} className={`${styles.message} ${styles[`msg_${m.tone}`]}`}>
               {t(m.key, m.vars)}

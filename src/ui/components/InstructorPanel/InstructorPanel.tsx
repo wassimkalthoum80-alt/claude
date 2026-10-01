@@ -1,4 +1,3 @@
-import { SCENARIOS } from '../../../content/scenarios';
 import {
   TIME_SCALES,
   type CprQualityPreset,
@@ -40,7 +39,6 @@ const select = (s: Readonly<SimulationState>) => ({
   preset: s.interventions.cpr.preset,
   paused: s.control.paused,
   scale: s.control.timeScale,
-  scenario: s.scenario.id,
   time: Math.floor(s.time),
   lung: s.patient.resp.lungPreset,
   drive: s.patient.resp.drive,
@@ -59,7 +57,8 @@ export function InstructorPanel() {
   const engine = useEngine();
   const { ui, setUi } = useUi();
   const s = useEngineSelector(select, shallowEqual);
-  if (!ui.instructorOpen) return null;
+  // Milestone 6 § 3: hidden in scored sessions; case choice lives in the module menus, not here.
+  if (!ui.instructorOpen || !ui.session?.instructorPanel) return null;
 
   return (
     <aside
@@ -213,28 +212,6 @@ export function InstructorPanel() {
               {t('instructor.reset')}
             </button>
           </div>
-        </div>
-      </div>
-
-      <div className={styles.group}>
-        <div className={styles.groupLabel}>{t('instructor.case')}</div>
-        <div className={styles.buttons}>
-          {SCENARIOS.map((sc) => (
-            <button
-              key={sc.id}
-              type="button"
-              className={`${styles.btn} ${s.scenario === sc.id ? styles.active : ''}`}
-              onClick={() => {
-                engine.loadScenario(sc);
-                if (sc.timeline.length > 0) {
-                  engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
-                  setUi({ briefingOpen: true, instructorOpen: false });
-                }
-              }}
-            >
-              {t(sc.titleKey as I18nKey)}
-            </button>
-          ))}
         </div>
       </div>
 

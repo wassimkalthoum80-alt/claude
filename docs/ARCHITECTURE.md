@@ -48,12 +48,31 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 | `src/sim/brain` | Cerebral state: hypnotic/GABAergic depth from the shared PD response surface, stimulation and analgesic attenuation, cerebral O₂, patient factors → EEG band amplitudes and suppression drive (imports core, state, pharmacology) |
 | `src/sim/devices` | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms |
 | `src/sim/signals` | Ring buffers and waveform generators |
-| `src/content` | Scenarios, guideline config (ERC 2025), i18n strings, parameter tooltips — plain data |
+| `src/game` | Learning logic, pure and React-free: catalog/session types, `createSession`, daily seed (later scoring, assessment rules, progression). Must not import React, `src/ui` or `src/content` (ESLint) |
+| `src/content` | Scenarios, module catalog (`modules/catalog.ts`), guideline config (ERC 2025), i18n strings, parameter tooltips, patient histories — plain data |
 | `src/ui/adapters` | Pure functions: snapshot → view models (e.g. `PatientVisualState`) |
-| `src/ui` | React components, canvas renderers, audio, theme |
+| `src/ui` | React components, screens (HOME, module menus), canvas renderers, audio, theme |
 
 `src/sim` has no DOM or React dependency and runs in Node (all unit tests do).
 The UI imports the simulation only through `src/sim/index.ts`.
+
+## App shell and sessions (milestone 6)
+
+```
+HOME ──► module menu ──► session intro ──► workspace ──► pause menu ──► end session / main menu
+         (catalog)       (engine paused)   (engine runs)              (engine paused, workspace unmounted)
+```
+
+- The **module catalog** (`src/content/modules/catalog.ts`) is data: modules, sections and entries; each
+  available entry names the scenario that configures the engine. Entries `preparing` are visible but cannot
+  start; `hidden` modules are not shown.
+- `createSession` (`src/game/session.ts`) turns an entry into a `SessionConfig` (module, entry, scenario,
+  difficulty, seed, scored, instructor panel). Starting a session calls `engine.loadScenario(scenario, seed)`
+  — the engine stays the sole owner of the simulation, and its event log starts fresh for the session.
+- The session lives in presentation state (`UiState.session`, `UiState.screen`); `useSession()` holds the
+  start / restart / end / home actions. Scored sessions hide the instructor panel and its hotkeys.
+- Difficulty changes help, never physiology; scoring and debrief (phase 3) will read the event log and
+  snapshots, never button presses alone.
 
 ## Time model
 
@@ -104,7 +123,7 @@ The UI imports the simulation only through `src/sim/index.ts`.
 | Airway / BVM / SGA / ETT (M4) | `patient.airway.device`, `VentilatorDevice` / `RespiratoryModel` |
 | Player-driven compressions, feedback devices, manikins | new `CompressionSource` implementations |
 | 2D art, Three.js or Unity patient | new renderer consuming `PatientVisualState` |
-| Scoring, debrief, replay (M7) | `EventLog` + deterministic re-run |
+| Scoring, debrief, replay (milestone 6 phase 3) | `src/game` pure functions over `EventLog` + snapshots; deterministic re-run from the session seed |
 
 ## Heart–lung interaction
 

@@ -22,7 +22,7 @@ function isTextInput(target: EventTarget | null): boolean {
 }
 
 /**
- * Space = CPR, P/Esc = pause menu, ` = instructor, M = audio, 1–5 = sinus/VF/asystole/PEA/pVT (instructor open).
+ * Space = CPR, P/Esc = pause menu, ` = instructor (unscored sessions only), M = audio, 1–5 = sinus/VF/asystole/PEA/pVT (instructor open).
  * Every action still goes through engine.dispatch.
  */
 export function useKeyboardShortcuts(): void {
@@ -57,7 +57,7 @@ export function useKeyboardShortcuts(): void {
       }
       if (e.key === '`' || e.key === '^' || e.code === 'Backquote') {
         e.preventDefault();
-        toggleUi('instructorOpen');
+        if (ui.session?.instructorPanel) toggleUi('instructorOpen');
         return;
       }
       if (e.key === 'm' || e.key === 'M') {
@@ -69,7 +69,7 @@ export function useKeyboardShortcuts(): void {
         return;
       }
       const rhythm = RHYTHM_KEYS[e.key];
-      if (rhythm && ui.instructorOpen)
+      if (rhythm && ui.instructorOpen && ui.session?.instructorPanel)
         engine.dispatch({ type: 'SET_RHYTHM', rhythm }, 'instructor');
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -81,5 +81,14 @@ export function useKeyboardShortcuts(): void {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [engine, ui.menuOpen, ui.briefingOpen, ui.instructorOpen, ui.limitsOpen, setUi, toggleUi]);
+  }, [
+    engine,
+    ui.menuOpen,
+    ui.briefingOpen,
+    ui.instructorOpen,
+    ui.limitsOpen,
+    ui.session?.instructorPanel,
+    setUi,
+    toggleUi,
+  ]);
 }

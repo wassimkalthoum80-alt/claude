@@ -8,8 +8,12 @@ respond second by second.
 > *Every second matters. Every interruption matters. Every intervention changes physiology.
 > The monitor tells the story of what is happening inside the patient.*
 
-**Status: Milestone 1 (foundation) + ventilator modes, oxygenation, SpO₂ tone and the heart–lung interaction.**
-For education only — not a medical device.
+**Status: full physiology simulator (ventilation, heart–lung, drugs, fluids, processed EEG, ALS) + milestone 6
+phase 1: HOME screen, module menus and learning sessions.** For education only — not a medical device.
+
+| HOME | Module menu (scored module with difficulty) |
+|---|---|
+| ![HOME](docs/screenshots/flow-0-home.jpg) | ![Module menu](docs/screenshots/flow-0-module-menu.jpg) |
 
 ![Stable patient, 1920×1080](docs/screenshots/1920x1080-1-stable-sinus.jpg)
 
@@ -48,19 +52,41 @@ npm run dev        # http://localhost:5173
 | `npm run build` | Production build in `dist/` |
 | `npm run screenshots` | Visual QA screenshots into `docs/screenshots/` (dev server must be running) |
 
-URL options: `?autostart` skips the briefing, `?lang=de` starts in German, `?debug` exposes
+URL options: `?autostart` skips HOME and the intro and opens the instructor sandbox, `?lang=de` starts in German, `?debug` exposes
 `window.__resusEngine` and a frame-cost meter (`window.__resusFrameMs`).
 
-## How to play (Milestone 1)
+## Learning structure (milestone 6)
 
-1. Press **Start** on the briefing. The patient is anaesthetised, intubated and ventilated.
+The app opens on **HOME**. Choose what to do; each entry starts a **session** (module + entry + difficulty +
+seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06-learning-architecture.md`](docs/prompts/milestone-06-learning-architecture.md).
+
+| Module | Now | Scored | Instructor panel |
+|---|---|---|---|
+| **Physiology Lab** | Ventilation Lab (healthy lungs, asthma, ARDS), Haemodynamics & Drug Lab (free; phenotypes in preparation), Fluids & Balance Lab (7 presets) | no | yes |
+| **Skills Training** | Ventilation troubleshooting: silent disconnection (more exercises and the arrhythmia trainer in preparation) | yes | hidden |
+| **Resuscitation** | Sudden VF under anaesthesia (cause-specific arrests in preparation) | yes | hidden |
+| **Clinical Challenges** | categories shown, validated cases in preparation (max. 5, owner-reviewed) | yes | hidden |
+| **My Progress** | arrives with scoring (phase 3) | — | — |
+| **Instructor Mode** | today's free sandbox plus every existing scenario as a starting situation | no | yes |
+| *Daily Challenge* | hidden until validated cases exist (date-derived seed already in `src/game/session.ts`) | — | — |
+
+- Scored modules offer **Beginner / Intermediate / Expert** (remembered). Difficulty changes the help, never the
+  physiology; scores and the debrief arrive in phase 3.
+- The **session intro** shows the case; the patient waits paused until **Start**. The pause menu offers
+  *Resume*, *Restart session*, *End session* (back to the module menu), *Main menu* and the settings. Case lists
+  are no longer in the pause menu or the instructor panel.
+- Outside a session the engine is paused and no workstation is mounted. Desktop and phone layouts both have HOME.
+
+## How to play
+
+1. HOME → **Instructor Mode** → *Sandbox* → **Start**. The patient is anaesthetised, intubated and ventilated.
 2. Open the **instructor panel** with <kbd>`</kbd> and set the rhythm to **VF** (or press <kbd>2</kbd>).
 3. Watch the arterial line collapse, the pleth disappear, EtCO₂ wash out, and the **NO-FLOW** timer run.
 4. Press <kbd>Space</kbd> to **start CPR**. Each compression makes an arterial pulse, and diastolic pressure
    builds up over ~15 compressions.
 5. Stop and restart CPR: pressure collapses within seconds and has to be rebuilt. That is the lesson.
 6. Try the CPR-quality presets (too slow, too fast, too shallow, leaning) and change VT/RR/PEEP/FiO₂.
-7. Menu → **Cases** → *Sudden VF under anaesthesia*: a scripted case with an objective and an end-of-case summary.
+7. HOME → **Resuscitation** → *Sudden VF under anaesthesia*: a scripted case with an objective and an end-of-case summary.
 
 **Ventilation and oxygenation**
 - Four modes on the ventilator panel: **VC-AC**, **PC-AC**, **PRVC** and **CPAP/PS** (CPAP/ASB in German), each
@@ -224,7 +250,7 @@ fictitious history per scenario (`src/content/patients/histories.ts`), consisten
 | <kbd>M</kbd> | Audio (QRS tone with SpO₂ pitch, alarms, compression clicks) |
 | <kbd>1</kbd>–<kbd>5</kbd> | Sinus / VF / asystole / PEA / pulseless VT (instructor panel open) |
 
-A case timer next to the instructor button counts the simulated case time from 00:00; it restarts with every new case or reset and stops while paused.
+A case timer next to the instructor button counts the simulated case time from 00:00; it restarts with every new session or reset and stops while paused. The instructor button and its hotkeys exist only in unscored sessions (Physiology Lab, Instructor Mode).
 
 Language: English and German (menu or `?lang=de`). ECG lead colours: IEC (default) or AHA.
 
@@ -264,14 +290,17 @@ src/
                        processed-EEG monitor (Simulated BIS, BSV, SQI, EMG, trends)
     signals/           ring buffers + ECG, ART, pleth, CO₂, Paw, flow and EEG generators
     __tests__/         unit tests
-  content/             scenarios, ERC 2025 guideline config, i18n (EN/DE), teaching tooltips
+  game/                learning logic, pure and React-free: session model (later scoring, progression)
+  content/             scenarios, module catalog (HOME menus), ERC 2025 guideline config, i18n (EN/DE),
+                       teaching tooltips, patient histories
   ui/
+    screens/           HOME and module menus
     adapters/          snapshot → view models (pure, tested)
     components/        monitor, ventilator, controls, perfusor rack + pump editor, CPR metrics, scene,
                        action bar, overlays…
     render/            canvas sweep renderer
     hooks/ audio/ theme/
-  App.tsx              composition only
+  App.tsx              app shell (HOME → module menu → session workspace), composition only
 e2e/                   Playwright smoke test
 docs/                  architecture, assumptions, reviews, reference image, screenshots
 ```
@@ -282,7 +311,7 @@ docs/                  architecture, assumptions, reviews, reference image, scre
   presets. Player-driven compressions plug into the existing `CompressionSource` interface later.
 - ROSC comes from a successful shock (seeded outcome model), from relieving an obstructive PEA, or from the
   instructor; drugs alone never restart the heart. Non-obstructive PEA/asystole need the instructor for ROSC.
-  No scoring or debrief timeline yet (the event log records every action for it). The ultrasound images are
+  No scoring or debrief timeline yet (milestone 6 phase 3; the event log records every action for it). The ultrasound images are
   schematic, and VT with a pulse, bradycardias/AV blocks and bag-valve-mask ventilation are not modelled yet.
 - The pharmacology is an **educational calibration**: PD constants, the educational PK models, the line model and
   the fluid kinetics are author-selected, and the formulary is unreviewed (see the assumptions document).
@@ -309,4 +338,4 @@ docs/                  architecture, assumptions, reviews, reference image, scre
 | **M4** | Airway: mask, SGA, intubation with misplacement and capnography confirmation done. Next: bag-valve-mask, oesophageal pressure (Pes) monitoring and ARDS scenarios from the owner's references |
 | **M5** | Tension pneumothorax, tamponade and POCUS done. Next: other 4 H / HITS causes, VT with pulse, bradycardia/AV block |
 | **M6** | Anaesthesia crises, richer lung mechanics |
-| **M7** | Game layer: campaign, difficulty, EventLog-based scoring, debrief timeline, progression |
+| **M6 (learning)** | Phase 1 done: HOME, module menus, session model. Next: Physiology Lab (phase 2), scoring/debrief/progression (3), Resuscitation module (4), Skills (5), Clinical Challenges (6), daily challenge (7) |

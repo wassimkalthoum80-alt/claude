@@ -1,12 +1,24 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import { de } from '../../content/i18n/de';
 import { en, type I18nKey } from '../../content/i18n/en';
+import { AUTOSTART, MODULE_CATALOG } from '../../content/modules/catalog';
+import { baselinePatient } from '../../content/scenarios';
+import { createSession } from '../../game/session';
+import type { Difficulty, ModuleId, SessionConfig } from '../../game/types';
 
 export type Language = 'en' | 'de';
 export type ElectrodeStandard = 'IEC' | 'AHA';
 
 /** Presentation-only state. Never part of the simulation state (CLAUDE.md A1). */
 export interface UiState {
+  /** which screen the app shows: HOME, a module submenu, or the clinical workspace of a running session */
+  screen: Screen;
+  /** module whose submenu is open (screen 'module') */
+  menuModule: ModuleId | null;
+  /** the running learning session (screen 'session'); the engine owns the simulation state */
+  session: SessionConfig | null;
+  /** difficulty chosen for scored modules (kept as a preference) */
+  difficulty: Difficulty;
   language: Language;
   audio: boolean;
   electrodes: ElectrodeStandard;
@@ -34,6 +46,7 @@ export interface UiState {
   historyOpen: boolean;
 }
 
+export type Screen = 'home' | 'module' | 'session';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
 export type MobileTab = 'monitor' | 'patient' | 'vent' | 'pumps' | 'actions';
 
@@ -60,6 +73,11 @@ function loadPrefs(): Partial<UiState> {
       ...(p.layout === 'auto' || p.layout === 'desktop' || p.layout === 'mobile'
         ? { layout: p.layout }
         : {}),
+      ...(p.difficulty === 'beginner' ||
+      p.difficulty === 'intermediate' ||
+      p.difficulty === 'expert'
+        ? { difficulty: p.difficulty }
+        : {}),
     };
   } catch {
     return {};
@@ -75,6 +93,7 @@ function savePrefs(s: UiState): void {
         audio: s.audio,
         electrodes: s.electrodes,
         layout: s.layout,
+        difficulty: s.difficulty,
       }),
     );
   } catch {
@@ -91,23 +110,53 @@ function reducer(state: UiState, action: UiAction): UiState {
     next.language !== state.language ||
     next.audio !== state.audio ||
     next.electrodes !== state.electrodes ||
-    next.layout !== state.layout
+    next.layout !== state.layout ||
+    next.difficulty !== state.difficulty
   ) {
     savePrefs(next);
   }
   return next;
 }
 
+/** Every panel, drawer and overlay of the workspace closed — used when a session starts or ends. */
+export const WORKSPACE_CLOSED = {
+  menuOpen: false,
+  instructorOpen: false,
+  briefingOpen: false,
+  ventDrawerOpen: false,
+  limitsOpen: false,
+  limitsFocus: null,
+  pumpEditor: null,
+  bisOpen: false,
+  balanceOpen: false,
+  actionPanel: null,
+  mobileTab: 'monitor',
+  historyOpen: false,
+} as const satisfies Partial<UiState>;
+
 function initialState(): UiState {
   const params = new URLSearchParams(window.location.search);
   const langParam = params.get('lang');
+  // ?autostart (automated tests, screenshots) skips HOME and opens the instructor sandbox, which is the
+  // scenario the engine is created with.
+  const autostart = params.has('autostart');
   return {
+    screen: autostart ? 'session' : 'home',
+    menuModule: null,
+    session: autostart
+      ? createSession(MODULE_CATALOG, AUTOSTART.module, AUTOSTART.entryId, {
+          difficulty: 'beginner',
+          seed: baselinePatient.seed,
+          now: Date.now(),
+        })
+      : null,
+    difficulty: 'beginner',
     language: 'en',
     audio: false,
     electrodes: 'IEC',
     menuOpen: false,
     instructorOpen: false,
-    briefingOpen: !params.has('autostart'),
+    briefingOpen: false,
     ventDrawerOpen: false,
     limitsOpen: false,
     limitsFocus: null,

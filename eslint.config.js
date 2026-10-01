@@ -9,6 +9,7 @@ import tseslint from 'typescript-eslint';
  * - src/sim/**      must not touch React, the DOM layer (src/ui) or content (src/content).
  * - src/content/**  may import simulation *types* only.
  * - src/ui/**       may import the simulation only through its public entry point src/sim/index.ts.
+ * - src/game/**     (sessions, scoring, progression) must not touch React, src/ui or src/content.
  */
 const SIM_FORBIDDEN = {
   paths: [
@@ -61,6 +62,29 @@ export default tseslint.config(
           paths: SIM_FORBIDDEN.paths,
           patterns: [
             { regex: '(^|/)ui(/|$)', message: 'Simulation tests must not depend on the UI.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Learning logic (sessions, later scoring and progression) is pure and React-free like the simulation; it
+    // receives catalog and scenario data as arguments.
+    files: ['src/game/**/*.ts'],
+    ignores: ['src/game/**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: SIM_FORBIDDEN.paths.map((p) => ({
+            ...p,
+            message: 'src/game must stay framework-free.',
+          })),
+          patterns: [
+            {
+              regex: '(^|/)(ui|content)(/|$)',
+              message: 'src/game must not depend on src/ui or src/content.',
+            },
           ],
         },
       ],

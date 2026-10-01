@@ -37,6 +37,16 @@
   cursor: pointer;
 }
 
+.sessionTitle {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 12px/1 var(--font-ui);
+  color: var(--text-dim);
+}
+
 .chip[aria-pressed='true'] {
   color: var(--text);
   border-color: var(--panel-border-strong);

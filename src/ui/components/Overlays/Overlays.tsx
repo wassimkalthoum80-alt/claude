@@ -1,28 +1,32 @@
 import { useCallback } from 'react';
-import { SCENARIOS } from '../../../content/scenarios';
 import type { I18nKey } from '../../../content/i18n/en';
+import { MODULE_CATALOG } from '../../../content/modules/catalog';
+import { findModule } from '../../../game/session';
 import type { SimulationState } from '../../../sim';
 import { formatMmSs } from '../../adapters/format';
 import { buildRunSummary } from '../../adapters/runSummary';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi, type Language } from '../../hooks/UiContext';
 import { deepEqual, useEngineSelector } from '../../hooks/useEngineSelector';
+import { useSession } from '../../hooks/useSession';
 import styles from './Overlays.module.css';
 
-const SHORTCUTS: { keys: string; label: I18nKey }[] = [
+const SHORTCUTS: { keys: string; label: I18nKey; instructor?: boolean }[] = [
   { keys: 'Space', label: 'shortcut.space' },
   { keys: 'P / Esc', label: 'shortcut.pause' },
-  { keys: '`', label: 'shortcut.instructor' },
+  { keys: '`', label: 'shortcut.instructor', instructor: true },
   { keys: 'M', label: 'shortcut.audio' },
   { keys: 'L', label: 'shortcut.limits' },
-  { keys: '1 2 3 4', label: 'shortcut.rhythm' },
+  { keys: '1 2 3 4', label: 'shortcut.rhythm', instructor: true },
 ];
 
 function Shortcuts() {
   const t = useT();
+  const { ui } = useUi();
+  const instructor = ui.session?.instructorPanel ?? false;
   return (
     <dl className={styles.shortcuts}>
-      {SHORTCUTS.map((s) => (
+      {SHORTCUTS.filter((s) => instructor || !s.instructor).map((s) => (
         <div key={s.keys} className={styles.shortcut}>
           <dt>
             <kbd>{s.keys}</kbd>
@@ -34,14 +38,32 @@ function Shortcuts() {
   );
 }
 
-/** Start screen with the case briefing. The live patient keeps running behind it (sandbox). */
+/** "Module · Difficulty" line of the running session (difficulty only for scored sessions). */
+function SessionLine() {
+  const t = useT();
+  const { ui } = useUi();
+  const session = ui.session;
+  if (!session) return null;
+  const mod = findModule(MODULE_CATALOG, session.module);
+  return (
+    <div className={styles.caseLabel} data-testid="session-line">
+      {mod ? t(mod.titleKey as I18nKey).toUpperCase() : ''}
+      {session.scored && <> · {t(`difficulty.${session.difficulty}`).toUpperCase()}</>}
+    </div>
+  );
+}
+
+/** Session intro: the case briefing before the patient starts (the engine waits paused behind it). */
 export function BriefingOverlay() {
   const t = useT();
   const engine = useEngine();
   const { ui, setUi } = useUi();
+  const { end } = useSession();
+  // The engine's scenario changes only through loadScenario; the selector re-renders when it does.
   const scenarioId = useEngineSelector((s: Readonly<SimulationState>) => s.scenario.id);
   if (!ui.briefingOpen) return null;
-  const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? engine.scenario;
+  const scenario = engine.scenario.id === scenarioId ? engine.scenario : null;
+  if (!scenario) return null;
 
   const start = () => {
     setUi({ briefingOpen: false });
@@ -51,34 +73,17 @@ export function BriefingOverlay() {
   return (
     <div className={styles.backdrop}>
       <div className={styles.card} role="dialog" aria-modal="true" aria-labelledby="briefing-title">
-        <div className={styles.brand}>
-          <span className={styles.logo}>
-            <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden>
-              <path
-                d="M3 17h7l3-8 5 15 3-7h8"
-                fill="none"
-                stroke="var(--ecg)"
-                strokeWidth="2.5"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <div>
-            <div className={styles.appTitle}>{t('app.title')}</div>
-            <div className={styles.appSubtitle}>
-              {t('app.subtitle')} · {t('app.milestone')}
-            </div>
-          </div>
-        </div>
-        <div className={styles.caseLabel}>{t('briefing.case')}</div>
+        <SessionLine />
         <h1 id="briefing-title" className={styles.caseTitle}>
-          {t(scenario.titleKey as I18nKey)}
+          {t((ui.session?.titleKey ?? scenario.titleKey) as I18nKey)}
         </h1>
         <p className={styles.briefing}>{t(scenario.briefingKey as I18nKey)}</p>
         <div className={styles.caseLabel}>{t('briefing.controls')}</div>
         <Shortcuts />
         <div className={styles.footer}>
-          <LanguageSwitch />
+          <button type="button" className={styles.secondary} onClick={end} data-testid="intro-back">
+            {t('briefing.back')}
+          </button>
           <button
             type="button"
             className={styles.primary}
@@ -95,7 +100,7 @@ export function BriefingOverlay() {
   );
 }
 
-function LanguageSwitch() {
+export function LanguageSwitch() {
   const { ui, setUi } = useUi();
   const langs: Language[] = ['en', 'de'];
   return (
@@ -114,11 +119,12 @@ function LanguageSwitch() {
   );
 }
 
-/** Pause menu: resume, restart, cases, settings, shortcuts, disclaimer. */
+/** Pause menu: resume, restart / end the session, main menu, settings, shortcuts, disclaimer. */
 export function PauseMenu() {
   const t = useT();
   const engine = useEngine();
   const { ui, setUi } = useUi();
+  const session = useSession();
   const ecgLeads = useEngineSelector((s: Readonly<SimulationState>) => s.devices.monitor.ecgLeads);
   if (!ui.menuOpen) return null;
 
@@ -133,6 +139,7 @@ export function PauseMenu() {
         <h1 id="menu-title" className={styles.menuTitle}>
           {t('menu.title')}
         </h1>
+        <SessionLine />
         <div className={styles.menuButtons}>
           <button type="button" className={styles.primary} onClick={resume} autoFocus>
             {t('menu.resume')}
@@ -140,31 +147,29 @@ export function PauseMenu() {
           <button
             type="button"
             className={styles.secondary}
-            onClick={() => {
-              engine.dispatch({ type: 'RESET' }, 'user');
-              setUi({ menuOpen: false });
-            }}
+            onClick={session.restart}
+            data-testid="menu-restart"
           >
             {t('menu.restart')}
           </button>
         </div>
-
-        <div className={styles.caseLabel}>{t('menu.cases')}</div>
-        <div className={styles.caseList}>
-          {SCENARIOS.map((sc) => (
-            <button
-              key={sc.id}
-              type="button"
-              className={styles.caseItem}
-              onClick={() => {
-                engine.loadScenario(sc);
-                engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
-                setUi({ menuOpen: false, briefingOpen: true });
-              }}
-            >
-              {t(sc.titleKey as I18nKey)}
-            </button>
-          ))}
+        <div className={styles.menuButtons}>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={session.end}
+            data-testid="menu-end-session"
+          >
+            {t('menu.endSession')}
+          </button>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={session.goHome}
+            data-testid="menu-home"
+          >
+            {t('menu.home')}
+          </button>
         </div>
 
         <div className={styles.caseLabel}>{t('menu.settings')}</div>
@@ -241,6 +246,7 @@ export function PauseMenu() {
 export function RunSummaryCard() {
   const t = useT();
   const engine = useEngine();
+  const session = useSession();
   const select = useCallback(
     (s: Readonly<SimulationState>) =>
       s.scenario.ended ? buildRunSummary(s, engine.scenario, engine.guidelines) : null,
@@ -299,21 +305,10 @@ export function RunSummaryCard() {
         </dl>
         <p className={styles.lesson}>{t('summary.lesson')}</p>
         <div className={styles.menuButtons}>
-          <button
-            type="button"
-            className={styles.primary}
-            onClick={() => engine.dispatch({ type: 'RESET' }, 'user')}
-          >
+          <button type="button" className={styles.primary} onClick={session.restart}>
             {t('summary.restart')}
           </button>
-          <button
-            type="button"
-            className={styles.secondary}
-            onClick={() => {
-              const sandbox = SCENARIOS[0];
-              if (sandbox) engine.loadScenario(sandbox);
-            }}
-          >
+          <button type="button" className={styles.secondary} onClick={session.end}>
             {t('summary.sandbox')}
           </button>
         </div>

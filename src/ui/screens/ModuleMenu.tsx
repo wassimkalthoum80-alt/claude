@@ -1,0 +1,104 @@
+import type { CSSProperties } from 'react';
+import type { I18nKey } from '../../content/i18n/en';
+import { MODULE_CATALOG } from '../../content/modules/catalog';
+import { findModule } from '../../game/session';
+import { DIFFICULTIES, type ModuleId } from '../../game/types';
+import { useT, useUi } from '../hooks/UiContext';
+import { useSession } from '../hooks/useSession';
+import { ModuleIcon } from './ModuleIcon';
+import { MODULE_ACCENT } from './moduleAccent';
+import styles from './Screens.module.css';
+
+/** Submenu of one module: difficulty (scored modules) and the startable entries by section. */
+export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
+  const t = useT();
+  const { ui, setUi } = useUi();
+  const { goHome, start } = useSession();
+  const mod = findModule(MODULE_CATALOG, moduleId);
+  if (!mod) return null;
+
+  return (
+    <div
+      className={styles.screen}
+      style={{ '--accent': MODULE_ACCENT[mod.id] } as CSSProperties}
+      data-testid="module-menu"
+    >
+      <div className={styles.inner}>
+        <button type="button" className={styles.back} onClick={goHome} data-testid="menu-back">
+          ‹ {t('modmenu.back')}
+        </button>
+
+        <header className={styles.moduleHeader}>
+          <span className={styles.moduleIcon}>
+            <ModuleIcon id={mod.id} size={30} />
+          </span>
+          <div>
+            <h1 className={styles.moduleHeading}>{t(mod.titleKey as I18nKey)}</h1>
+            <p className={styles.moduleTagline}>{t(mod.taglineKey as I18nKey)}</p>
+          </div>
+        </header>
+
+        <p className={styles.note}>
+          {t(mod.scored ? 'modmenu.scored' : 'modmenu.unscored')}
+          {mod.scored && <> {t('modmenu.scoringSoon')}</>}
+        </p>
+
+        {mod.scored && (
+          <section className={styles.difficulty} aria-label={t('modmenu.difficulty')}>
+            <div className={styles.sectionTitle}>{t('modmenu.difficulty')}</div>
+            <div className={styles.diffOptions} role="radiogroup">
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="radio"
+                  aria-checked={ui.difficulty === d}
+                  className={`${styles.diffOption} ${ui.difficulty === d ? styles.diffActive : ''}`}
+                  onClick={() => setUi({ difficulty: d })}
+                  data-testid={`difficulty-${d}`}
+                >
+                  <span className={styles.diffName}>{t(`difficulty.${d}`)}</span>
+                  <span className={styles.diffDesc}>{t(`difficulty.${d}.desc`)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {mod.sections.map((section) => (
+          <section key={section.id} className={styles.section}>
+            <h2 className={styles.sectionTitle}>{t(section.titleKey as I18nKey)}</h2>
+            <ul className={styles.entries}>
+              {section.entries.map((e) => {
+                const ready = e.status === 'available';
+                return (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      className={styles.entry}
+                      onClick={() => start(mod.id, e.id)}
+                      disabled={!ready}
+                      data-testid={`entry-${e.id}`}
+                    >
+                      <span className={styles.entryText}>
+                        <span className={styles.entryTitle}>{t(e.titleKey as I18nKey)}</span>
+                        <span className={styles.entryDesc}>{t(e.descriptionKey as I18nKey)}</span>
+                      </span>
+                      {ready ? (
+                        <span className={styles.startPill}>{t('modmenu.start')} ▸</span>
+                      ) : (
+                        <span className={styles.badge}>{t('home.preparing')}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+
+        <footer className={styles.disclaimer}>{t('app.disclaimer')}</footer>
+      </div>
+    </div>
+  );
+}

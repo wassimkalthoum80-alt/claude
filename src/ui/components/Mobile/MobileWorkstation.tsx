@@ -78,15 +78,21 @@ export function MobileWorkstation() {
   return (
     <div className={styles.shell} data-testid="mobile-layout">
       <header className={styles.top}>
-        <button
-          type="button"
-          className={styles.chip}
-          onClick={() => toggleUi('instructorOpen')}
-          aria-pressed={ui.instructorOpen}
-          data-testid="instructor-toggle"
-        >
-          {t('mobile.instructor')}
-        </button>
+        {ui.session?.instructorPanel ? (
+          <button
+            type="button"
+            className={styles.chip}
+            onClick={() => toggleUi('instructorOpen')}
+            aria-pressed={ui.instructorOpen}
+            data-testid="instructor-toggle"
+          >
+            {t('mobile.instructor')}
+          </button>
+        ) : (
+          <span className={styles.sessionTitle} data-testid="session-title">
+            {ui.session ? t(ui.session.titleKey as I18nKey) : ''}
+          </span>
+        )}
         <Clock />
         <button
           type="button"

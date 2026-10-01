@@ -14,6 +14,14 @@ const sizes = [
 
 const browser = await chromium.launch();
 const errors = [];
+
+/** Pause menu → main menu → module → entry: opens the session intro of a catalog entry. */
+async function newSession(page, module, entry) {
+  await page.keyboard.press('p');
+  await page.click('[data-testid=menu-home]');
+  await page.click(`[data-testid=module-${module}]`);
+  await page.click(`[data-testid=entry-${entry}]`);
+}
 for (const size of sizes) {
   const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
   page.on('console', (m) => m.type() === 'error' && errors.push(`[${size.name}] ${m.text()}`));
@@ -47,7 +55,8 @@ for (const size of sizes) {
   await page.screenshot({ path: `${outDir}/${size.name}-3-vf-cpr.jpg`, type: 'jpeg', quality: 88 });
   await page.close();
 }
-// Interactive states at 1536×1024: briefing, instructor panel, German UI during CPR, end-of-case card.
+// Interactive states at 1536×1024: HOME, module menu, briefing, instructor panel, German UI during CPR,
+// end-of-case card.
 {
   const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
   page.on('console', (m) => m.type() === 'error' && errors.push(`[flows] ${m.text()}`));
@@ -56,6 +65,13 @@ for (const size of sizes) {
     page.screenshot({ path: `${outDir}/flow-${name}.jpg`, type: 'jpeg', quality: 88 });
   const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
   await page.goto(`${base}/?debug`);
+  await page.waitForSelector('[data-testid=home-screen]');
+  await shot('0-home');
+  await page.click('[data-testid=module-resus]');
+  await shot('0-module-menu');
+  await page.click('[data-testid=menu-back]');
+  await page.click('[data-testid=module-instructor]');
+  await page.click('[data-testid=entry-sandbox]');
   await page.waitForTimeout(1500);
   await shot('1-briefing');
   await page.click('[data-testid=start-button]');
@@ -72,8 +88,7 @@ for (const size of sizes) {
   await run(12);
   await page.waitForTimeout(500);
   await shot('3-german-cpr');
-  await page.keyboard.press('p');
-  await page.getByRole('button', { name: /Kammerflimmern in Narkose/ }).click();
+  await newSession(page, 'instructor', 'vf');
   await page.click('[data-testid=start-button]');
   await run(26); // VF at 20 s → 6 s no-flow
   await page.keyboard.press('Space');
@@ -171,7 +186,10 @@ for (const size of sizes) {
   await shot('3-recovery-bsv-memory');
   await page.click('[aria-label=Close]');
   await page.evaluate(() =>
-    window.__resusEngine.dispatch({ type: 'BIS_SENSOR_FAULT', fault: 'disconnected' }, 'instructor'),
+    window.__resusEngine.dispatch(
+      { type: 'BIS_SENSOR_FAULT', fault: 'disconnected' },
+      'instructor',
+    ),
   );
   await run(5);
   await page.waitForTimeout(500);
@@ -229,9 +247,10 @@ for (const size of sizes) {
   const run = (s) => page.evaluate((sec) => window.__resusEngine.runFor(sec), s);
   await page.goto(`${base}/?autostart&debug`);
   await page.waitForFunction(() => window.__resusEngine !== undefined);
+  await newSession(page, 'instructor', 'asthma');
+  await page.click('[data-testid=start-button]');
   await page.keyboard.press('Backquote');
-  await page.getByRole('button', { name: /Breath stacking/ }).click();
-  await run(110); // the instructor panel stays open after loading a case without a briefing
+  await run(110);
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${outDir}/hl-1-asthma-stacking.jpg`, type: 'jpeg', quality: 88 });
   await page.getByTestId('heart-lung-panel').screenshot({
@@ -239,7 +258,8 @@ for (const size of sizes) {
     type: 'jpeg',
     quality: 90,
   });
-  await page.getByRole('button', { name: /Silent disconnection/ }).click();
+  await page.keyboard.press('Escape');
+  await newSession(page, 'instructor', 'disconnection');
   await page.click('[data-testid=start-button]');
   await run(300);
   await page.waitForTimeout(600);
@@ -281,7 +301,11 @@ for (const size of sizes) {
   );
   await run(290);
   await page.waitForTimeout(600);
-  await page.screenshot({ path: `${outDir}/ecg-3-hypoxic-st-depression.jpg`, type: 'jpeg', quality: 88 });
+  await page.screenshot({
+    path: `${outDir}/ecg-3-hypoxic-st-depression.jpg`,
+    type: 'jpeg',
+    quality: 88,
+  });
   await page.close();
 }
 
@@ -299,7 +323,9 @@ for (const size of sizes) {
   await run(3);
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${outDir}/limits-1-editor.jpg`, type: 'jpeg', quality: 88 });
-  await page.getByTestId('alarm-limits').screenshot({ path: `${outDir}/limits-2-panel.jpg`, type: 'jpeg', quality: 90 });
+  await page
+    .getByTestId('alarm-limits')
+    .screenshot({ path: `${outDir}/limits-2-panel.jpg`, type: 'jpeg', quality: 90 });
   await page.close();
 }
 

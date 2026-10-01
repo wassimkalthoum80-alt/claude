@@ -19,11 +19,14 @@ import { PatientScene } from './ui/components/PatientScene/PatientScene';
 import { Timers } from './ui/components/Timers/Timers';
 import { Ventilator } from './ui/components/Ventilator/Ventilator';
 import { VentilatorControls } from './ui/components/VentilatorControls/VentilatorControls';
-import { EngineProvider } from './ui/hooks/EngineContext';
+import { useEffect } from 'react';
+import { EngineProvider, useEngine } from './ui/hooks/EngineContext';
 import { UiProvider, useT, useUi } from './ui/hooks/UiContext';
 import { useKeyboardShortcuts } from './ui/hooks/useKeyboardShortcuts';
 import { usePhoneLayout } from './ui/hooks/useLayout';
 import { MobileWorkstation } from './ui/components/Mobile/MobileWorkstation';
+import { HomeScreen } from './ui/screens/HomeScreen';
+import { ModuleMenu } from './ui/screens/ModuleMenu';
 import styles from './App.module.css';
 
 /** Panels and overlays shared by both layouts (sheets on the phone, floating panels on the desktop). */
@@ -87,15 +90,17 @@ function DesktopWorkstation() {
           <span className={styles.bannerWide}>
             <PatientBanner />
           </span>
-          <button
-            type="button"
-            className={styles.chip}
-            onClick={() => toggleUi('instructorOpen')}
-            aria-pressed={ui.instructorOpen}
-            data-testid="instructor-toggle"
-          >
-            {t('instructor.open')} <kbd>`</kbd>
-          </button>
+          {ui.session?.instructorPanel && (
+            <button
+              type="button"
+              className={styles.chip}
+              onClick={() => toggleUi('instructorOpen')}
+              aria-pressed={ui.instructorOpen}
+              data-testid="instructor-toggle"
+            >
+              {t('instructor.open')} <kbd>`</kbd>
+            </button>
+          )}
           <Clock />
           <button
             type="button"
@@ -130,11 +135,29 @@ function DesktopWorkstation() {
   );
 }
 
+/**
+ * App shell (milestone 6 § 3): HOME → module menu → session workspace. Outside a session the engine is paused
+ * and no workstation (canvases, scene) is mounted.
+ */
+function Shell() {
+  const engine = useEngine();
+  const { ui } = useUi();
+  const inSession = ui.screen === 'session' && ui.session !== null;
+  useEffect(() => {
+    if (!inSession && !engine.getSnapshot().control.paused)
+      engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
+  }, [engine, inSession]);
+
+  if (inSession) return <Workstation />;
+  if (ui.screen === 'module' && ui.menuModule) return <ModuleMenu moduleId={ui.menuModule} />;
+  return <HomeScreen />;
+}
+
 export default function App() {
   return (
     <UiProvider>
       <EngineProvider>
-        <Workstation />
+        <Shell />
       </EngineProvider>
     </UiProvider>
   );

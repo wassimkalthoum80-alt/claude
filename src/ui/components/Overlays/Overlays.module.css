@@ -22,34 +22,6 @@
   user-select: text;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--divider);
-}
-
-.logo {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  background: #05080b;
-  border: 1px solid var(--panel-border);
-}
-
-.appTitle {
-  font: 600 22px/1.1 var(--font-num);
-  letter-spacing: 0.04em;
-}
-
-.appSubtitle {
-  font: 400 12.5px/1.3 var(--font-ui);
-  color: var(--text-dim);
-}
-
 .caseLabel {
   margin: 16px 0 6px;
   font: 500 11px/1 var(--font-ui);
@@ -150,23 +122,8 @@
   margin-top: 4px;
 }
 
-.caseList {
-  display: grid;
-  gap: 6px;
-}
-
-.caseItem {
-  text-align: left;
-  padding: 10px 12px;
-  border: 1px solid var(--tile-border);
-  border-radius: var(--radius-sm);
-  background: var(--tile-bg);
-  font: 500 13.5px/1.2 var(--font-ui);
-  cursor: pointer;
-}
-
-.caseItem:hover {
-  border-color: var(--panel-border-strong);
+.menuButtons + .menuButtons {
+  margin-top: 8px;
 }
 
 .settings {

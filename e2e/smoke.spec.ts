@@ -166,11 +166,13 @@ test('case timer next to the instructor button counts from 00:00 and restarts on
   await page.evaluate(() => window.__resusEngine?.dispatch({ type: 'RESET' }, 'instructor'));
   await expect(timer).toHaveText(/^00:0\d$/);
 
-  // A new case from the pause menu starts at 00:00 again.
+  // A new session (pause menu → main menu → module → entry) starts at 00:00 again.
   await page.evaluate(() => window.__resusEngine?.runFor(90));
   await expect(timer).toHaveText(/^01:3\d$/);
   await page.keyboard.press('p');
-  await page.getByRole('button', { name: /VF under anaesthesia/ }).click();
+  await page.getByTestId('menu-home').click();
+  await page.getByTestId('module-resus').click();
+  await page.getByTestId('entry-vf-anaesthesia').click();
   await expect(timer).toHaveText('00:00');
 });
 
@@ -289,4 +291,83 @@ test('patient banner shows age, weight and height at all times and opens the his
   await expect(page.getByTestId('history-panel')).toBeVisible();
   await expect(page.getByTestId('history-conditions')).toContainText('hypertension');
   expect(errors).toEqual([]);
+});
+
+test('navigation: HOME → module menu → session intro → workspace → pause → end session → HOME', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?debug');
+  await expect(page.getByTestId('home-screen')).toBeVisible();
+  await expect(page.getByTestId('home-screen')).toContainText('For education only');
+  // The patient does not run behind the menus.
+  expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().control.paused)).toBe(true);
+  // Daily challenge hidden until validated cases exist; My progress greyed out.
+  await expect(page.getByTestId('module-daily')).toHaveCount(0);
+  await expect(page.getByTestId('module-progress')).toBeDisabled();
+
+  // Scored module: difficulty, entries in preparation cannot start.
+  await page.getByTestId('module-resus').click();
+  await expect(page.getByTestId('module-menu')).toBeVisible();
+  await expect(page.getByTestId('entry-tamponade-arrest')).toBeDisabled();
+  await page.getByTestId('difficulty-expert').click();
+  await page.getByTestId('entry-vf-anaesthesia').click();
+  await expect(page.getByTestId('session-line')).toHaveText(/RESUSCITATION · EXPERT/);
+  expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().scenario.id)).toBe(
+    'vf-under-anaesthesia',
+  );
+  await page.getByTestId('start-button').click();
+  // Scored session: no instructor panel, not even with the hotkey.
+  await expect(page.getByTestId('instructor-toggle')).toHaveCount(0);
+  await page.keyboard.press('Backquote');
+  await expect(page.getByTestId('instructor-panel')).toHaveCount(0);
+  await expect(page.getByTestId('cpr-button')).toBeVisible();
+
+  // Pause menu: no case list any more; end session returns to the module menu.
+  await page.keyboard.press('p');
+  await expect(page.getByTestId('menu-restart')).toBeVisible();
+  await page.getByTestId('menu-end-session').click();
+  await expect(page.getByTestId('module-menu')).toBeVisible();
+  expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().control.paused)).toBe(true);
+  await page.getByTestId('menu-back').click();
+
+  // Instructor mode: the instructor panel is available.
+  await page.getByTestId('module-instructor').click();
+  await page.getByTestId('entry-sandbox').click();
+  await page.getByTestId('start-button').click();
+  await page.getByTestId('instructor-toggle').click();
+  await expect(page.getByTestId('instructor-panel')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-home').click();
+  await expect(page.getByTestId('home-screen')).toBeVisible();
+
+  // The difficulty choice is remembered.
+  await page.getByTestId('module-skills').click();
+  await expect(page.getByTestId('difficulty-expert')).toHaveAttribute('aria-checked', 'true');
+  expect(errors).toEqual([]);
+});
+
+test('phone layout: HOME and module menus fit the screen and start a session', async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await ctx.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug&lang=de');
+  await expect(page.getByTestId('module-lab')).toContainText('Physiologie-Labor');
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(390);
+  await page.getByTestId('module-lab').tap();
+  await page.getByTestId('entry-vent-free').tap();
+  await page.getByTestId('start-button').tap();
+  await expect(page.getByTestId('mobile-layout')).toBeVisible();
+  await expect(page.getByTestId('instructor-toggle')).toBeVisible();
+  expect(errors).toEqual([]);
+  await ctx.close();
 });

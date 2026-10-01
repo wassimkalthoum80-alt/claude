@@ -4,6 +4,10 @@ interface Window {
     runFor(seconds: number): void;
     dispatch(command: { type: string; [key: string]: unknown }, source?: string): void;
     readonly eventLog: readonly { kind: string; event?: string }[];
-    getSnapshot(): { devices: { defib: { shocks: number } } };
+    getSnapshot(): {
+      devices: { defib: { shocks: number } };
+      control: { paused: boolean };
+      scenario: { id: string };
+    };
   };
 }
