@@ -157,6 +157,8 @@ export type Command =
   | { type: 'ORDER_TEST'; test: TestKind }
   /** the learner opened a result */
   | { type: 'VIEW_RESULT'; orderId: number }
+  /** reveal the next level of a scenario hint (levels are revealed in order) */
+  | { type: 'REQUEST_HINT'; topic: string }
   | { type: 'RESET' };
 
 export type CommandType = Command['type'];

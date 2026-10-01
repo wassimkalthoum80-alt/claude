@@ -451,3 +451,34 @@ test('Event Director: blood gas with turnaround, passive lab notice, critical Sp
   await expect(page.getByTestId('critical-alert')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('session tools: timeline with before → after, trend charts, progressive hints (asthma lab)', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByTestId('module-lab').click();
+  await page.getByTestId('entry-vent-asthma').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.runFor(30);
+    e?.dispatch({ type: 'SET_VENT_SETTING', key: 'rr', value: 10 }, 'user');
+    e?.runFor(200);
+  });
+  await page.getByTestId('tool-timeline').click();
+  await expect(page.getByTestId('timeline')).toContainText('RR 10');
+  await expect(page.getByTestId('timeline')).toContainText('MAP');
+  await page.getByTestId('tool-trends').click();
+  await expect(page.getByTestId('trends').locator('canvas')).toHaveCount(5);
+  await page.getByTestId('trend-range-5').click();
+  await page.getByTestId('tool-hint').click();
+  await page.getByTestId('hint-next-falling-bp').click();
+  await expect(page.getByTestId('drawer-hint')).toContainText('expiratory flow');
+  const hints = await page.evaluate(
+    () => window.__resusEngine?.eventLog.filter((x) => x.kind === 'command').length ?? 0,
+  );
+  expect(hints).toBeGreaterThan(1);
+  expect(errors).toEqual([]);
+});

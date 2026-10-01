@@ -133,8 +133,30 @@ export interface TestOrder {
   viewed: boolean;
 }
 
+/**
+ * Progressive hints for one problem of a scenario (milestone 6b § 16): level 1 points where to look, the last
+ * level names what may help. Requested by the learner one level at a time; never shown unasked.
+ */
+export interface HintTopic {
+  id: string;
+  /** i18n key of the problem as the learner sees it (no diagnosis), e.g. "Falling blood pressure" */
+  titleKey: string;
+  /** i18n keys, from gentle to explicit (usually 4) */
+  levels: readonly string[];
+}
+
+export interface HintUse {
+  topic: string;
+  /** 1-based level revealed */
+  level: number;
+  /** s — sim time */
+  t: number;
+}
+
 export interface DirectorState {
   /** messages of this session, oldest first (bounded) */
   messages: DirectorMessage[];
   orders: TestOrder[];
+  /** hints revealed so far (scoring may lower the educational score slightly) */
+  hints: HintUse[];
 }

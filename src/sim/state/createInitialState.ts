@@ -248,7 +248,7 @@ export function createInitialState(
     },
     scenario: { id: scenario.id, seed, ended: false },
     control: { paused: false, timeScale: 1, autoSpeed: true, advance: null, interrupt: null },
-    director: { messages: [], orders: [] },
+    director: { messages: [], orders: [], hints: [] },
     model: {
       calibration: { ...HEART_LUNG_CALIBRATION, ...calibration },
       arrestModelEnabled: true,

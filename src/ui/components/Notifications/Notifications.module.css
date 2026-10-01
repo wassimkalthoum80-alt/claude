@@ -56,7 +56,7 @@
 .card {
   position: absolute;
   left: 50%;
-  bottom: 56px;
+  bottom: 64px;
   transform: translateX(-50%);
   z-index: 26;
   display: flex;

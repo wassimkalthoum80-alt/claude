@@ -10,6 +10,7 @@ import { SimSpeed } from '../SimSpeed/SimSpeed';
 import { AdvanceTime } from '../SimSpeed/AdvanceTime';
 import { TimeNotice } from '../SimSpeed/TimeNotice';
 import { Notifications } from '../Notifications/Notifications';
+import { SessionTools } from '../SessionTools/SessionTools';
 import { CprMetrics } from '../CprMetrics/CprMetrics';
 import {
   IconBolt,
@@ -127,6 +128,7 @@ export function MobileWorkstation() {
       </header>
       <TimeNotice />
       <Notifications />
+      <SessionTools />
       <div className={styles.bannerRow}>
         <PatientBanner compact />
       </div>

@@ -102,6 +102,10 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   imprecision from a separate seeded lab RNG, so ordering never perturbs the physiology); the result appears at
   `readyAt` with a lab message (`TEST_RESULT`), `VIEW_RESULT` records that it was read. UI: `Notifications`
   (passive notice / nurse card / critical alert) and `LabsPanel`.
+- **Timeline, trends, hints:** `MonitorTrends` (`src/sim/devices`) records the measured numerics and ventilator
+  settings at 1 Hz (4 h); `buildTimeline` (`src/ui/adapters/timeline.ts`, pure) turns the event log + these trends
+  into entries with before → after values (3 min window). `ScenarioDefinition.hints` holds progressive hint topics;
+  `REQUEST_HINT` reveals the next level (`state.director.hints`, for scoring in phase 3). UI: `SessionTools`.
 - **Determinism:** one seeded RNG (mulberry32) inside the engine. Same seed + same commands at the same ticks =
   same run.
 

@@ -7,6 +7,7 @@ import { SimSpeed } from './ui/components/SimSpeed/SimSpeed';
 import { AdvanceTime } from './ui/components/SimSpeed/AdvanceTime';
 import { TimeNotice } from './ui/components/SimSpeed/TimeNotice';
 import { Notifications } from './ui/components/Notifications/Notifications';
+import { SessionTools } from './ui/components/SessionTools/SessionTools';
 import { CprMetrics } from './ui/components/CprMetrics/CprMetrics';
 import { IconSliders, IconSpeaker } from './ui/components/icons';
 import { InstructorPanel } from './ui/components/InstructorPanel/InstructorPanel';
@@ -135,6 +136,7 @@ function DesktopWorkstation() {
         <footer className={styles.footer}>{t('app.disclaimer')}</footer>
         <TimeNotice />
         <Notifications />
+        <SessionTools />
       </div>
 
       <ActionFlyout />

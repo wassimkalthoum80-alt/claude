@@ -38,5 +38,12 @@ export const asthmaBreathStacking: ScenarioDefinition = {
   },
   timeline: [],
   objectives: [],
+  hints: [
+    {
+      id: 'falling-bp',
+      titleKey: 'hint.asthma.title',
+      levels: ['hint.asthma.1', 'hint.asthma.2', 'hint.asthma.3', 'hint.asthma.4'],
+    },
+  ],
   endAfterArrestS: 90,
 };

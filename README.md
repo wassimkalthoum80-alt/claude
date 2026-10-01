@@ -91,6 +91,11 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
 - **BLOOD GAS / LAB** (action bar): draw an arterial blood gas; the result (pH, PaCO₂, PaO₂, HCO₃⁻, BE, SaO₂,
   lactate, Hb, Na⁺, K⁺, Cl⁻, glucose, P/F) arrives 2–3 simulated minutes later with the values at the time of
   sampling and flags outside the reference range.
+- **TIMELINE · TRENDS · HINT** (beneath the scene): the timeline lists your actions and the clinical events,
+  each intervention with the measured change ("Ventilator RR 10 — MAP 53 → 84, HR 184 → 131, after 03:00");
+  the trend view shows HR, arterial pressure (mean with systolic/diastolic band), SpO₂, EtCO₂ and peak airway
+  pressure over the last 5 / 15 / 60 simulated minutes with your actions marked; hints (when the case has them,
+  not in expert sessions) open one level at a time, from where to look to what may help, and are recorded.
 
 ## How to play
 

@@ -215,9 +215,16 @@ export type {
   DirectorMetric,
   DirectorRule,
   DirectorState,
+  HintTopic,
+  HintUse,
   MessageAction,
   MessagePriority,
   MessageSource,
   TestKind,
   TestOrder,
 } from './types/director';
+export {
+  MONITOR_TREND_CHANNELS,
+  type MonitorTrendChannel,
+  type ReadonlyMonitorTrends,
+} from './devices/MonitorTrends';

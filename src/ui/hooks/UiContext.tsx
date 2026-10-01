@@ -44,7 +44,11 @@ export interface UiState {
   mobileTab: MobileTab;
   /** patient history ("Anamnese") panel open */
   historyOpen: boolean;
+  /** session tool drawer: timeline, trend view or hints (one at a time) */
+  drawer: SessionDrawer | null;
 }
+
+export type SessionDrawer = 'timeline' | 'trends' | 'hint';
 
 export type Screen = 'home' | 'module' | 'session';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
@@ -133,6 +137,7 @@ export const WORKSPACE_CLOSED = {
   actionPanel: null,
   mobileTab: 'monitor',
   historyOpen: false,
+  drawer: null,
 } as const satisfies Partial<UiState>;
 
 function initialState(): UiState {
@@ -168,6 +173,7 @@ function initialState(): UiState {
     layout: 'auto',
     mobileTab: 'monitor',
     historyOpen: false,
+    drawer: null,
     ...loadPrefs(),
     ...(langParam === 'de' || langParam === 'en' ? { language: langParam } : {}),
   };

@@ -69,6 +69,7 @@ import type {
 import type { AlarmId } from '../state/MonitorState';
 import type { DirectorMessage, DirectorRule } from '../types/director';
 import { EventDirector } from '../director/EventDirector';
+import { MonitorTrends, type ReadonlyMonitorTrends } from '../devices/MonitorTrends';
 import { ABG_TURNAROUND_S, drawAbg } from '../director/labs';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
 import type { SimEvent } from '../types/events';
@@ -126,6 +127,7 @@ export class SimulationEngine {
   private readonly fluidModel = new FluidModel();
   private readonly ledger = new FluidLedger();
   private readonly physio = new PhysioTrends();
+  private readonly bedside = new MonitorTrends();
   /** EEG has its own seeded stream (derived from the scenario seed) so it cannot perturb the other signals */
   private readonly eegGen = new EEGGenerator(0, SUBSTEP_S);
   private readonly drive = new RespiratoryDriveModel();
@@ -221,6 +223,11 @@ export class SimulationEngine {
   /** 1 Hz trends of the integrated drug response (true model values, instructor view). */
   get physioTrends(): ReadonlyPhysioTrends {
     return this.physio;
+  }
+
+  /** 1 Hz bedside trends: measured monitor values and ventilator settings (the learner's trend view). */
+  get monitorTrends(): ReadonlyMonitorTrends {
+    return this.bedside;
   }
 
   /** Fluid-balance ledger: every external input/output, recorded once, in per-minute bins. */
@@ -401,6 +408,7 @@ export class SimulationEngine {
     this.bisMonitor.update(s, this.bank, this.trendBank);
     this.physio.accumulate(s);
     while (this.physio.count < Math.floor(s.time + 1e-9)) this.physio.record(s);
+    while (this.bedside.count < Math.floor(s.time + 1e-9)) this.bedside.record(s);
     this.alarms.update(s);
     this.checkScenarioEnd();
     this.updateDirector();
@@ -505,6 +513,7 @@ export class SimulationEngine {
     this.trendBank.reset();
     this.ledger.reset();
     this.physio.reset();
+    this.bedside.reset();
     this.bisMonitor.reset();
     this.eegGen.reset((seed ^ 0x5eedee6) >>> 0);
     const s = this.state;
@@ -747,6 +756,14 @@ export class SimulationEngine {
           result: drawAbg(s, this.labRng),
           viewed: false,
         });
+        break;
+      }
+      case 'REQUEST_HINT': {
+        const topic = this.scenarioDef.hints?.find((h) => h.id === command.topic);
+        if (!topic) break;
+        const used = s.director.hints.filter((h) => h.topic === topic.id).length;
+        if (used < topic.levels.length)
+          s.director.hints.push({ topic: topic.id, level: used + 1, t: s.time });
         break;
       }
       case 'VIEW_RESULT': {
