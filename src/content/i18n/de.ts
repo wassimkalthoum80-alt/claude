@@ -1500,4 +1500,5 @@ export const de: Record<I18nKey, string> = {
   'learn.arrestTamponade':
     'Nach Herzoperation sprechen Drainagen, die nicht mehr fördern, bei fallendem Blutdruck für eine Tamponade. Der Ultraschall zeigt sie; Perikardpunktion oder Resternotomie behandeln sie.',
   'dec.reason.resus': 'Während des Stillstands nicht an den Messwerten beurteilt.',
+  'tl.k.AIRWAY_INSERT': 'Atemweg eingelegt',
 };

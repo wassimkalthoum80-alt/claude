@@ -9,6 +9,11 @@ interface Window {
       devices: { defib: { shocks: number } };
       control: { paused: boolean };
       scenario: { id: string; seed: number; variant: string | null };
+      timers: { arrestStartTime: number | null };
+      patient: {
+        cardio: { rhythm: string };
+        conditions: { pneumothorax: { side: 'left' | 'right' } | null };
+      };
     };
   };
   __resusDisplay?: { readonly time: number };

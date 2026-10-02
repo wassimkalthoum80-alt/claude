@@ -140,8 +140,11 @@ export function assessDecisions(
     const t = g[0]?.t ?? 0;
     const until = Math.min(t + r.effectS, end);
     const assessable = until - t >= r.minEffectS;
-    const before = assessable ? vitalsAt(vitals, t) : null;
-    const after = assessable ? vitalsAt(vitals, until) : null;
+    // During an arrest the values follow the compressions (and later the return of circulation), not the decision:
+    // no before → after is shown.
+    const withValues = assessable && !options.resus;
+    const before = withValues ? vitalsAt(vitals, t) : null;
+    const after = withValues ? vitalsAt(vitals, until) : null;
     let verdict: { mark: DecisionMark; reason: string };
     if (g.some((x) => x.key)) verdict = { mark: 'effective', reason: 'keyAction' };
     else if (options.resus)
@@ -159,7 +162,7 @@ export function assessDecisions(
       items: g.map(({ kind, detail }) => ({ kind, detail })),
       before,
       after,
-      afterS: assessable ? Math.round(until - t) : null,
+      afterS: withValues ? Math.round(until - t) : null,
       ...verdict,
     };
   });

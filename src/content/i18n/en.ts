@@ -1489,6 +1489,7 @@ export const en = {
   'learn.arrestTamponade':
     'After cardiac surgery, drains that stop draining while the pressure falls suggest tamponade. Ultrasound shows it; pericardiocentesis or re-sternotomy treats it.',
   'dec.reason.resus': 'Not judged by the measured values during the arrest.',
+  'tl.k.AIRWAY_INSERT': 'Airway inserted',
 } as const;
 
 export type I18nKey = keyof typeof en;

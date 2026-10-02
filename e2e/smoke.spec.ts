@@ -604,3 +604,44 @@ test('scored session → debrief with stars and decisions → My progress, kept 
   await expect(page.getByTestId('module-menu')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('resuscitation: tension pneumothorax arrest — CPR, needle on the correct side, ROSC, ALS debrief', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?debug');
+  await page.getByTestId('module-resus').click();
+  await page.getByTestId('entry-tension-arrest').click();
+  await expect(page.getByRole('dialog')).toContainText('central venous catheter');
+  await page.getByTestId('start-button').click();
+  // Run until the heart stops (the nurse reports the ventilator alarms meanwhile).
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    for (let i = 0; i < 300 && e?.getSnapshot().timers.arrestStartTime === null; i++) e.runFor(1);
+  });
+  expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().patient.cardio.rhythm)).toBe(
+    'pea',
+  );
+  await page.keyboard.press('Space'); // compressions
+  await page.evaluate(() => window.__resusEngine?.runFor(30));
+  const side = await page.evaluate(
+    () => window.__resusEngine?.getSnapshot().patient.conditions.pneumothorax?.side ?? 'right',
+  );
+  await page.getByTestId('action-procedures').click();
+  await page.getByTestId(`needle-${side}`).click();
+  await expect(page.getByTestId('procedure-result')).toBeVisible();
+  // The heart ejects again; the case ends 2 min after a lasting return of circulation.
+  await page.evaluate(() => window.__resusEngine?.runFor(20));
+  await page.keyboard.press('Space'); // stop compressions
+  await page.evaluate(() => window.__resusEngine?.runFor(130));
+  const debrief = page.getByTestId('debrief-screen');
+  await expect(debrief).toBeVisible();
+  await expect(debrief).toContainText('ROSC');
+  await expect(page.getByTestId('debrief-decisions')).toContainText('Treats the cause');
+  await expect(page.getByTestId('score-diagnosis')).not.toContainText('coming');
+  expect(errors).toEqual([]);
+});

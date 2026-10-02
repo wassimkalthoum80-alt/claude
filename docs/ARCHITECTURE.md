@@ -82,6 +82,11 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   when a scored session ends (`useSession().end`, or `AutoDebrief` when the case ends), stores the result in
   `UiState.debrief` and opens `DebriefScreen`; `ProgressScreen` reads the profile through the `ProgressStore`
   interface (`src/ui/progressStore.ts`, localStorage) — a server store can replace it later.
+- **Resuscitation cases (phase 4)** — `src/content/scenarios/arrestCases.ts`: arrests arise from modelled causes
+  (no scripted rhythm); return of circulation from the physiology (`REVERSIBLE_ROSC`, obstructive relief). The case
+  ends by `endAfterRoscS` / `endAfterArrestS` / `maxDurationS` (engine, logged as `SCENARIO_END` with the reason).
+  ALS scoring (`src/game/alsAssessment.ts`) reads the log: cause steps (`LogMatch` data per case), adrenaline
+  timing, rhythm assessments, inappropriate shocks, wrong-side decompression, oesophageal tube.
 
 ## Time model
 

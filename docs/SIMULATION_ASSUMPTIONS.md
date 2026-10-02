@@ -615,6 +615,11 @@ needed before trainees rely on scores.
 | Efficiency | 100 − 8 per blood gas within 5 min of the previous one − 4 per hint level | do not reward ordering everything |
 | Time | first concern → first effective decision: ≤ 60 s → 100, 0 at 600 s; bleeding case: surgeon requested ≤ 5 min → 100, 0 at 20 min | |
 | Resuscitation cases | recognition = time to first compression; treatment = CCF (100 at the guideline target, 0 at 40 points below); time = no-flow ≤ 10 s → 100, 0 at 120 s | CCF target from `erc2025.ts` |
+| ALS treatment (cause-specific arrests) | 0.4 × CCF score + 0.4 × cause (treated ≤ 2 min after the arrest → 100, 0 at 8 min; never → 0) + 0.2 × adrenaline (≤ 3 min → 100, 0 at 7 min; non-shockable rhythm) | ERC 2025: adrenaline as soon as possible in non-shockable rhythms; 4 Hs and 4 Ts |
+| ALS diagnosis | mean of correct rhythm calls (%) and cause treated (100/0) | |
+| ALS safety | −20 per shock into PEA/asystole/a perfusing rhythm, −10 per decompression on the side without a pneumothorax, −25 per oesophageal tube not removed within 60 s | |
+| Prevented arrest | a resuscitation case without an arrest is scored as a stabilisation (targets, recognition from the start) | preventing the arrest is the best outcome |
+| Decisions during an arrest | marked by what they were (cause ✓, compressions ✓, adrenaline ✓, shock into non-shockable ✕, oesophageal tube ✕, wrong side !); no before → after values | the values follow the compressions, not the decision |
 | Overall | weighted mean of the applicable scores: recognition 1, stabilisation 2, treatment 1.5, safety 1.5, efficiency 0.5, time 1 (VF case: own weights) | |
 | Outcome | arrest (no circulation at the end; ROSC in resuscitation cases), stable (≥ 80 % of the last 60 s in target) or unstable | |
 | Stars | ★ alive (or the resuscitation objective met) and stabilisation ≥ 50; ★★ overall ≥ 70, no dangerous decision, decisive case action done; ★★★ overall ≥ 85, every score ≥ 60, safety ≥ 90, stable / ROSC | milestone 6 § 11 |
