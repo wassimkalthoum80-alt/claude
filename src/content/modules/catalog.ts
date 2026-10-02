@@ -215,6 +215,17 @@ export const MODULE_CATALOG: ModuleCatalog = [
         titleKey: 'infectio.section.basics',
         entries: [
           review(available('positive-urine', 'infectio.positiveUrine', 'ward-positive-urine')),
+          review(available('cons-one-set', 'infectio.consOneSet', 'ward-cons-one-set')),
+          review(available('icu-sputum', 'infectio.icuSputum', 'ward-icu-sputum')),
+        ],
+      },
+      {
+        id: 'mimics',
+        titleKey: 'infectio.section.mimics',
+        entries: [
+          review(available('postop-fever', 'infectio.postopFever', 'ward-postop-fever')),
+          review(available('not-pneumonia', 'infectio.notPneumonia', 'ward-not-pneumonia')),
+          review(available('fever-on-abx', 'infectio.feverOnAbx', 'ward-fever-on-antibiotics')),
         ],
       },
       {
@@ -222,20 +233,35 @@ export const MODULE_CATALOG: ModuleCatalog = [
         titleKey: 'infectio.section.sepsis',
         entries: [
           review(available('fever-rigors', 'infectio.feverRigors', 'ward-fever-rigors')),
+          review(available('cap', 'infectio.cap', 'ward-cap')),
           review(available('peritonitis', 'infectio.peritonitis', 'ward-postop-peritonitis')),
         ],
       },
       {
         id: 'staph',
-        titleKey: 'infectio.section.staph',
-        entries: [review(available('sab-line', 'infectio.sabLine', 'ward-sab-line'))],
+        titleKey: 'infectio.section.bloodstream',
+        entries: [
+          review(available('sab-line', 'infectio.sabLine', 'ward-sab-line')),
+          review(available('mrsa', 'infectio.mrsa', 'ward-mrsa-bacteraemia')),
+          review(available('endocarditis', 'infectio.endocarditis', 'ward-endocarditis')),
+        ],
+      },
+      {
+        id: 'special',
+        titleKey: 'infectio.section.special',
+        entries: [
+          review(available('fn', 'infectio.fn', 'ward-febrile-neutropenia')),
+          review(available('meningitis', 'infectio.meningitis', 'ward-meningitis')),
+          review(available('cat-bite', 'infectio.catBite', 'ward-cat-bite')),
+        ],
       },
       {
         id: 'collateral',
         titleKey: 'infectio.section.collateral',
         entries: [
           review(available('cdi', 'infectio.cdi', 'ward-cdi')),
-          preparing('vap-mrgn', 'infectio.vapMrgn'),
+          review(available('vap-mrgn', 'infectio.vapMrgn', 'ward-vap')),
+          review(available('esbl-icu', 'infectio.esblIcu', 'ward-esbl-icu')),
         ],
       },
     ],

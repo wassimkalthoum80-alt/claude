@@ -24,7 +24,8 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'infectio.cdi.title': 'Durchfall nach Antibiotika',
   'infectio.cdi.desc': 'Tag 6 Clindamycin bei Erysipel — jetzt sechs wässrige Stühle am Tag.',
   'infectio.vapMrgn.title': 'Beatmet und keine Besserung',
-  'infectio.vapMrgn.desc': 'In Vorbereitung (Fortgeschritten): Resistenz unter Therapie.',
+  'infectio.vapMrgn.desc':
+    'Fortgeschritten: Pseudomonas-VAP — Kombination, Deeskalation, 3MRGN → 4MRGN.',
   'case.feverRigors.title': 'Fieber und Schüttelfrost',
   'case.feverRigors.presentation':
     '74 J., hohes Fieber mit Schüttelfrost, neu aufgetretene Verwirrtheit.',
@@ -1047,4 +1048,41 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
     'Älterer Patient, Cephalosporin wirkt nicht: Listerien — Ampicillin für 21 Tage.',
   'stw.learn.catBite':
     'Nach der Exposition fragen: Tierbisse ändern den Erreger — Pasteurella braucht Amoxicillin/Clavulansäure.',
+  'infectio.section.bloodstream': 'Blutstrominfektionen & Endokarditis',
+  'infectio.esblIcu.title': 'ESBL auf der Intensivstation',
+  'infectio.esblIcu.desc':
+    'Fortgeschritten: carbapenemsparend — während KPC auf der Station zirkuliert.',
+  'case.vap.title': 'Beatmet und keine Besserung',
+  'case.vap.presentation':
+    '59 J., Intensivtag 6 nach Polytrauma: neues Fieber, eitriges Sekret, Infiltrat.',
+  'case.vap.briefing':
+    'Herr G., 59 Jahre, Tag 6 der Beatmung nach Polytrauma (Thorax- und Beckenverletzungen). Seit der Nacht neues Fieber 38,9 °C, eitriges Trachealsekret, steigender Sauerstoffbedarf (FiO₂ 0,5), neues Infiltrat im Morgenröntgen. Seit der perioperativen Prophylaxe keine Antibiotika. Morgenvisite.',
+  'case.vap.exam':
+    'Untersuchung: eitriges Sekret beim Absaugen, RGs rechts basal, kreislaufstabil, Noradrenalin in niedriger Dosis wird ausgeschlichen; Zugänge reizlos.',
+  'dx.vapPseudomonas': 'Beatmungsassoziierte Pneumonie durch Pseudomonas aeruginosa',
+  'imaging.cxr.vap': 'Neue Verdichtung im rechten Unterlappen; Tubus und Katheter regelrecht.',
+  'case.esblIcu.title': 'ESBL auf der Intensivstation',
+  'case.esblIcu.presentation':
+    '71 J., Intensivtag 20, rektale ESBL-Klebsiella-Trägerin, jetzt Fieber und Hypotonie.',
+  'case.esblIcu.briefing':
+    'Frau P., 71 Jahre, Tag 20 nach einer komplizierten Bauchoperation, letzte Woche extubiert. Im Screening rektale Besiedlung mit ESBL-Klebsiella pneumoniae. Seit heute früh 39,2 °C, Schüttelfrost, fallender Blutdruck, trüber Katheterurin. Auf der Station wurden kürzlich zwei Patienten mit carbapenemasebildender Klebsiella gefunden.',
+  'case.esblIcu.exam':
+    'Untersuchung: suprapubischer Druckschmerz, Blasenkatheter seit 3 Wochen mit Sediment im Beutel; Bauchwunde heilt; Lunge frei; ZVK-Einstichstelle reizlos.',
+  'dx.esblCauti': 'Katheterassoziierte Urosepsis durch ESBL-Klebsiella pneumoniae',
+  'dx.kpcBsi': 'Blutstrominfektion durch KPC-bildende K. pneumoniae (4MRGN)',
+  'imaging.sono-urinary.normalCatheter':
+    'Nieren ohne Harnstau, Katheter in der Blase, Sediment in der Blase.',
+  'stw.chk.respCulture.ok': 'Trachealsekret oder BAL vor der ersten Gabe.',
+  'stw.chk.respCulture.missed':
+    'Keine respiratorische Probe vor dem Antibiotikum: kein Ziel für die Deeskalation.',
+  'stw.chk.mono.ok': 'Kombination nach Antibiogramm auf eine wirksame Substanz reduziert.',
+  'stw.chk.mono.missed':
+    'Zwei Tage nach dem Antibiogramm noch {n} Antibiotika: eine Kombination hilft nicht mehr, wenn die Empfindlichkeit bekannt ist.',
+  'stw.chk.catheterChange.ok': 'Infizierter Blasenkatheter entfernt oder gewechselt.',
+  'stw.chk.catheterChange.missed':
+    'Der 3 Wochen alte Katheter blieb: der Biofilm hält den Fokus aufrecht.',
+  'stw.learn.vap':
+    'VAP: zuerst Kulturen, empirisch breit wenn nötig — dann an Tag 3 eine gezielte Substanz, insgesamt 7–8 Tage. Jeder Carbapenem-Tag selektiert Resistenzen.',
+  'stw.learn.esblIcu':
+    'ESBL-Urosepsis: Carbapenem solange instabil, dann nach Antibiogramm deeskalieren und den Katheter wechseln. Auf einer Station mit KPC ist jeder unnötige Carbapenem-Tag ein Risiko.',
 };

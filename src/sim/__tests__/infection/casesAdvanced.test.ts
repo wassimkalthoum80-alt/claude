@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   catBite,
   endocarditis,
+  esblIcu,
   febrileNeutropenia,
   meningitis,
   mrsaBacteraemia,
+  vapPseudomonas,
 } from '../../../content/infection/casesAdvanced';
 import { INFECTION_LIBRARY } from '../../../content/infection/library';
 import { InfectionEngine } from '../../infection/InfectionEngine';
@@ -245,5 +247,76 @@ describe('E3 — cat bite', () => {
     };
     expect(run(false)).toBeGreaterThan(0.1);
     expect(run(true)).toBeLessThan(0.05);
+  });
+});
+
+describe('B4 — VAP with Pseudomonas', () => {
+  it('susceptible: piperacillin/tazobactam clears it; 3MRGN: it fails, high-dose meropenem works', () => {
+    const sus = make(vapPseudomonas, seedFor(vapPseudomonas, 'susceptible'));
+    sus.dispatch(start('piperacillin-tazobactam'));
+    runTo(sus, 72);
+    expect(burden(sus, 'vap')).toBeLessThan(0.15);
+    const seed = seedFor(vapPseudomonas, '3mrgn');
+    const pip = make(vapPseudomonas, seed);
+    pip.dispatch(start('piperacillin-tazobactam'));
+    runTo(pip, 72);
+    const mero = make(vapPseudomonas, seed);
+    mero.dispatch(start('meropenem', { dose: 'high', extendedInfusion: true }));
+    runTo(mero, 72);
+    expect(burden(pip, 'vap')).toBeGreaterThan(0.4);
+    expect(burden(mero, 'vap')).toBeLessThan(burden(pip, 'vap') - 0.2);
+  });
+
+  it('3MRGN under standard-dose meropenem can turn 4MRGN (porin loss) — more often than when susceptible', () => {
+    const fourMrgn = (variant: string) => {
+      let n = 0;
+      for (let s = 1; s <= 200 && n >= 0; s++) {
+        const e = make(vapPseudomonas, s);
+        if (e.variant !== variant) continue;
+        e.dispatch(start('meropenem'));
+        runTo(e, 24 * 8);
+        if (e.log.some((l) => l.kind === 'collateral' && l.collateral === 'resistance-de-novo'))
+          n++;
+      }
+      return n;
+    };
+    expect(fourMrgn('3mrgn')).toBeGreaterThan(fourMrgn('susceptible'));
+  });
+});
+
+describe('B5 — ESBL Klebsiella on the ICU', () => {
+  it('ceftriaxone fails, meropenem works', () => {
+    const seed = seedFor(esblIcu, 'quiet-unit');
+    const cro = make(esblIcu, seed);
+    cro.dispatch(start('ceftriaxone'));
+    runTo(cro, 48);
+    const mero = make(esblIcu, seed);
+    mero.dispatch(start('meropenem'));
+    mero.dispatch({ type: 'PROCEDURE', procedure: 'remove-urinary-catheter' });
+    runTo(mero, 48);
+    expect(burden(cro, 'cauti')).toBeGreaterThan(0.4);
+    expect(burden(mero, 'cauti')).toBeLessThan(0.15);
+  });
+
+  it('outbreak: 10 carbapenem days acquire KPC more often than a switch to cotrimoxazole on day 3', () => {
+    const acquired = (narrow: boolean) => {
+      let n = 0;
+      for (let s = 1; s <= 200; s++) {
+        const e = make(esblIcu, s);
+        if (e.variant !== 'outbreak') continue;
+        const id = e.dispatch(start('meropenem')).orderId ?? '';
+        e.dispatch({ type: 'PROCEDURE', procedure: 'remove-urinary-catheter' });
+        runTo(e, 72);
+        if (narrow) {
+          e.dispatch({ type: 'STOP_ANTIINFECTIVE', orderId: id });
+          e.dispatch(start('cotrimoxazole', { route: 'po' }));
+        }
+        runTo(e, 24 * 10);
+        if (e.log.some((l) => l.kind === 'collateral' && l.collateral === 'colonisation-acquired'))
+          n++;
+      }
+      return n;
+    };
+    expect(acquired(false)).toBeGreaterThan(acquired(true));
   });
 });

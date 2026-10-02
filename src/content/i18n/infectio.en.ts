@@ -21,7 +21,7 @@ export const infectioEn = {
   'infectio.cdi.title': 'Diarrhoea after antibiotics',
   'infectio.cdi.desc': 'Day 6 of clindamycin for cellulitis — now six watery stools a day.',
   'infectio.vapMrgn.title': 'Ventilated and not improving',
-  'infectio.vapMrgn.desc': 'In preparation (advanced): resistance under therapy.',
+  'infectio.vapMrgn.desc': 'Advanced: Pseudomonas VAP — combination, de-escalation, 3MRGN → 4MRGN.',
   'case.feverRigors.title': 'Fever and rigors',
   'case.feverRigors.presentation': '74 y, high fever with rigors, new confusion.',
   'case.feverRigors.briefing':
@@ -1023,4 +1023,40 @@ export const infectioEn = {
     'Older patient, cephalosporin not working: Listeria — ampicillin for 21 days.',
   'stw.learn.catBite':
     'Ask about exposure: animal bites change the organism — Pasteurella needs amoxicillin/clavulanate.',
+  'infectio.section.bloodstream': 'Bloodstream infections & endocarditis',
+  'infectio.esblIcu.title': 'ESBL on the ICU',
+  'infectio.esblIcu.desc': 'Advanced: carbapenem-sparing — while KPC circulates on the unit.',
+  'case.vap.title': 'Ventilated and not improving',
+  'case.vap.presentation':
+    '59 y, ICU day 6 after polytrauma: new fever, purulent secretions, infiltrate.',
+  'case.vap.briefing':
+    'Mr G., 59, is on day 6 of ventilation after a polytrauma (chest and pelvic injuries). Since the night new fever of 38.9 °C, purulent tracheal secretions, rising oxygen need (FiO₂ 0.5), new infiltrate on the morning X-ray. No antibiotics since the perioperative prophylaxis. Morning round.',
+  'case.vap.exam':
+    'Examination: purulent secretions on suctioning, crackles right base, hemodynamically stable on low-dose noradrenaline weaning; lines clean.',
+  'dx.vapPseudomonas': 'Ventilator-associated pneumonia with Pseudomonas aeruginosa',
+  'imaging.cxr.vap': 'New consolidation in the right lower lobe; tube and lines in place.',
+  'case.esblIcu.title': 'ESBL on the ICU',
+  'case.esblIcu.presentation':
+    '71 y, ICU day 20, rectal ESBL-Klebsiella carrier, now fever and hypotension.',
+  'case.esblIcu.briefing':
+    'Mrs P., 71, is on day 20 after a complicated abdominal operation, extubated last week. Screening showed rectal colonisation with ESBL Klebsiella pneumoniae. Since this morning 39.2 °C, rigors, blood pressure falling, cloudy catheter urine. Two patients on the unit have recently been found carrying a carbapenemase-producing Klebsiella.',
+  'case.esblIcu.exam':
+    'Examination: suprapubic tenderness, catheter in place for 3 weeks with sediment in the bag; abdominal wound healing; lungs clear; central line site clean.',
+  'dx.esblCauti': 'Catheter-associated urosepsis with ESBL Klebsiella pneumoniae',
+  'dx.kpcBsi': 'Bloodstream infection with KPC-producing K. pneumoniae (4MRGN)',
+  'imaging.sono-urinary.normalCatheter':
+    'Kidneys without hydronephrosis, catheter in the bladder, debris in the bladder.',
+  'stw.chk.respCulture.ok': 'Tracheal aspirate or BAL before the first dose.',
+  'stw.chk.respCulture.missed':
+    'No respiratory sample before the antibiotic: no target for de-escalation.',
+  'stw.chk.mono.ok': 'Combination reduced to one active agent by the resistogram.',
+  'stw.chk.mono.missed':
+    'Still {n} antibiotics two days after the resistogram: combination therapy does not help once susceptibility is known.',
+  'stw.chk.catheterChange.ok': 'Infected urinary catheter removed or changed.',
+  'stw.chk.catheterChange.missed':
+    'The 3-week-old catheter stayed: the biofilm keeps the focus alive.',
+  'stw.learn.vap':
+    'VAP: cultures first, broad empirically if needed — then on day 3 one targeted agent, 7–8 days in total. Every carbapenem day selects resistance.',
+  'stw.learn.esblIcu':
+    'ESBL urosepsis: carbapenem while unstable, then narrow by resistogram and change the catheter. On a unit with KPC every unnecessary carbapenem day is a risk.',
 } as const;

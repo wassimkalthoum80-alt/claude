@@ -289,6 +289,10 @@ export interface WardFlora {
   site: SpecimenSite;
   /** /h base acquisition hazard (multiplied by microbiome damage and devices) */
   hazardPerH: number;
+  /** drug classes that select this organism while they run (e.g. carbapenems for carbapenemase producers) */
+  selectedBy?: DrugClass[];
+  /** hazard multiplier while a selecting class runs (default 4) */
+  selectionFactor?: number;
   /** can cause a superinfection once colonised */
   superinfection?: Omit<InfectionSiteDef, 'id' | 'isolateIds' | 'onsetH'> & { hazardPerH: number };
 }

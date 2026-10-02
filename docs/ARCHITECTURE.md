@@ -369,6 +369,11 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
 - **Case variants:** `InfectionCase.variants` patches the hidden truth; `resolveInfectionVariant` draws one from the
   session seed (fresh seed per session for cases with variants). Scoring facts per variant:
   `stewardshipConfigFor(caseId, variant)`; case-specific debrief checks are data (`CaseCheck`).
+- **Case files (phase 5):** `src/content/infection/cases.ts` (MVP cases, aggregates `INFECTION_CASES`),
+  `casesNoInfection.ts` (N1–N3, A2, A3, B2) and `casesAdvanced.ts` (C2, C3, D2, E1, E3, B4, B5); the working-diagnosis
+  list is shared (`workingDiagnoses.ts`). New check kinds: `requireDrugs`, `antibioticBeforeImaging`,
+  `monotherapyAfterAst`, procedures relative to the first dose. The meningitis episode of the bridge adds
+  dexamethasone and CT head actions; their minutes come back in `RealtimeOutcome.actionsAtMin`.
 - **Sampling sequences:** blood cultures, urine culture and a diagnostic puncture open an animated bedside sequence
   (`src/ui/screens/ward/SamplingDialog.tsx`, `SamplingScene.tsx`). The steps and options are data in
   `src/ui/adapters/sampling.ts`; each option patches a pre-analytic field of the `SpecimenOrder` (antisepsis, volume,

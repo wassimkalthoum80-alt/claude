@@ -312,7 +312,7 @@ export const meningitis: InfectionCase = {
     {
       id: 'listeria',
       patch: {
-        patient: { ageYears: 74, reserve: 0.45, immunity: 0.8 },
+        patient: { reserve: 0.5, immunity: 0.8 },
         isolates: [{ id: 'sp', organismId: 'l-monocytogenes', mechanisms: [] }],
         infections: [
           {
@@ -391,10 +391,149 @@ export const catBite: InfectionCase = {
   ],
 };
 
+/**
+ * B4 (advanced) — ventilator-associated pneumonia with Pseudomonas aeruginosa on ICU day 6 after polytrauma. Teaches:
+ * respiratory and blood cultures first, day-3 re-evaluation, combination → monotherapy by resistogram, 7–8 days.
+ * Variants: susceptible; 3MRGN by efflux (meropenem only intermediate — porin loss under a carbapenem makes it 4MRGN).
+ */
+const VAP: InfectionSiteDef = {
+  id: 'vap',
+  diagnosisKey: 'dx.vapPseudomonas',
+  focus: 'lung',
+  isolateIds: ['pa'],
+  initialBurden: 0.55,
+  growthPerH: 0.012,
+  virulence: 0.8,
+  bacteraemia: 0.15,
+  minEffectiveDays: 7,
+};
+
+export const vapPseudomonas: InfectionCase = {
+  id: 'ward-vap',
+  titleKey: 'case.vap.title',
+  briefingKey: 'case.vap.briefing',
+  presentationKey: 'case.vap.presentation',
+  examKey: 'case.vap.exam',
+  seed: 9751,
+  startHourOfDay: 8,
+  maxDurationH: 24 * 12,
+  patient: {
+    ageYears: 59,
+    sex: 'male',
+    weightKg: 90,
+    baselineCreatinine: 1.0,
+    immunity: 0.85,
+    reserve: 0.5,
+    devices: ['ventilator', 'cvc', 'urinary-catheter'],
+  },
+  isolates: [{ id: 'pa', organismId: 'p-aeruginosa', mechanisms: [] }],
+  infections: [VAP],
+  resistance: {
+    pa: [{ kind: 'deNovo', driverClasses: ['carbapenem'], gains: 'oprd-loss', hazardPerH: 0.0004 }],
+  },
+  findings: [{ kind: 'cxr', reportKey: 'imaging.cxr.vap', infectionId: 'vap' }],
+  workingDiagnoses: WORKING_DIAGNOSES,
+  variants: [
+    { id: 'susceptible', patch: {} },
+    {
+      id: '3mrgn',
+      patch: {
+        isolates: [{ id: 'pa', organismId: 'p-aeruginosa', mechanisms: ['efflux'] }],
+        resistance: {
+          pa: [
+            {
+              kind: 'deNovo',
+              driverClasses: ['carbapenem'],
+              gains: 'oprd-loss',
+              hazardPerH: 0.0012,
+            },
+          ],
+        },
+      },
+    },
+  ],
+};
+
+/**
+ * B5 (advanced) — ICU long stay, rectally colonised with ESBL Klebsiella pneumoniae, now catheter-associated urosepsis
+ * with it. Teaches: carbapenem only while needed — narrow by resistogram (e.g. cotrimoxazole), change the catheter.
+ * Twist: carbapenemase-producing K. pneumoniae on the unit — every carbapenem day raises the risk of acquisition and a
+ * 4MRGN superinfection, which then needs a reserve agent by mechanism. Variants: quiet unit; outbreak on the unit.
+ */
+const KPC_FLORA = (hazardPerH: number) => ({
+  isolate: { id: 'kpc', organismId: 'k-pneumoniae', mechanisms: ['kpc' as const, 'esbl' as const] },
+  site: 'gut' as const,
+  hazardPerH,
+  selectedBy: ['carbapenem' as const, 'carbapenem-group1' as const],
+  superinfection: {
+    diagnosisKey: 'dx.kpcBsi',
+    focus: 'blood' as const,
+    initialBurden: 0.45,
+    growthPerH: 0.015,
+    virulence: 0.9,
+    bacteraemia: 0.9,
+    minEffectiveDays: 10,
+    hazardPerH: 0.004,
+  },
+});
+
+export const esblIcu: InfectionCase = {
+  id: 'ward-esbl-icu',
+  titleKey: 'case.esblIcu.title',
+  briefingKey: 'case.esblIcu.briefing',
+  presentationKey: 'case.esblIcu.presentation',
+  examKey: 'case.esblIcu.exam',
+  seed: 9761,
+  startHourOfDay: 8,
+  maxDurationH: 24 * 14,
+  patient: {
+    ageYears: 71,
+    sex: 'female',
+    weightKg: 66,
+    baselineCreatinine: 1.2,
+    immunity: 0.75,
+    reserve: 0.45,
+    devices: ['cvc', 'urinary-catheter'],
+  },
+  isolates: [{ id: 'kp', organismId: 'k-pneumoniae', mechanisms: ['esbl', 'fq-resistance'] }],
+  infections: [
+    {
+      id: 'cauti',
+      diagnosisKey: 'dx.esblCauti',
+      focus: 'urine',
+      isolateIds: ['kp'],
+      initialBurden: 0.55,
+      growthPerH: 0.012,
+      virulence: 0.85,
+      bacteraemia: 0.6,
+      needsSourceControl: true,
+      sourceControl: [
+        {
+          id: 'remove-urinary-catheter',
+          labelKey: 'proc.remove-urinary-catheter',
+          delayH: 1,
+          result: 'adequate',
+        },
+      ],
+      minEffectiveDays: 7,
+    },
+  ],
+  colonisation: [{ isolateId: 'kp', site: 'gut', count: 1e5 }],
+  wardFlora: [KPC_FLORA(0.00005)],
+  findings: [{ kind: 'sono-urinary', reportKey: 'imaging.sono-urinary.normalCatheter' }],
+  workingDiagnoses: WORKING_DIAGNOSES,
+  variants: [
+    { id: 'quiet-unit', patch: {} },
+    { id: 'outbreak', patch: { wardFlora: [KPC_FLORA(0.0003)] } },
+  ],
+};
+
 export const ADVANCED_CASES: readonly InfectionCase[] = [
   mrsaBacteraemia,
   endocarditis,
   febrileNeutropenia,
   meningitis,
   catBite,
+  vapPseudomonas,
+  esblIcu,
 ];

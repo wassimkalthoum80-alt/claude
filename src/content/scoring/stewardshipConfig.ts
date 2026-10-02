@@ -425,6 +425,47 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
       },
     ],
   },
+  'ward-vap': {
+    infectionPresent: true,
+    severity: 'sepsis',
+    focusDiagnosisId: 'pneumonia',
+    targetDays: 8,
+    learningKey: 'stw.learn.vap',
+    checks: [
+      {
+        kind: 'test',
+        specimen: 'respiratory-culture',
+        withinH: 6,
+        okKey: 'stw.chk.respCulture.ok',
+        key: 'stw.chk.respCulture.missed',
+        penalty: 6,
+      },
+      {
+        kind: 'monotherapyAfterAst',
+        withinH: 48,
+        okKey: 'stw.chk.mono.ok',
+        key: 'stw.chk.mono.missed',
+        penalty: 10,
+      },
+    ],
+  },
+  'ward-esbl-icu': {
+    infectionPresent: true,
+    severity: 'sepsis',
+    focusDiagnosisId: 'urinary',
+    targetDays: 7,
+    learningKey: 'stw.learn.esblIcu',
+    checks: [
+      {
+        kind: 'procedure',
+        procedures: ['remove-urinary-catheter'],
+        withinH: 24,
+        okKey: 'stw.chk.catheterChange.ok',
+        key: 'stw.chk.catheterChange.missed',
+        penalty: 8,
+      },
+    ],
+  },
 };
 
 /** Per-variant changes of a case's scoring facts. */

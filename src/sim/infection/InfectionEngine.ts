@@ -802,7 +802,15 @@ export class InfectionEngine {
     const damage = 1 + 2 * Math.min(1, this.microbiomeDamage / 5);
     for (const w of this.wardFlora) {
       if (!w.acquired) {
-        if (this.rng.next() < w.hazardPerH * damage * devices * dt) {
+        // SIM-ASSUMPTION: a running selecting class multiplies the acquisition hazard (default ×4).
+        const selecting =
+          w.selectedBy !== undefined &&
+          this.running().some((o) => {
+            const cls = this.library.drugs.get(o.drugId)?.drugClass;
+            return cls !== undefined && (w.selectedBy ?? []).includes(cls);
+          });
+        const selection = selecting ? (w.selectionFactor ?? 4) : 1;
+        if (this.rng.next() < w.hazardPerH * damage * devices * selection * dt) {
           w.acquired = true;
           const id = w.isolate.id;
           this.isolates.set(id, { ...w.isolate, mechanisms: [...w.isolate.mechanisms] });

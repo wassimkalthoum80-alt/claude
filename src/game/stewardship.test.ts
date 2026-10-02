@@ -16,9 +16,11 @@ import {
 import {
   catBite,
   endocarditis,
+  esblIcu,
   febrileNeutropenia,
   meningitis,
   mrsaBacteraemia,
+  vapPseudomonas,
 } from '../content/infection/casesAdvanced';
 import { INFECTION_LIBRARY as LIB } from '../content/infection/library';
 import {
@@ -629,5 +631,58 @@ describe('stewardship scoring — phase 5 bloodstream and special cases', () => 
     e.dispatch({ type: 'PROCEDURE', procedure: 'remove-cvc' });
     runTo(e, 72);
     expect(keysOf(e)).toEqual(expect.arrayContaining(['stw.missingTdm', 'stw.chk.cvcOut.ok']));
+  });
+});
+
+describe('stewardship scoring — advanced ICU cases', () => {
+  const v = (c: InfectionCase, variant: string) => {
+    for (let seed = 1; seed < 200; seed++) {
+      const e = new InfectionEngine({ caseDef: c, library: LIB, seed });
+      if (e.variant === variant) return e;
+    }
+    throw new Error(variant);
+  };
+  const keysOf = (e: InfectionEngine) =>
+    scoreStewardship({
+      caseDef: e.caseDef,
+      view: e.getView(),
+      log: e.log,
+      truth: e.getTruth(),
+      lib: LIB,
+      config: stewardshipConfigFor(e.caseDef.id, e.variant),
+      weights: STEWARDSHIP_WEIGHTS,
+      spectrumRank: SPECTRUM_RANK,
+    }).items.map((i) => i.key);
+
+  it('B4: keeping the combination two days after the resistogram is named; mono is credited', () => {
+    const combo = v(vapPseudomonas, 'susceptible');
+    combo.dispatch({
+      type: 'ORDER_SPECIMEN',
+      specimen: { kind: 'respiratory-culture', site: 'tbas' },
+    });
+    combo.dispatch(start('piperacillin-tazobactam'));
+    combo.dispatch(start('tobramycin'));
+    runTo(combo, 24 * 5);
+    expect(keysOf(combo)).toEqual(
+      expect.arrayContaining(['stw.chk.respCulture.ok', 'stw.chk.mono.missed']),
+    );
+    const mono = v(vapPseudomonas, 'susceptible');
+    mono.dispatch({
+      type: 'ORDER_SPECIMEN',
+      specimen: { kind: 'respiratory-culture', site: 'tbas' },
+    });
+    mono.dispatch(start('piperacillin-tazobactam'));
+    const tob = mono.dispatch(start('tobramycin')).orderId ?? '';
+    runTo(mono, 54);
+    mono.dispatch({ type: 'STOP_ANTIINFECTIVE', orderId: tob });
+    runTo(mono, 24 * 5);
+    expect(keysOf(mono)).toContain('stw.chk.mono.ok');
+  });
+
+  it('B5: catheter change is checked', () => {
+    const e = v(esblIcu, 'quiet-unit');
+    e.dispatch(start('meropenem'));
+    runTo(e, 30);
+    expect(keysOf(e)).toContain('stw.chk.catheterChange.missed');
   });
 });

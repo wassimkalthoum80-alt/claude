@@ -62,6 +62,8 @@ export type CaseCheck = { okKey: string; key: string; penalty: number } & (
   | { kind: 'requireDrugs'; groups: string[][] }
   /** the first antibiotic is given before this imaging (or the imaging is not needed) */
   | { kind: 'antibioticBeforeImaging'; imaging: ImagingKind }
+  /** combination reduced to one antibacterial by this many hours after the causative resistogram */
+  | { kind: 'monotherapyAfterAst'; withinH: number }
   | { kind: 'imaging'; imaging: ImagingKind[]; withinH: number }
   | { kind: 'test'; specimen: SpecimenKind; withinH: number }
   /** blood cultures repeated after effective therapy started (from/within h after it) */
@@ -629,6 +631,14 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         if (!learnerOrders.length) break;
         const ok = c.groups.every((g) => learnerOrders.some((o) => g.includes(o.drugId)));
         add(ok ? c.okKey : c.key, ok ? 0 : -c.penalty);
+        break;
+      }
+      case 'monotherapyAfterAst': {
+        if (!Number.isFinite(astH)) break;
+        const at = astH + c.withinH;
+        if (end < at) break;
+        const n = runningAt(at).filter((o) => drug(o)?.category !== undefined).length;
+        add(n <= 1 ? c.okKey : c.key, n <= 1 ? 0 : -c.penalty, { n });
         break;
       }
       case 'antibioticBeforeImaging': {

@@ -849,8 +849,27 @@ test('infectiology: real-time bridge — emergency department in real time, hand
 
   await page.goto('/?lang=de&debug');
   await page.getByTestId('module-infectio').click();
-  // All five MVP cases are playable.
-  for (const id of ['positive-urine', 'fever-rigors', 'peritonitis', 'sab-line', 'cdi'])
+  // All Infectiology cases are playable.
+  for (const id of [
+    'positive-urine',
+    'cons-one-set',
+    'icu-sputum',
+    'postop-fever',
+    'not-pneumonia',
+    'fever-on-abx',
+    'fever-rigors',
+    'cap',
+    'peritonitis',
+    'sab-line',
+    'mrsa',
+    'endocarditis',
+    'fn',
+    'meningitis',
+    'cat-bite',
+    'cdi',
+    'vap-mrgn',
+    'esbl-icu',
+  ])
     await expect(page.getByTestId(`entry-${id}`)).toBeEnabled();
   await page.getByTestId('entry-fever-rigors').click();
   await page.getByTestId('ward-start-realtime').click();
