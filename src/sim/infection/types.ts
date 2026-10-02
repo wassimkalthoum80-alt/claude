@@ -206,7 +206,9 @@ export type ProcedureId =
   | 'surgical-source-control'
   | 'debridement'
   | 'pleural-drainage'
-  | 'remove-prosthesis';
+  | 'remove-prosthesis'
+  /** adjunct, not source control: dexamethasone with the first antibiotic dose (bacterial meningitis) */
+  | 'dexamethasone';
 
 export const PROCEDURES: readonly ProcedureId[] = [
   'remove-cvc',
@@ -218,6 +220,7 @@ export const PROCEDURES: readonly ProcedureId[] = [
   'debridement',
   'pleural-drainage',
   'remove-prosthesis',
+  'dexamethasone',
 ];
 
 export interface SourceControlAction {
@@ -314,7 +317,10 @@ export type ImagingKind =
   | 'tte'
   | 'tee'
   | 'mri-spine'
-  | 'line-inspection';
+  | 'line-inspection'
+  | 'ct-head'
+  | 'ct-pa'
+  | 'duplex-legs';
 
 export interface CasePatient {
   ageYears: number;
@@ -383,6 +389,8 @@ export interface InfectionCase {
   initialTherapy?: { drugId: string; dose: DoseLevel; route: DrugRoute; startedH: number }[];
   /** the case can begin with a real-time emergency-department episode (course ↔ real-time bridge) */
   realtimeAdmission?: boolean;
+  /** which real-time episode the bridge opens (default: sepsis) */
+  realtimeKind?: 'sepsis' | 'meningitis';
   /** seeded variants of the hidden truth (one drawn per session) */
   variants?: InfectionCaseVariant[];
 }
@@ -488,6 +496,8 @@ export interface SpecimenOrder {
   promptTransport?: boolean;
   /** puncture fluid: also inoculated into blood-culture bottles at the bedside */
   inoculatedBottles?: boolean;
+  /** case content only: sets that grow a skin contaminant (scripted, e.g. CoNS in 1 of 2 sets) */
+  contaminatedSets?: number;
 }
 
 export type UrineCollection = 'midstream' | 'catheter-port' | 'catheter-bag';
@@ -604,6 +614,8 @@ export interface RealtimeOutcome {
   /** min from episode start; null = not given in the episode */
   antibioticsAtMin: number | null;
   culturesAtMin: number | null;
+  /** min from episode start of further case actions (e.g. dexamethasone, CT head) */
+  actionsAtMin?: Record<string, number>;
 }
 
 /** Patient preset for the real-time engine derived from the course (course → real time). */

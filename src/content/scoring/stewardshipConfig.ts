@@ -204,12 +204,174 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
       },
     ],
   },
+  'ward-postop-fever': {
+    infectionPresent: false,
+    severity: 'suspected',
+    focusDiagnosisId: null,
+    targetDays: null,
+    learningKey: 'stw.learn.postopFever',
+  },
+  'ward-not-pneumonia': {
+    infectionPresent: false,
+    severity: 'suspected',
+    focusDiagnosisId: null,
+    targetDays: null,
+    learningKey: 'stw.learn.notPneumonia',
+    checks: [
+      {
+        kind: 'stopDrug',
+        drugId: 'ampicillin-sulbactam',
+        withinH: 48,
+        okKey: 'stw.chk.stopUnneeded.ok',
+        key: 'stw.chk.stopUnneeded.missed',
+        penalty: 15,
+      },
+    ],
+  },
+  'ward-fever-on-antibiotics': {
+    infectionPresent: false,
+    severity: 'suspected',
+    focusDiagnosisId: null,
+    targetDays: null,
+    learningKey: 'stw.learn.feverOnAbx',
+    checks: [
+      {
+        kind: 'stopDrug',
+        drugId: 'piperacillin-tazobactam',
+        withinH: 48,
+        okKey: 'stw.chk.stopUnneeded.ok',
+        key: 'stw.chk.stopUnneeded.missed',
+        penalty: 12,
+      },
+      {
+        kind: 'avoidClasses',
+        classes: ['carbapenem', 'glycopeptide', 'new-bl-bli', 'oxazolidinone', 'echinocandin'],
+        okKey: 'stw.chk.noEscalation.ok',
+        key: 'stw.chk.noEscalation.missed',
+        penalty: 12,
+      },
+    ],
+  },
+  'ward-cons-one-set': {
+    infectionPresent: false,
+    severity: 'suspected',
+    focusDiagnosisId: null,
+    targetDays: null,
+    learningKey: 'stw.learn.consContaminant',
+  },
+  'ward-icu-sputum': {
+    infectionPresent: false,
+    severity: 'suspected',
+    focusDiagnosisId: null,
+    targetDays: null,
+    learningKey: 'stw.learn.icuSputum',
+    checks: [
+      {
+        kind: 'avoidClasses',
+        classes: ['azole', 'echinocandin'],
+        okKey: 'stw.chk.noColonisationTx.ok',
+        key: 'stw.chk.noColonisationTx.missed',
+        penalty: 10,
+      },
+    ],
+  },
+  'ward-cap': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'pneumonia',
+    targetDays: 5,
+    learningKey: 'stw.learn.cap',
+    checks: [
+      {
+        kind: 'avoidClasses',
+        classes: [
+          'carbapenem',
+          'ureidopenicillin-bli',
+          'ceph3-antipseudomonal',
+          'ceph4',
+          'glycopeptide',
+          'oxazolidinone',
+        ],
+        okKey: 'stw.chk.noBroadCap.ok',
+        key: 'stw.chk.noBroadCap.missed',
+        penalty: 8,
+      },
+    ],
+  },
 };
 
 /** Per-variant changes of a case's scoring facts. */
 export const STEWARDSHIP_VARIANTS: Readonly<
   Record<string, Readonly<Record<string, Partial<StewardshipConfig>>>>
 > = {
+  'ward-fever-on-antibiotics': {
+    'pulmonary-embolism': {
+      checks: [
+        {
+          kind: 'imaging',
+          imaging: ['ct-pa'],
+          withinH: 48,
+          okKey: 'stw.chk.ctpa.ok',
+          key: 'stw.chk.ctpa.missed',
+          penalty: 8,
+        },
+      ],
+    },
+  },
+  'ward-cons-one-set': {
+    crbsi: {
+      infectionPresent: true,
+      focusDiagnosisId: 'line',
+      targetDays: 7,
+      learningKey: 'stw.learn.consCrbsi',
+      checks: [
+        {
+          kind: 'procedure',
+          procedures: ['remove-cvc'],
+          withinH: 24,
+          okKey: 'stw.chk.cvcOut.ok',
+          key: 'stw.chk.cvcOut.missed',
+          penalty: 15,
+        },
+      ],
+    },
+  },
+  'ward-cap': {
+    legionella: {
+      learningKey: 'stw.learn.capLegionella',
+      checks: [
+        {
+          kind: 'requireDrugs',
+          groups: [['clarithromycin', 'levofloxacin', 'moxifloxacin', 'doxycycline']],
+          okKey: 'stw.chk.atypical.ok',
+          key: 'stw.chk.atypical.missed',
+          penalty: 15,
+        },
+        {
+          kind: 'test',
+          specimen: 'legionella-antigen',
+          withinH: 48,
+          okKey: 'stw.chk.legionellaAg.ok',
+          key: 'stw.chk.legionellaAg.missed',
+          penalty: 4,
+        },
+      ],
+    },
+    empyema: {
+      targetDays: 14,
+      learningKey: 'stw.learn.capEmpyema',
+      checks: [
+        {
+          kind: 'procedure',
+          procedures: ['pleural-drainage'],
+          withinH: 96,
+          okKey: 'stw.chk.drainage.ok',
+          key: 'stw.chk.drainage.missed',
+          penalty: 15,
+        },
+      ],
+    },
+  },
   'ward-sab-line': {
     spondylodiscitis: {
       // complicated bacteraemia with a bone focus: ≥ 6 weeks

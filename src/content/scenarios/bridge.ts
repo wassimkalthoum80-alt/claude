@@ -17,14 +17,38 @@ export function bridgeScenario(
   preset: RealtimePreset,
   kind: BridgeKind,
   patient: { ageYears: number; sex: 'female' | 'male'; weightKg: number },
+  episode: 'sepsis' | 'meningitis' = 'sepsis',
 ): ScenarioDefinition {
   const base = septicShock;
+  const textKey = episode === 'meningitis' ? 'meningitis' : kind;
+  // Meningitis: dexamethasone with the first dose, and the CT question (antibiotics must not wait for it).
+  const meningitisActions =
+    episode === 'meningitis'
+      ? [
+          {
+            id: 'dexamethasone',
+            labelKey: 'act.bridge.dexamethasone',
+            startKey: 'act.bridge.dexamethasone.start',
+            doneKey: 'act.bridge.dexamethasone.done',
+            delayS: 60,
+            commands: [],
+          },
+          {
+            id: 'ct-head',
+            labelKey: 'act.bridge.ctHead',
+            startKey: 'act.bridge.ctHead.start',
+            doneKey: 'act.bridge.ctHead.done',
+            delayS: 900,
+            commands: [],
+          },
+        ]
+      : [];
   return {
     ...base,
     id: BRIDGE_SCENARIO_ID,
-    titleKey: `scenario.bridge.${kind}.title`,
-    briefingKey: `scenario.bridge.${kind}.briefing`,
-    presentationKey: `scenario.bridge.${kind}.title`,
+    titleKey: `scenario.bridge.${textKey}.title`,
+    briefingKey: `scenario.bridge.${textKey}.briefing`,
+    presentationKey: `scenario.bridge.${textKey}.title`,
     variants: [],
     patient: {
       ...base.patient,
@@ -74,6 +98,7 @@ export function bridgeScenario(
         delayS: 120,
         commands: [],
       },
+      ...meningitisActions,
     ],
     maxDurationS: 1800,
     endAfterArrestS: 120,

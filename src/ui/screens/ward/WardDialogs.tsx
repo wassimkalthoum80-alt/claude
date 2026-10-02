@@ -537,6 +537,10 @@ export function HandoverDialog({
         ? `${outcome.vasopressorMin} min · max ${outcome.peakNoradrenalineUgKgMin} µg/kg/min`
         : tk('bridge.none'),
     ],
+    ...Object.entries(outcome.actionsAtMin ?? {}).map(([id, at]): [string, string] => [
+      `bridge.row.action.${id}`,
+      `${at} min`,
+    ]),
     ['bridge.row.lactate', `${outcome.peakLactate} mmol/L`],
     [
       'bridge.row.stable',

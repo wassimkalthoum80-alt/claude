@@ -216,6 +216,9 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'imaging.kind.tee': 'TEE',
   'imaging.kind.mri-spine': 'MRT Wirbelsäule',
   'imaging.kind.line-inspection': 'Zugänge und Wunden inspizieren',
+  'imaging.kind.ct-head': 'CCT',
+  'imaging.kind.ct-pa': 'CT-Pulmonalisangiographie',
+  'imaging.kind.duplex-legs': 'Duplex Beinvenen',
   'imaging.cxr.normal': 'Kein Infiltrat, kein Erguss.',
   'imaging.ct-chest.normal': 'Keine Pneumonie, kein Empyem, kein Abszess.',
   'imaging.ct-abdomen.normal': 'Kein Abszess, keine freie Luft, keine Harnstauung.',
@@ -226,6 +229,9 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'imaging.tee.normal': 'Keine Vegetation, kein Abszess.',
   'imaging.mri-spine.normal': 'Keine Spondylodiszitis, kein epiduraler Abszess.',
   'imaging.line-inspection.normal': 'Einstichstellen reizlos, Wunden unauffällig.',
+  'imaging.ct-head.normal': 'Keine Raumforderung, keine Blutung, keine Hirndruckzeichen.',
+  'imaging.ct-pa.normal': 'Keine Lungenarterienembolie.',
+  'imaging.duplex-legs.normal': 'Keine tiefe Beinvenenthrombose.',
   'imaging.sono-urinary.pyelonephritis':
     'Rechte Niere geschwollen, verminderte Mark-Rinden-Differenzierung; keine Harnstauung, kein Konkrement.',
   'imaging.ct-abdomen.pyelonephritis':
@@ -239,6 +245,7 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'proc.debridement': 'Débridement',
   'proc.pleural-drainage': 'Pleuradrainage',
   'proc.remove-prosthesis': 'Infiziertes Implantat entfernen',
+  'proc.dexamethasone': 'Dexamethason 10 mg i.v. (adjuvant, mit der ersten Gabe)',
   'nurse.fever': 'Temperatur jetzt ≥ 39 °C.',
   'nurse.hypotension': 'Blutdruck niedrig (MAP < 65 mmHg).',
   'nurse.desaturation': 'SpO₂ unter 90 %.',
@@ -408,6 +415,7 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'abx.reg.fluconazole': 'Aufsättigung 800 mg, dann 1 × 400 mg',
   'abx.anidulafungin': 'Anidulafungin',
   'abx.reg.anidulafungin': '200 mg, dann 1 × 100 mg i.v.',
+  'org.l-monocytogenes': 'Listeria monocytogenes',
   'org.e-coli': 'E. coli',
   'org.k-pneumoniae': 'Klebsiella pneumoniae',
   'org.e-cloacae': 'Enterobacter-cloacae-Komplex',
@@ -767,4 +775,157 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'act.bridge.antibiotics': 'Antibiotikum geben (Substanz bei Übergabe)',
   'act.bridge.antibiotics.start': 'Ich gebe jetzt das Antibiotikum.',
   'act.bridge.antibiotics.done': 'Das Antibiotikum ist drin.',
+  'bridge.row.action.dexamethasone': 'Dexamethason bei',
+  'bridge.row.action.ct-head': 'CCT bei',
+  'scenario.bridge.meningitis.title': 'Notaufnahme: Fieber und Verwirrtheit',
+  'scenario.bridge.meningitis.briefing':
+    'Der Patient aus dem Stationsfall kommt an: hohes Fieber, Kopfschmerzen, Meningismus, zunehmend verwirrt. Sie haben Monitor, Perfusoren und Infusionen. Blutkulturen abnehmen, Dexamethason und Antibiotikum geben — entscheiden, ob vorher ein CT nötig ist — dann an die Station übergeben (Leiste unten).',
+  'act.bridge.dexamethasone': 'Dexamethason 10 mg i.v.',
+  'act.bridge.dexamethasone.start': 'Dexamethason wird aufgezogen.',
+  'act.bridge.dexamethasone.done': 'Dexamethason ist drin.',
+  'act.bridge.ctHead': 'CCT',
+  'act.bridge.ctHead.start': 'CT ist angemeldet — der Transport dauert.',
+  'act.bridge.ctHead.done': 'CCT erfolgt: keine Raumforderung, keine Blutung.',
+  'infectio.section.mimics': 'Ist es überhaupt eine Infektion?',
+  'infectio.postopFever.title': 'Fieber am ersten Tag nach der OP',
+  'infectio.postopFever.desc': 'Abend nach Knie-TEP: 38,4 °C. Der Nachtdienst will einen Plan.',
+  'infectio.notPneumonia.title': 'Luftnot mit Infiltraten',
+  'infectio.notPneumonia.desc': 'Die Notaufnahme hat wegen „Pneumonie“ ein Antibiotikum begonnen.',
+  'infectio.feverOnAbx.title': 'Wieder Fieber unter Antibiotika',
+  'infectio.feverOnAbx.desc': 'Tag 6 Piperacillin/Tazobactam — und das Fieber ist zurück.',
+  'infectio.consOneSet.title': 'KNS in einer von zwei Blutkulturen',
+  'infectio.consOneSet.desc': 'Das Labor ruft an: grampositive Haufenkokken.',
+  'infectio.icuSputum.title': 'Enterokokken und Candida im Trachealsekret',
+  'infectio.icuSputum.desc':
+    'Beatmet, auf dem Weg der Besserung — und nun ein Mikrobiologie-Befund.',
+  'infectio.cap.title': 'Husten, Fieber, Infiltrat',
+  'infectio.cap.desc': 'Ambulant erworbene Pneumonie — wählen, oralisieren, beenden.',
+  'case.postopFever.title': 'Fieber am ersten Tag nach der OP',
+  'case.postopFever.presentation': '69 J., Abend von Tag 1 nach Knie-TEP: 38,4 °C.',
+  'case.postopFever.briefing':
+    'Frau W., 69 Jahre, gestern unkomplizierte Knie-TEP (perioperativ Cefazolin als Single Shot). Heute Abend 38,4 °C, sie fühlt sich „etwas schlapp“, Schmerzen kontrolliert. Der Nachtdienst ruft um 18:00 an: „Sollen wir ein Antibiotikum anfangen? CRP ist 96.“ Bekannt: Adipositas, Hypertonie. Keine Allergien.',
+  'case.postopFever.exam':
+    'Untersuchung: wach, beim Sprechen leicht kurzatmig; basal beidseits abgeschwächtes Atemgeräusch; Wunde trocken, Knie postoperativ erwartungsgemäß warm und geschwollen; Waden weich; Katheterurin klar.',
+  'dx.postopInflammation': 'Postoperative Entzündungsreaktion (keine Infektion)',
+  'dx.atelectasis': 'Basale Atelektasen (keine Infektion)',
+  'nurse.postopFever':
+    '„Wieder 38,4 — der Operateur sagt, wir sollen Sie wegen Antibiotika fragen.“',
+  'imaging.cxr.atelectasis': 'Beidseits basale Plattenatelektasen, kein Infiltrat, kein Erguss.',
+  'case.notPneumonia.title': 'Luftnot mit Infiltraten',
+  'case.notPneumonia.presentation':
+    '81 J., Luftnot, beidseitige Infiltrate — Ampicillin/Sulbactam in der Notaufnahme begonnen.',
+  'case.notPneumonia.briefing':
+    'Herr E., 81 Jahre, bekannte Herzinsuffizienz, kam gestern Abend mit seit drei Tagen zunehmender Luftnot, schläft inzwischen im Sitzen. Die Notaufnahme diagnostizierte eine „beidseitige Pneumonie“ und begann Ampicillin/Sulbactam. 37,6 °C, CRP 38. Sie sehen ihn bei der Morgenvisite.',
+  'case.notPneumonia.briefingAspiration':
+    'Herr E., 81 Jahre, hat gestern Abend zu Hause mehrfach erbrochen und wurde hustend und kurzatmig gefunden. Die Notaufnahme diagnostizierte eine „Pneumonie“ und begann Ampicillin/Sulbactam. 38,1 °C, CRP 45. Sie sehen ihn bei der Morgenvisite.',
+  'case.notPneumonia.exam':
+    'Untersuchung: tachypnoeisch, beidseits feuchte RGs, Knöchelödeme, gestaute Halsvenen; kein eitriges Sputum.',
+  'dx.pulmonaryOedema': 'Kardiales Lungenödem (keine Infektion)',
+  'dx.aspirationPneumonitis': 'Aspirationspneumonitis (chemisch, keine Infektion)',
+  'imaging.cxr.oedema':
+    'Beidseits perihiläre Verschattung, Kerley-Linien, Kardiomegalie, kleine Ergüsse beidseits.',
+  'imaging.cxr.aspiration':
+    'Fleckige Verdichtungen im rechten Unterlappen und den dorsalen Segmenten; Herz normal groß.',
+  'imaging.tte.lowEf': 'Dilatierter linker Ventrikel, EF etwa 25 %, keine Vegetation.',
+  'imaging.ct-chest.oedema':
+    'Milchglas und septale Verdickung schwerkraftabhängig, Ergüsse beidseits — Stauung.',
+  'imaging.ct-chest.aspiration':
+    'Abhängige Verdichtungen rechter Unterlappen, Flüssigkeit in den Bronchien — passend zu Aspiration.',
+  'case.feverOnAbx.title': 'Wieder Fieber unter Antibiotika',
+  'case.feverOnAbx.presentation':
+    '67 J., Tag 6 Piperacillin/Tazobactam bei Pyelonephritis: erneut Fieber.',
+  'case.feverOnAbx.briefing':
+    'Frau S., 67 Jahre, vor 6 Tagen mit Pyelonephritis aufgenommen (E. coli, auf alles Getestete sensibel). Ab Tag 2 fieberfrei, aber Piperacillin/Tazobactam wurde nie deeskaliert. Seit gestern Abend wieder Fieber bis 38,8 °C. Der Assistent schlägt vor, „auf Meropenem zu wechseln“. Morgenvisite.',
+  'case.feverOnAbx.exam':
+    'Untersuchung: wirkt nicht krank, Nierenlager frei, keine Dysurie; Zugang reizlos; Waden weich; Lunge frei. Relative Bradykardie zur Temperatur.',
+  'dx.drugFever': 'Drug fever durch Piperacillin/Tazobactam (keine Infektion)',
+  'dx.pulmonaryEmbolism': 'Lungenarterienembolie (keine Infektion)',
+  'nurse.dyspnoea': '„Sie wird plötzlich kurzatmig, wenn sie zur Toilette geht.“',
+  'imaging.ct-pa.embolism': 'Segmentale Emboli im rechten Unterlappen, keine Rechtsherzbelastung.',
+  'imaging.duplex-legs.dvt': 'Thrombose der linken V. poplitea.',
+  'case.consOneSet.title': 'KNS in einer von zwei Blutkulturen',
+  'case.consOneSet.presentation':
+    '72 J., ZVK, gestern leichtes Fieber — das Labor ruft wegen einer Blutkultur an.',
+  'case.consOneSet.briefing':
+    'Herr F., 72 Jahre, Tag 5 nach Darmresektion, hat einen ZVK für parenterale Ernährung. Gestern früh einmalig 38,2 °C; der Nachtdienst hat Blutkulturen abgenommen. Heute geht es ihm gut. Morgenvisite.',
+  'case.consOneSet.exam':
+    'Untersuchung: jetzt fieberfrei, ZVK-Einstichstelle reizlos, Wunde heilt gut, Abdomen weich.',
+  'case.consOneSet.examCrbsi':
+    'Untersuchung: 37,9 °C, ZVK-Einstichstelle gerötet mit etwas Eiter, Wunde heilt gut, Abdomen weich.',
+  'dx.transientFever': 'Passageres postoperatives Fieber; KNS = Kontamination',
+  'dx.consCrbsi': 'Katheterassoziierte Blutstrominfektion mit KNS',
+  'imaging.line-inspection.cvcRed': 'ZVK-Einstichstelle gerötet und induriert, Eiter auf Druck.',
+  'case.icuSputum.title': 'Enterokokken und Candida im Trachealsekret',
+  'case.icuSputum.presentation':
+    '64 J., Intensivtag 8 nach Herz-OP, im Weaning — im Trachealsekret wächst etwas.',
+  'case.icuSputum.briefing':
+    'Herr K., 64 Jahre, Tag 8 nach aortokoronarer Bypass-OP, nach langsamer Erholung noch beatmet, jetzt gut im Weaning. Gestern wurde routinemäßig Trachealsekret eingeschickt. Fieberfrei, Sekret klar, Sauerstoffbedarf sinkend, CRP fallend. Morgenvisite auf der Intensivstation.',
+  'case.icuSputum.exam':
+    'Untersuchung: wach unter niedriger Druckunterstützung, klares Sekret, seitengleiches Atemgeräusch, kein neues Infiltrat im letzten Röntgen; Sternotomiewunde trocken.',
+  'nurse.surgeonCandida':
+    '„Der Chirurg hat Candida im Befund gesehen und fragt, warum noch kein Fluconazol läuft.“',
+  'imaging.cxr.icuStable':
+    'Katheter und Tubus regelrecht, kleine basale Atelektasen, kein neues Infiltrat.',
+  'case.cap.title': 'Husten, Fieber, Infiltrat',
+  'case.cap.presentation':
+    '58 J., seit drei Tagen Husten und Fieber, rechtsseitige Thoraxschmerzen.',
+  'case.cap.briefing':
+    'Herr D., 58 Jahre, sonst gesund, seit drei Tagen Husten mit rostbraunem Auswurf, Fieber bis 39,5 °C und rechtsseitigen atemabhängigen Schmerzen. Um 14:00 aus der Notaufnahme aufgenommen: wach, Atemfrequenz 24, Blutdruck normal. Keine Antibiotika in den letzten Monaten, keine Reisen. Keine Allergien.',
+  'case.cap.exam':
+    'Untersuchung: Bronchialatmen und RGs über dem rechten Unterlappen, Klopfschalldämpfung; keine Verwirrtheit.',
+  'case.cap.examLegionella':
+    'Untersuchung: RGs über dem rechten Unterlappen; seit gestern Durchfall, Kopfschmerzen, relative Bradykardie. Vor einer Woche aus einem Hotelurlaub zurück.',
+  'dx.capPneumococcal': 'Ambulant erworbene Pneumokokken-Pneumonie',
+  'dx.capLegionella': 'Legionellen-Pneumonie',
+  'dx.empyema': 'Parapneumonisches Pleuraempyem',
+  'nurse.stillFebrile': '„Er fiebert heute immer noch, und rechts tut es beim Atmen mehr weh.“',
+  'imaging.cxr.lobar': 'Konsolidierung des rechten Unterlappens mit Aerobronchogramm.',
+  'imaging.cxr.effusion':
+    'Unterlappenkonsolidierung rechts und neuer mittelgroßer Pleuraerguss rechts.',
+  'imaging.ct-chest.empyema':
+    'Gekammerter Pleuraverhalt rechts mit kontrastmittelaufnehmender Pleura (Split-Pleura-Zeichen) — Empyem.',
+  'imaging.ct-chest.consolidation':
+    'Konsolidierung rechter Unterlappen, kein Abszess, kein Empyem.',
+  'stw.chk.stopUnneeded.ok': 'Das nicht nötige Antibiotikum wurde abgesetzt.',
+  'stw.chk.stopUnneeded.missed': 'Ein Antibiotikum ohne Infektion lief weiter.',
+  'stw.chk.noEscalation.ok': 'Keine reflexhafte Eskalation wegen Fieber allein.',
+  'stw.chk.noEscalation.missed':
+    '{drug} bei Fieber unter Antibiotika: Eskalation ohne neuen Fokus behandelt das Thermometer.',
+  'stw.chk.ctpa.ok': 'CT-Angiographie bei neuer Luftnot.',
+  'stw.chk.ctpa.missed':
+    'Neue Luftnot mit Fieber unter Antibiotika, ohne nach einer Embolie zu suchen.',
+  'stw.chk.cvcOut.ok': 'Infizierter ZVK entfernt.',
+  'stw.chk.cvcOut.missed': 'Der infizierte ZVK blieb liegen.',
+  'stw.chk.noColonisationTx.ok':
+    'Kein Antimykotikum für Candida in den Atemwegen eines sich bessernden Patienten.',
+  'stw.chk.noColonisationTx.missed':
+    '{drug} für eine Atemwegsbesiedlung: Candida im Trachealsekret ist fast nie eine Pneumonie.',
+  'stw.chk.noBroadCap.ok':
+    'Kein Breitspektrum für eine mittelschwere ambulant erworbene Pneumonie.',
+  'stw.chk.noBroadCap.missed': '{drug} für eine ambulant erworbene Pneumonie ohne Risikofaktoren.',
+  'stw.chk.atypical.ok': 'Legionellen abgedeckt (Makrolid, Chinolon oder Doxycyclin).',
+  'stw.chk.atypical.missed':
+    'Legionellen nicht abgedeckt: β-Laktame erreichen intrazelluläre Erreger nicht.',
+  'stw.chk.legionellaAg.ok': 'Legionellen-Urin-Antigen eingeschickt.',
+  'stw.chk.legionellaAg.missed': 'Kein Legionellen-Urin-Antigen trotz Hinweisen.',
+  'stw.chk.drainage.ok': 'Empyem drainiert.',
+  'stw.chk.drainage.missed': 'Empyem nicht drainiert: Antibiotika allein beseitigen keinen Eiter.',
+  'stw.learn.postopFever':
+    'Fieber am ersten Tag nach einer OP ist meist Entzündung und Atelektase. Untersuchen, mobilisieren, Atemtherapie — kein Antibiotikum, keine Kultur aus dem Katheterurin.',
+  'stw.learn.notPneumonia':
+    'Infiltrate sind nicht immer eine Pneumonie. Wenn Ödem oder chemische Pneumonitis das Bild erklären, das in der Notaufnahme begonnene Antibiotikum absetzen.',
+  'stw.learn.feverOnAbx':
+    'Fieber unter Antibiotika ist kein Grund zur Eskalation. An Drug fever, Thrombose und Zugänge denken — und eine abgeschlossene Therapie beenden.',
+  'stw.learn.consContaminant':
+    'KNS in einer von zwei Blutkulturen, späte Positivität, kein Fokus: eine Kontamination. Kein Vancomycin — Kontrollkulturen nur bei Zweifel.',
+  'stw.learn.consCrbsi':
+    'KNS in beiden Sets, das Kathetersets zuerst positiv, gerötete Einstichstelle: eine Katheterinfektion. Den Katheter entfernen; danach reicht eine kurze Therapie.',
+  'stw.learn.icuSputum':
+    'Enterokokken und Candida im Trachealsekret eines sich bessernden Patienten sind Besiedler. Eine Pneumonie behandelt man nach Klinik, nicht nach Befund.',
+  'stw.learn.cap':
+    'Mittelschwere CAP: Amoxicillin oder Ampicillin/Sulbactam (± Makrolid), oralisieren sobald stabil, insgesamt 5 Tage.',
+  'stw.learn.capLegionella':
+    'Durchfall, Kopfschmerz, Hotelaufenthalt, kein Ansprechen auf ein β-Laktam: an Legionellen denken — Urin-Antigen, Makrolid oder Levofloxacin.',
+  'stw.learn.capEmpyema':
+    'Anhaltendes Fieber an Tag 3 eines passenden Antibiotikums: nach einer Komplikation suchen. Ein Empyem braucht eine Drainage und eine längere Therapie.',
 };

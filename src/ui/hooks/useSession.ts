@@ -144,7 +144,12 @@ export function useSession(): SessionActions {
       const wardSession = ui.session;
       const course = wardStore.current();
       if (!wardSession || !course || ui.screen !== 'ward') return;
-      const scenario = bridgeScenario(course.realtimePreset(), kind, course.caseDef.patient);
+      const scenario = bridgeScenario(
+        course.realtimePreset(),
+        kind,
+        course.caseDef.patient,
+        course.caseDef.realtimeKind,
+      );
       engine.loadScenario(scenario, wardSession.seed);
       engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: wardSession.difficulty }, 'system');
       engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');

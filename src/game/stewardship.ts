@@ -29,7 +29,9 @@ export interface StewardshipConfig {
   /** antibiotics are indicated (false: bacteriuria, mimics) */
   infectionPresent: boolean;
   /** clinical context that sets the time-to-antibiotic target */
-  severity: 'septicShock' | 'sepsis' | 'suspected';
+  severity: 'septicShock' | 'sepsis' | 'febrileNeutropenia' | 'suspected';
+  /** empirical antibiotics are indicated even without a proven infection (febrile neutropenia) */
+  empiricalIndicated?: boolean;
   /** working diagnosis that is correct (null: no infection) */
   focusDiagnosisId: string | null;
   /** d — guideline total duration (null: no antibiotics needed) */
@@ -49,7 +51,17 @@ export interface StewardshipConfig {
  * action costs half the penalty.
  */
 export type CaseCheck = { okKey: string; key: string; penalty: number } & (
-  | { kind: 'procedure'; procedures: ProcedureId[]; withinH: number }
+  | {
+      kind: 'procedure';
+      procedures: ProcedureId[];
+      withinH: number;
+      /** counted from the first antibiotic dose instead of admission (adjuncts) */
+      relativeToFirstDose?: boolean;
+    }
+  /** every group has at least one drug ordered (e.g. ceftriaxone AND ampicillin in meningitis > 50 y) */
+  | { kind: 'requireDrugs'; groups: string[][] }
+  /** the first antibiotic is given before this imaging (or the imaging is not needed) */
+  | { kind: 'antibioticBeforeImaging'; imaging: ImagingKind }
   | { kind: 'imaging'; imaging: ImagingKind[]; withinH: number }
   | { kind: 'test'; specimen: SpecimenKind; withinH: number }
   /** blood cultures repeated after effective therapy started (from/within h after it) */
@@ -276,6 +288,14 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     }
   }
 
+  // Febrile neutropenia: empirical therapy is indicated without a proven focus — time to the first dose counts.
+  if (
+    timeToActiveH === null &&
+    config.empiricalIndicated &&
+    !(config.infectionPresent && cause.length)
+  )
+    timeToActiveH = firstAntibioticH;
+
   // Real-time bridge: the episode happened at the bridge hour while course time stood still. An antibiotic given in
   // it counts at its real minute; one ordered after the handover also waited the length of the episode.
   const rt = log.find(
@@ -318,7 +338,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
 
   // ── Antibiotic indication and timing ──
   const severityTarget = lib.guidelines.timeToAntibioticH[config.severity];
-  if (config.infectionPresent) {
+  if (config.infectionPresent || config.empiricalIndicated) {
     if (timeToActiveH === null) add('stw.noActive', -w.noActiveTherapy);
     else if (timeToActiveH <= severityTarget)
       add('stw.timely', 0, { h: timeToActiveH, target: severityTarget });
@@ -562,7 +582,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       ? Math.round(((lastStop - anchorH) / 24) * 10) / 10
       : 0;
   if (
-    config.infectionPresent &&
+    (config.infectionPresent || config.empiricalIndicated) &&
     config.targetDays !== null &&
     learnerOrders.length &&
     anchorH !== null
@@ -600,7 +620,27 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         const at = commands.find(
           (e) => e.command.type === 'PROCEDURE' && c.procedures.includes(e.command.procedure),
         )?.t;
-        timed(c, at ?? null, c.withinH);
+        if (c.relativeToFirstDose) {
+          if (firstAntibioticH !== null) timed(c, at ?? null, c.withinH, firstAntibioticH);
+        } else timed(c, at ?? null, c.withinH);
+        break;
+      }
+      case 'requireDrugs': {
+        if (!learnerOrders.length) break;
+        const ok = c.groups.every((g) => learnerOrders.some((o) => g.includes(o.drugId)));
+        add(ok ? c.okKey : c.key, ok ? 0 : -c.penalty);
+        break;
+      }
+      case 'antibioticBeforeImaging': {
+        const img = log.find((e) => e.kind === 'imaging' && e.imaging === c.imaging)?.t ?? null;
+        if (firstAntibioticH === null) {
+          if (img !== null) add(c.key, -c.penalty);
+          break;
+        }
+        add(
+          img === null || firstAntibioticH <= img ? c.okKey : c.key,
+          img === null || firstAntibioticH <= img ? 0 : -c.penalty,
+        );
         break;
       }
       case 'imaging': {

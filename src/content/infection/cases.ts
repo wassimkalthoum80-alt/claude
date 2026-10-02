@@ -8,16 +8,8 @@ import type { InfectionCase } from '../../sim/infection/types';
  * The truth (infections, mimics, colonisation, latent resistance) is never shown to the learner before the debrief.
  */
 
-const WORKING_DIAGNOSES = [
-  { id: 'urinary', labelKey: 'wd.urinary', focus: 'urine' as const },
-  { id: 'pneumonia', labelKey: 'wd.pneumonia', focus: 'lung' as const },
-  { id: 'abdominal', labelKey: 'wd.abdominal', focus: 'abdomen' as const },
-  { id: 'line', labelKey: 'wd.line', focus: 'line' as const },
-  { id: 'skin', labelKey: 'wd.skin', focus: 'skin' as const },
-  { id: 'bone', labelKey: 'wd.bone', focus: 'bone' as const },
-  { id: 'cdi', labelKey: 'wd.cdi', focus: 'gut' as const },
-  { id: 'non-infectious', labelKey: 'wd.non-infectious' },
-];
+import { NO_INFECTION_AND_CAP_CASES } from './casesNoInfection';
+import { WORKING_DIAGNOSES } from './workingDiagnoses';
 
 /**
  * B1 — fever and rigors in an elderly woman: acute pyelonephritis with bacteraemic E. coli. Teaches cultures
@@ -430,6 +422,7 @@ export const INFECTION_CASES: readonly InfectionCase[] = [
   postopPeritonitis,
   sabLine,
   cdiAfterClindamycin,
+  ...NO_INFECTION_AND_CAP_CASES,
 ];
 
 export const INFECTION_CASE_BY_ID: ReadonlyMap<string, InfectionCase> = new Map(

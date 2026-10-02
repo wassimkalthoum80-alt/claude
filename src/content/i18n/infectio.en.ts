@@ -210,6 +210,9 @@ export const infectioEn = {
   'imaging.kind.tee': 'Transoesophageal echo',
   'imaging.kind.mri-spine': 'MRI spine',
   'imaging.kind.line-inspection': 'Inspect lines and wounds',
+  'imaging.kind.ct-head': 'CT head',
+  'imaging.kind.ct-pa': 'CT pulmonary angiography',
+  'imaging.kind.duplex-legs': 'Leg vein duplex',
   'imaging.cxr.normal': 'No infiltrate, no effusion.',
   'imaging.ct-chest.normal': 'No pneumonia, no empyema, no abscess.',
   'imaging.ct-abdomen.normal': 'No abscess, no free air, no obstruction.',
@@ -219,6 +222,9 @@ export const infectioEn = {
   'imaging.tee.normal': 'No vegetation, no abscess.',
   'imaging.mri-spine.normal': 'No spondylodiscitis, no epidural abscess.',
   'imaging.line-inspection.normal': 'Insertion sites clean, wounds unremarkable.',
+  'imaging.ct-head.normal': 'No mass, no haemorrhage, no signs of raised pressure.',
+  'imaging.ct-pa.normal': 'No pulmonary embolism.',
+  'imaging.duplex-legs.normal': 'No deep vein thrombosis.',
   'imaging.sono-urinary.pyelonephritis':
     'Right kidney swollen with reduced corticomedullary differentiation; no hydronephrosis, no stone.',
   'imaging.ct-abdomen.pyelonephritis':
@@ -232,6 +238,7 @@ export const infectioEn = {
   'proc.debridement': 'Debridement',
   'proc.pleural-drainage': 'Pleural drainage',
   'proc.remove-prosthesis': 'Remove infected implant',
+  'proc.dexamethasone': 'Dexamethasone 10 mg i.v. (adjunct, with the first dose)',
   'nurse.fever': 'Temperature now ≥ 39 °C.',
   'nurse.hypotension': 'Blood pressure low (MAP < 65 mmHg).',
   'nurse.desaturation': 'SpO₂ below 90 %.',
@@ -398,6 +405,7 @@ export const infectioEn = {
   'abx.reg.fluconazole': 'loading 800 mg, then 1 × 400 mg',
   'abx.anidulafungin': 'Anidulafungin',
   'abx.reg.anidulafungin': '200 mg, then 1 × 100 mg i.v.',
+  'org.l-monocytogenes': 'Listeria monocytogenes',
   'org.e-coli': 'E. coli',
   'org.k-pneumoniae': 'Klebsiella pneumoniae',
   'org.e-cloacae': 'Enterobacter cloacae complex',
@@ -751,4 +759,153 @@ export const infectioEn = {
   'act.bridge.antibiotics': 'Give the antibiotic (named at handover)',
   'act.bridge.antibiotics.start': 'I am giving the antibiotic now.',
   'act.bridge.antibiotics.done': 'The antibiotic is in.',
+  'bridge.row.action.dexamethasone': 'Dexamethasone at',
+  'bridge.row.action.ct-head': 'CT head at',
+  'scenario.bridge.meningitis.title': 'Emergency department: fever and confusion',
+  'scenario.bridge.meningitis.briefing':
+    'The patient from the ward case arrives: high fever, headache, neck stiffness, increasingly confused. You have the monitor, pumps and fluids. Take blood cultures, give dexamethasone and the antibiotic — decide whether a CT has to come first — then hand over to the ward (bar at the bottom).',
+  'act.bridge.dexamethasone': 'Dexamethasone 10 mg i.v.',
+  'act.bridge.dexamethasone.start': 'Dexamethasone is being drawn up.',
+  'act.bridge.dexamethasone.done': 'Dexamethasone is in.',
+  'act.bridge.ctHead': 'CT head',
+  'act.bridge.ctHead.start': 'CT is called — transport takes a while.',
+  'act.bridge.ctHead.done': 'CT head done: no mass, no haemorrhage.',
+  'infectio.section.mimics': 'Is it an infection at all?',
+  'infectio.postopFever.title': 'Fever on the first day after surgery',
+  'infectio.postopFever.desc':
+    'Evening after a knee replacement: 38.4 °C. The night team wants a plan.',
+  'infectio.notPneumonia.title': 'Short of breath with infiltrates',
+  'infectio.notPneumonia.desc': 'The emergency department started an antibiotic for "pneumonia".',
+  'infectio.feverOnAbx.title': 'Fever again under antibiotics',
+  'infectio.feverOnAbx.desc': 'Day 6 of piperacillin/tazobactam — and the fever is back.',
+  'infectio.consOneSet.title': 'CoNS in one of two sets',
+  'infectio.consOneSet.desc': 'The lab calls: Gram-positive cocci in clusters.',
+  'infectio.icuSputum.title': 'Enterococci and Candida in the tracheal aspirate',
+  'infectio.icuSputum.desc': 'Ventilated, improving — and now a microbiology report.',
+  'infectio.cap.title': 'Cough, fever, infiltrate',
+  'infectio.cap.desc': 'Community-acquired pneumonia — choose, switch, stop.',
+  'case.postopFever.title': 'Fever on the first day after surgery',
+  'case.postopFever.presentation': '69 y, evening of day 1 after knee replacement: 38.4 °C.',
+  'case.postopFever.briefing':
+    'Mrs W., 69, had an uncomplicated total knee replacement yesterday (perioperative cefazolin single shot). Tonight 38.4 °C, she feels "a bit weak", pain controlled. The night team calls at 18:00: "Shall we start an antibiotic? CRP is 96." Known: obesity, hypertension. No allergies.',
+  'case.postopFever.exam':
+    'Examination: awake, slightly short of breath on talking; reduced breath sounds at both bases; wound dry, knee warm and swollen as expected after surgery; calves soft; catheter urine clear.',
+  'dx.postopInflammation': 'Postoperative inflammatory response (no infection)',
+  'dx.atelectasis': 'Basal atelectasis (no infection)',
+  'nurse.postopFever': '"Temperature 38.4 again — the surgeon says to ask you about antibiotics."',
+  'imaging.cxr.atelectasis': 'Bilateral basal plate atelectasis, no infiltrate, no effusion.',
+  'case.notPneumonia.title': 'Short of breath with infiltrates',
+  'case.notPneumonia.presentation':
+    '81 y, dyspnoea, bilateral infiltrates — ampicillin/sulbactam started in the ED.',
+  'case.notPneumonia.briefing':
+    'Mr E., 81, known heart failure, came in last night with increasing breathlessness over three days, now sleeping upright. The emergency department diagnosed "bilateral pneumonia" and started ampicillin/sulbactam. 37.6 °C, CRP 38. You see him on the morning round.',
+  'case.notPneumonia.briefingAspiration':
+    'Mr E., 81, vomited repeatedly yesterday evening at home and was found coughing and breathless. The emergency department diagnosed "pneumonia" and started ampicillin/sulbactam. 38.1 °C, CRP 45. You see him on the morning round.',
+  'case.notPneumonia.exam':
+    'Examination: tachypnoeic, bilateral crackles, ankle oedema, raised jugular venous pressure; no purulent sputum.',
+  'dx.pulmonaryOedema': 'Cardiac pulmonary oedema (no infection)',
+  'dx.aspirationPneumonitis': 'Aspiration pneumonitis (chemical, no infection)',
+  'imaging.cxr.oedema':
+    'Bilateral perihilar haziness, Kerley lines, cardiomegaly, small bilateral effusions.',
+  'imaging.cxr.aspiration':
+    'Patchy opacities in the right lower lobe and posterior segments; heart normal size.',
+  'imaging.tte.lowEf': 'Dilated left ventricle, ejection fraction about 25 %, no vegetation.',
+  'imaging.ct-chest.oedema':
+    'Ground-glass and septal thickening in a gravity-dependent distribution, bilateral effusions — congestion.',
+  'imaging.ct-chest.aspiration':
+    'Dependent consolidations right lower lobe, fluid in the bronchi — consistent with aspiration.',
+  'case.feverOnAbx.title': 'Fever again under antibiotics',
+  'case.feverOnAbx.presentation':
+    '67 y, day 6 of piperacillin/tazobactam for pyelonephritis: new fever.',
+  'case.feverOnAbx.briefing':
+    'Mrs S., 67, was admitted 6 days ago with pyelonephritis (E. coli, susceptible to everything tested). She was afebrile from day 2, but the piperacillin/tazobactam was never narrowed. Since yesterday evening fever up to 38.8 °C again. The resident suggests "switching to meropenem". Morning round.',
+  'case.feverOnAbx.exam':
+    'Examination: looks well, no flank pain, no dysuria; venous access unremarkable; calves soft; lungs clear. Relative bradycardia for the temperature.',
+  'dx.drugFever': 'Drug fever from piperacillin/tazobactam (no infection)',
+  'dx.pulmonaryEmbolism': 'Pulmonary embolism (no infection)',
+  'nurse.dyspnoea': '"She is suddenly short of breath when she walks to the bathroom."',
+  'imaging.ct-pa.embolism': 'Segmental emboli in the right lower lobe, no right-heart strain.',
+  'imaging.duplex-legs.dvt': 'Thrombosis of the left popliteal vein.',
+  'case.consOneSet.title': 'CoNS in one of two sets',
+  'case.consOneSet.presentation':
+    '72 y, central line, mild fever yesterday — the lab calls about a blood culture.',
+  'case.consOneSet.briefing':
+    'Mr F., 72, on day 5 after a bowel resection, has a central line for parenteral nutrition. Yesterday morning a single temperature of 38.2 °C; the night team drew blood cultures before you arrived. He feels well today. Morning round.',
+  'case.consOneSet.exam':
+    'Examination: afebrile now, central line insertion site clean, wound healing well, abdomen soft.',
+  'case.consOneSet.examCrbsi':
+    'Examination: 37.9 °C, central line insertion site red with a little pus, wound healing well, abdomen soft.',
+  'dx.transientFever': 'Transient postoperative fever; CoNS = contaminant',
+  'dx.consCrbsi': 'Catheter-related bloodstream infection with CoNS',
+  'imaging.line-inspection.cvcRed':
+    'Central line insertion site red and indurated, pus on pressure.',
+  'case.icuSputum.title': 'Enterococci and Candida in the tracheal aspirate',
+  'case.icuSputum.presentation':
+    '64 y, ICU day 8 after cardiac surgery, weaning — the tracheal aspirate grows something.',
+  'case.icuSputum.briefing':
+    'Mr K., 64, is on day 8 after coronary bypass surgery, still ventilated after a slow recovery, now weaning well. A routine tracheal aspirate was sent yesterday. Afebrile, secretions clear, oxygen need falling, CRP falling. Morning round on the ICU.',
+  'case.icuSputum.exam':
+    'Examination: awake on low pressure support, clear secretions, chest symmetric, no new infiltrate on the last X-ray; sternotomy wound dry.',
+  'nurse.surgeonCandida':
+    '"The surgeon saw Candida in the report and asks why there is no fluconazole yet."',
+  'imaging.cxr.icuStable': 'Lines and tube in place, small basal atelectasis, no new infiltrate.',
+  'case.cap.title': 'Cough, fever, infiltrate',
+  'case.cap.presentation': '58 y, three days of cough and fever, right-sided chest pain.',
+  'case.cap.briefing':
+    'Mr D., 58, otherwise well, has had cough with rusty sputum, fever up to 39.5 °C and right-sided pleuritic pain for three days. Admitted from the emergency department at 14:00: alert, respiratory rate 24, blood pressure normal. No antibiotics in the last months, no travel. No allergies.',
+  'case.cap.exam':
+    'Examination: bronchial breathing and crackles over the right lower lobe, dull to percussion; no confusion.',
+  'case.cap.examLegionella':
+    'Examination: crackles over the right lower lobe; diarrhoea since yesterday, headache, relative bradycardia. Returned from a hotel holiday a week ago.',
+  'dx.capPneumococcal': 'Community-acquired pneumococcal pneumonia',
+  'dx.capLegionella': 'Legionella pneumonia',
+  'dx.empyema': 'Parapneumonic pleural empyema',
+  'nurse.stillFebrile':
+    '"He is still febrile today and the right side hurts more when he breathes."',
+  'imaging.cxr.lobar': 'Consolidation of the right lower lobe with air bronchogram.',
+  'imaging.cxr.effusion':
+    'Right lower-lobe consolidation and a new moderate right pleural effusion.',
+  'imaging.ct-chest.empyema':
+    'Loculated right pleural collection with enhancing pleura (split-pleura sign) — empyema.',
+  'imaging.ct-chest.consolidation': 'Right lower-lobe consolidation, no abscess, no empyema.',
+  'stw.chk.stopUnneeded.ok': 'The antibiotic that was not needed was stopped.',
+  'stw.chk.stopUnneeded.missed': 'An antibiotic without an infection kept running.',
+  'stw.chk.noEscalation.ok': 'No reflex escalation for fever alone.',
+  'stw.chk.noEscalation.missed':
+    '{drug} for fever under antibiotics: escalation without a new focus treats the thermometer.',
+  'stw.chk.ctpa.ok': 'CT angiography for the new dyspnoea.',
+  'stw.chk.ctpa.missed':
+    'New dyspnoea with fever under antibiotics without looking for an embolism.',
+  'stw.chk.cvcOut.ok': 'Infected central line removed.',
+  'stw.chk.cvcOut.missed': 'The infected central line stayed in.',
+  'stw.chk.noColonisationTx.ok': 'No antifungal for Candida in the airway of an improving patient.',
+  'stw.chk.noColonisationTx.missed':
+    '{drug} for airway colonisation: Candida in tracheal aspirate is almost never pneumonia.',
+  'stw.chk.noBroadCap.ok': 'No broad-spectrum agent for a moderate community-acquired pneumonia.',
+  'stw.chk.noBroadCap.missed': '{drug} for a community-acquired pneumonia without risk factors.',
+  'stw.chk.atypical.ok': 'Legionella covered (macrolide, quinolone or doxycycline).',
+  'stw.chk.atypical.missed':
+    'Legionella not covered: β-lactams do not reach intracellular bacteria.',
+  'stw.chk.legionellaAg.ok': 'Legionella urine antigen sent.',
+  'stw.chk.legionellaAg.missed': 'No Legionella urine antigen despite the clues.',
+  'stw.chk.drainage.ok': 'Empyema drained.',
+  'stw.chk.drainage.missed': 'Empyema not drained: antibiotics alone do not clear pus.',
+  'stw.learn.postopFever':
+    'Fever on day 1 after surgery is usually inflammation and atelectasis. Examine, mobilise, physiotherapy — no antibiotic, no culture of a catheter urine.',
+  'stw.learn.notPneumonia':
+    'Infiltrates are not always pneumonia. When oedema or chemical pneumonitis explains the picture, stop the antibiotic the emergency department started.',
+  'stw.learn.feverOnAbx':
+    'Fever under antibiotics is not a reason to escalate. Think of drug fever, thrombosis and lines — and stop a course that is complete.',
+  'stw.learn.consContaminant':
+    'CoNS in one of two sets, late positivity, no focus: a contaminant. No vancomycin — repeat cultures only if doubt remains.',
+  'stw.learn.consCrbsi':
+    'CoNS in both sets, the catheter set positive first, a red insertion site: a line infection. Remove the line; then a short course is enough.',
+  'stw.learn.icuSputum':
+    'Enterococci and Candida in a tracheal aspirate of an improving patient are colonisers. Treat pneumonia by its signs, not by the report.',
+  'stw.learn.cap':
+    'Moderate CAP: amoxicillin or ampicillin/sulbactam (± macrolide), oral as soon as stable, 5 days in total.',
+  'stw.learn.capLegionella':
+    'Diarrhoea, headache, hotel stay, no response to a β-lactam: think Legionella — urine antigen, macrolide or levofloxacin.',
+  'stw.learn.capEmpyema':
+    'Persistent fever on day 3 of a fitting antibiotic: look for a complication. An empyema needs drainage and a longer course.',
 } as const;

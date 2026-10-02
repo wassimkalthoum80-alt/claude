@@ -142,6 +142,17 @@ export function WardScreen({ session }: { session: SessionConfig }) {
         run: () => (reserve ? setReserveDraft(cmd) : dispatch(cmd)),
       });
     }
+    const actions = o.actionsAtMin ?? {};
+    if (actions.dexamethasone !== undefined)
+      steps.push({
+        at: actions.dexamethasone,
+        run: () => dispatch({ type: 'PROCEDURE', procedure: 'dexamethasone' }),
+      });
+    if (actions['ct-head'] !== undefined)
+      steps.push({
+        at: actions['ct-head'],
+        run: () => dispatch({ type: 'ORDER_IMAGING', kind: 'ct-head' }),
+      });
     for (const st of steps.sort((a, b) => a.at - b.at)) st.run();
     dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: o });
     acknowledge();

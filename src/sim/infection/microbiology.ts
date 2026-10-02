@@ -175,6 +175,7 @@ function bloodCulture(input: SamplingInput): ScheduledReport[] {
       : COURSE.contaminationPerSet;
   let contaminatedSets = 0;
   for (let i = 0; i < sets; i++) if (rng.next() < pContamination) contaminatedSets++;
+  contaminatedSets = Math.min(sets, Math.max(contaminatedSets, order.contaminatedSets ?? 0));
   if (contaminatedSets > 0) {
     const id = input.addIsolate({
       organismId: 'cons',

@@ -58,6 +58,9 @@ const IMAGING: ImagingKind[] = [
   'tte',
   'tee',
   'mri-spine',
+  'ct-head',
+  'ct-pa',
+  'duplex-legs',
   'line-inspection',
 ];
 

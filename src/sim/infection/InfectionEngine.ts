@@ -148,6 +148,7 @@ export class InfectionEngine {
     recurrenceAtH: null as number | null,
   };
   private stoolsPer24h = 1;
+  private dexamethasoneAtH: number | null = null;
 
   private vitals: VitalsPoint[] = [];
   private labs: { t: number; labs: LabPanel }[] = [];
@@ -420,6 +421,17 @@ export class InfectionEngine {
         return { accepted: true, orderId: o.id };
       }
       case 'PROCEDURE': {
+        if (cmd.procedure === 'dexamethasone') {
+          // Adjunct, given at once; its effect (fewer neurological sequelae) is applied in the organ targets.
+          this.dexamethasoneAtH ??= this.t;
+          this.eventLog.append({
+            t: this.t,
+            kind: 'procedure-done',
+            procedure: cmd.procedure,
+            effective: this.sites.some((x) => x.active && x.def.focus === 'cns'),
+          });
+          return { accepted: true };
+        }
         // SIM-ASSUMPTION: a procedure without a matching focus takes 2 h and changes nothing.
         const actions = this.sites
           .flatMap((x) => x.def.sourceControl ?? [])
@@ -988,8 +1000,23 @@ export class InfectionEngine {
       liver: Math.min(1, sev * w.liver),
       coag: Math.min(1, sev * w.coag),
       // SIM-ASSUMPTION: older brains decompensate earlier (septic encephalopathy, delirium): ×(1 + (age − 60)/40).
-      cns: Math.min(1, sev * w.cns * (1 + Math.max(0, p.ageYears - 60) / 40) + mimicOrgan('cns')),
+      cns: Math.min(
+        1,
+        sev * w.cns * (1 + Math.max(0, p.ageYears - 60) / 40) * this.cnsSequelaeFactor() +
+          mimicOrgan('cns'),
+      ),
     };
+  }
+
+  /**
+   * SIM-ASSUMPTION: in bacterial meningitis, dexamethasone given before or within 1 h of the first antibiotic dose
+   * lowers the brain's share of organ dysfunction by 30 % (fewer neurological sequelae); later it does not help.
+   */
+  private cnsSequelaeFactor(): number {
+    const meningitis = this.sites.some((x) => x.active && x.def.focus === 'cns');
+    if (!meningitis || this.dexamethasoneAtH === null) return 1;
+    const first = this.firstAntibioticH;
+    return first === null || this.dexamethasoneAtH <= first + 1 ? 0.7 : 1;
   }
 
   private stepOrgans(dt: number): void {

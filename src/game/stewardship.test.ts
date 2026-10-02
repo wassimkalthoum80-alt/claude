@@ -6,6 +6,13 @@ import {
   postopPeritonitis,
   sabLine,
 } from '../content/infection/cases';
+import {
+  cap,
+  consOneSet,
+  feverOnAntibiotics,
+  icuSputum,
+  notPneumonia,
+} from '../content/infection/casesNoInfection';
 import { INFECTION_LIBRARY as LIB } from '../content/infection/library';
 import {
   SPECTRUM_RANK,
@@ -440,5 +447,75 @@ describe('stewardship scoring — real-time bridge timing', () => {
     const r = score(e);
     expect(r.metrics.timeToActiveH).toBeCloseTo(1.5, 2);
     expect(r.items.map((i) => i.key)).toContain('stw.late');
+  });
+});
+
+describe('stewardship scoring — phase 5 cases (no infection, CAP)', () => {
+  const v = (c: InfectionCase, variant: string) => {
+    for (let seed = 1; seed < 200; seed++) {
+      const e = new InfectionEngine({ caseDef: c, library: LIB, seed });
+      if (e.variant === variant) return e;
+    }
+    throw new Error(variant);
+  };
+  const keysOf = (e: InfectionEngine) =>
+    scoreStewardship({
+      caseDef: e.caseDef,
+      view: e.getView(),
+      log: e.log,
+      truth: e.getTruth(),
+      lib: LIB,
+      config: stewardshipConfigFor(e.caseDef.id, e.variant),
+      weights: STEWARDSHIP_WEIGHTS,
+      spectrumRank: SPECTRUM_RANK,
+    }).items.map((i) => i.key);
+  const stopAll = (e: InfectionEngine) => {
+    for (const o of e.getView().therapy)
+      if (o.stoppedH === null) e.dispatch({ type: 'STOP_ANTIINFECTIVE', orderId: o.id });
+  };
+
+  it('N2: stopping the ED antibiotic is credited, keeping it is named', () => {
+    const stopped = v(notPneumonia, 'pulmonary-oedema');
+    stopAll(stopped);
+    runTo(stopped, 60);
+    expect(keysOf(stopped)).toEqual(
+      expect.arrayContaining(['stw.withheld', 'stw.chk.stopUnneeded.ok']),
+    );
+    const kept = v(notPneumonia, 'pulmonary-oedema');
+    runTo(kept, 60);
+    expect(keysOf(kept)).toContain('stw.chk.stopUnneeded.missed');
+  });
+
+  it('N3: escalating to meropenem for fever under antibiotics is named', () => {
+    const e = v(feverOnAntibiotics, 'drug-fever');
+    e.dispatch(start('meropenem'));
+    runTo(e, 12);
+    expect(keysOf(e)).toEqual(
+      expect.arrayContaining(['stw.chk.noEscalation.missed', 'stw.treatedNoInfection']),
+    );
+  });
+
+  it('A2 contaminant: vancomycin for one CoNS set counts as treating no infection', () => {
+    const e = v(consOneSet, 'contaminant');
+    runTo(e, 30);
+    e.dispatch(start('vancomycin'));
+    runTo(e, 48);
+    expect(keysOf(e)).toContain('stw.treatedNoInfection');
+  });
+
+  it('B2 Legionella: a β-lactam alone misses the atypical cover', () => {
+    const e = v(cap, 'legionella');
+    e.dispatch(start('ampicillin-sulbactam'));
+    runTo(e, 24);
+    expect(keysOf(e)).toEqual(
+      expect.arrayContaining(['stw.chk.atypical.missed', 'stw.chk.noBroadCap.ok']),
+    );
+  });
+
+  it('A3: fluconazole for airway Candida is named', () => {
+    const e = v(icuSputum, 'pressure');
+    e.dispatch(start('fluconazole'));
+    runTo(e, 24);
+    expect(keysOf(e)).toContain('stw.chk.noColonisationTx.missed');
   });
 });

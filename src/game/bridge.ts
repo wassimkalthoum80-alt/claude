@@ -94,6 +94,12 @@ export function realtimeOutcome(
     );
     return e ? Math.round((e.t / 60) * 10) / 10 : null;
   };
+  const actionsAtMin: Record<string, number> = {};
+  for (const x of log) {
+    if (x.kind !== 'event' || x.event !== 'SCENARIO_ACTION_DONE' || !x.detail) continue;
+    if (x.detail === 'cultures' || x.detail === 'antibiotics') continue;
+    actionsAtMin[x.detail] ??= Math.round((x.t / 60) * 10) / 10;
+  }
   const fluidsMl = s.devices.pumps
     .filter((p) => p.kind === 'volumetric')
     .reduce((sum, p) => sum + p.deliveredMl, 0);
@@ -112,5 +118,6 @@ export function realtimeOutcome(
     timeToStabiliseMin: stabilisedAt === null ? null : Math.round((stabilisedAt / 60) * 10) / 10,
     antibioticsAtMin: actionAt('antibiotics'),
     culturesAtMin: actionAt('cultures'),
+    actionsAtMin,
   };
 }
