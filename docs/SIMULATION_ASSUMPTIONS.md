@@ -726,6 +726,7 @@ Two independent axes; the debrief may use the hidden truth because the case is o
 | Duration | total days vs. the case target (fever and rigors: 7 d); tolerance −1 / +2 d; longer −4 per extra day (max −20); shorter −10 | short-course evidence for pyelonephritis |
 | Timeout and status | timeout missed (due at 48–72 h) −8, wrong judgement −5; a non-focus diagnosis declared probable/confirmed −8 | |
 | TDM / diagnostic stewardship | a TDM drug ≥ 48 h without levels −6; each rejected C. difficile test −4 | |
+| Case checks (phase 4) | B3: source control ≤ 12 h (−20), no antifungal/linezolid/daptomycin for drain colonisers (−12), 4 days counted from effective source control; C1: line out ≤ 6 h (−15), cefazolin/flucloxacillin (−8), follow-up blood cultures 24–96 h after effective therapy (−10), echocardiography ≤ 120 h (−8), 14 days from the first negative follow-up culture (spondylodiscitis variant: 42 days, spine MRI ≤ 96 h −8); D1: stop clindamycin ≤ 12 h (−12), stool test ≤ 12 h (−6), fidaxomicin/oral vancomycin (−10), isolation ≤ 12 h (−6), 10 days; a late action costs half | anti-infectives running at admission are the case's starting point, not the learner's first order |
 | Pre-analytics (sampling sequences) | once per case: rushed antisepsis −3, < 8 mL per blood-culture bottle −3, bag urine −4, delayed transport −2, puncture fluid in a tube only −2; clean sampling through the sequences is credited | the sampling step is scored only in the debrief, never during the sequence |
 
 ## Presentation-only assumptions (UI)

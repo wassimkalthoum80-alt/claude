@@ -96,4 +96,155 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     targetDays: null,
     learningKey: 'stw.learn.positiveUrine',
   },
+  'ward-postop-peritonitis': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'abdominal',
+    // ≈ 4 days after adequate source control (short-course evidence for complicated intra-abdominal infection)
+    targetDays: 4,
+    durationFrom: 'source-control',
+    learningKey: 'stw.learn.peritonitis',
+    checks: [
+      {
+        kind: 'procedure',
+        procedures: ['surgical-source-control', 'interventional-drainage'],
+        withinH: 12,
+        okKey: 'stw.chk.sourceControl.ok',
+        key: 'stw.chk.sourceControl.missed',
+        penalty: 20,
+      },
+      {
+        kind: 'avoidClasses',
+        classes: ['echinocandin', 'azole', 'oxazolidinone', 'lipopeptide'],
+        okKey: 'stw.chk.noReflexCover.ok',
+        key: 'stw.chk.noReflexCover.missed',
+        penalty: 12,
+      },
+    ],
+  },
+  'ward-sab-line': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'line',
+    // 14 days from the first negative blood culture (uncomplicated S. aureus bacteraemia)
+    targetDays: 14,
+    durationFrom: 'first-negative-blood-culture',
+    learningKey: 'stw.learn.sabLine',
+    checks: [
+      {
+        kind: 'procedure',
+        procedures: ['remove-peripheral-line'],
+        withinH: 6,
+        okKey: 'stw.chk.lineOut.ok',
+        key: 'stw.chk.lineOut.missed',
+        penalty: 15,
+      },
+      {
+        kind: 'preferDrugs',
+        drugIds: ['cefazolin', 'flucloxacillin'],
+        okKey: 'stw.chk.mssaDrug.ok',
+        key: 'stw.chk.mssaDrug.missed',
+        penalty: 8,
+      },
+      {
+        kind: 'followUpBloodCultures',
+        fromH: 24,
+        withinH: 96,
+        okKey: 'stw.chk.followUpBc.ok',
+        key: 'stw.chk.followUpBc.missed',
+        penalty: 10,
+      },
+      {
+        kind: 'imaging',
+        imaging: ['tte', 'tee'],
+        withinH: 120,
+        okKey: 'stw.chk.echo.ok',
+        key: 'stw.chk.echo.missed',
+        penalty: 8,
+      },
+    ],
+  },
+  'ward-cdi': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'cdi',
+    targetDays: 10,
+    bloodCulturesExpected: false,
+    learningKey: 'stw.learn.cdi',
+    checks: [
+      {
+        kind: 'stopDrug',
+        drugId: 'clindamycin',
+        withinH: 12,
+        okKey: 'stw.chk.stopTrigger.ok',
+        key: 'stw.chk.stopTrigger.missed',
+        penalty: 12,
+      },
+      {
+        kind: 'test',
+        specimen: 'cdiff-test',
+        withinH: 12,
+        okKey: 'stw.chk.cdiffTest.ok',
+        key: 'stw.chk.cdiffTest.missed',
+        penalty: 6,
+      },
+      {
+        kind: 'preferDrugs',
+        drugIds: ['fidaxomicin', 'vancomycin-po'],
+        okKey: 'stw.chk.cdiDrug.ok',
+        key: 'stw.chk.cdiDrug.missed',
+        penalty: 10,
+      },
+      {
+        kind: 'isolation',
+        withinH: 12,
+        okKey: 'stw.chk.isolation.ok',
+        key: 'stw.chk.isolation.missed',
+        penalty: 6,
+      },
+    ],
+  },
 };
+
+/** Per-variant changes of a case's scoring facts. */
+export const STEWARDSHIP_VARIANTS: Readonly<
+  Record<string, Readonly<Record<string, Partial<StewardshipConfig>>>>
+> = {
+  'ward-sab-line': {
+    spondylodiscitis: {
+      // complicated bacteraemia with a bone focus: ≥ 6 weeks
+      targetDays: 42,
+      learningKey: 'stw.learn.sabSpine',
+      checks: [
+        {
+          kind: 'imaging',
+          imaging: ['mri-spine'],
+          withinH: 96,
+          okKey: 'stw.chk.mri.ok',
+          key: 'stw.chk.mri.missed',
+          penalty: 8,
+        },
+      ],
+    },
+  },
+};
+
+const GENERIC: StewardshipConfig = {
+  infectionPresent: true,
+  severity: 'suspected',
+  focusDiagnosisId: null,
+  targetDays: null,
+  learningKey: 'stw.learn.generic',
+};
+
+/** Scoring facts for a case and its variant (with per-variant changes and extra checks merged). */
+export function stewardshipConfigFor(caseId: string, variant: string | null): StewardshipConfig {
+  const base = STEWARDSHIP_CONFIG[caseId] ?? GENERIC;
+  const patch = variant ? STEWARDSHIP_VARIANTS[caseId]?.[variant] : undefined;
+  if (!patch) return base;
+  return {
+    ...base,
+    ...patch,
+    checks: [...(base.checks ?? []), ...(patch.checks ?? [])],
+  };
+}

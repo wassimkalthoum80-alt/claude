@@ -1,8 +1,8 @@
 import { INFECTION_LIBRARY } from '../../content/infection/library';
 import {
   SPECTRUM_RANK,
-  STEWARDSHIP_CONFIG,
   STEWARDSHIP_WEIGHTS,
+  stewardshipConfigFor,
 } from '../../content/scoring/stewardshipConfig';
 import type { AchievementId, ProgressStore } from '../../game/profile';
 import { levelOf, recordSession } from '../../game/progression';
@@ -37,13 +37,7 @@ export function finishWardSession(
   store: ProgressStore,
   now: number,
 ): WardDebriefData {
-  const config = STEWARDSHIP_CONFIG[engine.caseDef.id] ?? {
-    infectionPresent: engine.caseDef.infections.length > 0,
-    severity: 'suspected' as const,
-    focusDiagnosisId: null,
-    targetDays: null,
-    learningKey: 'stw.learn.generic',
-  };
+  const config = stewardshipConfigFor(engine.caseDef.id, engine.variant);
   const result = scoreStewardship({
     caseDef: engine.caseDef,
     view: engine.getView(),

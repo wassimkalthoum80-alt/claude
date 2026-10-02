@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { feverRigors, positiveUrine } from '../content/infection/cases';
+import {
+  cdiAfterClindamycin,
+  feverRigors,
+  positiveUrine,
+  postopPeritonitis,
+  sabLine,
+} from '../content/infection/cases';
 import { INFECTION_LIBRARY as LIB } from '../content/infection/library';
 import {
   SPECTRUM_RANK,
   STEWARDSHIP_CONFIG,
   STEWARDSHIP_WEIGHTS,
+  stewardshipConfigFor,
 } from '../content/scoring/stewardshipConfig';
 import { InfectionEngine, type InfectionCase, type InfectionCommand } from '../sim';
 import { scoreStewardship } from './stewardship';
@@ -271,5 +278,129 @@ describe('stewardship scoring — asymptomatic bacteriuria', () => {
     expect(a?.delta).toBeLessThan(0);
     expect(b?.delta ?? 0).toBeLessThan(a?.delta ?? 0);
     expect(score(long).stars).toBeLessThan(3);
+  });
+});
+
+describe('stewardship scoring — case checks (phase 4)', () => {
+  const engineFor = (c: InfectionCase, variant: string) => {
+    for (let seed = 1; seed < 200; seed++) {
+      const e = new InfectionEngine({ caseDef: c, library: LIB, seed });
+      if (e.variant === variant) return e;
+    }
+    throw new Error(variant);
+  };
+  const scoreV = (e: InfectionEngine) =>
+    scoreStewardship({
+      caseDef: e.caseDef,
+      view: e.getView(),
+      log: e.log,
+      truth: e.getTruth(),
+      lib: LIB,
+      config: stewardshipConfigFor(e.caseDef.id, e.variant),
+      weights: STEWARDSHIP_WEIGHTS,
+      spectrumRank: SPECTRUM_RANK,
+    });
+  const stopRunning = (e: InfectionEngine) => {
+    for (const o of e.getView().therapy)
+      if (o.stoppedH === null) e.dispatch({ type: 'STOP_ANTIINFECTIVE', orderId: o.id });
+  };
+  const keys = (e: InfectionEngine) => scoreV(e).items.map((i) => i.key);
+
+  it('B3: source control, no reflex cover, 4 days after it — all credited', () => {
+    const e = engineFor(postopPeritonitis, 'classic');
+    e.dispatch(cultures);
+    stopRunning(e);
+    const id = e.dispatch(start('piperacillin-tazobactam')).orderId ?? '';
+    e.dispatch({ type: 'PROCEDURE', procedure: 'surgical-source-control' });
+    runTo(e, 4 + 96);
+    e.dispatch({ type: 'STOP_ANTIINFECTIVE', orderId: id });
+    runTo(e, 110);
+    const k = keys(e);
+    expect(k).toEqual(
+      expect.arrayContaining([
+        'stw.chk.sourceControl.ok',
+        'stw.chk.noReflexCover.ok',
+        'stw.durationOk',
+        'stw.culturesBefore',
+      ]),
+    );
+    // the continued "prophylaxis" is the case's starting point, not the learner's first antibiotic
+    expect(scoreV(e).metrics.firstAntibioticH).toBe(0);
+  });
+
+  it('B3: antifungal for the drain Candida and no source control are named', () => {
+    const e = engineFor(postopPeritonitis, 'classic');
+    e.dispatch(start('piperacillin-tazobactam'));
+    e.dispatch(start('anidulafungin'));
+    runTo(e, 30);
+    const k = keys(e);
+    expect(k).toContain('stw.chk.noReflexCover.missed');
+    expect(k).toContain('stw.chk.sourceControl.missed');
+  });
+
+  it('C1: line out, cefazolin, follow-up cultures and echo — credited; vancomycin with the line left in — not', () => {
+    const good = engineFor(sabLine, 'uncomplicated');
+    good.dispatch(start('cefazolin'));
+    good.dispatch({ type: 'PROCEDURE', procedure: 'remove-peripheral-line' });
+    runTo(good, 24);
+    good.dispatch({ type: 'ORDER_IMAGING', kind: 'tte' });
+    runTo(good, 48);
+    good.dispatch(cultures);
+    runTo(good, 60);
+    expect(keys(good)).toEqual(
+      expect.arrayContaining([
+        'stw.chk.lineOut.ok',
+        'stw.chk.mssaDrug.ok',
+        'stw.chk.followUpBc.ok',
+        'stw.chk.echo.ok',
+      ]),
+    );
+    const bad = engineFor(sabLine, 'uncomplicated');
+    bad.dispatch(start('vancomycin'));
+    runTo(bad, 24);
+    expect(keys(bad)).toEqual(
+      expect.arrayContaining(['stw.chk.lineOut.missed', 'stw.chk.mssaDrug.missed']),
+    );
+  });
+
+  it('C1 spondylodiscitis variant: 6-week target and the spine MRI check', () => {
+    const c = stewardshipConfigFor('ward-sab-line', 'spondylodiscitis');
+    expect(c.targetDays).toBe(42);
+    expect(c.checks?.some((x) => x.okKey === 'stw.chk.mri.ok')).toBe(true);
+    expect(c.checks?.some((x) => x.okKey === 'stw.chk.lineOut.ok')).toBe(true);
+    expect(stewardshipConfigFor('ward-sab-line', 'uncomplicated').targetDays).toBe(14);
+  });
+
+  it('D1: test, stop clindamycin, fidaxomicin, isolate — timely and credited; metronidazole with clindamycin running — not', () => {
+    const good = engineFor(cdiAfterClindamycin, 'standard');
+    good.dispatch({ type: 'ORDER_SPECIMEN', specimen: { kind: 'cdiff-test', site: 'stool' } });
+    stopRunning(good);
+    good.dispatch(start('fidaxomicin', { route: 'po' }));
+    good.dispatch({ type: 'ISOLATION', on: true });
+    runTo(good, 24);
+    const r = scoreV(good);
+    expect(r.items.map((i) => i.key)).toEqual(
+      expect.arrayContaining([
+        'stw.timely',
+        'stw.chk.stopTrigger.ok',
+        'stw.chk.cdiffTest.ok',
+        'stw.chk.cdiDrug.ok',
+        'stw.chk.isolation.ok',
+      ]),
+    );
+    expect(r.items.some((i) => i.key === 'stw.noCulturesBefore')).toBe(false);
+    expect(r.reveal.diagnoses).toContain('dx.cdi');
+
+    const bad = engineFor(cdiAfterClindamycin, 'standard');
+    bad.dispatch(start('metronidazole', { route: 'po' }));
+    runTo(bad, 24);
+    expect(keys(bad)).toEqual(
+      expect.arrayContaining([
+        'stw.chk.stopTrigger.missed',
+        'stw.chk.cdiDrug.missed',
+        'stw.chk.isolation.missed',
+        'stw.chk.cdiffTest.missed',
+      ]),
+    );
   });
 });

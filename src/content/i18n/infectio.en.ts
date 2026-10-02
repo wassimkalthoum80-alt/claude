@@ -675,4 +675,43 @@ export const infectioEn = {
     'Examination: distended abdomen, diffuse tenderness, sparse bowel sounds, no guarding. Leg: residual faint redness. Temperature 38.6 °C, dry mucosa.',
   'imaging.ct-abdomen.colitis':
     'Wall thickening of the whole colon with pericolic stranding; no perforation, colon diameter 5 cm.',
+  'dx.cdi': 'C. difficile infection (colitis) after clindamycin',
+  'stw.chk.sourceControl.ok': 'Source control within 12 h.',
+  'stw.chk.sourceControl.missed':
+    'Source control late or not done: antibiotics alone cannot control a leak.',
+  'stw.chk.noReflexCover.ok': 'No reflex antifungal or VRE cover for drain colonisers.',
+  'stw.chk.noReflexCover.missed':
+    '{drug} for organisms from the drain while the patient was improving: colonisation is not infection.',
+  'stw.chk.lineOut.ok': 'Infected line removed within 6 h.',
+  'stw.chk.lineOut.missed':
+    'The infected line stayed in too long: the focus keeps seeding the blood.',
+  'stw.chk.mssaDrug.ok': 'Cefazolin or flucloxacillin for MSSA.',
+  'stw.chk.mssaDrug.missed':
+    'No cefazolin or flucloxacillin: for MSSA they beat vancomycin and broad agents.',
+  'stw.chk.followUpBc.ok': 'Follow-up blood cultures taken.',
+  'stw.chk.followUpBc.missed':
+    'No follow-up blood cultures: persistence and the duration start date stay unknown.',
+  'stw.chk.echo.ok': 'Echocardiography to look for endocarditis.',
+  'stw.chk.echo.missed':
+    'No echocardiography: endocarditis is not excluded in S. aureus bacteraemia.',
+  'stw.chk.mri.ok': 'MRI of the spine for the new back pain.',
+  'stw.chk.mri.missed':
+    'Back pain in S. aureus bacteraemia without spine imaging: a metastatic focus was missed.',
+  'stw.chk.stopTrigger.ok': 'Clindamycin (the trigger) stopped promptly.',
+  'stw.chk.stopTrigger.missed': 'The triggering antibiotic kept running.',
+  'stw.chk.cdiffTest.ok': 'Stool tested for C. difficile.',
+  'stw.chk.cdiffTest.missed': 'No C. difficile test for new diarrhoea under antibiotics.',
+  'stw.chk.cdiDrug.ok': 'Fidaxomicin or oral vancomycin.',
+  'stw.chk.cdiDrug.missed':
+    'Neither fidaxomicin nor oral vancomycin: first choice for C. difficile infection.',
+  'stw.chk.isolation.ok': 'Contact isolation started.',
+  'stw.chk.isolation.missed': 'No contact isolation: spores spread on the ward.',
+  'stw.learn.peritonitis':
+    'Source control is the treatment; antibiotics support it. After adequate source control about 4 days are enough — and Candida or VRE in a drain of an improving patient are colonisers.',
+  'stw.learn.sabLine':
+    'S. aureus in blood is never a contaminant: remove the line, cefazolin or flucloxacillin, follow-up cultures, echocardiography, 14 days from the first negative culture.',
+  'stw.learn.sabSpine':
+    'Persistent S. aureus bacteraemia or new pain means a metastatic focus until proven otherwise: image it and treat for at least 6 weeks.',
+  'stw.learn.cdi':
+    'Test only diarrhoea, stop the trigger, treat with fidaxomicin (or oral vancomycin), isolate — and review every antibiotic and the PPI.',
 } as const;

@@ -4,12 +4,15 @@ import {
   type AntiinfectiveDef,
   type DrugClass,
   type Focus,
+  type ImagingKind,
   type InfectionCase,
   type InfectionLibrary,
   type InfectionLogEntry,
   type InfectionTruth,
   type InfectionView,
   type Isolate,
+  type ProcedureId,
+  type SpecimenKind,
   type TherapyOrder,
 } from '../sim';
 import type { Outcome, Stars } from './scoringTypes';
@@ -33,7 +36,32 @@ export interface StewardshipConfig {
   targetDays: number | null;
   /** i18n key of the take-home message */
   learningKey: string;
+  /** where the target duration is counted from (default: first dose) */
+  durationFrom?: 'first-dose' | 'source-control' | 'first-negative-blood-culture';
+  /** blood cultures before antibiotics are part of the case (default true) */
+  bloodCulturesExpected?: boolean;
+  /** case-specific actions the debrief checks */
+  checks?: CaseCheck[];
 }
+
+/**
+ * A case-specific check (content). Each names the i18n keys for "done" (0 points) and "missed" (−penalty); a late
+ * action costs half the penalty.
+ */
+export type CaseCheck = { okKey: string; key: string; penalty: number } & (
+  | { kind: 'procedure'; procedures: ProcedureId[]; withinH: number }
+  | { kind: 'imaging'; imaging: ImagingKind[]; withinH: number }
+  | { kind: 'test'; specimen: SpecimenKind; withinH: number }
+  /** blood cultures repeated after effective therapy started (from/within h after it) */
+  | { kind: 'followUpBloodCultures'; fromH: number; withinH: number }
+  /** a drug running at admission is stopped within h */
+  | { kind: 'stopDrug'; drugId: string; withinH: number }
+  /** at least one of these drugs is ordered */
+  | { kind: 'preferDrugs'; drugIds: string[] }
+  /** none of these drug classes is ordered */
+  | { kind: 'avoidClasses'; classes: DrugClass[] }
+  | { kind: 'isolation'; withinH: number }
+);
 
 /** Penalty weights (content). */
 export interface StewardshipWeights {
@@ -186,6 +214,9 @@ function causative(input: StewardshipInput): { iso: Isolate; focus: Focus }[] {
       if (iso) out.push({ iso, focus: site.focus });
     }
   }
+  // C. difficile infection present at admission is the case's infection (treated in the gut lumen).
+  if ((input.caseDef.patient.cdiAtAdmission ?? 0) > 0)
+    out.push({ iso: { id: 'cdiff', organismId: 'c-difficile', mechanisms: [] }, focus: 'gut' });
   return out;
 }
 
@@ -211,11 +242,18 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   const micro = log.filter(
     (e): e is Extract<InfectionLogEntry, { kind: 'micro' }> => e.kind === 'micro',
   );
-  const firstAntibioticH = orders.length ? Math.min(...orders.map((o) => o.startedH)) : null;
+  // Anti-infectives already running at admission are the case's starting point, not the learner's orders.
+  const initial = input.caseDef.initialTherapy ?? [];
+  const isInitial = (o: TherapyOrder) =>
+    initial.some((i) => i.drugId === o.drugId && i.startedH === o.startedH);
+  const learnerOrders = orders.filter((o) => !isInitial(o));
+  const firstAntibioticH = learnerOrders.length
+    ? Math.min(...learnerOrders.map((o) => o.startedH))
+    : null;
   const bcBefore = specimens.filter(
     (s) =>
       s.order.kind === 'blood-culture' &&
-      !s.onAntibiotics &&
+      (!s.onAntibiotics || initial.length > 0) &&
       (firstAntibioticH === null || s.t <= firstAntibioticH),
   );
   const bloodCultureSets = Math.max(
@@ -251,7 +289,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   for (const o of orders) {
     const d = drug(o);
     if (!d) continue;
-    const n = days((o.stoppedH ?? end) - o.startedH);
+    const n = days((o.stoppedH ?? end) - Math.max(0, o.startedH));
     dot += n;
     if (rank(o) >= 4) broadDot += n;
     co2Kg += n * (d.co2KgPerDay[o.route] ?? 0);
@@ -274,7 +312,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
           target: severityTarget,
         },
       );
-  } else if (orders.length === 0) {
+  } else if (learnerOrders.length === 0) {
     add('stw.withheld', 0);
   } else {
     add(
@@ -290,8 +328,11 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   }
 
   // ── Cultures ──
-  const culturesBeforeAntibiotics = firstAntibioticH === null ? null : bcBefore.length > 0;
-  if (firstAntibioticH !== null) {
+  const culturesBeforeAntibiotics =
+    firstAntibioticH === null || config.bloodCulturesExpected === false
+      ? null
+      : bcBefore.length > 0;
+  if (culturesBeforeAntibiotics !== null) {
     if (culturesBeforeAntibiotics) add('stw.culturesBefore', 0);
     else
       add(
@@ -473,14 +514,42 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   }
 
   // ── Duration ──
-  const lastStop = orders.length ? Math.max(...orders.map((o) => o.stoppedH ?? end)) : 0;
+  const lastStop = learnerOrders.length
+    ? Math.max(...learnerOrders.map((o) => o.stoppedH ?? end))
+    : 0;
+  const sourceControlH = log.find((e) => e.kind === 'procedure-done' && e.effective)?.t ?? null;
+  const firstNegativeH = (() => {
+    if (timeToActiveH === null) return null;
+    const negative = new Set(
+      micro
+        .filter((m) => m.report.stage === 'no-growth' && m.report.final)
+        .map((m) => m.report.specimenId),
+    );
+    return (
+      specimens.find(
+        (s) =>
+          s.order.kind === 'blood-culture' && s.t > timeToActiveH && negative.has(s.specimenId),
+      )?.t ?? null
+    );
+  })();
+  const anchorH =
+    config.durationFrom === 'source-control'
+      ? sourceControlH
+      : config.durationFrom === 'first-negative-blood-culture'
+        ? firstNegativeH
+        : firstAntibioticH;
   const totalDays =
-    orders.length && firstAntibioticH !== null
-      ? Math.round(((lastStop - firstAntibioticH) / 24) * 10) / 10
+    learnerOrders.length && anchorH !== null
+      ? Math.round(((lastStop - anchorH) / 24) * 10) / 10
       : 0;
-  if (config.infectionPresent && config.targetDays !== null && orders.length) {
+  if (
+    config.infectionPresent &&
+    config.targetDays !== null &&
+    learnerOrders.length &&
+    anchorH !== null
+  ) {
     const [below, above] = w.durationTolerance;
-    const stillRunning = orders.some((o) => o.stoppedH === null);
+    const stillRunning = learnerOrders.some((o) => o.stoppedH === null);
     if (totalDays > config.targetDays + above) {
       add(
         'stw.tooLong',
@@ -494,6 +563,68 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       add('stw.tooShort', -w.tooShort, { days: totalDays, target: config.targetDays });
     } else if (!stillRunning) {
       add('stw.durationOk', 0, { days: totalDays, target: config.targetDays });
+    }
+  }
+
+  // ── Case-specific checks ──
+  const timed = (c: CaseCheck, doneAt: number | null, withinH: number, from = 0) => {
+    if (doneAt !== null && doneAt - from <= withinH) add(c.okKey, 0);
+    else if (doneAt !== null) add(c.key, -c.penalty / 2);
+    else if (end - from > withinH) add(c.key, -c.penalty);
+  };
+  const commands = log.filter(
+    (e): e is Extract<InfectionLogEntry, { kind: 'command' }> => e.kind === 'command' && e.accepted,
+  );
+  for (const c of config.checks ?? []) {
+    switch (c.kind) {
+      case 'procedure': {
+        const at = commands.find(
+          (e) => e.command.type === 'PROCEDURE' && c.procedures.includes(e.command.procedure),
+        )?.t;
+        timed(c, at ?? null, c.withinH);
+        break;
+      }
+      case 'imaging': {
+        const at = log.find((e) => e.kind === 'imaging' && c.imaging.includes(e.imaging))?.t;
+        timed(c, at ?? null, c.withinH);
+        break;
+      }
+      case 'test': {
+        const at = specimens.find((e) => e.order.kind === c.specimen)?.t;
+        timed(c, at ?? null, c.withinH);
+        break;
+      }
+      case 'followUpBloodCultures': {
+        if (timeToActiveH === null) break;
+        const from = timeToActiveH + c.fromH;
+        const at = specimens.find((e) => e.order.kind === 'blood-culture' && e.t >= from)?.t;
+        timed(c, at ?? null, c.withinH - c.fromH, from);
+        break;
+      }
+      case 'stopDrug': {
+        const o = orders.find((x) => x.drugId === c.drugId && isInitial(x));
+        if (!o) break;
+        timed(c, o.stoppedH, c.withinH);
+        break;
+      }
+      case 'preferDrugs':
+        if (learnerOrders.some((o) => c.drugIds.includes(o.drugId))) add(c.okKey, 0);
+        else if (learnerOrders.length) add(c.key, -c.penalty);
+        break;
+      case 'avoidClasses': {
+        const used = learnerOrders.find((o) => {
+          const cls = drug(o)?.drugClass;
+          return cls !== undefined && c.classes.includes(cls);
+        });
+        if (used) add(c.key, -c.penalty, { drug: drug(used)?.nameKey ?? used.drugId });
+        else add(c.okKey, 0);
+        break;
+      }
+      case 'isolation': {
+        const at = commands.find((e) => e.command.type === 'ISOLATION' && e.command.on)?.t;
+        timed(c, at ?? null, c.withinH);
+        break;
+      }
     }
   }
 
@@ -688,7 +819,10 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   timeline.sort((a, b) => a.t - b.t);
 
   const reveal = {
-    diagnoses: truth.sites.map((s) => s.diagnosisKey),
+    diagnoses: [
+      ...truth.sites.filter((s) => s.active).map((s) => s.diagnosisKey),
+      ...((input.caseDef.patient.cdiAtAdmission ?? 0) > 0 ? ['dx.cdi'] : []),
+    ],
     organisms: cause.map(({ iso }) => ({
       organismId: iso.organismId,
       mechanisms: [...iso.mechanisms],

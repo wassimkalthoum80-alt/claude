@@ -691,4 +691,43 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
     'Untersuchung: Abdomen gebläht, diffuser Druckschmerz, spärliche Darmgeräusche, keine Abwehrspannung. Bein: blasse Reströtung. Temperatur 38,6 °C, trockene Schleimhäute.',
   'imaging.ct-abdomen.colitis':
     'Wandverdickung des gesamten Kolons mit perikolischer Imbibierung; keine Perforation, Kolondurchmesser 5 cm.',
+  'dx.cdi': 'C.-difficile-Infektion (Kolitis) nach Clindamycin',
+  'stw.chk.sourceControl.ok': 'Fokussanierung innerhalb von 12 h.',
+  'stw.chk.sourceControl.missed':
+    'Fokussanierung spät oder nicht erfolgt: Antibiotika allein beherrschen keine Leckage.',
+  'stw.chk.noReflexCover.ok':
+    'Keine reflexhafte Antimykotika- oder VRE-Therapie für Drainagebesiedler.',
+  'stw.chk.noReflexCover.missed':
+    '{drug} für Erreger aus der Drainage, obwohl es dem Patienten besser ging: Besiedlung ist keine Infektion.',
+  'stw.chk.lineOut.ok': 'Infizierter Zugang innerhalb von 6 h entfernt.',
+  'stw.chk.lineOut.missed': 'Der infizierte Zugang blieb zu lange: der Fokus streut weiter.',
+  'stw.chk.mssaDrug.ok': 'Cefazolin oder Flucloxacillin bei MSSA.',
+  'stw.chk.mssaDrug.missed':
+    'Kein Cefazolin oder Flucloxacillin: bei MSSA sind sie Vancomycin und Breitspektrum überlegen.',
+  'stw.chk.followUpBc.ok': 'Kontroll-Blutkulturen abgenommen.',
+  'stw.chk.followUpBc.missed':
+    'Keine Kontroll-Blutkulturen: Persistenz und Beginn der Therapiedauer bleiben unbekannt.',
+  'stw.chk.echo.ok': 'Echokardiografie zur Suche nach Endokarditis.',
+  'stw.chk.echo.missed':
+    'Keine Echokardiografie: bei S.-aureus-Bakteriämie ist eine Endokarditis nicht ausgeschlossen.',
+  'stw.chk.mri.ok': 'MRT der Wirbelsäule bei neuen Rückenschmerzen.',
+  'stw.chk.mri.missed':
+    'Rückenschmerzen bei S.-aureus-Bakteriämie ohne Bildgebung: ein metastatischer Fokus wurde übersehen.',
+  'stw.chk.stopTrigger.ok': 'Clindamycin (der Auslöser) zügig abgesetzt.',
+  'stw.chk.stopTrigger.missed': 'Das auslösende Antibiotikum lief weiter.',
+  'stw.chk.cdiffTest.ok': 'Stuhl auf C. difficile untersucht.',
+  'stw.chk.cdiffTest.missed': 'Kein C.-difficile-Test bei neuem Durchfall unter Antibiotika.',
+  'stw.chk.cdiDrug.ok': 'Fidaxomicin oder orales Vancomycin.',
+  'stw.chk.cdiDrug.missed':
+    'Weder Fidaxomicin noch orales Vancomycin: Mittel der Wahl bei C.-difficile-Infektion.',
+  'stw.chk.isolation.ok': 'Kontaktisolation eingeleitet.',
+  'stw.chk.isolation.missed': 'Keine Kontaktisolation: Sporen verbreiten sich auf Station.',
+  'stw.learn.peritonitis':
+    'Die Fokussanierung ist die Therapie, Antibiotika unterstützen sie. Nach adäquater Sanierung reichen etwa 4 Tage — und Candida oder VRE in der Drainage eines sich bessernden Patienten sind Besiedler.',
+  'stw.learn.sabLine':
+    'S. aureus im Blut ist nie eine Kontamination: Zugang entfernen, Cefazolin oder Flucloxacillin, Kontrollkulturen, Echokardiografie, 14 Tage ab der ersten negativen Kultur.',
+  'stw.learn.sabSpine':
+    'Persistierende S.-aureus-Bakteriämie oder neue Schmerzen bedeuten bis zum Beweis des Gegenteils einen metastatischen Fokus: bildgebend suchen und mindestens 6 Wochen behandeln.',
+  'stw.learn.cdi':
+    'Nur Durchfall testen, den Auslöser absetzen, mit Fidaxomicin (oder oralem Vancomycin) behandeln, isolieren — und jedes Antibiotikum und den PPI hinterfragen.',
 };
