@@ -8,6 +8,7 @@ import type { InfectionCase } from '../../sim/infection/types';
  * The truth (infections, mimics, colonisation, latent resistance) is never shown to the learner before the debrief.
  */
 
+import { ADVANCED_CASES } from './casesAdvanced';
 import { NO_INFECTION_AND_CAP_CASES } from './casesNoInfection';
 import { WORKING_DIAGNOSES } from './workingDiagnoses';
 
@@ -423,6 +424,7 @@ export const INFECTION_CASES: readonly InfectionCase[] = [
   sabLine,
   cdiAfterClindamycin,
   ...NO_INFECTION_AND_CAP_CASES,
+  ...ADVANCED_CASES,
 ];
 
 export const INFECTION_CASE_BY_ID: ReadonlyMap<string, InfectionCase> = new Map(

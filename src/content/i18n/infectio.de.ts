@@ -928,4 +928,123 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
     'Durchfall, Kopfschmerz, Hotelaufenthalt, kein Ansprechen auf ein β-Laktam: an Legionellen denken — Urin-Antigen, Makrolid oder Levofloxacin.',
   'stw.learn.capEmpyema':
     'Anhaltendes Fieber an Tag 3 eines passenden Antibiotikums: nach einer Komplikation suchen. Ein Empyem braucht eine Drainage und eine längere Therapie.',
+  'infectio.section.special': 'Besondere Situationen',
+  'wd.endocarditis': 'Endokarditis',
+  'wd.meningitis': 'Meningitis',
+  'infectio.mrsa.title': 'MRSA aus dem Dialysekatheter',
+  'infectio.mrsa.desc': 'Fieber an der Dialyse — und das Labor meldet Haufenkokken.',
+  'infectio.endocarditis.title': 'Wochenlang Fieber und ein neues Geräusch',
+  'infectio.endocarditis.desc': 'Nachtschweiß, Gewichtsverlust, Zahnbehandlung vor sechs Wochen.',
+  'infectio.fn.title': 'Fieber nach Chemotherapie',
+  'infectio.fn.desc': '22:00, Neutrophile unter 0,5 G/L, 38,6 °C. Die Uhr läuft.',
+  'infectio.meningitis.title': 'Fieber, Kopfschmerz, Verwirrtheit',
+  'infectio.meningitis.desc': 'Meningismus und somnolent — jede Minute zählt.',
+  'infectio.catBite.title': 'Die Hand, die nicht besser wird',
+  'infectio.catBite.desc': 'Rote, geschwollene Hand, Fieber — stellen Sie die richtige Frage.',
+  'case.mrsa.title': 'MRSA aus dem Dialysekatheter',
+  'case.mrsa.presentation':
+    '70 J., Hämodialyse über getunnelten Katheter, Schüttelfrost an der Dialyse.',
+  'case.mrsa.briefing':
+    'Herr J., 70 Jahre, dialysepflichtig bei diabetischer Nephropathie über einen getunnelten Jugularis-Katheter, hatte bei der gestrigen Dialyse Schüttelfrost und 39,0 °C. Ein Set wurde peripher und eines aus dem Katheter abgenommen. Bekannter MRSA-Träger von einem früheren Aufenthalt. Das Labor ruft um 08:00 an: grampositive Haufenkokken in beiden Flaschen.',
+  'case.mrsa.exam':
+    'Untersuchung: Rötung und Druckschmerz um die Katheteraustrittsstelle; kein Geräusch; keine Rückenschmerzen; Kreatinin entsprechend dem Dialyseintervall.',
+  'dx.mrsaLine': 'MRSA-Bakteriämie durch den Dialysekatheter',
+  'dx.septicThrombosis': 'Septische katheterassoziierte Thrombose (komplizierte Bakteriämie)',
+  'imaging.line-inspection.dialysisRed':
+    'Austrittsstelle des Dialysekatheters gerötet, druckschmerzhaft, etwas Eiter.',
+  'case.endocarditis.title': 'Wochenlang Fieber und ein neues Geräusch',
+  'case.endocarditis.presentation':
+    '54 J., seit sechs Wochen Fieber, Nachtschweiß, Gewichtsverlust, neues Herzgeräusch.',
+  'case.endocarditis.briefing':
+    'Herr T., 54 Jahre, hat seit etwa sechs Wochen intermittierend Fieber bis 38,5 °C, Nachtschweiß und 5 kg Gewichtsverlust; der Hausarzt gab zweimal kurz ein orales Antibiotikum „gegen eine Erkältung“, jeweils mit kurzer Besserung. Vor zwei Monaten Zahnextraktion. Bekannter leichter Mitralklappenprolaps. Aufnahme um 10:00, seit 10 Tagen kein Antibiotikum.',
+  'case.endocarditis.exam':
+    'Untersuchung: neues holosystolisches Geräusch über der Herzspitze, kleine schmerzlose Hämorrhagien an den Handflächen, Splitterblutungen; Milz tastbar.',
+  'dx.endocarditisViridans': 'Mitralklappenendokarditis durch vergrünende Streptokokken',
+  'dx.endocarditisEnterococcal': 'Mitralklappenendokarditis durch Enterococcus faecalis',
+  'dx.embolicStroke': 'Septische zerebrale Embolie',
+  'nurse.embolic': '„Er kann plötzlich den rechten Arm nicht mehr heben und spricht verwaschen!“',
+  'imaging.tte.vegetation':
+    'Mobile Struktur am posterioren Mitralsegel, etwa 9 mm; mittelgradige Insuffizienz.',
+  'imaging.tee.vegetation':
+    'Vegetation 11 mm am posterioren Mitralsegel, mittel- bis hochgradige Insuffizienz, kein Abszess.',
+  'imaging.ct-head.embolic': 'Kleiner akuter Infarkt links-hemisphärisch, keine Blutung.',
+  'case.fn.title': 'Fieber nach Chemotherapie',
+  'case.fn.presentation': '48 J., Tag 10 nach Chemotherapie, Neutrophile < 0,5 G/L, 38,6 °C.',
+  'case.fn.briefing':
+    'Frau A., 48 Jahre, Tag 10 nach einem Chemotherapiezyklus bei Lymphom; Neutrophile heute früh 0,3 G/L. Um 22:00 hat sie 38,6 °C und friert. Portkatheter rechts pektoral. Blutdruck stabil. Sie haben Dienst.',
+  'case.fn.exam':
+    'Untersuchung: leichte Mukositis, kein Husten, Lunge frei, Abdomen weich, Porteinstichstelle reizlos, keine Hautläsionen, perianal nicht untersucht (Neutropenie).',
+  'dx.neutropenicFever': 'Febrile Neutropenie ohne Fokus (mit Neutrophilenerholung abgeklungen)',
+  'dx.fnGramNegative': 'Febrile Neutropenie mit E.-coli-Bakteriämie (Translokation aus dem Darm)',
+  'dx.portInfection': 'Portkatheterinfektion mit KNS',
+  'imaging.line-inspection.portRed':
+    'Porttasche leicht gerötet und druckschmerzhaft entlang des Tunnels.',
+  'case.meningitis.title': 'Fieber, Kopfschmerz, Verwirrtheit',
+  'case.meningitis.presentation':
+    '63 J., seit heute Nachmittag Fieber, starke Kopfschmerzen, Meningismus, jetzt somnolent.',
+  'case.meningitis.briefing':
+    'Herr V., 63 Jahre, war seit einer Woche erkältet. Seit heute Nachmittag hohes Fieber, die stärksten Kopfschmerzen seines Lebens, Erbrechen; seine Frau brachte ihn um 21:00, weil er verwirrt wurde. Keine fokalen Ausfälle, kein Krampfanfall. Bekannt: Diabetes. Keine Allergien.',
+  'case.meningitis.exam':
+    'Untersuchung: somnolent, aber erweckbar (GCS 13), ausgeprägter Meningismus, Stauungspapille nicht beurteilt, keine Fokalneurologie, kein Exanthem; Otitis media rechts.',
+  'dx.meningitisPneumococcal': 'Pneumokokken-Meningitis (nach Otitis media)',
+  'dx.meningitisListeria': 'Listerien-Meningitis',
+  'case.catBite.title': 'Die Hand, die nicht besser wird',
+  'case.catBite.presentation': '46 J., seit gestern rote, geschwollene, schmerzhafte Hand, Fieber.',
+  'case.catBite.briefing':
+    'Frau L., 46 Jahre, kommt mit seit gestern rasch zunehmender Rötung der linken Hand und des Unterarms, jetzt 38,9 °C. Der Hausarzt hat gestern Abend Flucloxacillin begonnen, ohne Wirkung. Sonst gesund, keine Allergien. Aufnahme um 16:00.',
+  'case.catBite.exam':
+    'Untersuchung: geschwollener, warmer, geröteter Handrücken mit Lymphangitis; zwei kleine Stichwunden zwischen den Fingerknöcheln. Auf Nachfrage: „Unsere Katze hat mich vorgestern gebissen, als ich sie zum Tierarzt gebracht habe.“',
+  'dx.pasteurellaCellulitis': 'Pasteurella-multocida-Phlegmone mit Bakteriämie nach Katzenbiss',
+  'dx.pasteurellaTenosynovitis': 'Pasteurella-Beugesehnenscheidenphlegmone nach Katzenbiss',
+  'nurse.fingerPain': '„Sie kann den Zeigefinger nicht mehr strecken — es tut furchtbar weh.“',
+  'imaging.line-inspection.hand':
+    'Zwei Stichwunden am Handrücken, ausbreitende Phlegmone mit Lymphangitis.',
+  'stw.chk.tee.ok': 'TEE zur Bestätigung der Vegetation und Suche nach Komplikationen.',
+  'stw.chk.tee.missed':
+    'Kein TEE: ein unauffälliges TTE schließt Endokarditis oder Abszess nicht aus.',
+  'stw.chk.endoDrug.ok': 'Gezielt Penicillin / Ceftriaxon / Ampicillin bei Streptokokken.',
+  'stw.chk.endoDrug.missed': 'Kein gezieltes β-Laktam bei sensiblem Streptokokkus.',
+  'stw.chk.valveSurgery.ok': 'Herzteam einbezogen: frühe OP nach der Embolie.',
+  'stw.chk.valveSurgery.missed': 'Embolie bei großer Vegetation, ohne eine OP zu erwägen.',
+  'stw.chk.enterococcalCombo.ok':
+    'Ampicillin plus Ceftriaxon (oder Gentamicin) bei Enterokokken-Endokarditis.',
+  'stw.chk.enterococcalCombo.missed':
+    'Enterokokken-Endokarditis braucht die synergistische Kombination.',
+  'stw.chk.fnDrug.ok': 'Pseudomonas-wirksames β-Laktam bei febriler Neutropenie.',
+  'stw.chk.fnDrug.missed': 'Kein pseudomonaswirksames β-Laktam bei febriler Neutropenie.',
+  'stw.chk.noEscalationFn.ok': 'Keine Eskalation bei anhaltendem Fieber in stabilem Zustand.',
+  'stw.chk.noEscalationFn.missed': '{drug} wegen Fieber allein bei stabiler Neutropenie ergänzt.',
+  'stw.chk.abxBeforeCt.ok': 'Die Antibiotika haben nicht auf das CT gewartet.',
+  'stw.chk.abxBeforeCt.missed':
+    'Das Antibiotikum hat auf das CT gewartet: bei Meningitis kostet jede Stunde Prognose.',
+  'stw.chk.dexa.ok': 'Dexamethason mit der ersten Antibiotikagabe.',
+  'stw.chk.dexa.missed': 'Kein Dexamethason mit der ersten Gabe (später hilft es nicht).',
+  'stw.chk.ageCover.ok': 'Ceftriaxon plus Ampicillin (Listerien) über 50 Jahre.',
+  'stw.chk.ageCover.missed':
+    'Über 50 Jahre müssen Listerien abgedeckt werden: Cephalosporine erfassen sie nicht.',
+  'stw.chk.pasteurella.ok': 'Aminopenicillin/β-Laktamase-Inhibitor nach Katzenbiss.',
+  'stw.chk.pasteurella.missed':
+    'Nach Katzenbiss erfassen Flucloxacillin, Cefazolin oder Clindamycin Pasteurella nicht.',
+  'stw.chk.debridement.ok': 'Die Handchirurgie hat die Sehnenscheide débridiert.',
+  'stw.chk.debridement.missed': 'Sehnenscheidenphlegmone ohne chirurgisches Débridement.',
+  'stw.learn.mrsa':
+    'MRSA-Bakteriämie: Katheter entfernen, Vancomycin mit Spiegeln (oder Daptomycin), Kontrollkulturen, Echo — 14 Tage ab der ersten negativen Kultur.',
+  'stw.learn.mrsaThrombosis':
+    'Kulturen trotz entferntem Katheter positiv: eine komplizierte Bakteriämie (septische Thrombose) — mindestens 4 Wochen.',
+  'stw.learn.endocarditis':
+    'Drei Blutkultur-Sets vor der ersten Gabe, TEE, ein gezieltes β-Laktam für 4 Wochen — und das Herzteam, sobald Komplikationen auftreten.',
+  'stw.learn.endocarditisEnterococcal':
+    'Enterokokken-Endokarditis: Ampicillin plus Ceftriaxon für 6 Wochen.',
+  'stw.learn.fn':
+    'Febrile Neutropenie: ein pseudomonaswirksames β-Laktam innerhalb einer Stunde; anhaltendes Fieber bei Stabilität ist kein Grund für Vancomycin oder Antimykotika; beenden, wenn fieberfrei und in Erholung.',
+  'stw.learn.fnGramNegative':
+    'In der Neutropenie tötet eine gramnegative Bakteriämie binnen Stunden: die erste Gabe darf nicht warten.',
+  'stw.learn.fnPort':
+    'Fieber in der Neutropenie mit Port: den Port ansehen, durch ihn Kulturen abnehmen — und ihn entfernen, wenn er der Fokus ist.',
+  'stw.learn.meningitis':
+    'Verdacht auf bakterielle Meningitis: Blutkulturen, Dexamethason und Antibiotika innerhalb einer Stunde. Ist vor der Lumbalpunktion ein CT nötig (Fokalneurologie, Krampfanfall, deutliche Bewusstseinsminderung), kommen Dexamethason und Antibiotikum zuerst — nie auf das CT warten.',
+  'stw.learn.meningitisListeria':
+    'Älterer Patient, Cephalosporin wirkt nicht: Listerien — Ampicillin für 21 Tage.',
+  'stw.learn.catBite':
+    'Nach der Exposition fragen: Tierbisse ändern den Erreger — Pasteurella braucht Amoxicillin/Clavulansäure.',
 };

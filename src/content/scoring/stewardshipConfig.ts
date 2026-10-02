@@ -298,6 +298,133 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
       },
     ],
   },
+  'ward-mrsa-bacteraemia': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'line',
+    targetDays: 14,
+    durationFrom: 'first-negative-blood-culture',
+    learningKey: 'stw.learn.mrsa',
+    checks: [
+      {
+        kind: 'procedure',
+        procedures: ['remove-cvc'],
+        withinH: 12,
+        okKey: 'stw.chk.cvcOut.ok',
+        key: 'stw.chk.cvcOut.missed',
+        penalty: 15,
+      },
+      {
+        kind: 'followUpBloodCultures',
+        fromH: 24,
+        withinH: 96,
+        okKey: 'stw.chk.followUpBc.ok',
+        key: 'stw.chk.followUpBc.missed',
+        penalty: 10,
+      },
+      {
+        kind: 'imaging',
+        imaging: ['tte', 'tee'],
+        withinH: 120,
+        okKey: 'stw.chk.echo.ok',
+        key: 'stw.chk.echo.missed',
+        penalty: 8,
+      },
+    ],
+  },
+  'ward-endocarditis': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'endocarditis',
+    targetDays: 28,
+    learningKey: 'stw.learn.endocarditis',
+    checks: [
+      {
+        kind: 'imaging',
+        imaging: ['tee'],
+        withinH: 72,
+        okKey: 'stw.chk.tee.ok',
+        key: 'stw.chk.tee.missed',
+        penalty: 8,
+      },
+      {
+        kind: 'preferDrugs',
+        drugIds: ['penicillin-g', 'ceftriaxone', 'ampicillin'],
+        okKey: 'stw.chk.endoDrug.ok',
+        key: 'stw.chk.endoDrug.missed',
+        penalty: 6,
+      },
+    ],
+  },
+  'ward-febrile-neutropenia': {
+    infectionPresent: false,
+    empiricalIndicated: true,
+    severity: 'febrileNeutropenia',
+    focusDiagnosisId: null,
+    // ≈ stop once afebrile for 72 h and recovering
+    targetDays: 5,
+    learningKey: 'stw.learn.fn',
+    checks: [
+      {
+        kind: 'preferDrugs',
+        drugIds: ['piperacillin-tazobactam', 'cefepime', 'ceftazidime', 'meropenem', 'imipenem'],
+        okKey: 'stw.chk.fnDrug.ok',
+        key: 'stw.chk.fnDrug.missed',
+        penalty: 12,
+      },
+    ],
+  },
+  'ward-meningitis': {
+    infectionPresent: true,
+    severity: 'sepsis',
+    focusDiagnosisId: 'meningitis',
+    targetDays: 10,
+    learningKey: 'stw.learn.meningitis',
+    checks: [
+      {
+        kind: 'antibioticBeforeImaging',
+        imaging: 'ct-head',
+        okKey: 'stw.chk.abxBeforeCt.ok',
+        key: 'stw.chk.abxBeforeCt.missed',
+        penalty: 10,
+      },
+      {
+        kind: 'procedure',
+        procedures: ['dexamethasone'],
+        withinH: 1,
+        relativeToFirstDose: true,
+        okKey: 'stw.chk.dexa.ok',
+        key: 'stw.chk.dexa.missed',
+        penalty: 8,
+      },
+      {
+        kind: 'requireDrugs',
+        groups: [
+          ['ceftriaxone', 'cefotaxime', 'meropenem'],
+          ['ampicillin', 'amoxicillin'],
+        ],
+        okKey: 'stw.chk.ageCover.ok',
+        key: 'stw.chk.ageCover.missed',
+        penalty: 12,
+      },
+    ],
+  },
+  'ward-cat-bite': {
+    infectionPresent: true,
+    severity: 'suspected',
+    focusDiagnosisId: 'skin',
+    targetDays: 7,
+    learningKey: 'stw.learn.catBite',
+    checks: [
+      {
+        kind: 'preferDrugs',
+        drugIds: ['amoxicillin-clavulanate', 'ampicillin-sulbactam', 'ampicillin', 'penicillin-g'],
+        okKey: 'stw.chk.pasteurella.ok',
+        key: 'stw.chk.pasteurella.missed',
+        penalty: 12,
+      },
+    ],
+  },
 };
 
 /** Per-variant changes of a case's scoring facts. */
@@ -367,6 +494,97 @@ export const STEWARDSHIP_VARIANTS: Readonly<
           withinH: 96,
           okKey: 'stw.chk.drainage.ok',
           key: 'stw.chk.drainage.missed',
+          penalty: 15,
+        },
+      ],
+    },
+  },
+  'ward-mrsa-bacteraemia': {
+    'septic-thrombosis': { targetDays: 28, learningKey: 'stw.learn.mrsaThrombosis' },
+  },
+  'ward-endocarditis': {
+    embolic: {
+      checks: [
+        {
+          kind: 'procedure',
+          procedures: ['surgical-source-control'],
+          withinH: 96,
+          okKey: 'stw.chk.valveSurgery.ok',
+          key: 'stw.chk.valveSurgery.missed',
+          penalty: 10,
+        },
+      ],
+    },
+    enterococcal: {
+      targetDays: 42,
+      learningKey: 'stw.learn.endocarditisEnterococcal',
+      checks: [
+        {
+          kind: 'requireDrugs',
+          groups: [['ampicillin'], ['ceftriaxone', 'gentamicin']],
+          okKey: 'stw.chk.enterococcalCombo.ok',
+          key: 'stw.chk.enterococcalCombo.missed',
+          penalty: 12,
+        },
+      ],
+    },
+  },
+  'ward-febrile-neutropenia': {
+    'no-focus': {
+      checks: [
+        {
+          kind: 'avoidClasses',
+          classes: ['glycopeptide', 'oxazolidinone', 'lipopeptide', 'echinocandin', 'azole'],
+          okKey: 'stw.chk.noEscalationFn.ok',
+          key: 'stw.chk.noEscalationFn.missed',
+          penalty: 10,
+        },
+      ],
+    },
+    'gram-negative': {
+      infectionPresent: true,
+      targetDays: 7,
+      learningKey: 'stw.learn.fnGramNegative',
+      checks: [
+        {
+          kind: 'avoidClasses',
+          classes: ['glycopeptide', 'oxazolidinone', 'lipopeptide', 'echinocandin', 'azole'],
+          okKey: 'stw.chk.noEscalationFn.ok',
+          key: 'stw.chk.noEscalationFn.missed',
+          penalty: 10,
+        },
+      ],
+    },
+    'port-infection': {
+      infectionPresent: true,
+      focusDiagnosisId: 'line',
+      targetDays: 7,
+      learningKey: 'stw.learn.fnPort',
+      checks: [
+        {
+          kind: 'procedure',
+          procedures: ['remove-cvc'],
+          withinH: 48,
+          okKey: 'stw.chk.cvcOut.ok',
+          key: 'stw.chk.cvcOut.missed',
+          penalty: 12,
+        },
+      ],
+    },
+  },
+  'ward-meningitis': {
+    listeria: { targetDays: 21, learningKey: 'stw.learn.meningitisListeria' },
+  },
+  'ward-cat-bite': {
+    tenosynovitis: {
+      targetDays: 14,
+      checks: [
+        {
+          kind: 'procedure',
+          procedures: ['debridement'],
+          withinH: 24,
+          okKey: 'stw.chk.debridement.ok',
+          key: 'stw.chk.debridement.missed',
           penalty: 15,
         },
       ],

@@ -908,4 +908,119 @@ export const infectioEn = {
     'Diarrhoea, headache, hotel stay, no response to a β-lactam: think Legionella — urine antigen, macrolide or levofloxacin.',
   'stw.learn.capEmpyema':
     'Persistent fever on day 3 of a fitting antibiotic: look for a complication. An empyema needs drainage and a longer course.',
+  'infectio.section.special': 'Special situations',
+  'wd.endocarditis': 'Endocarditis',
+  'wd.meningitis': 'Meningitis',
+  'infectio.mrsa.title': 'MRSA from the dialysis catheter',
+  'infectio.mrsa.desc': 'Fever during dialysis — and the lab calls with clusters.',
+  'infectio.endocarditis.title': 'Weeks of fever and a new murmur',
+  'infectio.endocarditis.desc': 'Night sweats, weight loss, dental treatment six weeks ago.',
+  'infectio.fn.title': 'Fever after chemotherapy',
+  'infectio.fn.desc': '22:00, neutrophils below 0.5 G/L, 38.6 °C. The clock is running.',
+  'infectio.meningitis.title': 'Fever, headache, confusion',
+  'infectio.meningitis.desc': 'Neck stiffness and drowsy — every minute counts.',
+  'infectio.catBite.title': 'The hand that will not settle',
+  'infectio.catBite.desc': 'Red, swollen hand, fever — ask the right question.',
+  'case.mrsa.title': 'MRSA from the dialysis catheter',
+  'case.mrsa.presentation': '70 y, haemodialysis via a tunnelled catheter, rigors during dialysis.',
+  'case.mrsa.briefing':
+    'Mr J., 70, on haemodialysis for diabetic kidney disease via a tunnelled jugular catheter, had rigors and 39.0 °C during yesterday’s session. One set was drawn peripherally and one from the catheter. Known MRSA carrier from a previous stay. The lab calls at 08:00: Gram-positive cocci in clusters in both bottles.',
+  'case.mrsa.exam':
+    'Examination: redness and tenderness around the catheter exit site; no murmur heard; no back pain; creatinine reflects the dialysis schedule.',
+  'dx.mrsaLine': 'MRSA bacteraemia from the dialysis catheter',
+  'dx.septicThrombosis': 'Septic catheter-related thrombosis (complicated bacteraemia)',
+  'imaging.line-inspection.dialysisRed':
+    'Exit site of the dialysis catheter red, tender, some pus.',
+  'case.endocarditis.title': 'Weeks of fever and a new murmur',
+  'case.endocarditis.presentation':
+    '54 y, six weeks of fever, night sweats, weight loss, new murmur.',
+  'case.endocarditis.briefing':
+    'Mr T., 54, has had intermittent fever up to 38.5 °C, night sweats and 5 kg weight loss for about six weeks; his GP gave two short courses of an oral antibiotic "for a cold", each with brief improvement. A tooth was extracted two months ago. Known mild mitral valve prolapse. Admitted at 10:00, no antibiotic for 10 days.',
+  'case.endocarditis.exam':
+    'Examination: new holosystolic murmur at the apex, small painless haemorrhages on the palms, splinter haemorrhages; spleen palpable.',
+  'dx.endocarditisViridans': 'Mitral valve endocarditis with viridans streptococci',
+  'dx.endocarditisEnterococcal': 'Mitral valve endocarditis with Enterococcus faecalis',
+  'dx.embolicStroke': 'Septic cerebral embolism',
+  'nurse.embolic': '"He suddenly cannot lift his right arm and his speech is slurred!"',
+  'imaging.tte.vegetation':
+    'Mobile echodensity on the posterior mitral leaflet, about 9 mm; moderate regurgitation.',
+  'imaging.tee.vegetation':
+    'Vegetation 11 mm on the posterior mitral leaflet, moderate-to-severe regurgitation, no abscess.',
+  'imaging.ct-head.embolic': 'Small acute left-hemispheric infarct, no haemorrhage.',
+  'case.fn.title': 'Fever after chemotherapy',
+  'case.fn.presentation': '48 y, day 10 after chemotherapy, neutrophils < 0.5 G/L, 38.6 °C.',
+  'case.fn.briefing':
+    'Mrs A., 48, is on day 10 after a cycle of chemotherapy for lymphoma; neutrophils this morning 0.3 G/L. At 22:00 she has 38.6 °C and feels cold. Port catheter in the right chest. Blood pressure stable. You are on call.',
+  'case.fn.exam':
+    'Examination: mild mucositis, no cough, lungs clear, abdomen soft, port site without redness, no skin lesions, perianal region not examined (neutropenia).',
+  'dx.neutropenicFever': 'Febrile neutropenia without a focus (settled with neutrophil recovery)',
+  'dx.fnGramNegative': 'Febrile neutropenia with E. coli bacteraemia (gut translocation)',
+  'dx.portInfection': 'Port catheter infection with CoNS',
+  'imaging.line-inspection.portRed': 'Port pocket slightly red and tender along the tunnel.',
+  'case.meningitis.title': 'Fever, headache, confusion',
+  'case.meningitis.presentation':
+    '63 y, since this afternoon fever, severe headache, neck stiffness, now drowsy.',
+  'case.meningitis.briefing':
+    'Mr V., 63, had a cold for a week. Since this afternoon high fever, the worst headache of his life, vomiting; his wife brought him in at 21:00 because he became confused. No focal deficit, no seizure. Known: diabetes. No allergies.',
+  'case.meningitis.exam':
+    'Examination: drowsy but rousable (GCS 13), marked neck stiffness, no papilloedema assessed, no focal signs, no rash; otitis media on the right.',
+  'dx.meningitisPneumococcal': 'Pneumococcal meningitis (after otitis media)',
+  'dx.meningitisListeria': 'Listeria meningitis',
+  'case.catBite.title': 'The hand that will not settle',
+  'case.catBite.presentation': '46 y, red, swollen, painful hand since yesterday, fever.',
+  'case.catBite.briefing':
+    'Mrs L., 46, comes with a rapidly spreading redness of the left hand and forearm since yesterday, now 38.9 °C. Her GP started flucloxacillin yesterday evening, without effect. Otherwise healthy, no allergies. Admitted at 16:00.',
+  'case.catBite.exam':
+    'Examination: swollen, warm, red back of the hand with lymphangitis; two small puncture wounds between the knuckles. When asked: "Our cat bit me the day before yesterday when I took it to the vet."',
+  'dx.pasteurellaCellulitis': 'Pasteurella multocida cellulitis with bacteraemia after a cat bite',
+  'dx.pasteurellaTenosynovitis': 'Pasteurella flexor tenosynovitis after a cat bite',
+  'nurse.fingerPain': '"She cannot straighten the index finger any more — it hurts terribly."',
+  'imaging.line-inspection.hand':
+    'Two puncture wounds on the back of the hand, spreading cellulitis with lymphangitis.',
+  'stw.chk.tee.ok': 'TEE to confirm the vegetation and look for complications.',
+  'stw.chk.tee.missed': 'No TEE: a normal TTE does not exclude endocarditis or an abscess.',
+  'stw.chk.endoDrug.ok': 'Targeted penicillin / ceftriaxone / ampicillin for streptococci.',
+  'stw.chk.endoDrug.missed': 'No targeted β-lactam for a susceptible streptococcus.',
+  'stw.chk.valveSurgery.ok': 'Heart team involved: early surgery after the embolism.',
+  'stw.chk.valveSurgery.missed': 'Embolism with a large vegetation without considering surgery.',
+  'stw.chk.enterococcalCombo.ok':
+    'Ampicillin plus ceftriaxone (or gentamicin) for enterococcal endocarditis.',
+  'stw.chk.enterococcalCombo.missed':
+    'Enterococcal endocarditis needs the synergistic combination.',
+  'stw.chk.fnDrug.ok': 'Pseudomonas-active β-lactam for febrile neutropenia.',
+  'stw.chk.fnDrug.missed': 'No pseudomonas-active β-lactam in febrile neutropenia.',
+  'stw.chk.noEscalationFn.ok': 'No escalation for persistent fever in a stable patient.',
+  'stw.chk.noEscalationFn.missed': '{drug} added for fever alone in a stable neutropenic patient.',
+  'stw.chk.abxBeforeCt.ok': 'Antibiotics did not wait for the CT.',
+  'stw.chk.abxBeforeCt.missed':
+    'The antibiotic waited for the CT: every hour costs outcome in meningitis.',
+  'stw.chk.dexa.ok': 'Dexamethasone with the first antibiotic dose.',
+  'stw.chk.dexa.missed': 'No dexamethasone with the first dose (it does not help later).',
+  'stw.chk.ageCover.ok': 'Ceftriaxone plus ampicillin (Listeria) above 50 years.',
+  'stw.chk.ageCover.missed': 'Above 50 years Listeria must be covered: cephalosporins miss it.',
+  'stw.chk.pasteurella.ok': 'Aminopenicillin/β-lactamase inhibitor after the cat bite.',
+  'stw.chk.pasteurella.missed':
+    'After a cat bite flucloxacillin, cefazolin or clindamycin miss Pasteurella.',
+  'stw.chk.debridement.ok': 'Hand surgeons debrided the tendon sheath.',
+  'stw.chk.debridement.missed': 'Tenosynovitis without surgical debridement.',
+  'stw.learn.mrsa':
+    'MRSA bacteraemia: remove the catheter, vancomycin with levels (or daptomycin), follow-up cultures, echo — 14 days from the first negative culture.',
+  'stw.learn.mrsaThrombosis':
+    'Cultures still positive after the line is out: a complicated bacteraemia (septic thrombosis) — at least 4 weeks.',
+  'stw.learn.endocarditis':
+    'Three blood-culture sets before the first dose, TEE, a targeted β-lactam for 4 weeks — and the heart team when complications appear.',
+  'stw.learn.endocarditisEnterococcal':
+    'Enterococcal endocarditis: ampicillin plus ceftriaxone for 6 weeks.',
+  'stw.learn.fn':
+    'Febrile neutropenia: a pseudomonas-active β-lactam within the hour; stable with persistent fever is no reason to add vancomycin or antifungals; stop when afebrile and recovering.',
+  'stw.learn.fnGramNegative':
+    'In neutropenia a Gram-negative bacteraemia kills within hours: the first dose must not wait.',
+  'stw.learn.fnPort':
+    'Fever in neutropenia with a port: look at the port, culture through it — and remove it when it is the focus.',
+  'stw.learn.meningitis':
+    'Suspected bacterial meningitis: blood cultures, dexamethasone and antibiotics within the hour. If a CT is needed before the lumbar puncture (focal signs, seizure, marked drowsiness), dexamethasone and the antibiotic come first — never wait for the scan.',
+  'stw.learn.meningitisListeria':
+    'Older patient, cephalosporin not working: Listeria — ampicillin for 21 days.',
+  'stw.learn.catBite':
+    'Ask about exposure: animal bites change the organism — Pasteurella needs amoxicillin/clavulanate.',
 } as const;

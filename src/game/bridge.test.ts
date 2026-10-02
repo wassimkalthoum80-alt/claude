@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { OBSERVATION_DEFAULTS } from '../content/director/observationDefaults';
 import { erc2025 } from '../content/guidelines/erc2025';
 import { feverRigors } from '../content/infection/cases';
+import { meningitis } from '../content/infection/casesAdvanced';
 import { INFECTION_LIBRARY } from '../content/infection/library';
 import { BRIDGE_SCENARIO_ID, bridgeScenario } from '../content/scenarios/bridge';
 import { InfectionEngine, SimulationEngine } from '../sim';
@@ -77,5 +78,31 @@ describe('real-time bridge (course ↔ real time)', () => {
     expect(outcome.durationMin).toBeCloseTo(11.5, 0);
     // the course applies it (logged as a command)
     expect(w.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome }).accepted).toBe(true);
+  });
+});
+
+describe('meningitis episode', () => {
+  it('offers dexamethasone and CT head as timed actions and returns their minutes', () => {
+    const w = new InfectionEngine({ caseDef: meningitis, library: INFECTION_LIBRARY });
+    const sc = bridgeScenario(w.realtimePreset(), 'admission', w.caseDef.patient, 'meningitis');
+    expect(sc.titleKey).toBe('scenario.bridge.meningitis.title');
+    expect(sc.actions?.map((a) => a.id)).toEqual(
+      expect.arrayContaining(['cultures', 'antibiotics', 'dexamethasone', 'ct-head']),
+    );
+    const e = new SimulationEngine({
+      scenario: sc,
+      guidelines: erc2025,
+      observation: OBSERVATION_DEFAULTS,
+      seed: 2,
+    });
+    const rec = new BridgeRecorder();
+    e.dispatch({ type: 'SCENARIO_ACTION', id: 'dexamethasone' }, 'user');
+    for (let i = 0; i < 120; i += 5) {
+      e.runFor(5);
+      rec.sample(e.getSnapshot());
+    }
+    const o = realtimeOutcome(rec.samples, e.getSnapshot(), e.eventLog);
+    expect(o.actionsAtMin?.dexamethasone).toBeCloseTo(1, 0);
+    expect(o.actionsAtMin?.['ct-head']).toBeUndefined();
   });
 });

@@ -13,6 +13,13 @@ import {
   icuSputum,
   notPneumonia,
 } from '../content/infection/casesNoInfection';
+import {
+  catBite,
+  endocarditis,
+  febrileNeutropenia,
+  meningitis,
+  mrsaBacteraemia,
+} from '../content/infection/casesAdvanced';
 import { INFECTION_LIBRARY as LIB } from '../content/infection/library';
 import {
   SPECTRUM_RANK,
@@ -517,5 +524,110 @@ describe('stewardship scoring — phase 5 cases (no infection, CAP)', () => {
     e.dispatch(start('fluconazole'));
     runTo(e, 24);
     expect(keysOf(e)).toContain('stw.chk.noColonisationTx.missed');
+  });
+});
+
+describe('stewardship scoring — phase 5 bloodstream and special cases', () => {
+  const v = (c: InfectionCase, variant: string) => {
+    for (let seed = 1; seed < 200; seed++) {
+      const e = new InfectionEngine({ caseDef: c, library: LIB, seed });
+      if (e.variant === variant) return e;
+    }
+    throw new Error(variant);
+  };
+  const result = (e: InfectionEngine) =>
+    scoreStewardship({
+      caseDef: e.caseDef,
+      view: e.getView(),
+      log: e.log,
+      truth: e.getTruth(),
+      lib: LIB,
+      config: stewardshipConfigFor(e.caseDef.id, e.variant),
+      weights: STEWARDSHIP_WEIGHTS,
+      spectrumRank: SPECTRUM_RANK,
+    });
+  const keysOf = (e: InfectionEngine) => result(e).items.map((i) => i.key);
+
+  it('E1: cultures, dexamethasone, ceftriaxone + ampicillin before any CT — all credited', () => {
+    const e = v(meningitis, 'pneumococcal');
+    e.dispatch(cultures);
+    e.dispatch({ type: 'PROCEDURE', procedure: 'dexamethasone' });
+    e.dispatch(start('ceftriaxone'));
+    e.dispatch(start('ampicillin'));
+    runTo(e, 2);
+    e.dispatch({ type: 'ORDER_IMAGING', kind: 'ct-head' });
+    runTo(e, 6);
+    expect(keysOf(e)).toEqual(
+      expect.arrayContaining([
+        'stw.timely',
+        'stw.culturesBefore',
+        'stw.chk.abxBeforeCt.ok',
+        'stw.chk.dexa.ok',
+        'stw.chk.ageCover.ok',
+      ]),
+    );
+  });
+
+  it('E1: CT first, antibiotic after it, no dexamethasone, ceftriaxone alone — each named', () => {
+    const e = v(meningitis, 'pneumococcal');
+    e.dispatch({ type: 'ORDER_IMAGING', kind: 'ct-head' });
+    runTo(e, 2);
+    e.dispatch(start('ceftriaxone'));
+    runTo(e, 6);
+    expect(keysOf(e)).toEqual(
+      expect.arrayContaining([
+        'stw.late',
+        'stw.chk.abxBeforeCt.missed',
+        'stw.chk.dexa.missed',
+        'stw.chk.ageCover.missed',
+      ]),
+    );
+  });
+
+  it('D2 no focus: empirical therapy is timely and not "treating no infection"; escalation is named', () => {
+    const e = v(febrileNeutropenia, 'no-focus');
+    e.dispatch(cultures);
+    e.dispatch(start('piperacillin-tazobactam'));
+    runTo(e, 48);
+    e.dispatch(start('vancomycin'));
+    runTo(e, 60);
+    const k = keysOf(e);
+    expect(k).toEqual(
+      expect.arrayContaining(['stw.timely', 'stw.chk.fnDrug.ok', 'stw.chk.noEscalationFn.missed']),
+    );
+    expect(k).not.toContain('stw.treatedNoInfection');
+  });
+
+  it('D2: ceftriaxone alone misses the pseudomonas-active β-lactam', () => {
+    const e = v(febrileNeutropenia, 'no-focus');
+    e.dispatch(start('ceftriaxone'));
+    runTo(e, 12);
+    expect(keysOf(e)).toContain('stw.chk.fnDrug.missed');
+  });
+
+  it('E3: flucloxacillin for a cat bite misses Pasteurella', () => {
+    const e = v(catBite, 'bacteraemia');
+    e.dispatch(start('flucloxacillin'));
+    runTo(e, 12);
+    expect(keysOf(e)).toEqual(
+      expect.arrayContaining(['stw.chk.pasteurella.missed', 'stw.noActive']),
+    );
+  });
+
+  it('C3 enterococcal: ampicillin + ceftriaxone is credited, 6-week target', () => {
+    const e = v(endocarditis, 'enterococcal');
+    e.dispatch(start('ampicillin'));
+    e.dispatch(start('ceftriaxone'));
+    runTo(e, 24);
+    expect(keysOf(e)).toContain('stw.chk.enterococcalCombo.ok');
+    expect(result(e).metrics.targetDays).toBe(42);
+  });
+
+  it('C2: vancomycin without levels is named (TDM)', () => {
+    const e = v(mrsaBacteraemia, 'uncomplicated');
+    e.dispatch(start('vancomycin'));
+    e.dispatch({ type: 'PROCEDURE', procedure: 'remove-cvc' });
+    runTo(e, 72);
+    expect(keysOf(e)).toEqual(expect.arrayContaining(['stw.missingTdm', 'stw.chk.cvcOut.ok']));
   });
 });
