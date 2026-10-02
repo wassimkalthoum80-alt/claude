@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useRef, type ReactNode } from 'reac
 import { INFECTION_CASE_BY_ID } from '../../content/infection/cases';
 import { INFECTION_LIBRARY } from '../../content/infection/library';
 import { BridgeRecorder } from '../../game/bridge';
+import { applyModifiers } from '../../game/campaign';
 import type { SessionConfig } from '../../game/types';
 import { InfectionEngine } from '../../sim';
 
@@ -29,8 +30,10 @@ export function WardStoreProvider({ children }: { children: ReactNode }) {
       engineFor(session) {
         const key = `${session.scenarioId}#${session.seed}#${session.startedAt}`;
         if (slot.current?.key === key) return slot.current.engine;
-        const caseDef = INFECTION_CASE_BY_ID.get(session.scenarioId);
-        if (!caseDef) return null;
+        const base = INFECTION_CASE_BY_ID.get(session.scenarioId);
+        if (!base) return null;
+        // Hospital campaign: the case as this hospital presents it (variant weights, flora, C. difficile).
+        const caseDef = session.campaign ? applyModifiers(base, session.campaign.modifiers) : base;
         const engine = new InfectionEngine({
           caseDef,
           library: INFECTION_LIBRARY,

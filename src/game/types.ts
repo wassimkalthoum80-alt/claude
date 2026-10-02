@@ -1,3 +1,4 @@
+import type { CaseModifiers } from './campaign';
 /**
  * Learning-structure types (milestone 6). Pure data — no React, no engine access. Content (the module catalog)
  * and the UI both depend on these; the simulation does not.
@@ -86,4 +87,6 @@ export interface SessionConfig {
   startedAt: number;
   /** unknown case: the scenario was drawn from a pool and is shown by its presentation only */
   unknown?: boolean;
+  /** hospital campaign: position and the hospital's adjustments of this case, fixed at its start */
+  campaign?: { index: number; modifiers: CaseModifiers };
 }

@@ -63,7 +63,7 @@ export interface UiState {
 export type SessionDrawer = 'timeline' | 'trends' | 'hint' | 'experiments' | 'diagnosis';
 
 export type Screen =
-  'home' | 'module' | 'session' | 'ward' | 'ward-debrief' | 'debrief' | 'progress';
+  'home' | 'module' | 'session' | 'ward' | 'ward-debrief' | 'debrief' | 'progress' | 'campaign';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
 export type MobileTab = 'monitor' | 'patient' | 'vent' | 'pumps' | 'actions';
 

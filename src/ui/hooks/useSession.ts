@@ -12,6 +12,10 @@ import { localProgressStore } from '../progressStore';
 import { useEngine } from './EngineContext';
 import { useUi, WORKSPACE_CLOSED } from './UiContext';
 import { useWardStore } from './WardStoreContext';
+import { CAMPAIGN_CONFIG } from '../../content/campaign/hospital';
+import { INFECTION_CASES } from '../../content/infection/cases';
+import { caseModifiers, caseSeed, newCampaign, nextCaseId } from '../../game/campaign';
+import { localCampaignStore } from '../campaignStore';
 
 /** A new 32-bit seed (wall-clock randomness is fine here: the seed itself is stored and logged). */
 function freshSeed(): number {
@@ -38,6 +42,10 @@ export interface SessionActions {
   openProgress: () => void;
   /** ward case → real-time episode in the workstation (emergency admission or shock) */
   startBridge: (kind: BridgeKind) => void;
+  /** open the hospital-campaign dashboard */
+  openCampaign: () => void;
+  /** hospital campaign: the next patient of this hospital (starts a campaign if none is stored) */
+  startCampaignCase: () => void;
 }
 
 /**
@@ -173,6 +181,47 @@ export function useSession(): SessionActions {
     [engine, setUi, ui.screen, ui.session, wardStore],
   );
 
+  const openCampaign = useCallback(() => {
+    pause();
+    setUi({ ...WORKSPACE_CLOSED, screen: 'campaign', menuModule: 'infectio', session: null });
+  }, [pause, setUi]);
+
+  const startCampaignCase = useCallback(() => {
+    let state = localCampaignStore.load();
+    if (!state) {
+      state = newCampaign(CAMPAIGN_CONFIG, freshSeed());
+      localCampaignStore.save(state);
+    }
+    const caseId = nextCaseId(
+      CAMPAIGN_CONFIG,
+      state,
+      INFECTION_CASES.map((c) => c.id),
+    );
+    const mod = MODULE_CATALOG.find((x) => x.id === 'infectio');
+    const entry = mod?.sections.flatMap((x) => x.entries).find((e) => e.scenarioId === caseId);
+    if (!caseId || !entry) return;
+    pause();
+    const session = {
+      ...createSession(MODULE_CATALOG, 'infectio', entry.id, {
+        difficulty: ui.difficulty,
+        seed: caseSeed(state),
+        now: Date.now(),
+      }),
+      campaign: {
+        index: state.index + 1,
+        modifiers: caseModifiers(CAMPAIGN_CONFIG, state.hospital, caseId),
+      },
+    };
+    setUi({
+      ...WORKSPACE_CLOSED,
+      screen: 'ward',
+      session,
+      briefingOpen: true,
+      bridge: null,
+      bridgeReturn: null,
+    });
+  }, [pause, setUi, ui.difficulty]);
+
   const end = useCallback(() => {
     pause();
     const session = ui.session;
@@ -195,6 +244,10 @@ export function useSession(): SessionActions {
       });
       return;
     }
+    if (ui.screen === 'ward' && session?.campaign) {
+      setUi({ ...WORKSPACE_CLOSED, screen: 'campaign', menuModule: 'infectio', session: null });
+      return;
+    }
     if (ui.screen === 'ward') {
       // Phase 3 adds the stewardship debrief; until then the ward case returns to its menu.
       setUi({ ...WORKSPACE_CLOSED, screen: 'module', menuModule: module, session: null });
@@ -209,7 +262,27 @@ export function useSession(): SessionActions {
   }, [pause, setUi, module, engine, ui.session, ui.screen, ui.bridge, wardStore]);
 
   return useMemo(
-    () => ({ openModule, goHome, start, restart, end, openProgress, startBridge }),
-    [openModule, goHome, start, restart, end, openProgress, startBridge],
+    () => ({
+      openModule,
+      goHome,
+      start,
+      restart,
+      end,
+      openProgress,
+      startBridge,
+      openCampaign,
+      startCampaignCase,
+    }),
+    [
+      openModule,
+      goHome,
+      start,
+      restart,
+      end,
+      openProgress,
+      startBridge,
+      openCampaign,
+      startCampaignCase,
+    ],
   );
 }

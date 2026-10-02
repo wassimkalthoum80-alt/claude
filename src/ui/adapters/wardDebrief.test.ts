@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { CAMPAIGN_CONFIG } from '../../content/campaign/hospital';
 import { positiveUrine } from '../../content/infection/cases';
+import { newCampaign, type CampaignState } from '../../game/campaign';
 import { INFECTION_LIBRARY as LIB } from '../../content/infection/library';
 import { emptyProfile, type ProgressProfile, type ProgressStore } from '../../game/profile';
 import type { SessionConfig } from '../../game/types';
@@ -47,5 +49,47 @@ describe('ward debrief', () => {
     expect(rec?.topics).toEqual(['infectiology']);
     expect(rec?.scores.treatment).toBe(d.result.stewardshipScore);
     expect(rec?.scores.safety).toBe(d.result.outcomeScore);
+  });
+});
+
+describe('ward debrief — hospital campaign', () => {
+  it('a campaign case moves the hospital and stores the new state', () => {
+    let saved: CampaignState | null = newCampaign(CAMPAIGN_CONFIG, 5);
+    const campaignStore = {
+      load: () => saved,
+      save: (s: CampaignState) => {
+        saved = s;
+      },
+    };
+    const e = new InfectionEngine({ caseDef: positiveUrine, library: LIB });
+    e.dispatch({
+      type: 'START_ANTIINFECTIVE',
+      drugId: 'ciprofloxacin',
+      dose: 'standard',
+      route: 'po',
+    });
+    while (e.timeH < 72) e.advance(72 - e.timeH);
+    const d = finishWardSession(
+      e,
+      {
+        ...session,
+        campaign: { index: 1, modifiers: { variantWeights: {}, floraFactor: 1, cdiFactor: 1 } },
+      },
+      memoryStore(),
+      2_000,
+      campaignStore,
+    );
+    expect(d.campaign?.entry.caseId).toBe('ward-positive-urine');
+    expect(d.campaign?.entry.deltas['ecoli-fq']).toBeGreaterThan(0);
+    expect(saved?.index).toBe(1);
+    expect(saved?.hospital.values['ecoli-fq']).toBeGreaterThan(
+      d.campaign?.before['ecoli-fq'] ?? 99,
+    );
+  });
+
+  it('outside the campaign nothing changes', () => {
+    const e = new InfectionEngine({ caseDef: positiveUrine, library: LIB });
+    while (e.timeH < 24) e.advance(24 - e.timeH);
+    expect(finishWardSession(e, session, memoryStore(), 1).campaign).toBeUndefined();
   });
 });

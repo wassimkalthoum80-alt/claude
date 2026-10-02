@@ -14,6 +14,7 @@ import {
 import { useSession } from '../../hooks/useSession';
 import { useUi, WORKSPACE_CLOSED } from '../../hooks/UiContext';
 import { localProgressStore } from '../../progressStore';
+import { localCampaignStore } from '../../campaignStore';
 import { finishWardSession, MIN_WARD_DEBRIEF_H } from '../../adapters/wardDebrief';
 import { wardNurse, wardPatientVisual } from '../../adapters/wardPatient';
 import { BedsideView } from './BedsideView';
@@ -56,7 +57,13 @@ export function WardScreen({ session }: { session: SessionConfig }) {
     const v = ward.engine.getView();
     if (!v.ended && v.timeH < MIN_WARD_DEBRIEF_H) return end();
     // The case is over: score it (the truth may now be revealed) and open the stewardship debrief.
-    const wardDebrief = finishWardSession(ward.engine, session, localProgressStore, Date.now());
+    const wardDebrief = finishWardSession(
+      ward.engine,
+      session,
+      localProgressStore,
+      Date.now(),
+      localCampaignStore,
+    );
     setUi({
       ...WORKSPACE_CLOSED,
       screen: 'ward-debrief',
