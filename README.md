@@ -64,7 +64,7 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
 | Module | Now | Scored | Instructor panel |
 |---|---|---|---|
 | **Physiology Lab** | Ventilation Lab (healthy lungs with experiments, severe asthma, ARDS), Haemodynamics & Drug Lab (free, post-operative bleeding; other phenotypes in preparation), Fluids & Balance Lab (7 presets) | no | yes |
-| **Skills Training** | Ventilation troubleshooting: silent disconnection (more exercises and the arrhythmia trainer in preparation) | yes | hidden |
+| **Skills Training** | Ventilation troubleshooting by presentation — silent disconnection, *High airway pressure alarm*, *Check the tube after intubation*, *Low tidal volume alarm*, *Falling saturation* (a different cause each time) — and the *Rhythm trainer* (VF, pulseless VT, PEA, asystole, unstable sinus bradycardia, sinus tachycardia; one rhythm per session) | yes | hidden |
 | **Resuscitation** | Sudden VF under anaesthesia and four cause-specific arrests — *Blue patient on the ICU* (hypoxia), *Collapse in the recovery room* (haemorrhage), *Collapse after a central line* (tension pneumothorax), *Collapse after cardiac surgery* (tamponade); three patient variants each | yes | hidden |
 | **Clinical Challenges** | two cases with patient variants: *Ventilated patient — falling blood pressure* (severe asthma) and *After abdominal surgery — tachycardia* (bleeding); more validated cases in preparation (max. 5, owner-reviewed) | yes | hidden |
 | **My Progress** | level and XP, skill profile, recommendation, achievements, history; export / import / reset (stored on this device) | — | — |
@@ -81,6 +81,10 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   presses alone; ordering tests repeatedly or opening every hint costs efficiency. Resuscitation cases are scored
   from time to first compression, compression fraction and no-flow time. Thresholds and case targets are data
   (`src/content/scoring/scoringConfig.ts`), pure scoring functions in `src/game/scoring.ts`.
+- **Working diagnosis** (milestone 6 phase 5): in Skills Training the learner commits to a diagnosis from the
+  case's list (**Diagnosis** beneath the scene; changeable). The case never reveals whether it is right; the
+  debrief shows the declared versus the actual cause and scores the first answer, how soon it came, and whether the
+  cause was fixed (tube pulled back, needle on the correct side, cuff re-inflated, relaxant for rigidity …).
 - **Cause-specific arrests** (milestone 6 phase 4): each case starts shortly before the arrest from a cause the
   physiology models — the learner can still prevent it. Once the heart has stopped, only high-quality CPR together
   with the treatment of the cause brings the circulation back: airway + oxygen (hypoxia), stopping the bleeding +

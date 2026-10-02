@@ -1579,4 +1579,6 @@ export const de: Record<I18nKey, string> = {
   'skills.rhythmAdvanced.title': 'AV-Blockierungen, SVT, Vorhofflimmern, Pacing',
   'skills.rhythmAdvanced.desc': 'Brauchen zuerst neue Rhythmus- und Medikamentenmodelle.',
   'dir.onset': '',
+  'fb.improve.noResponse':
+    'Keine Reaktion auf die Verschlechterung — handeln oder das Problem benennen, sobald Sie es bemerken.',
 };

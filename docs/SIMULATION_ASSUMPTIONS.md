@@ -583,6 +583,16 @@ reference script) and ERC. Everything below is **educational calibration** unles
 | No airway | ventilator circuit open when the patient has no airway device | consistency |
 | Case timings | arrests 1.5–4.5 min after the start untreated; ROSC 1–6 min after the arrest with correct treatment (see `src/sim/__tests__/arrestCauses.test.ts`) | educational pacing, not outcome statistics |
 
+## Skills Training additions (milestone 6 phase 5)
+
+| Assumption | Value | Rationale / source |
+|---|---|---|
+| Sinus-node rate | `SET_SINUS_RATE` replaces the intrinsic rate; reflexes and drugs act on top; filling time stays relative to the patient's normal rate | sinus-node dysfunction / drive; a slow node fills more but lowers output |
+| Atropine in node bradycardia | vagolytic effect only (existing model): little rise when the slowing is not vagal (β-blocked elderly patient: 33 → 40/min after 1 mg) | ERC bradycardia algorithm: atropine, then adrenaline infusion or pacing |
+| Tube migration | `SET_AIRWAY_POSITION` moves a tracheal tube (endobronchial: compliance × 0.55, shunt + 0.25 — existing model) | migration on repositioning |
+| Cuff leak | a fixed fraction of each tidal volume escapes (0.35 / 0.6 in the exercises); the cuff check ends it | under-inflated cuff; exhaled volume and EtCO₂ fall |
+| Skills scoring | treatment = 0.6 × fix (≤ 60 s after the onset → 100, 0 at 300 s; never → 0) + 0.4 × measured effect of all decisions; diagnosis = first declaration correct → by time (≤ 90 s → 100, 0 at 480 s), corrected later → 40 % of that, never → 0; declaring a diagnosis counts as a response for recognition; ★★ needs the correct diagnosis (at some point) and the fix | the diagnosis is never shown before the learner's decision (milestone 6 § 5) |
+
 ## Clinical audit: myocardial injury and arrhythmia from sustained ischaemia (`HeartLungModel.ts`)
 
 | Assumption                       | Value                                                                                                                                                                                                                                                                  | Rationale / source                                                                                                                                                        |

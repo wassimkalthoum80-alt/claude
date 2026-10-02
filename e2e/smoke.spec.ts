@@ -645,3 +645,49 @@ test('resuscitation: tension pneumothorax arrest — CPR, needle on the correct 
   await expect(page.getByTestId('score-diagnosis')).not.toContainText('coming');
   expect(errors).toEqual([]);
 });
+
+test('skills: tube check after intubation — working diagnosis in the drawer, judged only in the debrief', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?debug');
+  await page.getByTestId('module-skills').click();
+  await expect(page.getByTestId('entry-tube-obstruction')).toBeDisabled();
+  await page.getByTestId('entry-after-intubation').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(40));
+  const variant = await page.evaluate(
+    () => window.__resusEngine?.getSnapshot().scenario.variant ?? '',
+  );
+  const dx: Record<string, string> = {
+    oesophageal: 'tube-oesophageal',
+    endobronchial: 'tube-endobronchial',
+    correct: 'tube-correct',
+  };
+  const expected = dx[variant] ?? 'tube-correct';
+  await page.getByTestId('tool-diagnosis').click();
+  // The options never reveal the answer; choosing one only records it.
+  await page.getByTestId('dx-pneumothorax').click();
+  await page.getByTestId(`dx-${expected}`).click();
+  await expect(page.getByTestId('dx-current')).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        window.__resusEngine?.eventLog.filter(
+          (e) => e.kind === 'command' && JSON.stringify(e).includes('DECLARE_DIAGNOSIS'),
+        ).length,
+    ),
+  ).toBe(2);
+  await page.evaluate(() => window.__resusEngine?.runFor(60));
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-end-session').click();
+  const section = page.getByTestId('debrief-diagnosis');
+  await expect(section).toBeVisible();
+  await expect(section).toContainText('Actual cause');
+  await expect(section).toContainText('Pneumothorax →');
+  expect(errors).toEqual([]);
+});

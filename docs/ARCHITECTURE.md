@@ -82,6 +82,12 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   when a scored session ends (`useSession().end`, or `AutoDebrief` when the case ends), stores the result in
   `UiState.debrief` and opens `DebriefScreen`; `ProgressScreen` reads the profile through the `ProgressStore`
   interface (`src/ui/progressStore.ts`, localStorage) — a server store can replace it later.
+- **Skills Training (phase 5)** — `src/content/scenarios/skillsCases.ts`: each exercise is a presentation whose
+  cause is a variant (onset = a silent, logged scenario command). The learner's working diagnosis is a command
+  (`DECLARE_DIAGNOSIS`, recorded in `director.diagnoses`, never judged by the engine); the options are data
+  (`src/content/diagnoses/diagnosisSets.ts`), the correct answer and the fix per variant live in the scoring config
+  (`ScenarioScoring.variants`), merged by `withVariant` in `src/game/scoring.ts`. The rhythm trainer is the same
+  framework: a rhythm is a variant plus its expected diagnosis and therapy — new rhythms need no code change.
 - **Resuscitation cases (phase 4)** — `src/content/scenarios/arrestCases.ts`: arrests arise from modelled causes
   (no scripted rhythm); return of circulation from the physiology (`REVERSIBLE_ROSC`, obstructive relief). The case
   ends by `endAfterRoscS` / `endAfterArrestS` / `maxDurationS` (engine, logged as `SCENARIO_END` with the reason).

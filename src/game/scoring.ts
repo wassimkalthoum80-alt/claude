@@ -224,7 +224,10 @@ export function scoreSession(
   const dangerous = decisions.filter((d) => d.mark === 'dangerous').length;
   const questionable = decisions.filter((d) => d.mark === 'questionable').length;
   const rated = effective.length + dangerous + questionable;
-  const userTimes = decisions.map((d) => d.t);
+  // Responses to a problem: interventions and a declared working diagnosis (recognising it is a response).
+  const userTimes = [...decisions.map((d) => d.t), ...declarations(input).map((d) => d.t)].sort(
+    (a, b) => a - b,
+  );
 
   // --- concerns and responses (not in resuscitation cases: there the arrest is the case) ---
   // A concern is the start of a problem the learner should notice: present at the start of the case, a
@@ -506,7 +509,11 @@ export function scoreSession(
     if (recognition !== null && recognition >= 80)
       well.push({ key: 'fb.well.recognition', vars: { s: meanResponseS ?? 0 } });
     else if (recognition !== null)
-      improve.push({ key: 'fb.improve.recognition', vars: { s: meanResponseS ?? 0 } });
+      improve.push(
+        meanResponseS === null
+          ? { key: 'fb.improve.noResponse' }
+          : { key: 'fb.improve.recognition', vars: { s: meanResponseS } },
+      );
     if (stabilisation !== null && stabilisation >= 80)
       well.push({ key: 'fb.well.stable', vars: { pct: Math.round(100 * (inTarget ?? 0)) } });
     else if (stabilisation !== null)

@@ -1569,6 +1569,8 @@ export const en = {
   'skills.rhythmAdvanced.title': 'AV blocks, SVT, atrial fibrillation, pacing',
   'skills.rhythmAdvanced.desc': 'Need new rhythm and drug models first.',
   'dir.onset': '',
+  'fb.improve.noResponse':
+    'No response to the deterioration — act or name the problem as soon as you notice it.',
 } as const;
 
 export type I18nKey = keyof typeof en;
