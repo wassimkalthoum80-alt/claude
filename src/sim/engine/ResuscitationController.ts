@@ -14,6 +14,7 @@ import {
   NEEDLE_FAILURE,
   PERICARDIOCENTESIS_ML,
   pulseFinding,
+  REVERSIBLE_ROSC,
 } from '../interventions/resuscitation';
 import { getProduct } from '../pharmacology/formulary/products';
 import { doseToMl, type DoseUnit } from '../pharmacology/units';
@@ -395,6 +396,22 @@ export class ResuscitationController {
       }
     } else {
       this.reliefAt = null;
+    }
+    // PEA from a reversible cause the model produced (hypoxia, low flow): CPR perfusion while the cause is
+    // corrected restarts the heart (REVERSIBLE_ROSC).
+    const R = REVERSIBLE_ROSC;
+    if (p.cardio.rhythm === 'pea' && !m.obstructiveArrest && p.heartLung.arrestCause !== null) {
+      const corrected =
+        p.gas.spo2 >= R.minSao2 &&
+        p.heartLung.preloadFactor >= R.minFilling &&
+        viability(m) > R.minViability;
+      if (corrected && s.interventions.cpr.active) m.roscDose += dt * m.coronaryPerfusion;
+      if (m.roscDose >= R.doseS) {
+        m.roscDose = 0;
+        h.setRhythm('sinus');
+      }
+    } else {
+      m.roscDose = 0;
     }
   }
 

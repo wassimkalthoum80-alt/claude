@@ -977,14 +977,14 @@ export const de: Record<I18nKey, string> = {
   'skills.rhythmTrainer.title': 'Rhythmen erkennen und behandeln',
   'skills.rhythmTrainer.desc': 'VF, pulslose VT, PEA, Asystolie, Brady- und Tachykardie.',
   'resus.section.arrests': 'Herzstillstände',
-  'resus.hypoxia.title': 'Hypoxischer Stillstand',
-  'resus.hypoxia.desc': 'Atemweg und Sauerstoff entscheiden.',
-  'resus.hypovolaemia.title': 'Hypovolämischer Stillstand',
-  'resus.hypovolaemia.desc': 'PEA nach Blutung.',
-  'resus.tension.title': 'Spannungspneumothorax',
-  'resus.tension.desc': 'Adrenalin hilft hier nicht.',
-  'resus.tamponade.title': 'Perikardtamponade',
-  'resus.tamponade.desc': 'Ultraschall findet sie, Punktion behandelt sie.',
+  'resus.hypoxia.title': 'Zyanotischer Patient auf der Intensivstation',
+  'resus.hypoxia.desc': 'Nach dem Umlagern gefunden — der Monitor alarmiert.',
+  'resus.hypovolaemia.title': 'Kollaps im Aufwachraum',
+  'resus.hypovolaemia.desc': 'Eine Stunde nach offener Bauchoperation.',
+  'resus.tension.title': 'Kollaps nach ZVK-Anlage',
+  'resus.tension.desc': 'Beatmeter Intensivpatient, Subclavia-Punktion.',
+  'resus.tamponade.title': 'Kollaps nach Herzoperation',
+  'resus.tamponade.desc': 'Intensivstation, erste Stunden nach Klappenoperation.',
   'challenges.section.categories': 'Kategorien',
   'challenges.shock.title': 'Schock',
   'challenges.shock.desc': 'Validierte Fälle in Vorbereitung.',
@@ -1402,4 +1402,68 @@ export const de: Record<I18nKey, string> = {
   'ach.heart-lung.desc': 'Lernstand von 70 oder mehr in Hämodynamik und Beatmung.',
   'ach.explorer.title': 'Entdecker·in',
   'ach.explorer.desc': 'Fünf verschiedene Experimente im Physiologie-Labor öffnen.',
+  'scenario.arrestHypoxia.title': 'Zyanotischer Patient auf der Intensivstation',
+  'scenario.arrestHypoxia.briefing':
+    'Intensivstation, Nachtdienst. Der beatmete Patient in Bett 4 wurde vor einigen Minuten zum Waschen gedreht. Die Pflegekraft ruft Sie: Der Patient sieht blau aus, der Monitor alarmiert. Sie sind jetzt am Bett.',
+  'scenario.arrestBleeding.title': 'Kollaps im Aufwachraum',
+  'scenario.arrestBleeding.briefing':
+    'Aufwachraum, eine Stunde nach einer offenen Bauchoperation; noch beatmet, Noradrenalin niedrig dosiert. Die Pflegekraft bittet Sie zu kommen: Die Herzfrequenz steigt. Sie sind jetzt am Bett.',
+  'scenario.arrestTension.title': 'Kollaps nach ZVK-Anlage',
+  'scenario.arrestTension.briefing':
+    'Intensivstation. Ein Kollege hat gerade bei einem beatmeten Patienten einen ZVK über die V. subclavia gelegt (drei Versuche). Minuten später alarmiert das Beatmungsgerät, die Pflegekraft ruft Sie. Sie sind jetzt am Bett.',
+  'scenario.arrestTamponade.title': 'Kollaps nach Herzoperation',
+  'scenario.arrestTamponade.briefing':
+    'Herzchirurgische Intensivstation, drei Stunden nach einer Klappenoperation; beatmet, zwei Thoraxdrainagen. Die Pflegekraft macht sich Sorgen um den Blutdruck. Sie sind jetzt am Bett.',
+  'dir.arrestHypoxia.call':
+    'Schnell bitte — der Patient ist blau und die Sättigung kommt nicht über 50!',
+  'dir.arrestBleeding.drain':
+    'In den Drainagen sind {bloodLossLast30} mL frisches Blut — und es läuft weiter.',
+  'dir.arrestTension.call':
+    'Seit der ZVK-Anlage alarmiert die Beatmung ständig mit hohem Druck, und der Blutdruck fällt.',
+  'dir.arrestTamponade.drains':
+    'Die Thoraxdrainagen haben seit einer halben Stunde kaum noch gefördert — und der Blutdruck fällt weiter.',
+  'act.surgicalControl': 'Chirurg: Blutung komprimieren / abklemmen',
+  'act.surgicalControl.start':
+    'Der Chirurg wäscht sich — Kompression der Blutung in unter einer Minute.',
+  'act.surgicalControl.done':
+    'Chirurg: „Das blutende Gefäß ist abgeklemmt. Kein frisches Blut mehr.“',
+  'act.resternotomy': 'Herzchirurg: Notfall-Resternotomie',
+  'act.resternotomy.start':
+    'Ich habe den Herzchirurgen gerufen — das Resternotomie-Set kommt, etwa 4 Minuten.',
+  'act.resternotomy.done':
+    'Herzchirurg: „Thorax offen, Koagel ausgeräumt, die Blutung ist versorgt.“',
+  'hint.arrestHypoxia.title': 'Warum ist das Herz stehen geblieben?',
+  'hint.arrestHypoxia.1':
+    'Schauen Sie den Patienten an, nicht nur den Monitor: Gibt es einen Atemweg? Hebt sich der Thorax?',
+  'hint.arrestHypoxia.2':
+    'Was zeigt die Kapnografie? Ist das Beatmungsgerät wirklich mit dem Patienten verbunden?',
+  'hint.arrestHypoxia.3':
+    'Schwere Hypoxämie führt zu Bradykardie und dann zur PEA. Die Reanimation bewegt Blut — aber es muss Sauerstoff tragen.',
+  'hint.arrestHypoxia.4':
+    'Atemweg sichern (Maske, Larynxmaske oder Tubus), mit FiO₂ 1,0 beatmen und mit Kapnografie bestätigen — die Kompressionen laufen weiter.',
+  'hint.arrestBleeding.title': 'Warum ist das Herz stehen geblieben?',
+  'hint.arrestBleeding.1': 'Schauen Sie auf die Drainagen und die Bilanz.',
+  'hint.arrestBleeding.2': 'Was zeigt der Ultraschall über die Füllung des Herzens?',
+  'hint.arrestBleeding.3':
+    'Ein leeres Herz kann nicht auswerfen — weder selbst noch unter Kompressionen. Adrenalin füllt es nicht.',
+  'hint.arrestBleeding.4':
+    'Blutung stoppen (Chirurg im Prozeduren-Panel) und schnell Volumen geben: zweiter Zugang, rasche Boli (≈ 2 L), Erythrozytenkonzentrate.',
+  'hint.arrestTension.title': 'Warum ist das Herz stehen geblieben?',
+  'hint.arrestTension.1':
+    'Achten Sie auf die Beatmungsdrücke und auskultieren Sie beide Thoraxseiten.',
+  'hint.arrestTension.2':
+    'Auf welcher Seite wurde punktiert? Was zeigt der Lungenultraschall auf jeder Seite?',
+  'hint.arrestTension.3':
+    'Ein Spannungspneumothorax komprimiert Herz und große Venen: obstruktive PEA. Adrenalin hebt ihn nicht auf.',
+  'hint.arrestTension.4':
+    'Sofort Nadeldekompression auf der betroffenen Seite (Prozeduren-Panel), danach Thoraxdrainage.',
+  'hint.arrestTamponade.title': 'Warum ist das Herz stehen geblieben?',
+  'hint.arrestTamponade.1':
+    'Was sagen die Drainagen nach einer Herzoperation — und was, wenn sie nicht mehr fördern?',
+  'hint.arrestTamponade.2':
+    'Schauen Sie das Herz mit Ultraschall an (Kompressionen kurz unterbrechen).',
+  'hint.arrestTamponade.3':
+    'Blut um das Herz verhindert die Füllung: obstruktive PEA. Kompressionen allein bewegen fast nichts.',
+  'hint.arrestTamponade.4':
+    'Sofort Perikardpunktion (bei Nachlaufen wiederholen) und den Herzchirurgen zur Resternotomie rufen.',
 };

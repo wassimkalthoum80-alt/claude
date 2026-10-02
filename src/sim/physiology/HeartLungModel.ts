@@ -3,6 +3,7 @@ import type { HeartLungCalibration } from '../state/SimulationState';
 import { ECG, LUNG_PRESETS, OXYGEN } from './parameters';
 import { approach, clamp } from './shapes';
 import { obstructiveFilling } from './obstruction';
+import { ARREST_SVR_MAX } from './CardiovascularModel';
 
 /** mL O2/dL — arterial O2 content of the baseline patient (reference for coronary O2 supply) */
 const REFERENCE_CAO2 = 19;
@@ -206,6 +207,8 @@ export class HeartLungModel {
     k: HeartLungCalibration,
     arrestEnabled: boolean,
     dt: number,
+    /** chest compressions are running (slows electrical exhaustion in PEA) */
+    cprActive = false,
   ): HeartLungTransition | null {
     const { cardio, gas, reserves } = patient;
     const hl = patient.heartLung;
@@ -248,7 +251,7 @@ export class HeartLungModel {
     hl.troponin += ((troponinTarget(hl.myocardialInjury) - hl.troponin) * dt) / 5400;
 
     if (!cardio.spontaneousCirculation) {
-      return this.updateArrest(patient, k, deficit, severeHypoxia, arrestEnabled, dt);
+      return this.updateArrest(patient, k, deficit, severeHypoxia, arrestEnabled, dt, cprActive);
     }
 
     const l = LUNG_PRESETS[patient.resp.lungPreset];
@@ -473,16 +476,25 @@ export class HeartLungModel {
     severeHypoxia: number,
     arrestEnabled: boolean,
     dt: number,
+    cprActive: boolean,
   ): HeartLungTransition | null {
     const hl = patient.heartLung;
     const cardio = patient.cardio;
     hl.lowFlowTime = 0;
+    // SIM-ASSUMPTION: without a circulation there are no reflexes; the resistance follows the drugs alone
+    // (adrenaline/noradrenaline vasoconstriction during CPR, see arrestVasopressorTone).
+    const drugSvr = clamp(patient.pharmacology.effects.direct.svr, 0.25, ARREST_SVR_MAX);
+    cardio.svrFactor = approach(cardio.svrFactor, drugSvr, dt, k.svrTauS);
     if (cardio.rhythm !== 'pea') return null;
-    // SIM-ASSUMPTION: electrical exhaustion in PEA follows the persisting delivery deficit; good CPR flow slows it.
+    // SIM-ASSUMPTION: electrical exhaustion in PEA follows the persisting delivery deficit; CPR slows it — running
+    // compressions by 40 %, rising to 80 % with full coronary perfusion of oxygenated blood.
     const recovery = deficit < 0.05 ? hl.asystoleDose / 180 : 0;
+    const oxygenatedPerfusion =
+      patient.myocardium.coronaryPerfusion * clamp(patient.gas.spo2 / 100, 0, 1);
+    const cprProtection = cprActive ? 0.8 * (0.5 + 0.5 * oxygenatedPerfusion) : 0;
     hl.asystoleDose = Math.max(
       0,
-      hl.asystoleDose + dt * (deficit + 0.6 * severeHypoxia - recovery),
+      hl.asystoleDose + dt * ((deficit + 0.6 * severeHypoxia) * (1 - cprProtection) - recovery),
     );
     const rateTarget = Math.max(12, 45 * (1 - hl.asystoleDose / k.asystoleDoseS));
     cardio.heartRate = approach(cardio.heartRate, Math.min(cardio.heartRate, rateTarget), dt, 8);

@@ -63,3 +63,25 @@ export const NEEDLE_FAILURE = { probability: 0.3, minS: 120, maxS: 600 } as cons
 
 /** SIM-ASSUMPTION: a pericardiocentesis aspirates up to 150 mL (a pigtail left in place is not modelled). */
 export const PERICARDIOCENTESIS_ML = 150;
+
+/**
+ * Return of circulation in a PEA arrest with a reversible cause the model produced (hypoxia, low flow).
+ *
+ * SIM-ASSUMPTION: the still-electrically-active heart restarts after `doseS` seconds of full coronary perfusion
+ * from CPR (perfusion 0..1, so ≈ 80 s of CPR without and ≈ 50 s with adrenaline), but only while the cause is
+ * corrected — arterial saturation ≥ `minSao2` % and filling (preload factor, includes volume, intrathoracic pressure
+ * and obstruction) ≥ `minFilling` — and the myocardium is viable. Deterministic (no random draw). It reflects the
+ * ERC 2025 non-shockable algorithm: high-quality CPR, adrenaline as soon as possible, treat the reversible cause.
+ * Correcting the cause without CPR, or CPR without correcting the cause, never restarts the heart; PEA set by the
+ * instructor and asystole are not covered (instructor-controlled).
+ */
+export const REVERSIBLE_ROSC = {
+  /** s of full coronary perfusion */
+  doseS: 45,
+  /** % arterial oxygen saturation */
+  minSao2: 85,
+  /** preload factor (1 = normal filling) */
+  minFilling: 0.75,
+  /** myocardial viability (see defibrillation.ts) */
+  minViability: 0.35,
+} as const;

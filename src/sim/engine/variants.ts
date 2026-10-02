@@ -46,6 +46,9 @@ export function resolveVariant(
         }
       : {}),
     director: [...(base.director ?? []), ...(v.director ?? [])],
+    ...(base.conditions || v.conditions
+      ? { conditions: { ...base.conditions, ...v.conditions } }
+      : {}),
   };
   return { scenario, variant: v.id };
 }

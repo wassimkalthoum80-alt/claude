@@ -131,8 +131,12 @@ export class CardiovascularModel {
   }
 
   /** Slow (10 Hz) update of tone, critical closing pressure, CO and SVR (factor set by HeartLungModel). */
-  slowUpdate(cardio: CardioState, dt: number): void {
-    const toneTarget = cardio.spontaneousCirculation ? 1 : 0;
+  /**
+   * @param arrestTone 0..1 — vasomotor tone a vasopressor maintains while the heart is arrested
+   *   (`arrestVasopressorTone`); without one the tone is lost
+   */
+  slowUpdate(cardio: CardioState, dt: number, arrestTone = 0): void {
+    const toneTarget = cardio.spontaneousCirculation ? 1 : clamp(arrestTone, 0, 1);
     const tau = cardio.spontaneousCirculation ? CARDIO.toneRecoveryTauS : CARDIO.toneLossTauS;
     cardio.vascularTone = approach(cardio.vascularTone, toneTarget, dt, tau);
     cardio.criticalClosingPressure = criticalClosingPressure(cardio.vascularTone, cardio.svrFactor);
@@ -146,6 +150,22 @@ export class CardiovascularModel {
     return this.pressure;
   }
 }
+
+/**
+ * SIM-ASSUMPTION: during cardiac arrest an α-agonist keeps (or restores) vasomotor tone in proportion to its
+ * vasoconstriction above baseline: tone = (drug SVR factor − 1) / 1.5, full at a factor of 2.5 (≈ 1 mg adrenaline
+ * IV in the circulation), at most `ARREST_TONE_MAX` of normal tone. With the resistance (set by HeartLungModel in arrest) this raises the aortic diastolic
+ * pressure during CPR — the mechanism by which adrenaline improves coronary perfusion and ROSC (ERC 2025 ALS).
+ * @param drugSvr relative vascular resistance from drugs alone (1 = no drug)
+ */
+export function arrestVasopressorTone(drugSvr: number): number {
+  return ARREST_TONE_MAX * clamp((drugSvr - 1) / 1.5, 0, 1);
+}
+
+/** fraction of the normal vasomotor tone a vasopressor can maintain in arrest (calibrated to CPR pressures) */
+export const ARREST_TONE_MAX = 0.2;
+/** maximum resistance factor in arrest (no reflexes; ischaemic vessels respond less) */
+export const ARREST_SVR_MAX = 2;
 
 /**
  * SIM-ASSUMPTION: the tone-dependent part of the critical closing pressure scales with vasomotor tone (the SVR

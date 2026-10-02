@@ -245,6 +245,139 @@ export const HISTORIES: Record<string, PatientHistory> = {
       'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
     ),
   },
+  'arrest-hypoxia': {
+    caseId: 'SIM-4001',
+    diagnosis: t(
+      'Community-acquired pneumonia, day 3 of invasive ventilation',
+      'Ambulant erworbene Pneumonie, Tag 3 der invasiven Beatmung',
+    ),
+    procedure: t(
+      'ICU, ventilated via oral tube; propofol and sufentanil sedation, noradrenaline low dose',
+      'Intensivstation, oral intubiert und beatmet; Sedierung mit Propofol und Sufentanil, Noradrenalin niedrig dosiert',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+      t('Former smoker (30 pack-years)', 'Früher Nikotinkonsum (30 pack years)'),
+    ],
+    medications: [
+      t(
+        'Piperacillin/tazobactam 4.5 g i.v. 8-hourly',
+        'Piperacillin/Tazobactam 4,5 g i.v. alle 8 h',
+      ),
+      t('Enoxaparin 40 mg s.c. daily', 'Enoxaparin 40 mg s.c. täglich'),
+    ],
+    findings: [
+      t(
+        'Last blood gas this morning: PaO₂ 92 mmHg at FiO₂ 0.4',
+        'Letzte BGA heute Morgen: PaO₂ 92 mmHg bei FiO₂ 0,4',
+      ),
+      t('Tube 8.0, 22 cm at the teeth', 'Tubus 8,0, 22 cm an der Zahnreihe'),
+    ],
+    fasting: t('Enteral feeding paused for the wash', 'Sondenkost für die Pflege pausiert'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'arrest-hypovolaemia': {
+    caseId: 'SIM-4002',
+    diagnosis: t(
+      'Abdominal aortic aneurysm; 1 h after open repair (tube graft)',
+      'Bauchaortenaneurysma; 1 h nach offener Versorgung (Rohrprothese)',
+    ),
+    procedure: t(
+      'Recovery room, still ventilated; propofol and sufentanil, noradrenaline low dose',
+      'Aufwachraum, noch beatmet; Propofol und Sufentanil, Noradrenalin niedrig dosiert',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [
+      t('Coronary artery disease, stent 2019', 'Koronare Herzkrankheit, Stent 2019'),
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+    ],
+    medications: [
+      t('Aspirin 100 mg 1-0-0 (continued)', 'ASS 100 mg 1-0-0 (fortgeführt)'),
+      t('Bisoprolol 2.5 mg 1-0-0', 'Bisoprolol 2,5 mg 1-0-0'),
+      t('Heparin given intra-operatively', 'Heparin intraoperativ'),
+    ],
+    findings: [
+      t(
+        'Intra-operative blood loss 1200 mL, 2 units red cells given',
+        'Intraoperativer Blutverlust 1200 mL, 2 EK transfundiert',
+      ),
+      t('Two abdominal drains', 'Zwei abdominelle Drainagen'),
+    ],
+    fasting: t('Fasting since surgery', 'Nüchtern seit der Operation'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'arrest-tension': {
+    caseId: 'SIM-4003',
+    diagnosis: t(
+      'Septic shock from cholangitis, day 1 on the ICU',
+      'Septischer Schock bei Cholangitis, Tag 1 auf der Intensivstation',
+    ),
+    procedure: t(
+      'ICU, ventilated; new central venous catheter for vasopressors (right or left subclavian, three attempts)',
+      'Intensivstation, beatmet; neuer ZVK für Vasopressoren (V. subclavia, drei Punktionsversuche)',
+    ),
+    asa: 'IV',
+    allergies: [t('Penicillin (rash)', 'Penicillin (Exanthem)')],
+    conditions: [t('COPD GOLD 2', 'COPD GOLD 2'), t('Atrial fibrillation', 'Vorhofflimmern')],
+    medications: [
+      t('Meropenem 1 g i.v. 8-hourly', 'Meropenem 1 g i.v. alle 8 h'),
+      t('Apixaban (paused)', 'Apixaban (pausiert)'),
+    ],
+    findings: [
+      t(
+        'Chest X-ray this morning: no pneumothorax',
+        'Röntgen-Thorax heute früh: kein Pneumothorax',
+      ),
+      t('Peak pressure before the line: 22 cmH₂O', 'Spitzendruck vor der ZVK-Anlage: 22 cmH₂O'),
+    ],
+    fasting: t('Fasting', 'Nüchtern'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'arrest-tamponade': {
+    caseId: 'SIM-4004',
+    diagnosis: t(
+      'Aortic stenosis; 3 h after surgical aortic valve replacement',
+      'Aortenklappenstenose; 3 h nach chirurgischem Aortenklappenersatz',
+    ),
+    procedure: t(
+      'Cardiac surgical ICU, ventilated; two chest drains (mediastinal, pericardial)',
+      'Herzchirurgische Intensivstation, beatmet; zwei Thoraxdrainagen (mediastinal, perikardial)',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+      t('Chronic kidney disease stage 3', 'Chronische Niereninsuffizienz Stadium 3'),
+    ],
+    medications: [
+      t('Protamine given after bypass', 'Protamin nach dem Bypass gegeben'),
+      t('Aspirin 100 mg from tomorrow', 'ASS 100 mg ab morgen'),
+    ],
+    findings: [
+      t(
+        'Drain output first 2 h: 350 mL, then little',
+        'Drainagemenge in den ersten 2 h: 350 mL, danach wenig',
+      ),
+      t('Echo at the end of surgery: good LV function', 'Echo bei OP-Ende: gute LV-Funktion'),
+    ],
+    fasting: t('Fasting since surgery', 'Nüchtern seit der Operation'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
   'fluid-maintenance': {
     ...SANDBOX,
     caseId: 'SIM-2001',

@@ -313,7 +313,7 @@ test('navigation: HOME → module menu → session intro → workspace → pause
   // Scored module: difficulty, entries in preparation cannot start.
   await page.getByTestId('module-resus').click();
   await expect(page.getByTestId('module-menu')).toBeVisible();
-  await expect(page.getByTestId('entry-tamponade-arrest')).toBeDisabled();
+  await expect(page.getByTestId('entry-tamponade-arrest')).toBeEnabled();
   await page.getByTestId('difficulty-expert').click();
   await page.getByTestId('entry-vf-anaesthesia').click();
   await expect(page.getByTestId('session-line')).toHaveText(/RESUSCITATION · EXPERT/);

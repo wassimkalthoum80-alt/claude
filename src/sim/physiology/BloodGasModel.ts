@@ -82,6 +82,29 @@ export class BloodGasModel {
     gas.etco2 = this.etco2Target(gas, inp);
   }
 
+  /**
+   * Start with depleted oxygen stores (e.g. a patient found apnoeic): alveolar gas and arterial blood at the
+   * PO2 that gives `spo2`, mixed-venous blood one consumption step lower.
+   * SIM-ASSUMPTION: the stores are set directly (no history); the oxygen debt starts at zero and grows from here.
+   */
+  setO2(gas: GasState, inp: GasExchangeInputs, spo2: number): void {
+    const target = clamp(spo2, 10, 100) / 100;
+    const ph = gas.ph;
+    let lo = 5;
+    let hi = 600;
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      if (saturation(mid, ph) < target) lo = mid;
+      else hi = mid;
+    }
+    const pao2 = (lo + hi) / 2;
+    gas.pao2Alveolar = pao2;
+    gas.cao2 = oxygenContent(pao2, gas.hb, ph);
+    const flow = Math.max(0.5, inp.cardiacOutput) * 10; // dL/min
+    gas.cvo2 = Math.max(OXYGEN.criticalVenousContent, gas.cao2 - OXYGEN.vo2 / flow);
+    this.derive(gas, inp);
+  }
+
   update(gas: GasState, inp: GasExchangeInputs, dt: number): void {
     const steps = Math.max(1, Math.ceil(dt / SUBSTEP_S - 1e-9));
     for (let i = 0; i < steps; i++) this.substep(gas, inp, dt / steps);

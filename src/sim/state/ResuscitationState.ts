@@ -76,6 +76,8 @@ export interface MyocardialArrestState {
   vtTime: number;
   /** the current PEA began from obstructed filling (tamponade, tension pneumothorax): relief can restore flow */
   obstructiveArrest: boolean;
+  /** s — coronary-perfusion dose collected while a reversible cause of PEA is corrected (REVERSIBLE_ROSC) */
+  roscDose: number;
 }
 
 /** Where an airway device actually lies. */

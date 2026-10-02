@@ -572,6 +572,17 @@ reference script) and ERC. Everything below is **educational calibration** unles
 | Drug push                           | amount placed at the cannula, then 20 mL flush (+ drug volume counted as flush in the balance); reaches the circulation with blood flow                                                   | ERC: flush 20 mL; drugs in arrest wait for CPR flow                                                                                |
 | LV pressure ceiling                 | ejection falls linearly from MAP 160 mmHg to zero at 120 + 180 × LV function (≈ 300 mmHg healthy)                                                                                         | maximal isovolumic LV pressure; stops the Windkessel reaching unphysiological pressures after 1 mg adrenaline into a beating heart |
 
+## Cause-specific arrests (milestone 6 phase 4 — `CardiovascularModel.ts`, `HeartLungModel.ts`, `interventions/resuscitation.ts`)
+
+| Assumption | Value | Rationale / source |
+|---|---|---|
+| Vasopressor during arrest | vasomotor tone in arrest = 0.2 × clamp((drug SVR factor − 1)/1.5, 0, 1); resistance follows the drugs alone (no reflexes), capped at 2× | α-mediated aortic diastolic pressure is how adrenaline improves coronary perfusion and ROSC (ERC 2025 ALS; PARAMEDIC2). Calibrated: CPR mean pressure ≈ 37 → 58 mmHg and coronary perfusion 0.57 → 0.95 after 1 mg |
+| Reversible-cause ROSC | PEA from hypoxia or low flow (model-driven only) restarts after 45 s of full coronary perfusion (≈ 80 s CPR without, ≈ 50 s with adrenaline) while SaO₂ ≥ 85 %, preload factor ≥ 0.75 and viability > 0.35; deterministic | ERC non-shockable algorithm: high-quality CPR, adrenaline early, treat the cause. Correcting the cause without CPR or CPR without the cause never restarts the heart; instructor-set PEA and asystole stay instructor-controlled |
+| Electrical exhaustion in PEA | asystole dose rate × (1 − protection); protection 0.4 with compressions, up to 0.8 with full coronary perfusion of oxygenated blood | CPR keeps electrical activity going longer; untreated hypoxic PEA → asystole ≈ 1 min, treated ≈ several minutes |
+| Depleted oxygen stores at start | `initialSpo2`: alveolar and arterial PO₂ for the saturation, mixed venous one consumption step lower; oxygen debt starts at 0 | lets a case start shortly before a hypoxic arrest (found apnoeic) without a hidden history |
+| No airway | ventilator circuit open when the patient has no airway device | consistency |
+| Case timings | arrests 1.5–4.5 min after the start untreated; ROSC 1–6 min after the arrest with correct treatment (see `src/sim/__tests__/arrestCauses.test.ts`) | educational pacing, not outcome statistics |
+
 ## Clinical audit: myocardial injury and arrhythmia from sustained ischaemia (`HeartLungModel.ts`)
 
 | Assumption                       | Value                                                                                                                                                                                                                                                                  | Rationale / source                                                                                                                                                        |

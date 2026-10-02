@@ -31,6 +31,7 @@ const myo = (over: Partial<MyocardialArrestState> = {}): MyocardialArrestState =
   refibrillationAt: null,
   vtTime: 0,
   obstructiveArrest: false,
+  roscDose: 0,
   ...over,
 });
 

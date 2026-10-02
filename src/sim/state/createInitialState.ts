@@ -158,11 +158,15 @@ export function createInitialState(
         exhaledCo2Fraction: 1,
       },
       conditions: {
-        pneumothorax: null,
         pericardialMl: 0,
         pericardialRateMlMin: 0,
         ivAccess: 'iv',
         ...scenario.conditions,
+        // A copy: the engine changes the pneumothorax in place (tension, decompression) and must never write into
+        // the scenario definition shared by every session.
+        pneumothorax: scenario.conditions?.pneumothorax
+          ? { ...scenario.conditions.pneumothorax }
+          : null,
       },
       myocardium: {
         ischaemicTime: 0,
@@ -170,6 +174,7 @@ export function createInitialState(
         refibrillationAt: null,
         vtTime: 0,
         obstructiveArrest: false,
+        roscDose: 0,
       },
       rosc: false,
     },
@@ -214,7 +219,8 @@ export function createInitialState(
         breathCount: 0,
         pressureLimited: false,
         prvcPressure: 10,
-        circuitConnected: true,
+        // Without an airway device the ventilator is not connected to the patient.
+        circuitConnected: p.airway !== 'none',
         apnea: false,
       },
       pumps: initialPumps(scenario),

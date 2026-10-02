@@ -7,7 +7,7 @@ import { autoAlarmLimits, defaultAlarmLimits, setAlarmLimit } from '../devices/a
 import { MonitorDevice } from '../devices/MonitorDevice';
 import { VentilatorDevice } from '../devices/VentilatorDevice';
 import { CPREngine } from '../interventions/CPREngine';
-import { CardiovascularModel } from '../physiology/CardiovascularModel';
+import { arrestVasopressorTone, CardiovascularModel } from '../physiology/CardiovascularModel';
 import { BloodGasModel, type GasExchangeInputs } from '../physiology/BloodGasModel';
 import { HeartLungModel, type HeartLungTransition } from '../physiology/HeartLungModel';
 import { LungStateModel } from '../physiology/LungStateModel';
@@ -163,6 +163,8 @@ export class SimulationEngine {
   private highAlarms = new Set<AlarmId>();
   /** an arrest started since the last interrupt check */
   private arrestThisTick = false;
+  /** s — sim time the current return of circulation began (scenario end), null in arrest */
+  private roscSince: number | null = null;
   /** a Director message asked to interrupt accelerated time since the last check */
   private directorInterrupt = false;
   private readonly director = new EventDirector();
@@ -411,7 +413,11 @@ export class SimulationEngine {
     s.tick += 1;
 
     // Slow (10 Hz) physiology and devices.
-    this.cardio.slowUpdate(cardioState, TICK_S);
+    this.cardio.slowUpdate(
+      cardioState,
+      TICK_S,
+      arrestVasopressorTone(s.patient.pharmacology.effects.direct.svr),
+    );
     this.cpr.slowUpdate(cprState, s.time, TICK_S);
     this.updatePharmacology(TICK_S);
     this.lungState.update(s.patient, this.ventilator.readout(), s.time, TICK_S);
@@ -421,6 +427,7 @@ export class SimulationEngine {
       s.model.calibration,
       s.model.arrestModelEnabled,
       TICK_S,
+      s.interventions.cpr.active,
     );
     if (transition) this.applyTransition(transition);
     this.resus.update(TICK_S);
@@ -523,6 +530,7 @@ export class SimulationEngine {
       this.guidelines.defibrillation.firstShockJ,
     );
     this.state.scenario.variant = variant;
+    this.roscSince = null;
     this.wasCirculating = this.state.patient.cardio.spontaneousCirculation;
     this.state.director.difficulty = this.difficulty;
     this.baselineHeartRate = scenario.patient.heartRate;
@@ -558,6 +566,8 @@ export class SimulationEngine {
     this.bloodGas.reset(s.patient.gas, this.gasInputs());
     if (scenario.patient.initialPaco2 !== undefined)
       this.bloodGas.setCo2(s.patient.gas, this.gasInputs(), scenario.patient.initialPaco2);
+    if (scenario.patient.initialSpo2 !== undefined)
+      this.bloodGas.setO2(s.patient.gas, this.gasInputs(), scenario.patient.initialSpo2);
     this.heartLung.reset(s.patient, scenario.patient.heartRate);
     s.devices.monitor.numerics.etco2 = Math.round(s.patient.gas.etco2);
     if (s.devices.monitor.numerics.spo2 !== null)
@@ -1351,14 +1361,36 @@ export class SimulationEngine {
 
   private checkScenarioEnd(): void {
     const s = this.state;
-    const limit = this.active.endAfterArrestS;
-    if (limit === undefined || s.scenario.ended || s.timers.arrestStartTime === null) return;
-    if (s.time - s.timers.arrestStartTime >= limit - 1e-9) {
+    if (s.scenario.ended) return;
+    const sc = this.active;
+    const c = s.patient.cardio;
+    const arrestAt = s.timers.arrestStartTime;
+    // ROSC end: the circulation has returned (after an arrest) and stayed for endAfterRoscS.
+    if (c.spontaneousCirculation && arrestAt !== null) this.roscSince ??= s.time;
+    else this.roscSince = null;
+    const end = (reason: string) => {
       s.scenario.ended = true;
-      this.logEvent('SCENARIO_END', s.time);
+      this.logEvent('SCENARIO_END', s.time, reason);
       this.clock.paused = true;
       s.control.paused = true;
-    }
+    };
+    const eps = 1e-9;
+    if (
+      sc.endAfterRoscS !== undefined &&
+      this.roscSince !== null &&
+      s.time - this.roscSince >= sc.endAfterRoscS - eps
+    )
+      return end('rosc');
+    // With a ROSC end, the arrest limit applies only while the patient is still in arrest.
+    const arrestLimitActive = sc.endAfterRoscS === undefined || !c.spontaneousCirculation;
+    if (
+      sc.endAfterArrestS !== undefined &&
+      arrestAt !== null &&
+      arrestLimitActive &&
+      s.time - arrestAt >= sc.endAfterArrestS - eps
+    )
+      return end('arrest-limit');
+    if (sc.maxDurationS !== undefined && s.time >= sc.maxDurationS - eps) end('time-limit');
   }
 
   private appendCommand(command: Command, source: CommandSource): void {

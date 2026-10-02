@@ -974,14 +974,14 @@ export const en = {
   'skills.rhythmTrainer.title': 'Recognise and treat rhythms',
   'skills.rhythmTrainer.desc': 'VF, pulseless VT, PEA, asystole, brady- and tachycardia.',
   'resus.section.arrests': 'Cardiac arrests',
-  'resus.hypoxia.title': 'Hypoxic arrest',
-  'resus.hypoxia.desc': 'The airway and oxygen decide the outcome.',
-  'resus.hypovolaemia.title': 'Hypovolaemic arrest',
-  'resus.hypovolaemia.desc': 'PEA after haemorrhage.',
-  'resus.tension.title': 'Tension pneumothorax',
-  'resus.tension.desc': 'Adrenaline will not fix it.',
-  'resus.tamponade.title': 'Cardiac tamponade',
-  'resus.tamponade.desc': 'Ultrasound finds it, drainage treats it.',
+  'resus.hypoxia.title': 'Blue patient on the ICU',
+  'resus.hypoxia.desc': 'Found after turning — the monitor alarms.',
+  'resus.hypovolaemia.title': 'Collapse in the recovery room',
+  'resus.hypovolaemia.desc': 'One hour after open abdominal surgery.',
+  'resus.tension.title': 'Collapse after a central line',
+  'resus.tension.desc': 'Ventilated ICU patient, subclavian puncture.',
+  'resus.tamponade.title': 'Collapse after cardiac surgery',
+  'resus.tamponade.desc': 'ICU, first hours after a valve operation.',
   'challenges.section.categories': 'Categories',
   'challenges.shock.title': 'Shock',
   'challenges.shock.desc': 'Validated cases in preparation.',
@@ -1396,6 +1396,67 @@ export const en = {
   'ach.heart-lung.desc': 'Mastery of 70 or more in both haemodynamics and ventilation.',
   'ach.explorer.title': 'Explorer',
   'ach.explorer.desc': 'Open five different Physiology Lab experiments.',
+  'scenario.arrestHypoxia.title': 'Blue patient on the ICU',
+  'scenario.arrestHypoxia.briefing':
+    'ICU, night shift. The ventilated patient in bed 4 was turned for a wash a few minutes ago. The nurse calls you in: the patient looks blue and the monitor is alarming. You are at the bedside now.',
+  'scenario.arrestBleeding.title': 'Collapse in the recovery room',
+  'scenario.arrestBleeding.briefing':
+    'Recovery room, one hour after an open abdominal operation; still ventilated, noradrenaline at a low dose. The nurse asks you to come: the heart rate is climbing. You are at the bedside now.',
+  'scenario.arrestTension.title': 'Collapse after a central line',
+  'scenario.arrestTension.briefing':
+    'ICU. A colleague has just placed a subclavian central venous catheter in a ventilated patient (three attempts). Minutes later the ventilator alarms and the nurse calls you. You are at the bedside now.',
+  'scenario.arrestTamponade.title': 'Collapse after cardiac surgery',
+  'scenario.arrestTamponade.briefing':
+    'Cardiac surgical ICU, three hours after a valve operation; ventilated, two chest drains. The nurse is worried about the pressure. You are at the bedside now.',
+  'dir.arrestHypoxia.call':
+    'Doctor, come quickly — the patient is blue and I cannot get a saturation above the fifties!',
+  'dir.arrestBleeding.drain':
+    'The drains have filled with {bloodLossLast30} mL of fresh blood — and it keeps running.',
+  'dir.arrestTension.call':
+    'The ventilator keeps alarming high pressure since the line went in, and the blood pressure is dropping.',
+  'dir.arrestTamponade.drains':
+    'The chest drains have hardly drained anything for the last half hour — and the pressure keeps falling.',
+  'act.surgicalControl': 'Surgeon: compress / clamp the bleeding',
+  'act.surgicalControl.start':
+    'The surgeon is scrubbing — compression of the bleeding in under a minute.',
+  'act.surgicalControl.done': 'Surgeon: “I have the bleeding vessel clamped. No more fresh blood.”',
+  'act.resternotomy': 'Cardiac surgeon: emergency re-sternotomy',
+  'act.resternotomy.start':
+    'I have called the cardiac surgeon — re-sternotomy set coming, about 4 minutes.',
+  'act.resternotomy.done':
+    'Cardiac surgeon: “Chest open, clot evacuated, the bleeding is controlled.”',
+  'hint.arrestHypoxia.title': 'Why did the heart stop?',
+  'hint.arrestHypoxia.1':
+    'Look at the patient, not only the monitor: is there an airway? Is the chest moving?',
+  'hint.arrestHypoxia.2':
+    'What does the capnogram show? Is the ventilator actually connected to the patient?',
+  'hint.arrestHypoxia.3':
+    'Severe hypoxaemia leads to bradycardia and then PEA. CPR circulates blood — but it must carry oxygen.',
+  'hint.arrestHypoxia.4':
+    'Secure an airway (mask, supraglottic airway or tube), ventilate with FiO₂ 1.0 and confirm with capnography — while compressions continue.',
+  'hint.arrestBleeding.title': 'Why did the heart stop?',
+  'hint.arrestBleeding.1': 'Look at the drains and the fluid balance.',
+  'hint.arrestBleeding.2': "What does the ultrasound show about the heart's filling?",
+  'hint.arrestBleeding.3':
+    'An empty heart cannot eject — neither by itself nor under compressions. Adrenaline does not fill it.',
+  'hint.arrestBleeding.4':
+    'Stop the bleeding (surgeon in the procedures panel) and give volume fast: a second line and rapid boluses (≈ 2 L), red cells.',
+  'hint.arrestTension.title': 'Why did the heart stop?',
+  'hint.arrestTension.1': 'Look at the airway pressures and listen to both sides of the chest.',
+  'hint.arrestTension.2':
+    'Which side did the central line go in? What does lung ultrasound show on each side?',
+  'hint.arrestTension.3':
+    'A tension pneumothorax compresses the heart and the great veins: obstructive PEA. Adrenaline does not relieve it.',
+  'hint.arrestTension.4':
+    'Needle decompression on the affected side now (procedures panel), then a chest drain.',
+  'hint.arrestTamponade.title': 'Why did the heart stop?',
+  'hint.arrestTamponade.1':
+    'What do the drains tell you after cardiac surgery — and what if they stop draining?',
+  'hint.arrestTamponade.2': 'Look at the heart with ultrasound (pause compressions briefly).',
+  'hint.arrestTamponade.3':
+    'Blood around the heart stops it from filling: obstructive PEA. Compressions alone move almost nothing.',
+  'hint.arrestTamponade.4':
+    'Pericardiocentesis now (repeat if it re-accumulates) and call the cardiac surgeon for re-sternotomy.',
 } as const;
 
 export type I18nKey = keyof typeof en;

@@ -30,6 +30,8 @@ export interface PatientInit {
   reserves?: Partial<PhysiologyReserves>;
   /** mmHg — starting PaCO2 (e.g. hypercapnia on arrival); default: steady state of the start ventilation */
   initialPaco2?: number;
+  /** % — starting arterial saturation with depleted oxygen stores (e.g. found apnoeic); default: steady state */
+  initialSpo2?: number;
   /** mL */
   deadSpace: number;
   airway: AirwayDevice;
@@ -88,6 +90,10 @@ export interface ScenarioDefinition {
   padsAttached?: boolean;
   /** end the run (and show the summary) this many seconds after arrest onset */
   endAfterArrestS?: number;
+  /** end the run this many seconds after a return of circulation that has lasted (resuscitation cases) */
+  endAfterRoscS?: number;
+  /** s — end the run at this sim time at the latest (e.g. when the learner prevented the arrest) */
+  maxDurationS?: number;
   /** Event Director rules of this scenario (added to the engine's general rules) */
   director?: readonly DirectorRule[];
   /** progressive hints for the problems of this scenario */
@@ -116,4 +122,6 @@ export interface ScenarioVariant {
   fluid?: FluidInit;
   /** additional Event Director rules of this variant */
   director?: readonly DirectorRule[];
+  /** reversible causes of this variant (merged field by field into the scenario's) */
+  conditions?: Partial<PatientConditions>;
 }
