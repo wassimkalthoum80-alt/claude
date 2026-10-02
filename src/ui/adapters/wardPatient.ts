@@ -1,4 +1,12 @@
-import type { InfectionCase, InfectionLogEntry, InfectionView, ProcedureId } from '../../sim';
+import {
+  nibpFromMap,
+  WARD_PLETH_MIN_PERFUSION,
+  type InfectionCase,
+  type InfectionLogEntry,
+  type InfectionView,
+  type ProcedureId,
+  type WardMonitorInput,
+} from '../../sim';
 
 /**
  * What a clinician sees at the bedside (milestone 7 phase 2b). Derived only from the learner view — vitals, labs,
@@ -215,5 +223,48 @@ export function wardNurse(view: InfectionView, log: readonly InfectionLogEntry[]
       conscious: `nurse.conscious.${view.consciousness}`,
     },
     urgent: false,
+  };
+}
+
+export type AlarmLevel = 'none' | 'medium' | 'high';
+
+/** What the ward bedside monitor shows: signal-generator input and numerics with alarm levels. */
+export interface WardMonitorView {
+  input: WardMonitorInput;
+  nibp: { sys: number; dia: number; mean: number };
+  /** h — time of the last NIBP cycle (hourly) */
+  nibpAtH: number;
+  /** SpO₂ readable (enough pulsatility) */
+  spo2Valid: boolean;
+  alarms: { hr: AlarmLevel; spo2: AlarmLevel; nibp: AlarmLevel; temp: AlarmLevel; rr: AlarmLevel };
+}
+
+/**
+ * SIM-ASSUMPTION (presentation): peripheral perfusion for the pleth = (MAP − 40)/45 clamped to 0.08–1, halved
+ * under vasopressor; ward alarm limits HR > 120 (high > 140), SpO₂ < 92 (high < 88), MAP < 65 (high < 55),
+ * temperature ≥ 38.5 (high ≥ 40), RR > 24 (high > 30).
+ */
+export function wardMonitorView(view: InfectionView): WardMonitorView {
+  const v = view.vitals[view.vitals.length - 1];
+  const hr = v?.heartRate ?? 80;
+  const map = v?.map ?? 85;
+  const spo2 = v?.spo2 ?? 97;
+  const temp = v?.temperatureC ?? 37;
+  const rr = v?.respRate ?? 14;
+  const perfusion = Math.min(1, Math.max(0.08, (map - 40) / 45)) * (view.vasopressor ? 0.5 : 1);
+  const level = (high: boolean, medium: boolean): AlarmLevel =>
+    high ? 'high' : medium ? 'medium' : 'none';
+  return {
+    input: { heartRate: hr, spo2, map, respRate: rr, temperatureC: temp, perfusion },
+    nibp: nibpFromMap(map, hr),
+    nibpAtH: Math.floor(view.timeH),
+    spo2Valid: perfusion >= WARD_PLETH_MIN_PERFUSION,
+    alarms: {
+      hr: level(hr > 140, hr > 120),
+      spo2: level(spo2 < 88, spo2 < 92),
+      nibp: level(map < 55, map < 65),
+      temp: level(temp >= 40, temp >= 38.5),
+      rr: level(rr > 30, rr > 24),
+    },
   };
 }

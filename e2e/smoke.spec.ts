@@ -750,6 +750,9 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   // The bedside view shows what can be seen — drowsy and flushed — not the diagnosis.
   await expect(page.getByTestId('bedside-observations')).toContainText('Somnolent');
   await expect(page.getByTestId('ward-nurse')).toContainText('Temp.');
+  // Bedside monitor: ECG/pleth traces and the course values.
+  await expect(page.getByTestId('ward-monitor').locator('canvas')).toHaveCount(2);
+  await expect(page.getByTestId('monitor-temp')).toContainText('38');
 
   // Cultures first, then the antibiotic.
   await page.getByTestId('tab-diagnostics').click();

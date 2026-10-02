@@ -465,4 +465,6 @@ export const infectioEn = {
   'nurse.ended.cured': 'Going home today — and says thank you!',
   'nurse.ended.died': 'I am sorry — the patient has died.',
   'nurse.ended.time-limit': 'Handover done — the case ends here.',
+  'monitor.temp': 'Temp',
+  'monitor.rr': 'RR',
 } as const;

@@ -251,3 +251,9 @@ export {
 export { COURSE as INFECTION_COURSE } from './infection/params';
 export type * from './infection/types';
 export { PROCEDURES } from './infection/types';
+export {
+  WardMonitorSignals,
+  nibpFromMap,
+  WARD_PLETH_MIN_PERFUSION,
+  type WardMonitorInput,
+} from './infection/wardMonitor';

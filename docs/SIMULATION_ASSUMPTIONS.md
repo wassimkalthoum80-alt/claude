@@ -692,6 +692,10 @@ lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/
 | Admission state | organs start at the dysfunction the admission inflammation drives (patients arrive already ill) | |
 | Consciousness | CNS dysfunction × (1 + (age − 60)/40) for age > 60; ≥ 0.12 drowsy, ≥ 0.3 confused, ≥ 0.7 unresponsive | older patients become delirious earlier |
 | Bedside view (UI) | mottled if MAP < 65 / vasopressor / lactate ≥ 4; pale if MAP < 75 and HR > 110; flushed ≥ 38.3 °C; rigors when ≥ 38.5 °C and rising ≥ 0.4 °C in 3 h; sweating ≥ 38.8 °C or shock; laboured RR ≥ 28 or SpO₂ < 90; nasal O₂ when SpO₂ < 92; jaundice bilirubin ≥ 3 mg/dL | presentation only, from visible values |
+| Ward bedside monitor | ECG 250 Hz (sinus PQRST at the course HR, ±2 % beat variability) and pleth 125 Hz (one pulse per beat, transit 0.22 s, amplitude = perfusion) generated from the current course hour; own display RNG, never changes the course | live steady state of an hourly model |
+| Pleth perfusion (UI) | (MAP − 40)/45 clamped 0.08–1, × 0.5 under vasopressor; SpO₂ shown only ≥ 0.15 | |
+| NIBP | pulse pressure 44 mmHg + 0.25/beat above 80 (max 65); sys = MAP + 2/3 PP, dia = MAP − 1/3 PP; hourly cycle | course gives MAP only |
+| Ward alarm limits (UI) | HR > 120 (high > 140), SpO₂ < 92 (< 88), MAP < 65 (< 55), temp ≥ 38.5 (≥ 40), RR > 24 (> 30) | |
 | Oral switch offer (UI) | oral form with bioavailability ≥ 0.7 offered as "→ oral" | ciprofloxacin ≈ 0.75 qualifies |
 | CO₂ | ≈ 7 kg CO₂e per i.v. dose, 0.2 kg per oral day (extrapolated from one ciprofloxacin estimate, Born et al. BMJ Qual Saf 2023) | order of magnitude only |
 

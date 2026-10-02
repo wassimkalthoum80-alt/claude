@@ -475,4 +475,6 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'nurse.ended.cured': 'Wird heute entlassen — und bedankt sich!',
   'nurse.ended.died': 'Es tut mir leid — Exitus.',
   'nurse.ended.time-limit': 'Übergabe erledigt — der Fall endet hier.',
+  'monitor.temp': 'Temp',
+  'monitor.rr': 'AF',
 };

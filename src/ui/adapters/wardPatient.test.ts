@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { feverRigors, positiveUrine } from '../../content/infection/cases';
 import { INFECTION_LIBRARY as LIB } from '../../content/infection/library';
 import { InfectionEngine, type InfectionCase } from '../../sim';
-import { visualKey, wardNurse, wardPatientVisual } from './wardPatient';
+import { visualKey, wardMonitorView, wardNurse, wardPatientVisual } from './wardPatient';
 
 const make = (c: InfectionCase) => new InfectionEngine({ caseDef: c, library: LIB });
 const runTo = (e: InfectionEngine, h: number) => {
@@ -95,5 +95,19 @@ describe('ward nurse (reports, never diagnoses)', () => {
     runTo(e, 30);
     const json = JSON.stringify(wardNurse(e.getView(), e.log));
     for (const w of ['pyelonephritis', 'e-coli', 'dx.']) expect(json).not.toContain(w);
+  });
+});
+
+describe('ward monitor view', () => {
+  it('numerics follow the course; shock raises alarms and shrinks the pleth', () => {
+    const e = make(feverRigors);
+    const admission = wardMonitorView(e.getView());
+    expect(admission.spo2Valid).toBe(true);
+    expect(admission.alarms.temp).toBe('none');
+    runTo(e, 24 * 4);
+    const shock = wardMonitorView(e.getView());
+    expect(shock.alarms.nibp).not.toBe('none');
+    expect(shock.input.perfusion).toBeLessThan(admission.input.perfusion);
+    expect(shock.nibp.mean).toBe(e.getView().vitals.at(-1)?.map);
   });
 });

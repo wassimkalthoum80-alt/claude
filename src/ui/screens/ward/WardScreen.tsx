@@ -15,6 +15,7 @@ import { useUi } from '../../hooks/UiContext';
 import { wardNurse, wardPatientVisual } from '../../adapters/wardPatient';
 import { BedsideView } from './BedsideView';
 import { OrderPanel } from './OrderPanel';
+import { WardMonitor } from './WardMonitor';
 import { useTk, useWard } from './useWard';
 import { WardChart } from './WardChart';
 import {
@@ -180,7 +181,9 @@ export function WardScreen({ session }: { session: SessionConfig }) {
             <BedsideView
               visual={wardPatientVisual(view, ward.caseDef, log)}
               nurse={wardNurse(view, log)}
-            />
+            >
+              <WardMonitor view={view} startHourOfDay={start} seed={session.seed} />
+            </BedsideView>
           </section>
           <MicroInbox log={log} startHourOfDay={start} />
         </div>

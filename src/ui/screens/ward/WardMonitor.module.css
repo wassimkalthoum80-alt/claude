@@ -1,0 +1,123 @@
+/* Ward bedside monitor — monitor palette (CLAUDE.md A4): ECG/HR green, SpO₂/pleth cyan, blood pressure red. */
+
+.monitor {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #020406;
+  border-top: 1px solid var(--divider);
+}
+
+.traces {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  column-gap: 6px;
+  min-width: 0;
+}
+
+.trace {
+  width: 100%;
+  height: 52px;
+  display: block;
+}
+
+.label {
+  font: 600 10px var(--font-num);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.numerics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(78px, auto));
+  gap: 4px 12px;
+  align-content: center;
+}
+
+.num {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  font-family: var(--font-num);
+}
+
+.num b {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.num small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.name {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
+}
+
+.ecg {
+  color: var(--ecg);
+}
+
+.spo2 {
+  color: var(--spo2);
+}
+
+.nibp {
+  color: var(--art);
+}
+
+.nibp b {
+  font-size: 22px;
+}
+
+.temp {
+  color: #f1f4f7;
+}
+
+.rr {
+  color: #f1f4f7;
+  opacity: 0.85;
+}
+
+.alarmMedium b {
+  color: var(--alarm-medium);
+  animation: blink 1.6s steps(2, start) infinite;
+}
+
+.alarmHigh b {
+  color: #fff;
+  background: var(--alarm-high);
+  padding: 0 3px;
+  border-radius: 2px;
+  animation: blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alarmMedium b,
+  .alarmHigh b {
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .monitor {
+    grid-template-columns: 1fr;
+  }
+
+  .numerics {
+    grid-template-columns: repeat(3, auto);
+  }
+}

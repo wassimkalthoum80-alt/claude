@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { WardNurse, WardPatientVisual } from '../../adapters/wardPatient';
 import { visualKey } from '../../adapters/wardPatient';
 import { useTk } from './useWard';
@@ -16,7 +16,16 @@ const SKIN: Record<WardPatientVisual['skin'], string> = {
  * Stylised 2D bedside view of the ward patient. It reads only `WardPatientVisual`; realistic images or a 3D model
  * can replace this component (keyed by `visualKey`) without any change to the simulation.
  */
-export function BedsideView({ visual, nurse }: { visual: WardPatientVisual; nurse: WardNurse }) {
+export function BedsideView({
+  visual,
+  nurse,
+  children,
+}: {
+  visual: WardPatientVisual;
+  nurse: WardNurse;
+  /** rendered under the scene (the bedside monitor) */
+  children?: ReactNode;
+}) {
   const tk = useTk();
   const v = visual;
   let skin = SKIN[v.skin];
@@ -295,6 +304,7 @@ export function BedsideView({ visual, nurse }: { visual: WardPatientVisual; nurs
           </g>
         )}
       </svg>
+      {children}
       <div
         className={`${styles.nurseLine} ${nurse.urgent ? styles.nurseUrgent : ''}`}
         data-testid="ward-nurse"

@@ -354,3 +354,7 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   (alert pose), carrying out a fresh order (busy pose: samples, antibiotic, procedure), a recent observation, or her
   routine handover of the visible values. She reports; she never diagnoses or acts alone. The bedside scene sits in
   the centre column (patient + nurse), with the patient card, chart and labs on the left and orders on the right.
+- **Ward bedside monitor:** `src/sim/infection/wardMonitor.ts` (`WardMonitorSignals`) generates ECG (250 Hz) and
+  pleth (125 Hz) into ring buffers from the current course values — signals from state, never canned arrays; NIBP
+  from MAP. `src/ui/screens/ward/WardMonitor.tsx` draws them as sweep traces (`drawSweep`, 25 mm/s) in its own rAF
+  loop, with HR / SpO₂ / NIBP / temperature / RR numerics and alarm colours (`wardMonitorView`).
