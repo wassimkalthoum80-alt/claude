@@ -404,3 +404,41 @@ describe('stewardship scoring — case checks (phase 4)', () => {
     );
   });
 });
+
+describe('stewardship scoring — real-time bridge timing', () => {
+  const outcome = (antibioticsAtMin: number | null, durationMin: number) => ({
+    survived: true,
+    durationMin,
+    vasopressorMin: 0,
+    peakNoradrenalineUgKgMin: 0,
+    peakLactate: 2,
+    fluidsMl: 1000,
+    akiStage: 0 as const,
+    ventilated: false,
+    timeToStabiliseMin: 0,
+    antibioticsAtMin,
+    culturesAtMin: 2,
+  });
+
+  it('an antibiotic given in the episode counts at its real minute', () => {
+    const e = make(feverRigors);
+    e.dispatch(cultures);
+    e.dispatch(start('ceftriaxone'));
+    e.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: outcome(40, 50) });
+    runTo(e, 6);
+    const r = score(e);
+    expect(r.metrics.timeToActiveH).toBeCloseTo(40 / 60, 2);
+    expect(r.items.map((i) => i.key)).toContain('stw.timely');
+  });
+
+  it('no antibiotic in a 90-min episode: the first dose after the handover is late', () => {
+    const e = make(feverRigors);
+    e.dispatch(cultures);
+    e.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: outcome(null, 90) });
+    e.dispatch(start('ceftriaxone'));
+    runTo(e, 6);
+    const r = score(e);
+    expect(r.metrics.timeToActiveH).toBeCloseTo(1.5, 2);
+    expect(r.items.map((i) => i.key)).toContain('stw.late');
+  });
+});

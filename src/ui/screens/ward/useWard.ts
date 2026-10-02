@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { INFECTION_CASE_BY_ID } from '../../../content/infection/cases';
-import { INFECTION_LIBRARY } from '../../../content/infection/library';
 import type { I18nKey } from '../../../content/i18n/en';
 import type { SessionConfig } from '../../../game/types';
-import { InfectionEngine, type InfectionCase, type InfectionView } from '../../../sim';
+import type { InfectionCase, InfectionEngine, InfectionView } from '../../../sim';
+import { useWardStore } from '../../hooks/WardStoreContext';
 import { useT } from '../../hooks/UiContext';
 
 export interface Ward {
@@ -17,12 +16,9 @@ export interface Ward {
  * useSyncExternalStore; every interaction goes through engine.dispatch (CLAUDE.md A1).
  */
 export function useWard(session: SessionConfig): Ward | null {
-  const engine = useMemo(() => {
-    const caseDef = INFECTION_CASE_BY_ID.get(session.scenarioId);
-    return caseDef
-      ? new InfectionEngine({ caseDef, library: INFECTION_LIBRARY, seed: session.seed })
-      : null;
-  }, [session.scenarioId, session.seed]);
+  const store = useWardStore();
+  // The engine lives in the ward store, so it survives a real-time episode in the workstation.
+  const engine = useMemo(() => store.engineFor(session), [store, session]);
   const subscribe = useCallback(
     (l: () => void) => (engine ? engine.subscribe(l) : () => {}),
     [engine],

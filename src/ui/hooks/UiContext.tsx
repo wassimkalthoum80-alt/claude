@@ -7,6 +7,8 @@ import { createSession } from '../../game/session';
 import type { Difficulty, ModuleId, SessionConfig } from '../../game/types';
 import type { DebriefData } from '../adapters/debrief';
 import type { WardDebriefData } from '../adapters/wardDebrief';
+import type { BridgeKind } from '../../content/scenarios/bridge';
+import type { RealtimeOutcome } from '../../sim';
 
 export type Language = 'en' | 'de';
 export type ElectrodeStandard = 'IEC' | 'AHA';
@@ -23,6 +25,10 @@ export interface UiState {
   debrief: DebriefData | null;
   /** stewardship debrief of the last Infectiology case (screen 'ward-debrief') */
   wardDebrief: WardDebriefData | null;
+  /** a real-time episode opened from a ward case is running in the workstation (course → real time) */
+  bridge: { wardSession: SessionConfig; kind: BridgeKind } | null;
+  /** the episode just ended: its result waits for the handover on the ward (real time → course) */
+  bridgeReturn: { kind: BridgeKind; outcome: RealtimeOutcome } | null;
   /** difficulty chosen for scored modules (kept as a preference) */
   difficulty: Difficulty;
   language: Language;
@@ -165,6 +171,8 @@ function initialState(): UiState {
       : null,
     debrief: null,
     wardDebrief: null,
+    bridge: null,
+    bridgeReturn: null,
     difficulty: 'beginner',
     language: 'en',
     audio: false,

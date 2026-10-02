@@ -836,3 +836,46 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   await expect(page.getByTestId('module-menu')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('infectiology: real-time bridge — emergency department in real time, handover to the ward course', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(e.message));
+  const shots = process.env.WARD_SHOTS;
+
+  await page.goto('/?lang=de&debug');
+  await page.getByTestId('module-infectio').click();
+  // All five MVP cases are playable.
+  for (const id of ['positive-urine', 'fever-rigors', 'peritonitis', 'sab-line', 'cdi'])
+    await expect(page.getByTestId(`entry-${id}`)).toBeEnabled();
+  await page.getByTestId('entry-fever-rigors').click();
+  await page.getByTestId('ward-start-realtime').click();
+
+  // Course → real time: the workstation opens with the ED episode.
+  await expect(page.getByTestId('briefing-text')).toContainText('Notaufnahme');
+  await page.getByTestId('start-button').click();
+  await expect(page.getByTestId('bridge-handover')).toBeVisible();
+  await page.getByTestId('action-procedures').click();
+  await page.getByTestId('case-action-cultures').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(90));
+  await page.getByTestId('case-action-antibiotics').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(240));
+  if (shots) await page.screenshot({ path: `${shots}/ward-7-bridge.png` });
+  await page.getByTestId('bridge-handover').click();
+
+  // Real time → course: the handover names what happened and asks for the antibiotic.
+  await expect(page.getByTestId('ward-handover')).toBeVisible();
+  await expect(page.getByTestId('ward-handover')).toContainText('Blutkulturen bei');
+  await expect(page.getByTestId('handover-confirm')).toBeDisabled();
+  await page.getByTestId('handover-drug').selectOption('ceftriaxone');
+  if (shots) await page.screenshot({ path: `${shots}/ward-8-handover.png` });
+  await page.getByTestId('handover-confirm').click();
+  await expect(page.getByTestId('ward-handover')).toBeHidden();
+  await expect(page.getByTestId('therapy-sheet')).toContainText('Ceftriaxon');
+  await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:00/);
+  expect(errors).toEqual([]);
+});

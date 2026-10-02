@@ -5,10 +5,13 @@ import { INFECTION_CASE_BY_ID } from '../../content/infection/cases';
 import { recordExplored } from '../../game/progression';
 import { createSession } from '../../game/session';
 import type { ModuleId } from '../../game/types';
+import { bridgeScenario, type BridgeKind } from '../../content/scenarios/bridge';
+import { realtimeOutcome } from '../../game/bridge';
 import { finishScoredSession, MIN_DEBRIEF_S } from '../adapters/debrief';
 import { localProgressStore } from '../progressStore';
 import { useEngine } from './EngineContext';
 import { useUi, WORKSPACE_CLOSED } from './UiContext';
+import { useWardStore } from './WardStoreContext';
 
 /** A new 32-bit seed (wall-clock randomness is fine here: the seed itself is stored and logged). */
 function freshSeed(): number {
@@ -33,6 +36,8 @@ export interface SessionActions {
   end: () => void;
   /** open the My Progress screen */
   openProgress: () => void;
+  /** ward case → real-time episode in the workstation (emergency admission or shock) */
+  startBridge: (kind: BridgeKind) => void;
 }
 
 /**
@@ -41,6 +46,7 @@ export interface SessionActions {
  */
 export function useSession(): SessionActions {
   const engine = useEngine();
+  const wardStore = useWardStore();
   const { ui, setUi } = useUi();
   const module = ui.session?.module ?? null;
 
@@ -83,7 +89,14 @@ export function useSession(): SessionActions {
           seed: infectionCase.variants ? freshSeed() : infectionCase.seed,
           now: Date.now(),
         });
-        setUi({ ...WORKSPACE_CLOSED, screen: 'ward', session, briefingOpen: true });
+        setUi({
+          ...WORKSPACE_CLOSED,
+          screen: 'ward',
+          session,
+          briefingOpen: true,
+          bridge: null,
+          bridgeReturn: null,
+        });
         return;
       }
       const listed = SCENARIOS.find((s) => s.id === entry?.scenarioId);
@@ -126,9 +139,57 @@ export function useSession(): SessionActions {
     setUi({ ...WORKSPACE_CLOSED });
   }, [engine, setUi, ui.session]);
 
+  const startBridge = useCallback(
+    (kind: BridgeKind) => {
+      const wardSession = ui.session;
+      const course = wardStore.current();
+      if (!wardSession || !course || ui.screen !== 'ward') return;
+      const scenario = bridgeScenario(course.realtimePreset(), kind, course.caseDef.patient);
+      engine.loadScenario(scenario, wardSession.seed);
+      engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: wardSession.difficulty }, 'system');
+      engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
+      wardStore.startRecording();
+      setUi({
+        ...WORKSPACE_CLOSED,
+        screen: 'session',
+        // The workstation runs unscored: the episode's result goes back to the ward case.
+        session: {
+          ...wardSession,
+          scenarioId: scenario.id,
+          titleKey: scenario.titleKey,
+          scored: false,
+          instructorPanel: false,
+        },
+        bridge: { wardSession, kind },
+        bridgeReturn: null,
+        briefingOpen: true,
+      });
+    },
+    [engine, setUi, ui.screen, ui.session, wardStore],
+  );
+
   const end = useCallback(() => {
     pause();
     const session = ui.session;
+    if (ui.bridge) {
+      // Real time → course: hand the episode back to the ward (nothing to hand over if it never started).
+      const started = engine.getSnapshot().time > 0;
+      const outcome = started
+        ? realtimeOutcome(
+            wardStore.recorder()?.samples ?? [],
+            engine.getSnapshot(),
+            engine.eventLog,
+          )
+        : null;
+      setUi({
+        ...WORKSPACE_CLOSED,
+        screen: 'ward',
+        session: ui.bridge.wardSession,
+        bridge: null,
+        bridgeReturn: outcome ? { kind: ui.bridge.kind, outcome } : null,
+      });
+      return;
+    }
     if (ui.screen === 'ward') {
       // Phase 3 adds the stewardship debrief; until then the ward case returns to its menu.
       setUi({ ...WORKSPACE_CLOSED, screen: 'module', menuModule: module, session: null });
@@ -140,10 +201,10 @@ export function useSession(): SessionActions {
       return;
     }
     setUi({ ...WORKSPACE_CLOSED, screen: 'module', menuModule: module, session: null });
-  }, [pause, setUi, module, engine, ui.session, ui.screen]);
+  }, [pause, setUi, module, engine, ui.session, ui.screen, ui.bridge, wardStore]);
 
   return useMemo(
-    () => ({ openModule, goHome, start, restart, end, openProgress }),
-    [openModule, goHome, start, restart, end, openProgress],
+    () => ({ openModule, goHome, start, restart, end, openProgress, startBridge }),
+    [openModule, goHome, start, restart, end, openProgress, startBridge],
   );
 }

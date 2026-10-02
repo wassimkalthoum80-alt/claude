@@ -769,6 +769,8 @@ export interface InfectionView {
   consciousness: 'alert' | 'drowsy' | 'confused' | 'unresponsive';
   /** needs vasopressor (from the course; real time decides the dose) */
   vasopressor: boolean;
+  /** a shock episode is open (offered as a real-time episode until its outcome is applied) */
+  shock: boolean;
   ended: false | 'cured' | 'died' | 'time-limit';
   pendingInterrupt: boolean;
 }

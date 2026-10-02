@@ -644,3 +644,41 @@
   padding: 0;
   overflow: hidden;
 }
+
+/* Real-time bridge */
+.shockBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--alarm-high);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: rgba(255, 64, 64, 0.08);
+  color: #fff;
+}
+
+.handover {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.handover div {
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+}
+
+.handover dt {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.handover dd {
+  margin: 2px 0 0;
+  color: #fff;
+}

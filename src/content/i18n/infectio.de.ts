@@ -730,4 +730,41 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
     'Persistierende S.-aureus-Bakteriämie oder neue Schmerzen bedeuten bis zum Beweis des Gegenteils einen metastatischen Fokus: bildgebend suchen und mindestens 6 Wochen behandeln.',
   'stw.learn.cdi':
     'Nur Durchfall testen, den Auslöser absetzen, mit Fidaxomicin (oder oralem Vancomycin) behandeln, isolieren — und jedes Antibiotikum und den PPI hinterfragen.',
+  'bridge.label': 'Echtzeit-Episode des Stationsfalls',
+  'bridge.kind.admission': 'Notaufnahme · Echtzeit',
+  'bridge.kind.shock': 'Schock · Echtzeit',
+  'bridge.hint':
+    'Stabilisieren, Kulturen abnehmen, Antibiotikum geben — dann an die Station übergeben.',
+  'bridge.handover': 'An die Station übergeben',
+  'bridge.startAdmission': 'In der Notaufnahme beginnen (Echtzeit)',
+  'bridge.startAdmission.note':
+    'Sie versorgen die ersten Minuten am Monitor; das Ergebnis wird an den Stationsverlauf übergeben.',
+  'bridge.shockBanner':
+    'Der Patient ist im Schock. Der Verlauf läuft weiter — oder Sie übernehmen in Echtzeit.',
+  'bridge.startShock': 'In Echtzeit übernehmen',
+  'bridge.handover.title.admission': 'Übergabe aus der Notaufnahme',
+  'bridge.handover.title.shock': 'Übergabe nach der Schockepisode',
+  'bridge.handover.text': 'Das ist in Echtzeit passiert. Es geht jetzt im Stationsverlauf weiter.',
+  'bridge.handover.died': 'Der Patient hat die Episode nicht überlebt.',
+  'bridge.handover.confirm': 'Auf Station weiter',
+  'bridge.whichDrug': 'Welches Antibiotikum haben Sie gegeben?',
+  'bridge.row.duration': 'Episode',
+  'bridge.row.cultures': 'Blutkulturen bei',
+  'bridge.row.antibiotics': 'Antibiotikum bei',
+  'bridge.row.fluids': 'Flüssigkeit',
+  'bridge.row.vasopressor': 'Noradrenalin',
+  'bridge.row.lactate': 'Laktat max.',
+  'bridge.row.stable': 'MAP ≥ 65 stabil ab',
+  'bridge.notDone': 'nicht erfolgt',
+  'bridge.none': 'keins',
+  'bridge.notStable': 'nicht erreicht',
+  'scenario.bridge.admission.title': 'Notaufnahme: Fieber und Schüttelfrost',
+  'scenario.bridge.admission.briefing':
+    'Die Patientin aus dem Stationsfall ist gerade in der Notaufnahme angekommen: fiebernd, tachykard, mit Sauerstoffmaske. Sie haben Monitor, Perfusoren und Infusionen. Stabilisieren, Blutkulturen abnehmen, Antibiotikum geben — und dann an die Station übergeben (Leiste unten).',
+  'scenario.bridge.shock.title': 'Schock auf Station',
+  'scenario.bridge.shock.briefing':
+    'Der Stationspatient verschlechtert sich: hypoton, tachykard, kaltschweißig. Sie übernehmen am Monitor mit Infusionen und Noradrenalin. Stabilisieren, Kulturen abnehmen falls noch nicht erfolgt, Antibiotikum geben oder überprüfen — dann zurück an den Stationsverlauf.',
+  'act.bridge.antibiotics': 'Antibiotikum geben (Substanz bei Übergabe)',
+  'act.bridge.antibiotics.start': 'Ich gebe jetzt das Antibiotikum.',
+  'act.bridge.antibiotics.done': 'Das Antibiotikum ist drin.',
 };

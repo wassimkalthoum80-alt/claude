@@ -306,6 +306,7 @@ export class InfectionEngine {
               ? 'drowsy'
               : 'alert',
       vasopressor: this.organs.circ > COURSE.vasopressorAbove,
+      shock: this.shockActive,
       ended: this.ended,
       pendingInterrupt: this.interrupt,
     };

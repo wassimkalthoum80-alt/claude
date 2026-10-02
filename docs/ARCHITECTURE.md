@@ -358,6 +358,17 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   pleth (125 Hz) into ring buffers from the current course values — signals from state, never canned arrays; NIBP
   from MAP. `src/ui/screens/ward/WardMonitor.tsx` draws them as sweep traces (`drawSweep`, 25 mm/s) in its own rAF
   loop, with HR / SpO₂ / NIBP / temperature / RR numerics and alarm colours (`wardMonitorView`).
+- **Real-time bridge (phase 4):** a case with `realtimeAdmission` (B1) can start in the emergency department, and any
+  course shock (`view.shock`) offers "take over in real time". `useSession.startBridge` builds the episode from
+  `InfectionEngine.realtimePreset()` (`src/content/scenarios/bridge.ts`), loads it into the one `SimulationEngine`
+  and opens the workstation unscored; `BridgeBar` records it (`BridgeRecorder`, `src/game/bridge.ts`) and offers the
+  handover. `end()` turns the run into a `RealtimeOutcome` (`realtimeOutcome`) and returns to the ward, where the
+  `HandoverDialog` asks which antibiotic was given and dispatches cultures, the antibiotic and
+  `APPLY_REALTIME_OUTCOME` to the course. The course engine survives the episode in `WardStoreContext` (React
+  context, keyed by the session).
+- **Case variants:** `InfectionCase.variants` patches the hidden truth; `resolveInfectionVariant` draws one from the
+  session seed (fresh seed per session for cases with variants). Scoring facts per variant:
+  `stewardshipConfigFor(caseId, variant)`; case-specific debrief checks are data (`CaseCheck`).
 - **Sampling sequences:** blood cultures, urine culture and a diagnostic puncture open an animated bedside sequence
   (`src/ui/screens/ward/SamplingDialog.tsx`, `SamplingScene.tsx`). The steps and options are data in
   `src/ui/adapters/sampling.ts`; each option patches a pre-analytic field of the `SpecimenOrder` (antisepsis, volume,

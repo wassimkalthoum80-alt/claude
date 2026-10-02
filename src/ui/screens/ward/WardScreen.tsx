@@ -5,6 +5,7 @@ import type { InfectionCommand, InfectionLogEntry } from '../../../sim';
 import {
   consultQuestions,
   hoursUntil,
+  orderableDrugs,
   noticesSince,
   proactivePrompts,
   wardTime,
@@ -28,6 +29,7 @@ import {
   DiagnosisPanel,
   EndDialog,
   FailureWorkup,
+  HandoverDialog,
   NoticeDialog,
   PatientCard,
   ReserveDialog,
@@ -48,7 +50,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
   const tk = useTk();
   const ward = useWard(session);
   const { ui, setUi } = useUi();
-  const { end } = useSession();
+  const { end, startBridge } = useSession();
   const finish = useCallback(() => {
     if (!ward) return end();
     const v = ward.engine.getView();
@@ -110,7 +112,41 @@ export function WardScreen({ session }: { session: SessionConfig }) {
     // 'review-therapy': the learner reviews the sheet and resistogram — no automatic action.
   };
 
-  const showNotices = notices.length > 0 && !ui.briefingOpen;
+  const handover = ui.bridgeReturn;
+  const showNotices = notices.length > 0 && !ui.briefingOpen && !handover;
+  const confirmHandover = (drug: { drugId: string; route: 'iv' | 'po' } | null) => {
+    if (!handover) return;
+    const o = handover.outcome;
+    // Real time → course, in the order it happened in the episode: cultures and the antibiotic (the course clock
+    // stood still during it), then the episode's consequences.
+    const steps: { at: number; run: () => void }[] = [];
+    if (o.culturesAtMin !== null)
+      steps.push({
+        at: o.culturesAtMin,
+        run: () =>
+          dispatch({
+            type: 'ORDER_SPECIMEN',
+            specimen: { kind: 'blood-culture', site: 'blood', sets: 2, adequateVolume: true },
+          }),
+      });
+    if (drug && o.antibioticsAtMin !== null) {
+      const cmd: StartCommand = {
+        type: 'START_ANTIINFECTIVE',
+        drugId: drug.drugId,
+        dose: 'standard',
+        route: drug.route,
+      };
+      const reserve = orderableDrugs(LIB).reserve.some((d) => d.id === drug.drugId);
+      steps.push({
+        at: o.antibioticsAtMin,
+        run: () => (reserve ? setReserveDraft(cmd) : dispatch(cmd)),
+      });
+    }
+    for (const st of steps.sort((a, b) => a.at - b.at)) st.run();
+    dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: o });
+    acknowledge();
+    setUi({ bridgeReturn: null });
+  };
   return (
     <div className={styles.ward} data-testid="ward-screen">
       <header className={styles.topbar}>
@@ -186,6 +222,23 @@ export function WardScreen({ session }: { session: SessionConfig }) {
         </div>
       )}
 
+      {view.shock && !view.ended && !handover && (
+        <div className={styles.shockBanner} role="alert" data-testid="ward-shock">
+          <span>{tk('bridge.shockBanner')}</span>
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={() => {
+              acknowledge();
+              startBridge('shock');
+            }}
+            data-testid="ward-bridge-shock"
+          >
+            {tk('bridge.startShock')}
+          </button>
+        </div>
+      )}
+
       <main className={styles.grid}>
         <div className={styles.col}>
           <PatientCard caseDef={ward.caseDef} />
@@ -241,6 +294,17 @@ export function WardScreen({ session }: { session: SessionConfig }) {
             acknowledge();
             setUi({ briefingOpen: false });
           }}
+          {...(ward.caseDef.realtimeAdmission &&
+          view.timeH === 0 &&
+          !log.some((e) => e.kind === 'command')
+            ? {
+                onStartRealtime: () => {
+                  acknowledge();
+                  setUi({ briefingOpen: false });
+                  startBridge('admission');
+                },
+              }
+            : {})}
         />
       )}
       {showNotices && <NoticeDialog notices={notices} start={start} onClose={acknowledge} />}
@@ -278,7 +342,16 @@ export function WardScreen({ session }: { session: SessionConfig }) {
           }}
         />
       )}
-      {view.ended && !showNotices && <EndDialog outcome={view.ended} onClose={finish} />}
+      {handover && (
+        <HandoverDialog
+          kind={handover.kind}
+          outcome={handover.outcome}
+          onConfirm={confirmHandover}
+        />
+      )}
+      {view.ended && !showNotices && !handover && (
+        <EndDialog outcome={view.ended} onClose={finish} />
+      )}
     </div>
   );
 }

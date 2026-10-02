@@ -276,6 +276,25 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     }
   }
 
+  // Real-time bridge: the episode happened at the bridge hour while course time stood still. An antibiotic given in
+  // it counts at its real minute; one ordered after the handover also waited the length of the episode.
+  const rt = log.find(
+    (e): e is Extract<InfectionLogEntry, { kind: 'command' }> =>
+      e.kind === 'command' && e.accepted && e.command.type === 'APPLY_REALTIME_OUTCOME',
+  );
+  if (
+    rt?.command.type === 'APPLY_REALTIME_OUTCOME' &&
+    timeToActiveH !== null &&
+    timeToActiveH >= rt.t
+  ) {
+    const o = rt.command.outcome;
+    timeToActiveH =
+      o.antibioticsAtMin !== null && timeToActiveH === rt.t
+        ? rt.t + o.antibioticsAtMin / 60
+        : timeToActiveH + o.durationMin / 60;
+    timeToActiveH = Math.round(timeToActiveH * 100) / 100;
+  }
+
   // ── Dose counts, CO2, cost ──
   let dot = 0;
   let broadDot = 0;

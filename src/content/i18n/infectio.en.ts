@@ -714,4 +714,41 @@ export const infectioEn = {
     'Persistent S. aureus bacteraemia or new pain means a metastatic focus until proven otherwise: image it and treat for at least 6 weeks.',
   'stw.learn.cdi':
     'Test only diarrhoea, stop the trigger, treat with fidaxomicin (or oral vancomycin), isolate — and review every antibiotic and the PPI.',
+  'bridge.label': 'Real-time episode of the ward case',
+  'bridge.kind.admission': 'Emergency department · real time',
+  'bridge.kind.shock': 'Shock · real time',
+  'bridge.hint': 'Stabilise, take cultures, give the antibiotic — then hand over to the ward.',
+  'bridge.handover': 'Hand over to the ward',
+  'bridge.startAdmission': 'Start in the emergency department (real time)',
+  'bridge.startAdmission.note':
+    'You manage the first minutes at the monitor; the result is handed over to the ward course.',
+  'bridge.shockBanner':
+    'The patient is in shock. The course keeps running — or take over in real time.',
+  'bridge.startShock': 'Take over in real time',
+  'bridge.handover.title.admission': 'Handover from the emergency department',
+  'bridge.handover.title.shock': 'Handover after the shock episode',
+  'bridge.handover.text':
+    'This is what happened in real time. It now continues in the ward course.',
+  'bridge.handover.died': 'The patient did not survive the episode.',
+  'bridge.handover.confirm': 'Continue on the ward',
+  'bridge.whichDrug': 'Which antibiotic did you give?',
+  'bridge.row.duration': 'Episode',
+  'bridge.row.cultures': 'Blood cultures at',
+  'bridge.row.antibiotics': 'Antibiotic at',
+  'bridge.row.fluids': 'Fluids',
+  'bridge.row.vasopressor': 'Noradrenaline',
+  'bridge.row.lactate': 'Peak lactate',
+  'bridge.row.stable': 'MAP ≥ 65 stable from',
+  'bridge.notDone': 'not done',
+  'bridge.none': 'none',
+  'bridge.notStable': 'not reached',
+  'scenario.bridge.admission.title': 'Emergency department: fever and rigors',
+  'scenario.bridge.admission.briefing':
+    'The patient from the ward case has just arrived in the emergency department: febrile, tachycardic, on an oxygen mask. You have the monitor, pumps and fluids. Stabilise, take blood cultures, give the antibiotic — and hand over to the ward when you are done (the bar at the bottom).',
+  'scenario.bridge.shock.title': 'Shock on the ward',
+  'scenario.bridge.shock.briefing':
+    'The ward patient is deteriorating: hypotensive, tachycardic, clammy. You take over at the monitor with fluids and noradrenaline. Stabilise, take cultures if not yet done, give or review the antibiotic — then hand back to the ward course.',
+  'act.bridge.antibiotics': 'Give the antibiotic (named at handover)',
+  'act.bridge.antibiotics.start': 'I am giving the antibiotic now.',
+  'act.bridge.antibiotics.done': 'The antibiotic is in.',
 } as const;

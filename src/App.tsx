@@ -39,6 +39,8 @@ import { HomeScreen } from './ui/screens/HomeScreen';
 import { ModuleMenu } from './ui/screens/ModuleMenu';
 import { DebriefScreen } from './ui/screens/DebriefScreen';
 import { ProgressScreen } from './ui/screens/ProgressScreen';
+import { BridgeBar } from './ui/components/Bridge/BridgeBar';
+import { WardStoreProvider } from './ui/hooks/WardStoreContext';
 import { WardScreen } from './ui/screens/ward/WardScreen';
 import { WardDebriefScreen } from './ui/screens/ward/WardDebriefScreen';
 import styles from './App.module.css';
@@ -57,6 +59,7 @@ function SharedOverlays() {
       <PauseMenu />
       <RunSummaryCard />
       <AutoDebrief />
+      <BridgeBar />
     </>
   );
 }
@@ -183,7 +186,9 @@ export default function App() {
   return (
     <UiProvider>
       <EngineProvider>
-        <Shell />
+        <WardStoreProvider>
+          <Shell />
+        </WardStoreProvider>
       </EngineProvider>
     </UiProvider>
   );

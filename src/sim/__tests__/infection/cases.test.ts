@@ -233,3 +233,30 @@ describe('D1 — C. difficile after clindamycin', () => {
     expect(e.getView().ended).not.toBe('died');
   });
 });
+
+describe('bridge hooks in the course', () => {
+  it('untreated ESBL urosepsis opens a shock episode; applying the real-time outcome closes it', () => {
+    const e = make(feverRigors, seedFor(feverRigors, 'esbl'));
+    while (!e.getView().shock && e.timeH < 120 && !e.getView().ended) e.advance(4);
+    expect(e.getView().shock).toBe(true);
+    expect(e.log.some((l) => l.kind === 'shock')).toBe(true);
+    e.dispatch({
+      type: 'APPLY_REALTIME_OUTCOME',
+      outcome: {
+        survived: true,
+        durationMin: 20,
+        vasopressorMin: 15,
+        peakNoradrenalineUgKgMin: 0.2,
+        peakLactate: 3.5,
+        fluidsMl: 1500,
+        akiStage: 1,
+        ventilated: false,
+        timeToStabiliseMin: 12,
+        antibioticsAtMin: 5,
+        culturesAtMin: 2,
+      },
+    });
+    expect(e.getView().shock).toBe(false);
+    expect(e.getTruth().organs.kidney).toBeGreaterThanOrEqual(0.25);
+  });
+});

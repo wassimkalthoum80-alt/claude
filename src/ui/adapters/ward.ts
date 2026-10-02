@@ -314,7 +314,9 @@ export function consultQuestions(
     const culturesBefore = specimens.some(
       (s) => s.order.kind === 'blood-culture' && !s.onAntibiotics,
     );
-    if (!culturesBefore) q.push({ key: 'abs.q.culturesBefore', important: true });
+    // Not asked when the antibiotic was already running at admission (nothing the learner could have drawn before).
+    const startedHere = firstStart >= 0;
+    if (!culturesBefore && startedHere) q.push({ key: 'abs.q.culturesBefore', important: true });
     const declared = Object.values(view.declared);
     if (!declared.some((s) => s === 'suspected' || s === 'probable' || s === 'confirmed')) {
       q.push({ key: 'abs.q.focus', important: true });

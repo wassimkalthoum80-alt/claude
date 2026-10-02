@@ -1,14 +1,17 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { INFECTION_LIBRARY as LIB } from '../../../content/infection/library';
 import type {
   InfectionCase,
   InfectionCommand,
   InfectionStatus,
   InfectionView,
+  RealtimeOutcome,
   TimeoutReview,
 } from '../../../sim';
 import {
   FAILURE_CAUSES,
   countLabel,
+  orderableDrugs,
   patientFacts,
   wardTime,
   type ConsultQuestion,
@@ -49,9 +52,12 @@ function Modal({
 export function BriefingDialog({
   caseDef,
   onStart,
+  onStartRealtime,
 }: {
   caseDef: InfectionCase;
   onStart: () => void;
+  /** begin with the emergency-department episode in real time (course ↔ real-time bridge) */
+  onStartRealtime?: () => void;
 }) {
   const tk = useTk();
   return (
@@ -68,6 +74,14 @@ export function BriefingDialog({
       >
         {tk('ward.start')}
       </button>
+      {onStartRealtime && (
+        <>
+          <button type="button" onClick={onStartRealtime} data-testid="ward-start-realtime">
+            {tk('bridge.startAdmission')}
+          </button>
+          <p className={styles.note}>{tk('bridge.startAdmission.note')}</p>
+        </>
+      )}
     </Modal>
   );
 }
@@ -490,6 +504,90 @@ export function EndDialog({
         data-testid="ward-end-close"
       >
         {tk('ward.backToMenu')}
+      </button>
+    </Modal>
+  );
+}
+
+/** Handover after a real-time episode (real time → course): what happened, and which antibiotic was given. */
+export function HandoverDialog({
+  kind,
+  outcome,
+  onConfirm,
+}: {
+  kind: 'admission' | 'shock';
+  outcome: RealtimeOutcome;
+  /** drug given in the episode (null: none or not named) */
+  onConfirm: (drug: { drugId: string; route: 'iv' | 'po' } | null) => void;
+}) {
+  const tk = useTk();
+  const groups = useMemo(() => orderableDrugs(LIB), []);
+  const [drugId, setDrugId] = useState('');
+  const gaveAntibiotic = outcome.antibioticsAtMin !== null;
+  const drug = LIB.drugs.get(drugId);
+  const min = (v: number | null) => (v === null ? tk('bridge.notDone') : `${v} min`);
+  const rows: [string, string][] = [
+    ['bridge.row.duration', `${outcome.durationMin} min`],
+    ['bridge.row.cultures', min(outcome.culturesAtMin)],
+    ['bridge.row.antibiotics', min(outcome.antibioticsAtMin)],
+    ['bridge.row.fluids', `${outcome.fluidsMl} mL`],
+    [
+      'bridge.row.vasopressor',
+      outcome.vasopressorMin > 0
+        ? `${outcome.vasopressorMin} min · max ${outcome.peakNoradrenalineUgKgMin} µg/kg/min`
+        : tk('bridge.none'),
+    ],
+    ['bridge.row.lactate', `${outcome.peakLactate} mmol/L`],
+    [
+      'bridge.row.stable',
+      outcome.timeToStabiliseMin === null
+        ? tk('bridge.notStable')
+        : `${outcome.timeToStabiliseMin} min`,
+    ],
+  ];
+  return (
+    <Modal title={tk(`bridge.handover.title.${kind}`)} testId="ward-handover" wide>
+      <p>{tk(outcome.survived ? 'bridge.handover.text' : 'bridge.handover.died')}</p>
+      <dl className={styles.handover}>
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <dt>{tk(k)}</dt>
+            <dd className="num">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {outcome.survived && gaveAntibiotic && (
+        <label className={styles.fieldset}>
+          {tk('bridge.whichDrug')}{' '}
+          <select
+            value={drugId}
+            onChange={(e) => setDrugId(e.target.value)}
+            data-testid="handover-drug"
+            aria-label={tk('bridge.whichDrug')}
+          >
+            <option value="">{tk('ward.chooseDrug')}</option>
+            {(['access', 'watch', 'reserve'] as const).map((cat) => (
+              <optgroup key={cat} label={tk(`aware.${cat}`)}>
+                {groups[cat]
+                  .filter((d) => d.routes.includes('iv'))
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {tk(d.nameKey)}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+      )}
+      <button
+        type="button"
+        className={styles.primary}
+        disabled={outcome.survived && gaveAntibiotic && !drug}
+        onClick={() => onConfirm(drug ? { drugId: drug.id, route: 'iv' } : null)}
+        data-testid="handover-confirm"
+      >
+        {tk('bridge.handover.confirm')}
       </button>
     </Modal>
   );

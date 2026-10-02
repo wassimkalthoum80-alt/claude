@@ -222,18 +222,21 @@ export const MODULE_CATALOG: ModuleCatalog = [
         titleKey: 'infectio.section.sepsis',
         entries: [
           review(available('fever-rigors', 'infectio.feverRigors', 'ward-fever-rigors')),
-          preparing('peritonitis', 'infectio.peritonitis'),
+          review(available('peritonitis', 'infectio.peritonitis', 'ward-postop-peritonitis')),
         ],
       },
       {
         id: 'staph',
         titleKey: 'infectio.section.staph',
-        entries: [preparing('sab-line', 'infectio.sabLine')],
+        entries: [review(available('sab-line', 'infectio.sabLine', 'ward-sab-line'))],
       },
       {
         id: 'collateral',
         titleKey: 'infectio.section.collateral',
-        entries: [preparing('cdi', 'infectio.cdi'), preparing('vap-mrgn', 'infectio.vapMrgn')],
+        entries: [
+          review(available('cdi', 'infectio.cdi', 'ward-cdi')),
+          preparing('vap-mrgn', 'infectio.vapMrgn'),
+        ],
       },
     ],
   },

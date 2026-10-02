@@ -270,7 +270,8 @@ export function AutoDebrief() {
   const { ui } = useUi();
   const { end } = useSession();
   const ended = useEngineSelector(caseEnded);
-  const scored = ui.session?.scored ?? false;
+  // Scored sessions and real-time episodes of a ward case close by themselves when the case ends.
+  const scored = (ui.session?.scored ?? false) || ui.bridge !== null;
   useEffect(() => {
     if (ended && scored) end();
   }, [ended, scored, end]);
@@ -280,7 +281,7 @@ export function AutoDebrief() {
 /** End-of-run card for scripted cases in unscored sessions: objective, no-flow, compression fraction. */
 export function RunSummaryCard() {
   const { ui } = useUi();
-  if (ui.session?.scored) return null;
+  if (ui.session?.scored || ui.bridge) return null;
   return <RunSummaryContent />;
 }
 
