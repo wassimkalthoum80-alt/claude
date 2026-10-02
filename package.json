@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "review:infectio": "REVIEW_OUT=docs/review/infectiology-clinical-review.md vitest run src/review"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

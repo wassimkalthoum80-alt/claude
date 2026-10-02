@@ -20,5 +20,6 @@
     "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.node.test.ts"]
 }
