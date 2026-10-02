@@ -185,6 +185,9 @@ export class InfectionEngine {
     this.bactInflam = this.bacterialDrive();
     this.crp = COURSE.crp.base + COURSE.crp.scale * (drive * 0.65) ** 1.3;
     this.pct = COURSE.pct.base + COURSE.pct.scale * this.bactInflam ** 2;
+    // Patients arrive with the organ dysfunction their infection has already caused.
+    this.organs = this.organTargets();
+    this.creatinine = c.patient.baselineCreatinine * (1 + 3 * this.organs.kidney);
     for (const init of c.initialTherapy ?? []) {
       this.orders.push(
         this.makeOrder(init.drugId, init.dose, init.route, false, null, init.startedH),
@@ -274,6 +277,15 @@ export class InfectionEngine {
       declared: { ...this.declared },
       isolation: this.isolation,
       stoolsPer24h: Math.round(this.stoolsPer24h),
+      // SIM-ASSUMPTION: CNS dysfunction 0.12 / 0.3 / 0.7 → drowsy / confused / unresponsive.
+      consciousness:
+        this.organs.cns >= 0.7
+          ? 'unresponsive'
+          : this.organs.cns >= 0.3
+            ? 'confused'
+            : this.organs.cns >= 0.12
+              ? 'drowsy'
+              : 'alert',
       vasopressor: this.organs.circ > COURSE.vasopressorAbove,
       ended: this.ended,
       pendingInterrupt: this.interrupt,
@@ -929,7 +941,8 @@ export class InfectionEngine {
     return Math.max(o.circ, (o.circ + o.kidney + o.lung + o.liver + o.coag + o.cns) / 3.5);
   }
 
-  private stepOrgans(dt: number): void {
+  /** Organ dysfunction the current inflammation, toxicity and foci drive towards. */
+  private organTargets(): Organs {
     const p = this.caseDef.patient;
     const thr = COURSE.organThreshold.base + COURSE.organThreshold.perReserve * p.reserve;
     const sev = Math.max(0, (this.inflam - thr) / (1 - thr));
@@ -945,14 +958,20 @@ export class InfectionEngine {
       ...this.sites.filter((s) => s.active && s.def.focus === 'lung').map((s) => 0.5 * s.burden),
     );
     const fulminantCdi = this.cdi.active ? Math.max(0, (this.cdi.severity - 0.6) * 1.5) : 0;
-    const target: Organs = {
+    return {
       circ: Math.min(1, sev * w.circ + fulminantCdi),
       kidney: Math.min(1, sev * w.kidney + this.nephrotox),
       lung: Math.min(1, sev * w.lung + lungFocus + mimicOrgan),
       liver: Math.min(1, sev * w.liver),
       coag: Math.min(1, sev * w.coag),
-      cns: Math.min(1, sev * w.cns),
+      // SIM-ASSUMPTION: older brains decompensate earlier (septic encephalopathy, delirium): ×(1 + (age − 60)/40).
+      cns: Math.min(1, sev * w.cns * (1 + Math.max(0, p.ageYears - 60) / 40)),
     };
+  }
+
+  private stepOrgans(dt: number): void {
+    const p = this.caseDef.patient;
+    const target = this.organTargets();
     for (const k of Object.keys(target) as (keyof Organs)[]) {
       const tau = target[k] > this.organs[k] ? COURSE.organTauH.rise : COURSE.organTauH.recover;
       this.organs[k] += ((target[k] - this.organs[k]) * dt) / tau;

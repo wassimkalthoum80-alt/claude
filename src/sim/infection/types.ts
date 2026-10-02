@@ -734,6 +734,8 @@ export interface InfectionView {
   isolation: boolean;
   /** stool frequency /24 h (nurse-observed) */
   stoolsPer24h: number;
+  /** what the bedside shows of brain function (observable sign, not a diagnosis) */
+  consciousness: 'alert' | 'drowsy' | 'confused' | 'unresponsive';
   /** needs vasopressor (from the course; real time decides the dose) */
   vasopressor: boolean;
   ended: false | 'cured' | 'died' | 'time-limit';

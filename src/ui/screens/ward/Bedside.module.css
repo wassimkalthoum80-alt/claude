@@ -1,0 +1,88 @@
+/* Bedside view: slow, calm motion (breathing, shivering); disabled for reduced-motion users. */
+
+.bedside {
+  margin: 0 0 8px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  background: #0b1117;
+}
+
+.bedside svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 210px;
+}
+
+.caption {
+  padding: 6px 10px;
+  font: 500 13px/1.35 var(--font-ui);
+  color: #fff;
+  border-top: 1px solid var(--divider);
+}
+
+.sign {
+  font: 700 11px var(--font-ui);
+  fill: #1a1a1a;
+}
+
+.breath {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: breath var(--breath, 4s) ease-in-out infinite;
+}
+
+@keyframes breath {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(var(--breath-depth, 1.02));
+  }
+}
+
+.rigors {
+  animation: shiver 0.12s linear infinite;
+}
+
+@keyframes shiver {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(0.8px, -0.4px);
+  }
+  50% {
+    transform: translate(-0.8px, 0.3px);
+  }
+  75% {
+    transform: translate(0.5px, 0.5px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.sweat {
+  animation: sweat 3s ease-in-out infinite;
+}
+
+@keyframes sweat {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath,
+  .rigors,
+  .sweat {
+    animation: none;
+  }
+}

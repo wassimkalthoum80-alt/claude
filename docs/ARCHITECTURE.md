@@ -346,3 +346,7 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
 - The antibiotic timeout is logged with `TIMEOUT_REVIEW`; reserve orders carry `indication` / `absApproval`.
 - Texts: `src/content/i18n/infectio.en.ts` / `infectio.de.ts`, generated from one EN/DE table and spread into the
   main dictionaries.
+- **Bedside view (phase 2b):** `src/ui/adapters/wardPatient.ts` turns the learner view into `WardPatientVisual`
+  (skin colour, sweating, rigors, breathing, consciousness, posture, oxygen, devices, isolation, observation texts)
+  — evidence only. `src/ui/screens/ward/BedsideView.tsx` is a stylised 2D SVG renderer; `visualKey()` gives a stable
+  key (e.g. `female-elderly-flushed-rigors-drowsy`) so realistic images or a 3D model can replace it later.

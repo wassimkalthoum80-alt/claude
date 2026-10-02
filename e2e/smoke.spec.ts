@@ -747,6 +747,8 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   if (shots) await page.screenshot({ path: `${shots}/ward-1-briefing.png` });
   await page.getByTestId('ward-start').click();
   await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:00/);
+  // The bedside view shows what can be seen — drowsy and flushed — not the diagnosis.
+  await expect(page.getByTestId('bedside-observations')).toContainText('Somnolent');
 
   // Cultures first, then the antibiotic.
   await page.getByTestId('tab-diagnostics').click();

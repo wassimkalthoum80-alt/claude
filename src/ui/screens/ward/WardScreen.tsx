@@ -12,6 +12,8 @@ import {
 } from '../../adapters/ward';
 import { useSession } from '../../hooks/useSession';
 import { useUi } from '../../hooks/UiContext';
+import { wardPatientVisual } from '../../adapters/wardPatient';
+import { BedsideView } from './BedsideView';
 import { OrderPanel } from './OrderPanel';
 import { useTk, useWard } from './useWard';
 import { WardChart } from './WardChart';
@@ -166,6 +168,12 @@ export function WardScreen({ session }: { session: SessionConfig }) {
 
       <main className={styles.grid}>
         <div className={styles.col}>
+          <section className={styles.card} aria-label={tk('ward.bedside')}>
+            <header className={styles.cardHeader}>
+              <h2>{tk('ward.bedside')}</h2>
+            </header>
+            <BedsideView visual={wardPatientVisual(view, ward.caseDef, log)} />
+          </section>
           <PatientCard caseDef={ward.caseDef} />
           <WardChart view={view} startHourOfDay={start} />
           <DiagnosisPanel caseDef={ward.caseDef} view={view} dispatch={dispatch} />
