@@ -457,7 +457,9 @@ describe('stewardship scoring — real-time bridge timing', () => {
       lactate: 1.8,
       noradrenalineUgKgMin: 0,
       fio2: 40,
-      airway: 'mask',
+      airway: 'none',
+      support: 'simple-mask',
+      o2FlowLMin: 6,
     },
   });
 

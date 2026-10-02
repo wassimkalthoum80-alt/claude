@@ -36,7 +36,9 @@ describe('real-time bridge (course ↔ real time)', () => {
     const preset = w.realtimePreset();
     const sc = bridgeScenario(preset, 'admission', w.caseDef.patient);
     expect(sc.id).toBe(BRIDGE_SCENARIO_ID);
-    expect(sc.patient.airway).toBe('mask');
+    // Conventional oxygen by simple mask: no airway device, the ventilator stands by.
+    expect(sc.patient.airway).toBe('none');
+    expect(sc.oxygen).toMatchObject({ support: 'simple-mask', flowLMin: { 'simple-mask': 6 } });
     expect(sc.patient.factors?.temperatureC).toBe(preset.temperatureC);
     expect(sc.fluid?.factors?.vasoplegia).toBe(preset.vasoplegia);
     expect(sc.pumps?.some((p) => p.productId === 'propofol-2')).toBe(false);
@@ -47,9 +49,12 @@ describe('real-time bridge (course ↔ real time)', () => {
     const s = e.getSnapshot();
     expect(s.patient.cardio.spontaneousCirculation).toBe(true);
     expect(s.patient.gas.spo2).toBeGreaterThan(92);
-    // breathing on its own (pressure-supported), not on the apnoea backup rate
-    expect(s.devices.ventilator.measured.rrTotal).toBeGreaterThan(18);
+    // breathing on its own on the mask — no imposed breaths, no ventilator alarms
+    expect(s.devices.ventilator.standby).toBe(true);
+    expect(s.devices.ventilator.breathCount).toBe(0);
+    expect(s.devices.oxygen.countedRate).toBeGreaterThan(18);
     expect(s.devices.monitor.alarms.map((a) => a.id)).not.toContain('APNEA');
+    expect(s.devices.monitor.alarms.map((a) => a.id)).not.toContain('DISCONNECT');
   });
 
   it('records culture and antibiotic times, vasopressor and fluids — and returns them to the course', () => {
@@ -77,7 +82,7 @@ describe('real-time bridge (course ↔ real time)', () => {
     expect(outcome.ventilated).toBe(false);
     expect(outcome.durationMin).toBeCloseTo(11.5, 0);
     expect(outcome.end.noradrenalineUgKgMin).toBeGreaterThan(0.05);
-    expect(outcome.end.airway).toBe('mask');
+    expect(outcome.end.airway).toBe('none');
     // the course applies it (logged as a command)
     w.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'admission' });
     expect(w.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome }).accepted).toBe(true);

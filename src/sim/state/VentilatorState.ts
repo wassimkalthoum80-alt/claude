@@ -78,6 +78,11 @@ export interface VentilatorState {
   prvcPressure: number;
   /** patient circuit connected to the airway */
   circuitConnected: boolean;
+  /**
+   * the ventilator is not in use (room air, conventional oxygen or HFOT): no breaths, no pressure, no alarms — unlike
+   * an accidental disconnection, which alarms
+   */
+  standby: boolean;
   /** apnoea detected (no breath for the apnoea time) — PSV switches to backup ventilation */
   apnea: boolean;
 }

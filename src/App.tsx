@@ -28,6 +28,10 @@ import { PatientHistoryPanel } from './ui/components/Patient/PatientHistoryPanel
 import { PatientScene } from './ui/components/PatientScene/PatientScene';
 import { Timers } from './ui/components/Timers/Timers';
 import { Ventilator } from './ui/components/Ventilator/Ventilator';
+import {
+  RespSupportPanel,
+  WhenVentilatorInUse,
+} from './ui/components/RespSupport/RespSupportPanel';
 import { VentilatorControls } from './ui/components/VentilatorControls/VentilatorControls';
 import { useEffect } from 'react';
 import { EngineProvider, useEngine } from './ui/hooks/EngineContext';
@@ -99,8 +103,11 @@ function DesktopWorkstation() {
         </div>
 
         <div className={`${styles.right} ${ui.ventDrawerOpen ? styles.drawerOpen : ''}`}>
-          <Ventilator />
-          <VentilatorControls />
+          <RespSupportPanel />
+          <WhenVentilatorInUse>
+            <Ventilator />
+            <VentilatorControls />
+          </WhenVentilatorInUse>
           <PerfusorRack />
           <CprMetrics />
         </div>

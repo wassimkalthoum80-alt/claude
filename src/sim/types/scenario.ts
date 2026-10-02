@@ -1,3 +1,4 @@
+import type { OxygenDevice, RespSupport, VenturiAdapter } from '../state/OxygenState';
 import type { CprQualityPreset } from '../state/CPRState';
 import type { AirwayDevice, LungPreset, PhysiologyReserves, RhythmId } from '../state/PatientState';
 import type { VentSettings } from '../state/VentilatorState';
@@ -73,6 +74,11 @@ export interface ScenarioDefinition {
   seed: number;
   patient: PatientInit;
   ventilator: VentSettings;
+  /**
+   * respiratory support connected at the start (default from the airway: none → room air, face mask → NIV, tube or
+   * supraglottic airway → invasive ventilation); conventional oxygen and HFOT need airway 'none'
+   */
+  oxygen?: OxygenInit;
   cprPreset: CprQualityPreset;
   /**
    * pumps at the start (default: 5 empty syringe pumps + 1 empty volumetric pump). Running infusions start at
@@ -126,4 +132,14 @@ export interface ScenarioVariant {
   director?: readonly DirectorRule[];
   /** reversible causes of this variant (merged field by field into the scenario's) */
   conditions?: Partial<PatientConditions>;
+}
+
+/** Respiratory support at the start of a scenario. */
+export interface OxygenInit {
+  support: RespSupport;
+  /** L/min per device */
+  flowLMin?: Partial<Record<OxygenDevice, number>>;
+  /** % */
+  hfncFio2?: number;
+  venturiPercent?: VenturiAdapter;
 }

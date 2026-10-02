@@ -879,6 +879,18 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await expect(page.getByTestId('briefing-text')).toContainText('Notaufnahme');
   await page.getByTestId('start-button').click();
   await expect(page.getByTestId('bridge-handover')).toBeVisible();
+  // Breathing / oxygen therapy follows the connected device: a simple mask, the ventilator in standby.
+  await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'simple-mask');
+  await expect(page.getByTestId('resp-fio2')).toContainText('geschätzt');
+  await expect(page.getByTestId('mode-PSV')).toHaveCount(0);
+  await page.getByTestId('resp-hfnc').click();
+  await expect(page.getByTestId('resp-fio2')).toContainText('Flow 40 L/min · FiO₂ 40 %');
+  if (shots) await page.screenshot({ path: `${shots}/ward-6b-hfnc.png` });
+  await page.getByTestId('resp-niv').click();
+  await expect(page.getByTestId('resp-niv-interface')).toContainText('IPAP');
+  await expect(page.getByTestId('mode-PSV')).toBeVisible();
+  await page.getByTestId('resp-simple-mask').click();
+  await expect(page.getByTestId('mode-PSV')).toHaveCount(0);
   await page.getByTestId('action-procedures').click();
   await page.getByTestId('case-action-cultures').click();
   await page.evaluate(() => window.__resusEngine?.runFor(90));

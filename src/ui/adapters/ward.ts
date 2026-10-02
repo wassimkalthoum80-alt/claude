@@ -1,6 +1,7 @@
 import type { Difficulty } from '../../game/types';
 import type {
   AntiinfectiveDef,
+  CourseSupport,
   AwareCategory,
   InfectionCase,
   InfectionLibrary,
@@ -577,4 +578,17 @@ export function patientFacts(c: InfectionCase) {
     devices: c.patient.devices ?? [],
     baselineCreatinine: c.patient.baselineCreatinine,
   };
+}
+
+/** The carried respiratory support as one i18n line (device, flow, FiO₂ — estimated for conventional oxygen). */
+export function respSupportText(sp: {
+  respSupport: CourseSupport['respSupport'];
+  airway: CourseSupport['airway'];
+  fio2: number;
+  o2FlowLMin: number | null;
+}): { key: string; vars: Record<string, string | number> } {
+  const vars = { fio2: Math.round(sp.fio2), flow: sp.o2FlowLMin ?? 0 };
+  if (sp.respSupport === 'invasive')
+    return { key: `ward.support.resp.invasive.${sp.airway === 'sga' ? 'sga' : 'ett'}`, vars };
+  return { key: `ward.support.resp.${sp.respSupport}`, vars };
 }

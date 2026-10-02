@@ -1123,17 +1123,22 @@ for k,en,de in [
 ('bridge.endValue','MAP {map} mmHg · HR {hr}/min · SpO₂ {spo2} % at FiO₂ {fio2} % · lactate {lactate} mmol/L','MAP {map} mmHg · HF {hr}/min · SpO₂ {spo2} % bei FiO₂ {fio2} % · Laktat {lactate} mmol/L'),
 ('bridge.row.endNoradrenaline','Running at handover','Läuft bei Übergabe'),
 ('bridge.endNoradrenaline','Noradrenaline {dose} µg/kg/min — stays on (ICU protocol titrates it to MAP ≥ 65 mmHg)','Noradrenalin {dose} µg/kg/min – läuft weiter (Intensivprotokoll titriert auf MAP ≥ 65 mmHg)'),
-('bridge.row.airway','Airway','Atemweg'),
-('bridge.airway.none','spontaneous, no device','spontan, ohne Hilfsmittel'),
-('bridge.airway.mask','oxygen mask','Sauerstoffmaske'),
-('bridge.airway.sga','supraglottic airway','Larynxmaske'),
-('bridge.airway.ett','intubated, ventilated','intubiert, beatmet'),
+('bridge.row.airway','Respiratory support','Atemunterstützung'),
 ('ward.support.label','Support','Unterstützung'),
 ('ward.support.noradrenaline','Noradrenaline {dose} µg/kg/min — titrated to MAP ≥ 65 mmHg by the ICU protocol','Noradrenalin {dose} µg/kg/min – nach Intensivprotokoll auf MAP ≥ 65 mmHg titriert'),
-('ward.support.airway.ett','Intubated and ventilated · FiO₂ {fio2} %','Intubiert und beatmet · FiO₂ {fio2} %'),
-('ward.support.airway.sga','Supraglottic airway · FiO₂ {fio2} %','Larynxmaske · FiO₂ {fio2} %'),
-('ward.support.airway.mask','Oxygen by mask · set FiO₂ {fio2} %','Sauerstoff über Maske · eingestellte FiO₂ {fio2} %'),
 ('nurse.noradrenalineOff','Noradrenaline has been weaned to zero per the ICU protocol and is now off.','Noradrenalin ist nach Intensivprotokoll ausgeschlichen und jetzt aus.'),
+]: a(k,en,de)
+# ── patient continuity part 2: respiratory support 2026-10-03
+for k,en,de in [
+('ward.support.resp.room-air','Room air','Raumluft'),
+('ward.support.resp.nasal-cannula','Nasal cannula {flow} L/min (FiO₂ ≈ {fio2} %, estimated)','Nasenbrille {flow} L/min (FiO₂ ≈ {fio2} %, geschätzt)'),
+('ward.support.resp.simple-mask','Oxygen mask {flow} L/min (FiO₂ ≈ {fio2} %, estimated)','Sauerstoffmaske {flow} L/min (FiO₂ ≈ {fio2} %, geschätzt)'),
+('ward.support.resp.reservoir-mask','Reservoir mask {flow} L/min (FiO₂ ≈ {fio2} %, estimated)','Reservoirmaske {flow} L/min (FiO₂ ≈ {fio2} %, geschätzt)'),
+('ward.support.resp.venturi','Venturi mask, {flow} L/min O₂ (FiO₂ ≈ {fio2} %, estimated)','Venturimaske, {flow} L/min O₂ (FiO₂ ≈ {fio2} %, geschätzt)'),
+('ward.support.resp.hfnc','High-flow oxygen therapy · flow {flow} L/min · FiO₂ {fio2} %','High-Flow-Sauerstofftherapie · Flow {flow} L/min · FiO₂ {fio2} %'),
+('ward.support.resp.niv','NIV by face mask · FiO₂ {fio2} %','NIV über Gesichtsmaske · FiO₂ {fio2} %'),
+('ward.support.resp.invasive.ett','Intubated and ventilated · FiO₂ {fio2} %','Intubiert und beatmet · FiO₂ {fio2} %'),
+('ward.support.resp.invasive.sga','Supraglottic airway, ventilated · FiO₂ {fio2} %','Larynxmaske, beatmet · FiO₂ {fio2} %'),
 ]: a(k,en,de)
 CLS = [('penicillin','Penicillin','Penicillin'),('aminopenicillin','Aminopenicillins','Aminopenicilline'),('aminopenicillin-bli','Aminopenicillin/BLI','Aminopenicillin/BLI'),('ureidopenicillin','Ureidopenicillins','Ureidopenicilline'),('ureidopenicillin-bli','Piperacillin/tazobactam','Piperacillin/Tazobactam'),('isoxazolylpenicillin','Isoxazolyl penicillins','Isoxazolylpenicilline'),('amidinopenicillin','Pivmecillinam','Pivmecillinam'),('ceph1','1st-gen. cephalosporins','Cephalosporine Gr. 1'),('ceph2','2nd-gen. cephalosporins','Cephalosporine Gr. 2'),('ceph3','3rd-gen. cephalosporins','Cephalosporine Gr. 3a'),('ceph3-antipseudomonal','Antipseudomonal cephalosporins','Cephalosporine Gr. 3b'),('ceph4','4th-gen. cephalosporins','Cephalosporine Gr. 4'),('carbapenem-group1','Ertapenem','Ertapenem'),('carbapenem','Carbapenems','Carbapeneme'),('new-bl-bli','New β-lactam/BLI','Neue β-Laktam/BLI'),('siderophore-ceph','Cefiderocol','Cefiderocol'),('fluoroquinolone','Fluoroquinolones','Fluorchinolone'),('aminoglycoside','Aminoglycosides','Aminoglykoside'),('glycopeptide','Glycopeptides','Glykopeptide'),('oxazolidinone','Linezolid','Linezolid'),('lipopeptide','Daptomycin','Daptomycin'),('lincosamide','Clindamycin','Clindamycin'),('nitroimidazole','Metronidazole','Metronidazol'),('tetracycline','Tetracyclines','Tetrazykline'),('glycylcycline','Tigecycline','Tigecyclin'),('macrolide','Macrolides','Makrolide'),('folate-antagonist','Cotrimoxazole','Cotrimoxazol'),('fosfomycin','Fosfomycin','Fosfomycin'),('nitrofuran','Nitrofurantoin','Nitrofurantoin'),('polymyxin','Colistin','Colistin'),('fidaxomicin','Fidaxomicin','Fidaxomicin'),('rifamycin','Rifampicin','Rifampicin'),('azole','Azoles','Azole'),('echinocandin','Echinocandins','Echinocandine')]
 for k,en,de in CLS: a('cls.'+k,en,de)

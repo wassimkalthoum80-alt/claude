@@ -358,6 +358,13 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   pleth (125 Hz) into ring buffers from the current course values — signals from state, never canned arrays; NIBP
   from MAP. `src/ui/screens/ward/WardMonitor.tsx` draws them as sweep traces (`drawSweep`, 25 mm/s) in its own rAF
   loop, with HR / SpO₂ / NIBP / temperature / RR numerics and alarm colours (`wardMonitorView`).
+- **Respiratory support (continuity part 2):** `devices.oxygen` holds the connected support (`RespSupport`: room air,
+  nasal cannula, simple/reservoir/Venturi mask, HFOT, NIV, invasive) and each oxygen device's settings. The airway
+  device stays separate. `SET_RESP_SUPPORT` / `SET_OXYGEN` (and `AIRWAY_REMOVE.then`) change it in the engine;
+  conventional oxygen, HFOT and room air put `VentilatorDevice` in standby (`vent.standby`: no breaths, no pressure,
+  no alarms), where it detects the patient's own breaths from the lung flow; `devices/oxygenTherapy.ts` turns device,
+  settings and that breathing pattern into the inspired FiO₂ the gas exchange uses. The UI panel
+  `RespSupportPanel` follows the support; the ventilator screen and controls render only while it is in use.
 - **Real-time bridge (phase 4; continuity 2026-10-03):** a case with `realtimeAdmission` (B1) can start in the
   emergency department, and any course shock (`view.shock`) offers "take over in real time". One patient, one clock:
   - `useSession.startBridge` dispatches `REALTIME_EPISODE_START` to the course (its clock is held; ward time commands

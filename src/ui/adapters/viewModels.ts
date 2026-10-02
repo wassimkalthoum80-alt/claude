@@ -287,9 +287,12 @@ export function messagesViewModel(s: Readonly<SimulationState>): Message[] {
   if (s.patient.rosc && s.patient.cardio.spontaneousCirculation)
     out.push({ key: 'msg.rosc', tone: 'good' });
   const v = s.devices.ventilator;
-  if (!v.circuitConnected) out.push({ key: 'msg.disconnected', tone: 'bad' });
-  if (v.apnea) out.push({ key: 'msg.backup', tone: 'warn' });
-  if (settingsPending(v)) out.push({ key: 'msg.nextBreath', tone: 'info' });
+  // A ventilator in standby (room air, oxygen device, HFOT) is not disconnected — it is not in use.
+  if (!v.standby) {
+    if (!v.circuitConnected) out.push({ key: 'msg.disconnected', tone: 'bad' });
+    if (v.apnea) out.push({ key: 'msg.backup', tone: 'warn' });
+    if (settingsPending(v)) out.push({ key: 'msg.nextBreath', tone: 'info' });
+  }
   if (s.control.timeScale !== 1 && s.control.timeScale !== 0) {
     out.push({ key: 'msg.speed', vars: { n: s.control.timeScale }, tone: 'info' });
   }

@@ -7,6 +7,7 @@ import type { DirectorState } from '../types/director';
 import type { PatientState } from './PatientState';
 import type { LineState, PumpState } from './PharmacologyState';
 import type { VentilatorState } from './VentilatorState';
+import type { OxygenSupportState } from './OxygenState';
 import type { DefibrillatorState, ResuscitationState } from './ResuscitationState';
 
 /**
@@ -63,6 +64,8 @@ export interface SimulationState {
   devices: {
     monitor: MonitorState;
     ventilator: VentilatorState;
+    /** respiratory support in use (room air, conventional oxygen, HFOT, NIV, invasive) and the oxygen devices */
+    oxygen: OxygenSupportState;
     /** syringe pumps (Perfusor) and volumetric pumps (Infusomat) */
     pumps: PumpState[];
     /** IV line dead space contents */

@@ -34,6 +34,7 @@ import { ActionPanelBody } from '../ResusPanels/ActionFlyout';
 import { ACTION_TITLES } from '../ResusPanels/actionTitles';
 import { Timers } from '../Timers/Timers';
 import { Ventilator } from '../Ventilator/Ventilator';
+import { RespSupportPanel, WhenVentilatorInUse } from '../RespSupport/RespSupportPanel';
 import { VentilatorControls } from '../VentilatorControls/VentilatorControls';
 import styles from './MobileWorkstation.module.css';
 
@@ -153,8 +154,11 @@ export function MobileWorkstation() {
         )}
         {tab === 'vent' && (
           <div className={styles.stack}>
-            <Ventilator />
-            <VentilatorControls />
+            <RespSupportPanel />
+            <WhenVentilatorInUse>
+              <Ventilator />
+              <VentilatorControls />
+            </WhenVentilatorInUse>
           </div>
         )}
         {tab === 'pumps' && (

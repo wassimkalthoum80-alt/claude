@@ -10,6 +10,7 @@ import type {
 } from '../state/VentilatorState';
 import type { VentSettingKey } from '../types/commands';
 import { validateVentSetting } from './ventilatorLimits';
+import { RESTING_DEMAND, type BreathingDemand } from './oxygenTherapy';
 
 /** s — no breath for this long in CPAP/PS → apnoea alarm and backup ventilation */
 export const APNEA_TIME_S = 20;
@@ -20,6 +21,8 @@ const PS_MAX_TI_S = 2.5;
 /** s — shortest pressure-support inspiration before flow-cycling is allowed */
 const PS_MIN_TI_S = 0.25;
 const HISTORY = 8;
+/** cmH2O — FRC-preserving muscle tone of unassisted breathing (recruitment model only) */
+const AWAKE_TONE_CMH2O = 3;
 
 type BreathKind = 'volume' | 'pressure';
 
@@ -58,6 +61,17 @@ export class VentilatorDevice {
 
   reset(vent: VentilatorState, resp: RespState, t: number): void {
     this.leakFraction = 0;
+    this.standbyPressure = 0;
+    this.apparatusDeadSpaceMl = 0;
+    this.spont = {
+      inInspiration: false,
+      startVolume: 0,
+      startTime: 0,
+      peakFlow: 0,
+      lastEnd: -Infinity,
+      starts: [],
+    };
+    this.demand = { ...RESTING_DEMAND };
     this.lung.reset(vent.settings.peep, resp.compliance);
     this.nextMandatory = t;
     this.completedBreaths = 0;
@@ -105,8 +119,111 @@ export class VentilatorDevice {
     if (!connected) this.connectedThroughBreath = false;
   }
 
+  /** cmH2O — airway-opening pressure in standby (HFOT flow; 0 on room air and conventional oxygen) */
+  standbyPressure = 0;
+  /** mL — rebreathed device dead space in standby (simple mask at low flow) */
+  apparatusDeadSpaceMl = 0;
+  private spont = {
+    inInspiration: false,
+    startVolume: 0,
+    startTime: 0,
+    peakFlow: 0,
+    lastEnd: -Infinity,
+    starts: [] as number[],
+  };
+  private demand: BreathingDemand = { ...RESTING_DEMAND };
+
+  /** The patient's own breathing pattern (standby: detected from the lung; otherwise the resting default). */
+  get spontaneousDemand(): BreathingDemand {
+    return this.demand;
+  }
+
+  /** /min — breaths the patient takes on their own (standby only; 0 after 20 s without a breath). */
+  countedRate(t: number): number {
+    const st = this.spont.starts;
+    const last = st[st.length - 1];
+    if (last === undefined || st.length < 2 || t - last > APNEA_TIME_S) return 0;
+    return Math.round(60 / ((last - (st[0] ?? last)) / (st.length - 1)));
+  }
+
+  /**
+   * The ventilator leaves (standby) or takes over the breathing. Standby: no breaths, no pressure, no alarms — the
+   * patient breathes room air or the oxygen device's gas. Taking over starts a fresh breath cycle.
+   */
+  setStandby(vent: VentilatorState, standby: boolean, t: number): void {
+    if (vent.standby === standby) return;
+    vent.standby = standby;
+    vent.apnea = false;
+    if (standby) {
+      vent.circuitConnected = false;
+      this.connectedThroughBreath = false;
+      vent.breathPhase = 'expiration';
+      this.spont.inInspiration = false;
+      this.spont.starts = [];
+    } else {
+      this.expirationStart = t;
+      vent.breathPhase = 'expiration';
+      this.nextMandatory = t + (vent.mode === 'PSV' ? APNEA_TIME_S : 60 / vent.settings.rr);
+    }
+  }
+
+  /**
+   * Standby: the airway opening stays at the device pressure; the patient's effort alone moves gas. Each own breath
+   * is detected from the lung flow (start of inspiration → end of inspiration) for the lung-state model and the
+   * oxygen device (tidal volume, inspiratory time, peak inspiratory flow).
+   */
+  private standbyStep(t: number, dt: number, vent: VentilatorState, resp: RespState): boolean {
+    const lung = this.lung;
+    const c = resp.compliance;
+    const r = lung.flow >= 0 ? resp.resistance : resp.expiratoryResistance;
+    lung.pressureStep(dt, this.standbyPressure, c, r, resp.pmus);
+    const sp = this.spont;
+    const flowLMin = lung.flow * 60;
+    let started = false;
+    if (!sp.inInspiration && flowLMin > 1.5 && t - sp.lastEnd > 0.3) {
+      sp.inInspiration = true;
+      sp.startVolume = lung.volume - lung.flow * dt;
+      sp.startTime = t;
+      sp.peakFlow = 0;
+      // SIM-ASSUMPTION: an awake patient's inspiratory muscle tone keeps the FRC — the recruitment model sees the
+      // end-expiratory pressure plus 3 cmH2O (atelectasis at zero end-expiratory pressure is an anaesthesia finding).
+      this.endExpiratoryPressure = Math.max(0, (sp.startVolume * 1000) / c) + AWAKE_TONE_CMH2O;
+      started = true;
+    }
+    if (sp.inInspiration) {
+      sp.peakFlow = Math.max(sp.peakFlow, flowLMin);
+      if (flowLMin <= 0) {
+        sp.inInspiration = false;
+        sp.lastEnd = t;
+        const vt = (lung.volume - sp.startVolume) * 1000;
+        if (vt > 30) {
+          this.completedBreaths += 1;
+          this.lastTidalVolume = Math.max(0, vt - this.apparatusDeadSpaceMl);
+          this.volumeAtEndInspiration = lung.volume;
+          sp.starts.push(sp.startTime);
+          if (sp.starts.length > 5) sp.starts.shift();
+          const rate = this.countedRate(t);
+          this.demand = {
+            tidalVolume: vt,
+            rate: rate > 0 ? rate : this.demand.rate,
+            inspiratoryTime: t - sp.startTime,
+            peakInspiratoryFlow: sp.peakFlow,
+          };
+        }
+      }
+    }
+    vent.breathPhase = sp.inInspiration ? 'inspiration' : 'expiration';
+    this.peak = Math.max(this.peak, lung.airwayPressure);
+    const peepVolume = (this.standbyPressure * c) / 1000;
+    resp.volumeAboveFRC = (lung.volume - peepVolume) * 1000;
+    resp.airwayPressure = 0;
+    resp.flow = 0;
+    return started;
+  }
+
   /** Advance to time t. Returns true when a new breath started in this sub-step. */
   step(t: number, dt: number, vent: VentilatorState, resp: RespState): boolean {
+    if (vent.standby) return this.standbyStep(t, dt, vent, resp);
     const pmus = resp.pmus;
     let started = false;
 

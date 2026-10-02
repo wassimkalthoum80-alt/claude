@@ -766,10 +766,28 @@ export interface RealtimeEndState {
   lactate: number;
   /** µg/kg/min — noradrenaline running at handover */
   noradrenalineUgKgMin: number;
-  /** % — inspired oxygen set on the mask/ventilator */
+  /**
+   * % — FiO₂ set on the ventilator or HFOT blender; with conventional oxygen the model's estimate of the inspired
+   * oxygen (never an exact delivered value)
+   */
   fio2: number;
   airway: 'none' | 'mask' | 'sga' | 'ett';
+  /** respiratory support connected at handover */
+  support: CourseRespSupport;
+  /** L/min — oxygen-device flow (O₂ flow; HFOT: total gas flow); null with room air or the ventilator */
+  o2FlowLMin: number | null;
 }
+
+/** Respiratory support (same values as the workstation's RespSupport; src/sim/infection stays self-contained). */
+export type CourseRespSupport =
+  | 'room-air'
+  | 'nasal-cannula'
+  | 'simple-mask'
+  | 'reservoir-mask'
+  | 'venturi'
+  | 'hfnc'
+  | 'niv'
+  | 'invasive';
 
 /** Support carried from a real-time episode into the course (shown on the ward; titrated by protocol). */
 export interface CourseSupport {
@@ -778,8 +796,11 @@ export interface CourseSupport {
   /** the infusion is titrated to the MAP target by the ICU protocol (ends when weaned to 0) */
   titrating: boolean;
   airway: RealtimeEndState['airway'];
-  /** % */
+  /** % — set FiO₂ (ventilator, HFOT) or estimated inspired O₂ (conventional oxygen) */
   fio2: number;
+  respSupport: CourseRespSupport;
+  /** L/min — oxygen-device flow, null with room air or the ventilator */
+  o2FlowLMin: number | null;
   /** h — handover time */
   sinceH: number;
 }

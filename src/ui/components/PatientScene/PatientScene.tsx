@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useRef, type ReactNode } from 'react';
-import type { SimulationState } from '../../../sim';
+import type { RespSupport, SimulationState } from '../../../sim';
 import { dynamicVisualState, staticVisualState } from '../../adapters/patientVisualState';
 import { useDisplay, useFrame } from '../../hooks/EngineContext';
 import { useUi } from '../../hooks/UiContext';
@@ -82,6 +82,7 @@ export function PatientScene() {
         electrodes: v.electrodes,
         ecgLeads: v.ecgLeads,
         airway: v.airwayDevice,
+        support: v.respSupport,
       };
     },
     [ui.electrodes],
@@ -381,6 +382,9 @@ export function PatientScene() {
           </g>
         )}
 
+        {/* oxygen devices and the NIV mask (the patient breathes on their own; the ventilator stands by) */}
+        <OxygenDevice support={vis.support} />
+
         {/* surgical cap */}
         <path d={CAP} fill="url(#capPleats)" />
         <path d={CAP} fill="url(#capShade)" />
@@ -490,5 +494,81 @@ export function PatientScene() {
         </Layer>
       )}
     </div>
+  );
+}
+
+/** Conventional oxygen, HFOT and the NIV face mask over mouth and nose (head-end view: chin at the top). */
+function OxygenDevice({ support }: { support: RespSupport }) {
+  if (support === 'room-air' || support === 'invasive') return null;
+  const tubing = (width: number, color: string) => (
+    <path
+      d="M800 790 C760 760 700 740 640 700 C590 668 560 640 540 600"
+      stroke={color}
+      strokeWidth={width}
+      fill="none"
+      strokeLinecap="round"
+      opacity="0.85"
+    />
+  );
+  if (support === 'nasal-cannula' || support === 'hfnc') {
+    const w = support === 'hfnc' ? 9 : 3;
+    return (
+      <g data-device={support}>
+        <path
+          d={`M788 850 C760 852 720 860 690 872 M812 850 C840 852 880 860 910 872`}
+          stroke="#cfe6f2"
+          strokeWidth={w}
+          fill="none"
+          strokeLinecap="round"
+          opacity="0.9"
+        />
+        <circle cx="788" cy="852" r={w * 0.9} fill="#e6f3fa" />
+        <circle cx="812" cy="852" r={w * 0.9} fill="#e6f3fa" />
+        <path
+          d="M690 872 C660 840 650 800 640 700"
+          stroke="#cfe6f2"
+          strokeWidth={w}
+          fill="none"
+          opacity="0.8"
+        />
+        {support === 'hfnc' && tubing(16, '#bcd3e0')}
+      </g>
+    );
+  }
+  const niv = support === 'niv';
+  return (
+    <g data-device={support}>
+      <path
+        d="M712 846 C690 880 700 928 728 936 M888 846 C910 880 900 928 872 936"
+        stroke="#3f5a6e"
+        strokeWidth="5"
+        fill="none"
+        opacity="0.8"
+      />
+      <ellipse
+        cx="800"
+        cy="840"
+        rx={niv ? 70 : 58}
+        ry={niv ? 62 : 52}
+        fill={niv ? 'rgba(200,225,240,0.5)' : 'rgba(200,235,225,0.4)'}
+        stroke={niv ? '#7fa7c2' : '#8cc9b4'}
+        strokeWidth="3"
+      />
+      {support === 'reservoir-mask' && (
+        <ellipse
+          cx="800"
+          cy="748"
+          rx="34"
+          ry="44"
+          fill="rgba(150,210,190,0.45)"
+          stroke="#8cc9b4"
+          strokeWidth="2"
+        />
+      )}
+      {support === 'venturi' && (
+        <rect x="788" y="772" width="24" height="20" rx="3" fill="#3aa0e0" />
+      )}
+      {niv ? tubing(30, '#e3ebf0') : tubing(5, '#cfe6f2')}
+    </g>
   );
 }

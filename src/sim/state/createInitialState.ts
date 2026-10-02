@@ -3,12 +3,14 @@ import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS, OXYGEN } from '../physiol
 import { TROPONIN_BASELINE_NG_L } from '../physiology/HeartLungModel';
 import { CPR_PRESETS } from '../interventions/cprQuality';
 import { defaultAlarmLimits } from '../devices/alarmLimits';
+import { initialOxygenSupport, ventilatorInUse } from '../devices/oxygenTherapy';
 import { emptyPharmacology } from '../pharmacology/PharmacologyModel';
 import { defaultPatientFactors, initialCerebralState } from '../brain/CerebralModel';
 import { initialBisState } from '../devices/BisMonitor';
 import { defaultFluidFactors, initialBalance, initialBodyFluid } from '../fluid/init';
 import { getProduct } from '../pharmacology/formulary/products';
 import type { PumpState } from './PharmacologyState';
+import type { RespSupport } from './OxygenState';
 import type { HeartLungCalibration } from './SimulationState';
 import type { ScenarioDefinition } from '../types/scenario';
 import { predictedBodyWeight } from './PatientState';
@@ -24,6 +26,9 @@ export function createInitialState(
   guidelineFirstShockJ = 150,
 ): SimulationState {
   const p = scenario.patient;
+  const support: RespSupport =
+    scenario.oxygen?.support ??
+    (p.airway === 'none' ? 'room-air' : p.airway === 'mask' ? 'niv' : 'invasive');
   const lungPreset = p.lungPreset ?? 'normal';
   const lung = LUNG_PRESETS[lungPreset];
   const severity = lungPreset === 'bronchospasm' ? (p.obstructionSeverity ?? 1) : 1;
@@ -220,10 +225,12 @@ export function createInitialState(
         breathCount: 0,
         pressureLimited: false,
         prvcPressure: 10,
-        // Without an airway device the ventilator is not connected to the patient.
-        circuitConnected: p.airway !== 'none',
+        // The ventilator is connected only when it is the support in use and an airway device is in place.
+        circuitConnected: ventilatorInUse(support) && p.airway !== 'none',
+        standby: !ventilatorInUse(support),
         apnea: false,
       },
+      oxygen: initialOxygenSupport(support, scenario.oxygen ?? {}),
       pumps: initialPumps(scenario),
       line: { extensionMl: 0.5, commonMl: 2, extension: {}, common: {}, flushRemainingMl: 0 },
       defib: initialDefibrillator(guidelineFirstShockJ, scenario.padsAttached ?? false),

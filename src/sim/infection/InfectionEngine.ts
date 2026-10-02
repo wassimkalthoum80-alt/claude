@@ -702,6 +702,8 @@ export class InfectionEngine {
       maxNoradrenaline: Math.max(COURSE.support.naMax, na),
       airway: e.airway,
       fio2: e.fio2,
+      respSupport: e.support,
+      o2FlowLMin: e.o2FlowLMin,
       sinceH: this.t,
       carry: {
         map: e.map - (base.map + noradrenalineEffect(na)),
@@ -1616,6 +1618,8 @@ function publicSupport(sp: CarriedSupport): CourseSupport {
     titrating: sp.titrating,
     airway: sp.airway,
     fio2: sp.fio2,
+    respSupport: sp.respSupport,
+    o2FlowLMin: sp.o2FlowLMin,
     sinceH: sp.sinceH,
   };
 }

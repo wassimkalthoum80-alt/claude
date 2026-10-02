@@ -1,5 +1,7 @@
 import {
   getProduct,
+  isOxygenDevice,
+  ventilatorInUse,
   type Command,
   type InfectionCommand,
   type LogEntry,
@@ -37,7 +39,7 @@ export interface BridgeSample {
   lactate: number;
   /** % — true arterial saturation */
   spo2: number;
-  /** % — inspired oxygen fraction set on the ventilator/mask */
+  /** % — inspired oxygen: set on the ventilator, or the oxygen device's estimate in standby */
   fio2: number;
 }
 
@@ -88,7 +90,10 @@ export class BridgeRecorder {
       noradrenaline: noradrenalineRate(s),
       lactate: s.patient.gas.lactate,
       spo2: s.patient.gas.spo2,
-      fio2: s.devices.ventilator.active.fio2,
+      // inspired oxygen of the support in use (oxygen devices: the model estimate)
+      fio2: s.devices.ventilator.standby
+        ? s.devices.oxygen.inspiredO2
+        : s.devices.ventilator.active.fio2,
     });
   }
 
@@ -181,13 +186,28 @@ export function realtimeOutcome(
       spo2: round1(s.patient.gas.spo2),
       lactate: round1(s.patient.gas.lactate),
       noradrenalineUgKgMin: Math.round(noradrenalineRate(s) * 1000) / 1000,
-      fio2: s.devices.ventilator.active.fio2,
+      ...endSupport(s),
       airway: s.patient.airway.device,
     },
   };
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+
+/** The respiratory support at handover: device, its flow and the FiO₂ (set, or estimated for conventional oxygen). */
+function endSupport(
+  s: Readonly<SimulationState>,
+): Pick<RealtimeOutcome['end'], 'support' | 'o2FlowLMin' | 'fio2'> {
+  const o = s.devices.oxygen;
+  if (ventilatorInUse(o.support))
+    return { support: o.support, o2FlowLMin: null, fio2: s.devices.ventilator.active.fio2 };
+  if (!isOxygenDevice(o.support)) return { support: o.support, o2FlowLMin: null, fio2: 21 };
+  return {
+    support: o.support,
+    o2FlowLMin: o.flowLMin[o.support],
+    fio2: o.support === 'hfnc' ? o.hfncFio2 : Math.round(o.inspiredO2),
+  };
+}
 
 /** An antibiotic named at the handover (a reserve drug carries its justification). */
 export type HandoverDrug = Extract<InfectionCommand, { type: 'START_ANTIINFECTIVE' }>;

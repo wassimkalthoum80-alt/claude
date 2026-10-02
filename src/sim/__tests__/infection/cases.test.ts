@@ -272,7 +272,9 @@ describe('bridge hooks in the course', () => {
           lactate: 2.4,
           noradrenalineUgKgMin: 0.1,
           fio2: 40,
-          airway: 'mask',
+          airway: 'none',
+          support: 'simple-mask',
+          o2FlowLMin: 6,
         },
       },
     });

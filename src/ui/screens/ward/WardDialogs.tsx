@@ -17,6 +17,7 @@ import {
   type ConsultQuestion,
   type FailureAction,
   type WardNotice,
+  respSupportText,
 } from '../../adapters/ward';
 import { useTk } from './useWard';
 import styles from './Ward.module.css';
@@ -561,7 +562,18 @@ export function HandoverDialog({
               ? tk('bridge.endNoradrenaline', { dose: outcome.end.noradrenalineUgKgMin })
               : tk('bridge.none'),
           ],
-          ['bridge.row.airway', tk(`bridge.airway.${outcome.end.airway}`)],
+          [
+            'bridge.row.airway',
+            (() => {
+              const line = respSupportText({
+                respSupport: outcome.end.support,
+                airway: outcome.end.airway,
+                fio2: outcome.end.fio2,
+                o2FlowLMin: outcome.end.o2FlowLMin,
+              });
+              return tk(line.key, line.vars);
+            })(),
+          ],
         ] as [string, string][])
       : []),
     [

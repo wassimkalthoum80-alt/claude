@@ -6,6 +6,13 @@ import { AlarmEngine } from '../devices/AlarmEngine';
 import { autoAlarmLimits, defaultAlarmLimits, setAlarmLimit } from '../devices/alarmLimits';
 import { MonitorDevice } from '../devices/MonitorDevice';
 import { VentilatorDevice } from '../devices/VentilatorDevice';
+import {
+  clampOxygenFlow,
+  HFNC_FIO2,
+  oxygenDelivery,
+  ventilatorInUse,
+} from '../devices/oxygenTherapy';
+import { VENTURI_ADAPTERS, type RespSupport } from '../state/OxygenState';
 import { CPREngine } from '../interventions/CPREngine';
 import { arrestVasopressorTone, CardiovascularModel } from '../physiology/CardiovascularModel';
 import { BloodGasModel, type GasExchangeInputs } from '../physiology/BloodGasModel';
@@ -43,8 +50,12 @@ import {
   type Validation,
 } from '../pharmacology/validation';
 import { ECG } from '../physiology/parameters';
-import { clamp } from '../physiology/shapes';
-import { RespiratoryDriveModel } from '../physiology/RespiratoryDrive';
+import { approach, clamp } from '../physiology/shapes';
+import {
+  RespiratoryDriveModel,
+  UNASSISTED_EFFORT,
+  unassistedEffortTarget,
+} from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
 import { obstructiveFilling } from '../physiology/obstruction';
 import { isResusCommand, ResuscitationController } from './ResuscitationController';
@@ -184,6 +195,8 @@ export class SimulationEngine {
   private version = 0;
   private snapshotVersion = -1;
   private loads = 0;
+  /** multiplier of the spontaneous effort (unassisted breathing: awake calibration × chemoreflex) */
+  private effortGain = 1;
   private snapshot: SimulationState;
 
   constructor(options: EngineOptions) {
@@ -210,8 +223,21 @@ export class SimulationEngine {
       logEvent: (e, t, detail) => engine.logEvent(e, t, detail),
       startCpr: () => engine.cpr.start(engine.state.interventions.cpr, engine.state.time),
       stopCpr: () => engine.cpr.stop(engine.state.interventions.cpr),
-      setCircuit: (connected) =>
-        engine.ventilator.setCircuit(engine.state.devices.ventilator, connected),
+      setCircuit: (connected) => {
+        const st = engine.state;
+        // A placed airway device is connected to the ventilator: it takes over the breathing.
+        if (connected && st.devices.ventilator.standby) {
+          const support = st.patient.airway.device === 'mask' ? 'niv' : 'invasive';
+          engine.ventilator.setStandby(st.devices.ventilator, false, st.time);
+          engine.logEvent(
+            'RESP_SUPPORT_CHANGED',
+            st.time,
+            `${st.devices.oxygen.support}→${support}`,
+          );
+          st.devices.oxygen.support = support;
+        }
+        engine.ventilator.setCircuit(st.devices.ventilator, connected);
+      },
       setLeak: (f) => {
         engine.ventilator.leakFraction = f;
       },
@@ -361,6 +387,7 @@ export class SimulationEngine {
         this.rng,
         s.patient.pharmacology.effects.respiratoryDrive,
         s.patient.pharmacology.effects.diaphragmBlock,
+        this.effortGain,
       );
       if (this.ventilator.step(t, SUBSTEP_S, vent, s.patient.resp)) {
         this.monitor.onBreathStart(this.bank, t, vent.circuitConnected);
@@ -421,6 +448,7 @@ export class SimulationEngine {
     );
     this.cpr.slowUpdate(cprState, s.time, TICK_S);
     this.updatePharmacology(TICK_S);
+    this.updateOxygenSupport();
     this.lungState.update(s.patient, this.ventilator.readout(), s.time, TICK_S);
     this.bloodGas.update(s.patient.gas, this.gasInputs(), TICK_S);
     const transition = this.heartLung.update(
@@ -595,13 +623,18 @@ export class SimulationEngine {
     this.cardio.reset(s.patient.cardio);
     this.lungState.reset(s.patient, s.devices.ventilator);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
+    this.effortGain = s.devices.ventilator.standby ? UNASSISTED_EFFORT.calibration : 1;
+    this.updateOxygenSupport();
     this.bloodGas.reset(s.patient.gas, this.gasInputs());
     if (scenario.patient.initialPaco2 !== undefined)
       this.bloodGas.setCo2(s.patient.gas, this.gasInputs(), scenario.patient.initialPaco2);
     if (scenario.patient.initialSpo2 !== undefined)
       this.bloodGas.setO2(s.patient.gas, this.gasInputs(), scenario.patient.initialSpo2);
     this.heartLung.reset(s.patient, scenario.patient.heartRate);
-    s.devices.monitor.numerics.etco2 = Math.round(s.patient.gas.etco2);
+    // No capnography without the ventilator circuit (room air, oxygen devices, HFOT).
+    s.devices.monitor.numerics.etco2 = s.devices.ventilator.standby
+      ? null
+      : Math.round(s.patient.gas.etco2);
     if (s.devices.monitor.numerics.spo2 !== null)
       s.devices.monitor.numerics.spo2 = Math.round(s.patient.gas.spo2);
     this.drive.reset();
@@ -623,7 +656,11 @@ export class SimulationEngine {
   private apply(command: Command, source: CommandSource): void {
     const s = this.state;
     if (isResusCommand(command)) {
+      const hadAirway = s.patient.airway.device !== 'none' || s.patient.airway.insertion !== null;
       this.resus.apply(command, source);
+      // Extubation names the support that follows (default room air) — never an implied ventilator mode.
+      if (command.type === 'AIRWAY_REMOVE' && hadAirway)
+        this.setRespSupport(command.then ?? 'room-air');
       return;
     }
     switch (command.type) {
@@ -648,6 +685,23 @@ export class SimulationEngine {
       case 'SET_CIRCUIT':
         this.ventilator.setCircuit(s.devices.ventilator, command.connected);
         break;
+      case 'SET_RESP_SUPPORT':
+        this.setRespSupport(command.support);
+        break;
+      case 'SET_OXYGEN': {
+        const o = s.devices.oxygen;
+        if (command.flowLMin !== undefined)
+          o.flowLMin[command.device] = clampOxygenFlow(command.device, command.flowLMin);
+        if (command.hfncFio2 !== undefined && Number.isFinite(command.hfncFio2))
+          o.hfncFio2 = clamp(Math.round(command.hfncFio2), HFNC_FIO2.min, HFNC_FIO2.max);
+        if (
+          command.venturiPercent !== undefined &&
+          VENTURI_ADAPTERS.includes(command.venturiPercent)
+        )
+          o.venturiPercent = command.venturiPercent;
+        this.updateOxygenSupport();
+        break;
+      }
       case 'SET_LUNG':
         // Mechanics, shunt and recruitability follow from the preset in the lung-state model.
         s.patient.resp.lungPreset = command.preset;
@@ -1156,13 +1210,85 @@ export class SimulationEngine {
     }
   }
 
+  /**
+   * Connect a respiratory support. Conventional oxygen, HFOT and room air put the ventilator in standby (a face mask
+   * used for NIV is taken off); NIV puts a face mask on (not over a tube); invasive ventilation needs a tube or
+   * supraglottic airway in place. The previous support stops acting; its settings are kept for later.
+   */
+  private setRespSupport(support: RespSupport): void {
+    const s = this.state;
+    const air = s.patient.airway;
+    const vent = s.devices.ventilator;
+    const o = s.devices.oxygen;
+    const tube = air.device === 'ett' || air.device === 'sga';
+    const reject = (why: string) =>
+      this.logEvent('COMMAND_REJECTED', s.time, `SET_RESP_SUPPORT|${support}|${why}`);
+    if (support === 'invasive' && !tube) return reject('no-tube');
+    if (support === 'niv' && tube) return reject('tube-in-place');
+    // SIM-ASSUMPTION: oxygen through a T-piece on a tube is not modelled — a tube in place stays on the ventilator.
+    if (!ventilatorInUse(support) && tube) return reject('tube-in-place');
+    const from = o.support;
+    if (support === 'niv') {
+      if (air.device === 'none' && !air.insertion) {
+        air.device = 'mask';
+        air.position = 'correct';
+      }
+      if (vent.mode !== 'PSV') this.ventilator.setMode(vent, 'PSV', s.patient.resp);
+      this.ventilator.setStandby(vent, false, s.time);
+      this.ventilator.setCircuit(vent, true);
+    } else if (support === 'invasive') {
+      this.ventilator.setStandby(vent, false, s.time);
+      this.ventilator.setCircuit(vent, true);
+    } else {
+      if (air.device === 'mask') air.device = 'none';
+      this.ventilator.setStandby(vent, true, s.time);
+    }
+    o.support = support;
+    this.updateOxygenSupport();
+    if (from !== support) this.logEvent('RESP_SUPPORT_CHANGED', s.time, `${from}→${support}`);
+  }
+
+  /** 10 Hz: inspired oxygen, HFOT pressure and advisories of the connected oxygen support. */
+  private updateOxygenSupport(): void {
+    const s = this.state;
+    const o = s.devices.oxygen;
+    const vent = s.devices.ventilator;
+    // Unassisted breathing: awake effort with a chemoreflex; with the ventilator in use the gain returns to 1.
+    const gainTarget = vent.standby ? unassistedEffortTarget(s.patient.gas.paco2) : 1;
+    this.effortGain = approach(this.effortGain, gainTarget, TICK_S, UNASSISTED_EFFORT.tauS);
+    if (vent.standby) {
+      const demand = this.ventilator.spontaneousDemand;
+      const d = oxygenDelivery(o, demand);
+      o.inspiredO2 = Math.round(d.fio2 * 1000) / 10;
+      o.airwayPressure = Math.round(d.airwayPressure * 10) / 10;
+      o.warnings = d.warnings;
+      o.peakInspiratoryFlowLMin = Math.round(demand.peakInspiratoryFlow);
+      o.countedRate = this.ventilator.countedRate(s.time);
+      this.ventilator.standbyPressure = d.airwayPressure;
+      this.ventilator.apparatusDeadSpaceMl = d.apparatusDeadSpaceMl;
+    } else {
+      o.inspiredO2 = vent.circuitConnected ? vent.active.fio2 : 21;
+      o.airwayPressure = 0;
+      o.warnings = [];
+      o.countedRate = vent.measured.rrTotal;
+      this.ventilator.standbyPressure = 0;
+      this.ventilator.apparatusDeadSpaceMl = 0;
+    }
+  }
+
   private gasInputs(): GasExchangeInputs {
     const p = this.state.patient;
     const vent = this.state.devices.ventilator;
     return {
       cardiacOutput: p.cardio.cardiacOutput,
       alveolarVentilation: p.gas.alveolarVentilation,
-      fio2: vent.circuitConnected ? vent.active.fio2 / 100 : 0.21,
+      // Standby (room air, conventional oxygen, HFOT): the oxygen device's inspired fraction; an open circuit
+      // otherwise breathes room air.
+      fio2: vent.standby
+        ? this.state.devices.oxygen.inspiredO2 / 100
+        : vent.circuitConnected
+          ? vent.active.fio2 / 100
+          : 0.21,
       shunt: p.gas.shunt,
       lungGasVolume: p.gas.lungGasVolume,
       alveolarDeadSpace: p.gas.alveolarDeadSpace,

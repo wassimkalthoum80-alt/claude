@@ -16,6 +16,7 @@ import {
   proactivePrompts,
   wardTime,
   type FailureAction,
+  respSupportText,
 } from '../../adapters/ward';
 import { useSession } from '../../hooks/useSession';
 import { useUi, WORKSPACE_CLOSED } from '../../hooks/UiContext';
@@ -407,8 +408,10 @@ function SupportLine({ support }: { support: CourseSupport }) {
   const items: string[] = [];
   if (support.noradrenalineUgKgMin > 0)
     items.push(tk('ward.support.noradrenaline', { dose: support.noradrenalineUgKgMin }));
-  if (support.airway !== 'none')
-    items.push(tk(`ward.support.airway.${support.airway}`, { fio2: support.fio2 }));
+  if (support.respSupport !== 'room-air') {
+    const line = respSupportText(support);
+    items.push(tk(line.key, line.vars));
+  }
   if (items.length === 0) return null;
   return (
     <p className={styles.support} data-testid="ward-support">

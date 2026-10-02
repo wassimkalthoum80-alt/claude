@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
-import type { SimulationState } from '../../../sim';
+import { RESP_SUPPORTS, type RespSupport, type SimulationState } from '../../../sim';
 import {
   airwayView,
   auscultate,
@@ -45,6 +45,8 @@ export function AirwayPanel() {
   );
   const [lungs, setLungs] = useState<Auscultation | null>(null);
   const [epi, setEpi] = useState<Auscultation['epigastric'] | null>(null);
+  /** the support after removal — extubation names it; there is no implied return to room air */
+  const [then, setThen] = useState<RespSupport | ''>('');
   const user = (c: Parameters<typeof engine.dispatch>[0]) => engine.dispatch(c, 'user');
 
   const listenLungs = () => {
@@ -115,12 +117,34 @@ export function AirwayPanel() {
           <button
             type="button"
             className={styles.btn}
-            disabled={v.device === 'none' && !busy}
-            onClick={() => user({ type: 'AIRWAY_REMOVE' })}
+            disabled={(v.device === 'none' && !busy) || then === ''}
+            onClick={() => {
+              if (then === '') return;
+              user({ type: 'AIRWAY_REMOVE', then });
+              setThen('');
+            }}
+            data-testid="airway-remove"
           >
             {t('air.remove')}
           </button>
         </div>
+        <label className={styles.row} style={{ marginTop: 4 }}>
+          <span className={styles.dim}>{t('air.then')}</span>
+          <select
+            value={then}
+            onChange={(e) => setThen(e.currentTarget.value as RespSupport | '')}
+            disabled={v.device === 'none' && !busy}
+            data-testid="airway-remove-then"
+            aria-label={t('air.thenChoose')}
+          >
+            <option value="">{t('air.thenChoose')}</option>
+            {RESP_SUPPORTS.filter((x) => x !== 'invasive').map((x) => (
+              <option key={x} value={x}>
+                {t(`resp.support.${x}`)}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className={styles.faint} style={{ marginTop: 4 }}>
           {t('air.hint')}
         </div>

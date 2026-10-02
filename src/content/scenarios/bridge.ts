@@ -61,12 +61,12 @@ export function bridgeScenario(
       weightKg: patient.weightKg,
       heightCm: patient.sex === 'female' ? 163 : 176,
       heartRate: Math.round(preset.heartRate),
-      // SIM-ASSUMPTION: the awake patient on a conventional oxygen mask breathes spontaneously without any imposed
-      // positive pressure (PS 0 / PEEP 0 cmH2O) at FiO2 ≈ 40 %; NIV would be a separate, labelled configuration.
-      airway: 'mask',
+      // The awake patient breathes spontaneously on a simple oxygen mask (6 L/min): no airway device, the
+      // ventilator stands by (no imposed breaths or pressure); NIV is a separate support the learner can choose.
+      airway: 'none',
       factors: { temperatureC: preset.temperatureC },
     },
-    ventilator: { ...base.ventilator, ps: 0, peep: 0, fio2: 40 },
+    oxygen: { support: 'simple-mask', flowLMin: { 'simple-mask': 6 } },
     // No sedation in the emergency department; the noradrenaline syringe is ready but off.
     pumps: (base.pumps ?? [])
       .filter((p) => p.id !== 'P1' && p.id !== 'P2')
@@ -80,12 +80,7 @@ export function bridgeScenario(
       },
     },
     // Septic tachypnoea: strong spontaneous drive (unsupported breaths, no backup ventilation).
-    timeline: continuation
-      ? []
-      : [
-          { at: 0, command: { type: 'SET_VENT_MODE', mode: 'PSV' } },
-          { at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'strong' } },
-        ],
+    timeline: continuation ? [] : [{ at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'strong' } }],
     actions: [
       {
         id: 'cultures',

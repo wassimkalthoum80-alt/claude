@@ -31,6 +31,7 @@ export class RespiratoryDriveModel {
    * cmH2O at time t.
    * @param driveFactor 0..1 respiratory drive left after opioids/hypnotics
    * @param diaphragmBlock 0..1 neuromuscular block of the diaphragm
+   * @param effortGain multiplier of the effort (unassisted breathing: awake calibration × chemoreflex)
    * SIM-ASSUMPTION: drug depression slows the rate (factor^0.7) more than it weakens each effort (factor^0.3);
    * below 2 breaths/min the patient is apnoeic. Neuromuscular block weakens the effort, not the drive.
    */
@@ -41,12 +42,13 @@ export class RespiratoryDriveModel {
     rng: SeededRng,
     driveFactor = 1,
     diaphragmBlock = 0,
+    effortGain = 1,
   ): number {
     const base = DRIVE_PATTERNS[arrested ? 'none' : drive];
     const rate = base.rate * Math.max(0, driveFactor) ** 0.7;
     const p = {
       rate: rate < 2 ? 0 : rate,
-      pmus: base.pmus * Math.max(0, driveFactor) ** 0.3 * (1 - diaphragmBlock),
+      pmus: base.pmus * Math.max(0, driveFactor) ** 0.3 * (1 - diaphragmBlock) * effortGain,
       duration: base.duration,
     };
     if (p.rate === 0 || p.pmus < 0.2) {
@@ -66,4 +68,18 @@ export class RespiratoryDriveModel {
     if (u < 0 || u >= 1) return 0;
     return this.amplitude * Math.sin(Math.PI * u);
   }
+}
+
+/**
+ * SIM-ASSUMPTION: effort gain of a patient breathing without the ventilator (room air, conventional oxygen, HFOT).
+ * The drive patterns above are calibrated for breathing through the ventilator circuit (tube, anaesthetised
+ * mechanics); breathing unassisted the awake patient's effort is ×1.8 of that, and a chemoreflex scales it with
+ * PaCO₂ (×(1 + 0.08 per mmHg above 40), bounded 0.5–2) so that tidal volume and rate are the patient's own response.
+ * The gain follows with a 20-s time constant; with the ventilator in use it returns to 1.
+ */
+export const UNASSISTED_EFFORT = { calibration: 1.8, perMmHg: 0.08, min: 0.5, max: 2, tauS: 20 };
+
+export function unassistedEffortTarget(paco2: number): number {
+  const u = UNASSISTED_EFFORT;
+  return u.calibration * Math.min(u.max, Math.max(u.min, 1 + u.perMmHg * (paco2 - 40)));
 }

@@ -116,6 +116,23 @@ export type {
 } from './state/VentilatorState';
 export { VENT_MODES } from './state/VentilatorState';
 export type {
+  OxygenDevice,
+  OxygenSupportState,
+  OxygenWarning,
+  RespSupport,
+  VenturiAdapter,
+} from './state/OxygenState';
+export { RESP_SUPPORTS, VENTURI_ADAPTERS } from './state/OxygenState';
+export {
+  HFNC_FIO2,
+  OXYGEN_DEVICES,
+  VENTURI_REQUIRED_FLOW,
+  isOxygenDevice,
+  oxygenDelivery,
+  ventilatorInUse,
+  type BreathingDemand,
+} from './devices/oxygenTherapy';
+export type {
   CPRState,
   CprQualityPreset,
   CprFault,

@@ -14,6 +14,7 @@ import type { AlarmLimitBound, AlarmLimitParam, EcgLeadSet } from '../state/Moni
 import type { VentMode } from '../state/VentilatorState';
 import type { AirwayPosition, DefibMode, Side } from '../state/ResuscitationState';
 import type { AirwayDevice } from '../state/PatientState';
+import type { OxygenDevice, RespSupport, VenturiAdapter } from '../state/OxygenState';
 
 /** What the trainee concluded at the end of a rhythm check. */
 export type RhythmCheckAssessment = 'shockable' | 'nonShockable' | 'pulse';
@@ -56,6 +57,19 @@ export type Command =
   | { type: 'SET_VENT_SETTING'; key: VentSettingKey; value: number }
   | { type: 'SET_VENT_MODE'; mode: VentMode }
   | { type: 'SET_CIRCUIT'; connected: boolean }
+  /**
+   * respiratory support connected to the patient: room air, conventional oxygen, HFOT (ventilator in standby), NIV
+   * through a face mask, or invasive ventilation (needs a tube or supraglottic airway)
+   */
+  | { type: 'SET_RESP_SUPPORT'; support: RespSupport }
+  /** settings of an oxygen device (L/min, HFOT FiO₂ %, Venturi adapter %); each device keeps its own */
+  | {
+      type: 'SET_OXYGEN';
+      device: OxygenDevice;
+      flowLMin?: number;
+      hfncFio2?: number;
+      venturiPercent?: VenturiAdapter;
+    }
   | { type: 'SET_LUNG'; preset: LungPreset }
   | { type: 'SET_RESP_DRIVE'; drive: RespiratoryDrive }
   | { type: 'SET_RHYTHM'; rhythm: RhythmId }
@@ -142,7 +156,8 @@ export type Command =
   | { type: 'DRUG_PUSH'; productId: string; dose: number; unit: DoseUnit }
   /** place an airway device; `position` (instructor/scenario only) forces where a tube ends up */
   | { type: 'AIRWAY_INSERT'; device: Exclude<AirwayDevice, 'none'>; position?: AirwayPosition }
-  | { type: 'AIRWAY_REMOVE' }
+  /** remove the airway device; `then` = the support connected next (extubation names it; default room air) */
+  | { type: 'AIRWAY_REMOVE'; then?: RespSupport }
   /** cm — pull the tracheal tube back (corrects an endobronchial position) */
   | { type: 'TUBE_WITHDRAW'; cm: number }
   | { type: 'ASSESS'; kind: AssessmentKind }
@@ -252,6 +267,8 @@ export type ClinicalEventType =
   /** an airway device is in place (detail: "device|position") */
   | 'AIRWAY_PLACED'
   | 'AIRWAY_REMOVED'
+  /** respiratory support changed (detail: "from→to") — trend marker */
+  | 'RESP_SUPPORT_CHANGED'
   /** gastric distension led to regurgitation (detail: mL of gastric air) */
   | 'REGURGITATION'
   /** a bedside examination was performed (detail: kind) */

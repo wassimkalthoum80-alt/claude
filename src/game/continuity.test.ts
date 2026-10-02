@@ -44,7 +44,9 @@ const END: RealtimeEndState = {
   lactate: 3.4,
   noradrenalineUgKgMin: 0.3,
   fio2: 40,
-  airway: 'mask',
+  airway: 'none',
+  support: 'simple-mask',
+  o2FlowLMin: 6,
 };
 const outcome = (over: Partial<RealtimeOutcome> = {}): RealtimeOutcome => ({
   survived: true,
@@ -153,7 +155,12 @@ describe('the course continues from the handover state', () => {
       noradrenaline: 0.3,
     });
     expect(v.vasopressor).toBe(true);
-    expect(v.support).toMatchObject({ noradrenalineUgKgMin: 0.3, titrating: true, airway: 'mask' });
+    expect(v.support).toMatchObject({
+      noradrenalineUgKgMin: 0.3,
+      titrating: true,
+      respSupport: 'simple-mask',
+      o2FlowLMin: 6,
+    });
     expect(slow.getView().vitals.at(-1)).toEqual(v.vitals.at(-1));
     // One hour later: still dependent, weaned at most one protocol step, pressure held near the target.
     runTo(quick, quick.timeH + 1);

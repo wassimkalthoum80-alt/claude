@@ -1,4 +1,4 @@
-import type { AirwayDevice, ReadonlySignalBank, SimulationState } from '../../sim';
+import type { AirwayDevice, ReadonlySignalBank, RespSupport, SimulationState } from '../../sim';
 
 /**
  * Everything a patient-scene renderer may know. The scene never reads raw physiology: swapping the SVG
@@ -14,6 +14,8 @@ export interface PatientVisualState {
   /** someone's hands are on the chest */
   rescuerHands: boolean;
   airwayDevice: AirwayDevice;
+  /** connected respiratory support (oxygen devices are drawn on the face) */
+  respSupport: RespSupport;
   /** 0..1 skin perfusion (1 = pink, 0 = pale/grey) */
   skinPerfusion: number;
   electrodes: 'IEC' | 'AHA';
@@ -30,6 +32,7 @@ export function staticVisualState(
   return {
     rescuerHands: s.interventions.cpr.active,
     airwayDevice: s.patient.airway.device,
+    respSupport: s.devices.oxygen.support,
     skinPerfusion: Math.min(1, s.patient.cardio.cardiacOutput / 5),
     electrodes,
     ecgLeads: s.devices.monitor.ecgLeads,

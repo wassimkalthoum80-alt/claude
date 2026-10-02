@@ -289,7 +289,11 @@ describe('markers and bridge', () => {
         airway: { device: 'mask' },
         demographics: { weightKg: 70 },
       },
-      devices: { pumps: [], ventilator: { measured: { rrTotal: 22 }, active: { fio2: 40 } } },
+      devices: {
+        pumps: [],
+        ventilator: { measured: { rrTotal: 22 }, active: { fio2: 40 } },
+        oxygen: { support: 'simple-mask', flowLMin: { 'simple-mask': 6 }, inspiredO2: 45 },
+      },
     } as unknown as Parameters<typeof realtimeOutcome>[1];
     const brief = Array.from({ length: 30 }, (_, i) => sample(i * 5, 97, i < 24 ? 100 : 40));
     expect(realtimeOutcome(brief, snap, []).respiratoryFailure).toBe(false);

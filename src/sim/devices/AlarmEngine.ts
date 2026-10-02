@@ -47,9 +47,12 @@ export class AlarmEngine {
     if (above(n.artSys, lim.artSys.high) || above(n.artMean, lim.artMean.high))
       active.add('ART_HIGH');
     if (n.spo2 === null) active.add('SPO2_NO_PULSE');
-    if (vent.pressureLimited || vent.measured.ppeak >= vent.active.pmax) active.add('PAW_HIGH');
-    if (vent.apnea || (vent.breathCount > 1 && vent.measured.mv < 1)) active.add('APNEA');
-    if (!vent.circuitConnected) active.add('DISCONNECT');
+    // A ventilator in standby (room air, conventional oxygen, HFOT) is not in use and raises no ventilator alarms.
+    if (!vent.standby) {
+      if (vent.pressureLimited || vent.measured.ppeak >= vent.active.pmax) active.add('PAW_HIGH');
+      if (vent.apnea || (vent.breathCount > 1 && vent.measured.mv < 1)) active.add('APNEA');
+      if (!vent.circuitConnected) active.add('DISCONNECT');
+    }
     const spo2 = n.spo2;
     if (below(spo2, lim.spo2.low)) active.add('SPO2_LOW');
     if (above(spo2, lim.spo2.high)) active.add('SPO2_HIGH');
