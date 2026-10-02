@@ -57,12 +57,12 @@ export function bridgeScenario(
       weightKg: patient.weightKg,
       heightCm: patient.sex === 'female' ? 163 : 176,
       heartRate: Math.round(preset.heartRate),
-      // SIM-ASSUMPTION: the awake patient on an oxygen mask is modelled as a face mask with low pressure support
-      // (PS 4 / PEEP 5 cmH2O, FiO2 35 %), the closest spontaneous-breathing configuration of the real-time engine.
+      // SIM-ASSUMPTION: the awake patient on a conventional oxygen mask breathes spontaneously without any imposed
+      // positive pressure (PS 0 / PEEP 0 cmH2O) at FiO2 ≈ 40 %; NIV would be a separate, labelled configuration.
       airway: 'mask',
       factors: { temperatureC: preset.temperatureC },
     },
-    ventilator: { ...base.ventilator, ps: 4, peep: 5, fio2: 35 },
+    ventilator: { ...base.ventilator, ps: 0, peep: 0, fio2: 40 },
     // No sedation in the emergency department; the noradrenaline syringe is ready but off.
     pumps: (base.pumps ?? [])
       .filter((p) => p.id !== 'P1' && p.id !== 'P2')
@@ -75,7 +75,7 @@ export function bridgeScenario(
         capillaryLeak: preset.capillaryLeak,
       },
     },
-    // Septic tachypnoea: strong spontaneous drive (pressure-supported breaths, no backup ventilation).
+    // Septic tachypnoea: strong spontaneous drive (unsupported breaths, no backup ventilation).
     timeline: [
       { at: 0, command: { type: 'SET_VENT_MODE', mode: 'PSV' } },
       { at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'strong' } },

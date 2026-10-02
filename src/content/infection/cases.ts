@@ -46,7 +46,8 @@ export const feverRigors: InfectionCase = {
       initialBurden: 0.62,
       growthPerH: 0.012,
       virulence: 0.85,
-      bacteraemia: 0.65,
+      // the case is a bacteraemic pyelonephritis: blood cultures before therapy grow in most sessions
+      bacteraemia: 0.8,
       // ≈ 7 days of effective therapy from the first effective dose
       minEffectiveDays: 7,
     },

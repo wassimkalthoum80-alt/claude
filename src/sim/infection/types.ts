@@ -681,9 +681,15 @@ export interface RealtimeOutcome {
   peakLactate: number;
   /** mL crystalloid/colloid given */
   fluidsMl: number;
-  /** KDIGO stage reached (0–3) */
-  akiStage: 0 | 1 | 2 | 3;
+  /**
+   * 0..1 — internal renal injury index reached in the episode (not a KDIGO stage: a 30-min episode cannot show the
+   * creatinine or 6-h urine criteria; the course derives creatinine and urine output from it)
+   */
+  renalInjury: number;
+  /** intubated at handover (airway protection or procedure) */
   ventilated: boolean;
+  /** respiratory organ failure in the episode (SaO₂ < 90 % or FiO₂ ≥ 0.6 needed) — not implied by intubation */
+  respiratoryFailure: boolean;
   /** min — until MAP ≥ 65 without escalation (null = not reached) */
   timeToStabiliseMin: number | null;
   /** min from episode start; null = not given in the episode */

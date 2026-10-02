@@ -97,7 +97,9 @@ describe('hospital campaign — game mechanic', () => {
   it('C. difficile cases caused on the ward add to the CDI rate', () => {
     const a = advanceCampaign(CFG, newCampaign(CFG, 1), result({}, { cdiCases: 1 })).state;
     const b = advanceCampaign(CFG, newCampaign(CFG, 1), result({})).state;
-    expect((a.hospital.values.cdi ?? 0) - (b.hospital.values.cdi ?? 0)).toBeCloseTo(1.4, 1);
+    // the CDI case adds 1.5; that index does not also recover in the same step (the case without CDI does recover)
+    expect((a.hospital.values.cdi ?? 0) - (b.hospital.values.cdi ?? 0)).toBeGreaterThanOrEqual(1.5);
+    expect(a.hospital.values.cdi).toBeCloseTo(6 + 1.5, 1);
     expect(a.hospital.cdiCases).toBe(1);
   });
 

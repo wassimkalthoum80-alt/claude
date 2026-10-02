@@ -326,9 +326,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
               {CAMPAIGN_CONFIG.metrics.map((m) => (
                 <tr key={m.id}>
                   <td>{tk(m.labelKey)}</td>
-                  <td className="num">
-                    {(hospital.values[m.id] ?? m.baseline).toFixed(1)} {m.unit === '%' ? '%' : ''}
-                  </td>
+                  <td className="num">{(hospital.values[m.id] ?? m.baseline).toFixed(1)}</td>
                 </tr>
               ))}
             </tbody>

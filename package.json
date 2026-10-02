@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "screenshots": "node scripts/screenshots.mjs",
-    "review:infectio": "REVIEW_OUT=docs/review/infectiology-clinical-review.md vitest run src/review"
+    "review:infectio": "REVIEW_OUT=docs/review/infectiology-clinical-review.md vitest run src/review",
+    "i18n:infectio": "python3 scripts/infectio-i18n.py"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

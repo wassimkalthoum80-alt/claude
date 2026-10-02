@@ -108,7 +108,7 @@ function siteRows(code: string, sites: readonly InfectionSiteDef[], isolates: re
       : (s.sourceControl ?? []).length
         ? `optional: ${(s.sourceControl ?? []).map((a) => `${a.id} (${a.delayH} h)`).join('; ')}`
         : 'no',
-    s.minEffectiveDays,
+    `${s.minEffectiveDays} (from ${s.durationFrom ?? 'effective-start'})`,
     s.onsetH ?? 0,
   ]);
 }
@@ -116,9 +116,9 @@ function siteRows(code: string, sites: readonly InfectionSiteDef[], isolates: re
 const mimicRows = (code: string, mimics: readonly MimicDef[]) =>
   mimics.map((m, i) => [
     `${code}-MIM${i + 1}`,
-    tDe(m.diagnosisKey),
+    `${tDe(m.diagnosisKey)}${m.kind === 'complication' ? ' [complication of the infection]' : ''}`,
     m.drive,
-    Number.isFinite(m.resolveTauH) ? m.resolveTauH : 'persists',
+    `${Number.isFinite(m.resolveTauH) ? m.resolveTauH : 'persists'}${m.resolvedBy ? ` after ${m.resolvedBy.join('/')}` : ''}`,
     m.causedByDrugId ? `while ${m.causedByDrugId} runs` : '',
     m.organDrive ? `${m.organ ?? 'lung'} ${m.organDrive}` : '',
     m.onsetH ?? 0,
@@ -336,7 +336,7 @@ function caseSection(c: InfectionCase, section: string): string {
         'Virulence',
         'Bacteraemia',
         'Source control',
-        'Min. effective days',
+        'Min. effective days (counted from)',
         'Onset h',
       ],
       siteRows(code, c.infections, c.isolates),
@@ -446,8 +446,11 @@ const PROMPT = `# ResusSim — Infectiology / Antibiotic Stewardship: clinical r
 > or common ward errors that a case should include. German texts should be checked for medical German as well."
 >
 > Notes on the model: time steps of 1 h; "burden" 0–1 is the bacterial load at a focus; "virulence" scales how much
-> burden drives inflammation; "min. effective days" are the days of effective therapy needed after clearance before
-> stopping is safe (seeded ±); deductions are points off a 100-point stewardship score (a late action costs half).
+> burden drives inflammation; "min. effective days" are the days of effective therapy needed before stopping is safe,
+> counted from the site's anchor (first effective dose, clearance ≈ first negative blood culture, or adequate source
+> control); focus "urine" = bladder, "kidney" = renal parenchyma / urosepsis; deductions are points off a 100-point
+> stewardship score (a late action costs half). Revised after the clinical review of 2 October 2026 (see
+> docs/review/review-response-2026-10-02.md).
 > Doses in the formulary are display texts; the model uses standard / high / reduced exposure levels.
 
 `;

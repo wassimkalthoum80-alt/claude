@@ -628,8 +628,13 @@ export class InfectionEngine {
       o.timeToStabiliseMin === null
         ? 0.65
         : Math.min(this.organs.circ, 0.3 + 0.002 * o.timeToStabiliseMin);
-    this.organs.kidney = Math.max(this.organs.kidney, [0, 0.25, 0.45, 0.65][o.akiStage] ?? 0);
-    if (o.ventilated) this.organs.lung = Math.max(this.organs.lung, 0.5);
+    // SIM-ASSUMPTION: the episode's renal injury index carries over as kidney dysfunction (creatinine and urine output
+    // then follow in the course); lung dysfunction only after respiratory failure, not from intubation itself.
+    this.organs.kidney = Math.max(
+      this.organs.kidney,
+      0.7 * Math.min(1, Math.max(0, o.renalInjury)),
+    );
+    if (o.respiratoryFailure) this.organs.lung = Math.max(this.organs.lung, 0.5);
     if (o.peakLactate > 4) this.organs.liver = Math.max(this.organs.liver, 0.2);
   }
 

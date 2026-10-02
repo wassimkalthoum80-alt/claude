@@ -252,9 +252,11 @@ export function advanceCampaign(
   for (const m of config.metrics) {
     const before = values[m.id] ?? m.baseline;
     let v = before;
+    let driven = false;
     for (const [cls, pp] of Object.entries(m.drivers) as [DrugClass, number][]) {
       const days = result.exposureDays[cls] ?? 0;
       if (days > 0 && pp > 0) {
+        driven = true;
         v += pp * days;
         causes.push({
           metric: m.id,
@@ -265,6 +267,7 @@ export function advanceCampaign(
       }
     }
     if (m.perCdiCase && result.cdiCases > 0) {
+      driven = true;
       v += m.perCdiCase * result.cdiCases;
       causes.push({
         metric: m.id,
@@ -273,9 +276,10 @@ export function advanceCampaign(
         delta: m.perCdiCase * result.cdiCases,
       });
     }
-    // Stewardship pays off: a well-managed case pulls the hospital back towards its floor. Recovery scales with the
-    // case's overall score, so withholding a needed antibiotic (or losing the patient) earns no "clean" hospital.
-    v -= config.recovery * clamp(result.overall / 100, 0, 1) * (v - m.floor);
+    // Stewardship pays off: a well-managed case lets the pressure indices it did not drive recover towards their floor.
+    // Recovery scales with the case's overall score, so withholding a needed antibiotic (or losing the patient) earns
+    // no "clean" hospital; an index this case pushed up does not also fall back in the same step.
+    if (!driven) v -= config.recovery * clamp(result.overall / 100, 0, 1) * (v - m.floor);
     v = round1(clamp(v, m.floor, m.ceiling) * 10) / 10;
     values[m.id] = v;
     deltas[m.id] = round1((v - before) * 10) / 10;

@@ -22,6 +22,10 @@ export interface BridgeSample {
   noradrenaline: number;
   /** mmol/L */
   lactate: number;
+  /** % — true arterial saturation */
+  spo2: number;
+  /** % — inspired oxygen fraction set on the ventilator/mask */
+  fio2: number;
 }
 
 /** µg/kg/min of noradrenaline running on the syringe pumps. */
@@ -53,6 +57,8 @@ export class BridgeRecorder {
       map: s.patient.cardio.meanArterialPressure,
       noradrenaline: noradrenalineRate(s),
       lactate: s.patient.gas.lactate,
+      spo2: s.patient.gas.spo2,
+      fio2: s.devices.ventilator.active.fio2,
     });
   }
 
@@ -104,6 +110,7 @@ export function realtimeOutcome(
     .filter((p) => p.kind === 'volumetric')
     .reduce((sum, p) => sum + p.deliveredMl, 0);
   const injury = s.patient.fluid.renal.injury;
+  const respiratoryFailure = samples.some((x) => x.spo2 < 90 || x.fio2 >= 60);
   return {
     survived: s.patient.cardio.spontaneousCirculation,
     durationMin: Math.round((end / 60) * 10) / 10,
@@ -113,8 +120,9 @@ export function realtimeOutcome(
     peakLactate:
       Math.round(Math.max(s.patient.gas.lactate, ...samples.map((x) => x.lactate)) * 10) / 10,
     fluidsMl: Math.round(fluidsMl),
-    akiStage: injury >= 0.6 ? 3 : injury >= 0.3 ? 2 : injury >= 0.1 ? 1 : 0,
+    renalInjury: Math.round(injury * 100) / 100,
     ventilated: s.patient.airway.device === 'ett',
+    respiratoryFailure,
     timeToStabiliseMin: stabilisedAt === null ? null : Math.round((stabilisedAt / 60) * 10) / 10,
     antibioticsAtMin: actionAt('antibiotics'),
     culturesAtMin: actionAt('cultures'),

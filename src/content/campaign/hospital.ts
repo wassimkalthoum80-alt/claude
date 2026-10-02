@@ -4,7 +4,8 @@ import type { CampaignConfig } from '../../game/campaign';
  * Hospital campaign (milestone 7, separate milestone "hospital campaign"): the starting hospital and the game
  * mechanic that turns the learner's prescribing into local resistance, C. difficile and MRE pressure.
  *
- * GAME MECHANIC — not an epidemiological model. The numbers are invented teaching defaults chosen so that one
+ * GAME MECHANIC — not an epidemiological model. The metrics are fictional ecological-pressure indices (shown as an
+ * index, not as a hospital prevalence or incidence); the numbers are invented teaching defaults chosen so that one
  * careless case moves the needle visibly and careful play brings it back over a few cases. The baseline local
  * antibiogram is a replaceable config (milestone 7 § 6). CLINICAL REVIEW: baselines and drivers.
  */
@@ -92,7 +93,7 @@ export const CAMPAIGN_CONFIG: CampaignConfig = {
     'ward-postop-peritonitis': { esbl: 'ecoli-esbl' },
     'ward-vap': { '3mrgn': 'pa-carba' },
     'ward-esbl-icu': { outbreak: 'kp-kpc' },
-    'ward-cdi': { severe: 'cdi' },
+    // C. difficile pressure raises the acquisition risk (cdiMetric), not the severity: severity is a host matter
   },
   // ward-flora hazards (carbapenemase producers) scale with this metric
   floraMetric: 'kp-kpc',

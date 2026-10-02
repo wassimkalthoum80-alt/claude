@@ -829,7 +829,8 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   await expect(page.getByTestId('ward-score-outcome')).toBeVisible();
   await expect(page.getByTestId('ward-score-stewardship')).toBeVisible();
   await expect(page.getByTestId('ward-debrief-reveal')).toContainText('E. coli');
-  await expect(page.getByTestId('ward-debrief-improve')).toContainText(/Reserve/);
+  // A documented indication justifies the reserve start; it is reassessed after the resistogram.
+  await expect(page.getByTestId('ward-debrief')).toContainText(/Reservesubstanz/);
   await expect(page.getByTestId('ward-debrief-timeline')).toContainText('Cefiderocol');
   if (shots) await page.screenshot({ path: `${shots}/ward-6-debrief.png`, fullPage: true });
   await page.getByTestId('ward-debrief-menu').click();
@@ -908,6 +909,37 @@ test('infectiology: hospital campaign — next patient, hospital impact in the d
   });
   page.on('pageerror', (e) => errors.push(e.message));
   const shots = process.env.WARD_SHOTS;
+  // A fixed fresh hospital whose first patient is A1 (the next patient is otherwise drawn at random).
+  await page.addInitScript(() => {
+    if (!window.sessionStorage.getItem('campaign-seeded')) {
+      window.sessionStorage.setItem('campaign-seeded', '1');
+      window.localStorage.setItem(
+        'resussim.campaign.v1',
+        JSON.stringify({
+          version: 1,
+          seed: 39,
+          index: 0,
+          hospital: {
+            values: {
+              'ecoli-esbl': 10,
+              'ecoli-fq': 18,
+              'kp-kpc': 1,
+              'pa-carba': 12,
+              mrsa: 9,
+              vre: 12,
+              cdi: 6,
+            },
+            dot: 0,
+            broadDot: 0,
+            reserveDot: 0,
+            patientDays: 0,
+            cdiCases: 0,
+          },
+          history: [],
+        }),
+      );
+    }
+  });
 
   await page.goto('/?lang=de');
   await page.getByTestId('module-infectio').click();
@@ -921,9 +953,15 @@ test('infectiology: hospital campaign — next patient, hospital impact in the d
   await expect(page.getByTestId('ward-briefing')).toBeVisible();
   await page.getByTestId('ward-start').click();
   await page.getByTestId('open-antibiogram').click();
-  await expect(page.getByTestId('ward-antibiogram')).toContainText('Lokales Antibiogramm');
+  await expect(page.getByTestId('ward-antibiogram')).toContainText('Resistenzdruck');
   await page.getByTestId('open-antibiogram').click();
   for (let i = 0; i < 8; i++) {
+    // The next patient is drawn at random: stop at any decision dialog (timeout, shock) — leaving is allowed.
+    if (
+      (await page.getByTestId('ward-timeout').isVisible()) ||
+      (await page.getByTestId('ward-shock').isVisible())
+    )
+      break;
     if (await page.getByTestId('notices-ok').isVisible())
       await page.getByTestId('notices-ok').click();
     else if (
@@ -937,6 +975,12 @@ test('infectiology: hospital campaign — next patient, hospital impact in the d
   }
   if (await page.getByTestId('notices-ok').isVisible())
     await page.getByTestId('notices-ok').click();
+  if (await page.getByTestId('ward-timeout').isVisible()) {
+    await page.getByTestId('timeout-infection-unsure').check();
+    await page.getByTestId('timeout-source-not-applicable').check();
+    await page.getByTestId('timeout-plan-continue').check();
+    await page.getByTestId('timeout-submit').click();
+  }
   await page.getByTestId('ward-exit').click();
 
   // The debrief shows what this patient did to the hospital.

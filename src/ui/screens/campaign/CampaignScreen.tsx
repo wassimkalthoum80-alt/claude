@@ -11,7 +11,8 @@ import screen from '../Screens.module.css';
 import { Sparkline } from './Sparkline';
 import styles from './Campaign.module.css';
 
-const fmt = (v: number, unit: '%' | '/10k') => (unit === '%' ? `${v.toFixed(1)} %` : v.toFixed(1));
+// Fictional pressure index: shown without a prevalence/incidence unit.
+const fmt = (v: number, _unit: '%' | '/10k') => v.toFixed(1);
 
 /**
  * Hospital campaign dashboard: the hospital the learner's prescribing has shaped — local antibiogram, C. difficile,
