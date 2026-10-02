@@ -5,6 +5,7 @@ import { AUTOSTART, MODULE_CATALOG } from '../../content/modules/catalog';
 import { baselinePatient } from '../../content/scenarios';
 import { createSession } from '../../game/session';
 import type { Difficulty, ModuleId, SessionConfig } from '../../game/types';
+import type { DebriefData } from '../adapters/debrief';
 
 export type Language = 'en' | 'de';
 export type ElectrodeStandard = 'IEC' | 'AHA';
@@ -17,6 +18,8 @@ export interface UiState {
   menuModule: ModuleId | null;
   /** the running learning session (screen 'session'); the engine owns the simulation state */
   session: SessionConfig | null;
+  /** result of the last scored session (screen 'debrief') — plain data, computed once at the end */
+  debrief: DebriefData | null;
   /** difficulty chosen for scored modules (kept as a preference) */
   difficulty: Difficulty;
   language: Language;
@@ -50,7 +53,7 @@ export interface UiState {
 
 export type SessionDrawer = 'timeline' | 'trends' | 'hint' | 'experiments';
 
-export type Screen = 'home' | 'module' | 'session';
+export type Screen = 'home' | 'module' | 'session' | 'debrief' | 'progress';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
 export type MobileTab = 'monitor' | 'patient' | 'vent' | 'pumps' | 'actions';
 
@@ -156,6 +159,7 @@ function initialState(): UiState {
           now: Date.now(),
         })
       : null,
+    debrief: null,
     difficulty: 'beginner',
     language: 'en',
     audio: false,

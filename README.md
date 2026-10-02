@@ -9,7 +9,8 @@ respond second by second.
 > The monitor tells the story of what is happening inside the patient.*
 
 **Status: full physiology simulator (ventilation, heart–lung, drugs, fluids, processed EEG, ALS) + milestone 6
-phase 1: HOME screen, module menus and learning sessions.** For education only — not a medical device.
+phases 1–3: HOME screen, module menus and learning sessions; time control, Event Director, nurse and Physiology
+Lab cases; scoring, debrief and progression.** For education only — not a medical device.
 
 | HOME | Module menu (scored module with difficulty) |
 |---|---|
@@ -65,13 +66,26 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
 | **Physiology Lab** | Ventilation Lab (healthy lungs with experiments, severe asthma, ARDS), Haemodynamics & Drug Lab (free, post-operative bleeding; other phenotypes in preparation), Fluids & Balance Lab (7 presets) | no | yes |
 | **Skills Training** | Ventilation troubleshooting: silent disconnection (more exercises and the arrhythmia trainer in preparation) | yes | hidden |
 | **Resuscitation** | Sudden VF under anaesthesia (cause-specific arrests in preparation) | yes | hidden |
-| **Clinical Challenges** | categories shown, validated cases in preparation (max. 5, owner-reviewed) | yes | hidden |
-| **My Progress** | arrives with scoring (phase 3) | — | — |
+| **Clinical Challenges** | two cases with patient variants: *Ventilated patient — falling blood pressure* (severe asthma) and *After abdominal surgery — tachycardia* (bleeding); more validated cases in preparation (max. 5, owner-reviewed) | yes | hidden |
+| **My Progress** | level and XP, skill profile, recommendation, achievements, history; export / import / reset (stored on this device) | — | — |
 | **Instructor Mode** | today's free sandbox plus every existing scenario as a starting situation | no | yes |
 | *Daily Challenge* | hidden until validated cases exist (date-derived seed already in `src/game/session.ts`) | — | — |
 
 - Scored modules offer **Beginner / Intermediate / Expert** (remembered). Difficulty changes the help, never the
-  physiology; scores and the debrief arrive in phase 3.
+  physiology.
+- **Debrief** (end of every scored session that ran ≥ 30 s, or automatically when the case ends): outcome,
+  1–3 stars, overall and sub-scores (Recognition, Stabilisation, Treatment, Safety, Efficiency, Time; Diagnosis
+  comes with the diagnostics panel), *What you did well*, *What could be improved*, the key learning point, and
+  your decisions marked ✓ effective / ! questionable / ✕ dangerous with the measured change ("Ventilator RR 10 ·
+  VT 450 — MAP 55 → 84 after 03:00"). Scores come from the event log and the measured values, never from button
+  presses alone; ordering tests repeatedly or opening every hint costs efficiency. Resuscitation cases are scored
+  from time to first compression, compression fraction and no-flow time. Thresholds and case targets are data
+  (`src/content/scoring/scoringConfig.ts`), pure scoring functions in `src/game/scoring.ts`.
+- **Progression** (`src/game/progression.ts`): XP per session (completion, score × difficulty, stars, first
+  completion), levels 1–7 (Medical Student → Senior ICU Specialist — game levels only, they do not imply medical
+  competence), mastery per topic (moving average), six achievements, a recommendation for the weakest area, best
+  stars per case in the module menus. Stored in `localStorage` (`resussim.progress.v1`, versioned schema, validated
+  on import); no account or server.
 - The **session intro** shows the case; the patient waits paused until **Start**. The pause menu offers
   *Resume*, *Restart session*, *End session* (back to the module menu), *Main menu* and the settings. Case lists
   are no longer in the pause menu or the instructor panel.
@@ -345,7 +359,7 @@ docs/                  architecture, assumptions, reviews, reference image, scre
   presets. Player-driven compressions plug into the existing `CompressionSource` interface later.
 - ROSC comes from a successful shock (seeded outcome model), from relieving an obstructive PEA, or from the
   instructor; drugs alone never restart the heart. Non-obstructive PEA/asystole need the instructor for ROSC.
-  No scoring or debrief timeline yet (milestone 6 phase 3; the event log records every action for it). The ultrasound images are
+  Scoring thresholds are educational defaults awaiting clinical review; no diagnosis score yet. The ultrasound images are
   schematic, and VT with a pulse, bradycardias/AV blocks and bag-valve-mask ventilation are not modelled yet.
 - The pharmacology is an **educational calibration**: PD constants, the educational PK models, the line model and
   the fluid kinetics are author-selected, and the formulary is unreviewed (see the assumptions document).

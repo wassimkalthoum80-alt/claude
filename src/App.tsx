@@ -11,7 +11,12 @@ import { SessionTools } from './ui/components/SessionTools/SessionTools';
 import { CprMetrics } from './ui/components/CprMetrics/CprMetrics';
 import { IconSliders, IconSpeaker } from './ui/components/icons';
 import { InstructorPanel } from './ui/components/InstructorPanel/InstructorPanel';
-import { BriefingOverlay, PauseMenu, RunSummaryCard } from './ui/components/Overlays/Overlays';
+import {
+  AutoDebrief,
+  BriefingOverlay,
+  PauseMenu,
+  RunSummaryCard,
+} from './ui/components/Overlays/Overlays';
 import { PatientMonitor } from './ui/components/PatientMonitor/PatientMonitor';
 import { PerfusorRack } from './ui/components/Perfusors/PerfusorRack';
 import { PumpEditor } from './ui/components/Perfusors/PumpEditor';
@@ -32,6 +37,8 @@ import { usePhoneLayout } from './ui/hooks/useLayout';
 import { MobileWorkstation } from './ui/components/Mobile/MobileWorkstation';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { ModuleMenu } from './ui/screens/ModuleMenu';
+import { DebriefScreen } from './ui/screens/DebriefScreen';
+import { ProgressScreen } from './ui/screens/ProgressScreen';
 import styles from './App.module.css';
 
 /** Panels and overlays shared by both layouts (sheets on the phone, floating panels on the desktop). */
@@ -47,6 +54,7 @@ function SharedOverlays() {
       <BriefingOverlay />
       <PauseMenu />
       <RunSummaryCard />
+      <AutoDebrief />
     </>
   );
 }
@@ -159,6 +167,8 @@ function Shell() {
   }, [engine, inSession]);
 
   if (inSession) return <Workstation />;
+  if (ui.screen === 'debrief' && ui.debrief) return <DebriefScreen data={ui.debrief} />;
+  if (ui.screen === 'progress') return <ProgressScreen />;
   if (ui.screen === 'module' && ui.menuModule) return <ModuleMenu moduleId={ui.menuModule} />;
   return <HomeScreen />;
 }

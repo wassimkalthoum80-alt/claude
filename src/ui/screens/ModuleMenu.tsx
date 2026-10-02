@@ -1,13 +1,17 @@
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type { I18nKey } from '../../content/i18n/en';
 import { MODULE_CATALOG } from '../../content/modules/catalog';
+import { entryKey } from '../../game/progression';
 import { findModule } from '../../game/session';
 import { DIFFICULTIES, type ModuleId } from '../../game/types';
 import { useT, useUi } from '../hooks/UiContext';
 import { useSession } from '../hooks/useSession';
 import { ModuleIcon } from './ModuleIcon';
+import { localProgressStore } from '../progressStore';
 import { MODULE_ACCENT } from './moduleAccent';
+import progressStyles from './Progress.module.css';
 import styles from './Screens.module.css';
+import { Stars } from './Stars';
 
 /** Submenu of one module: difficulty (scored modules) and the startable entries by section. */
 export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
@@ -15,6 +19,7 @@ export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
   const { ui, setUi } = useUi();
   const { goHome, start } = useSession();
   const mod = findModule(MODULE_CATALOG, moduleId);
+  const best = useMemo(() => localProgressStore.load().best, []);
   if (!mod) return null;
 
   return (
@@ -38,10 +43,7 @@ export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
           </div>
         </header>
 
-        <p className={styles.note}>
-          {t(mod.scored ? 'modmenu.scored' : 'modmenu.unscored')}
-          {mod.scored && <> {t('modmenu.scoringSoon')}</>}
-        </p>
+        <p className={styles.note}>{t(mod.scored ? 'modmenu.scored' : 'modmenu.unscored')}</p>
 
         {mod.scored && (
           <section className={styles.difficulty} aria-label={t('modmenu.difficulty')}>
@@ -84,6 +86,17 @@ export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
                         <span className={styles.entryTitle}>{t(e.titleKey as I18nKey)}</span>
                         <span className={styles.entryDesc}>{t(e.descriptionKey as I18nKey)}</span>
                       </span>
+                      {ready && mod.scored && best[entryKey(mod.id, e.id)] && (
+                        <span className={progressStyles.entryStars}>
+                          <Stars
+                            n={best[entryKey(mod.id, e.id)]?.stars ?? 0}
+                            size="sm"
+                            label={t('modmenu.best', {
+                              n: best[entryKey(mod.id, e.id)]?.stars ?? 0,
+                            })}
+                          />
+                        </span>
+                      )}
                       {ready ? (
                         <span className={styles.startPill}>{t('modmenu.start')} ▸</span>
                       ) : (

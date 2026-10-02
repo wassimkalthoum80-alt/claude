@@ -581,6 +581,35 @@ reference script) and ERC. Everything below is **educational calibration** unles
 | Ischaemic electrical instability | arrhythmia burden + clamp((ischaemia − 0.25)/0.5) × (0.12 + 2 × injury) per s; VF at the existing 90 s threshold                                                                                                                                                       | prolonged ischaemia with injured myocardium → VF; a healthy heart with brief ischaemia does not fibrillate. Deterministic model threshold, not a probability              |
 | Coronary reserve                 | unchanged (2.5 × cardiac reserve): a healthy heart tolerates MAP ≈ 55 at HR 135 without injury; cardiac reserve 0.5 (coronary patient): MAP ≈ 63 / HR ≈ 110 → 6–8 % injury, troponin rise, no VF; MAP ≈ 57–61 / HR ≈ 120–130 → 11–14 % injury and VF after ≈ 15–30 min | teaching calibration                                                                                                                                                      |
 
+## Scoring (milestone 6 phase 3 — `src/game/scoring.ts`, values in `src/content/scoring/scoringConfig.ts`)
+
+Educational defaults chosen by the developer; **not a validated assessment instrument**. Clinical review is
+needed before trainees rely on scores.
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| Targets | MAP ≥ 65 mmHg, SpO₂ ≥ 92 % (asthma case 90 %) | common peri-operative / ICU targets |
+| Dangerous values | MAP < 50 mmHg, SpO₂ < 85 %, Ppeak > 40 cmH₂O | hypoperfusion, severe hypoxaemia, barotrauma risk |
+| Decision grouping | interventions within 20 s are one decision | several settings changed together |
+| Effect window | 5 s mean at the decision and 30–180 s later (or at the end of the session) | same window as the session timeline; later decisions inside the window share the credit |
+| Effective | out-of-target value improves: ΔMAP ≥ +8 mmHg, ΔSpO₂ ≥ +3 %, ΔPpeak ≤ −8 cmH₂O (from > 35) | clearly beyond measurement noise |
+| Dangerous | followed by MAP < 50 with ΔMAP ≤ −10, SpO₂ < 85 with ΔSpO₂ ≤ −5, or Ppeak > 40 with ΔPpeak ≥ +8 | a clear fall/rise into the dangerous range |
+| Questionable / neutral | out of target and no improvement, or a target lost / in target before and after (no judgement) | no points for clicking |
+| Prevented | first response to a problem a scenario event started (e.g. the disconnection) while still in target counts as effective | the apnoea alarm precedes the SpO₂ fall |
+| Concerns | problem at the start (case flag), a scenario onset event, or ≥ 30 s out of target (ends after 60 s back in target); a later concern without a learner action in between is the same problem | |
+| Recognition | first intervention after a concern: ≤ 45 s → 100, linear to 0 at 300 s; arrest → first compression ≤ 10 s → 100, 0 at 60 s | |
+| Stabilisation | 0.4 × fraction of the session in target + 0.6 × fraction of the last third in target | the end state counts more |
+| Treatment | (effective + 0.3 × questionable) / assessed decisions; 0 if a decisive case action (call the surgeon) was never requested | |
+| Safety | 100 − 25 per dangerous decision − 1 per 10 s of each dangerous value (max 30 each) − 20 per arrest − 5 per protocol override − 15 per unsafe shock − 5 per long hands-off | |
+| Efficiency | 100 − 8 per blood gas within 5 min of the previous one − 4 per hint level | do not reward ordering everything |
+| Time | first concern → first effective decision: ≤ 60 s → 100, 0 at 600 s; bleeding case: surgeon requested ≤ 5 min → 100, 0 at 20 min | |
+| Resuscitation cases | recognition = time to first compression; treatment = CCF (100 at the guideline target, 0 at 40 points below); time = no-flow ≤ 10 s → 100, 0 at 120 s | CCF target from `erc2025.ts` |
+| Overall | weighted mean of the applicable scores: recognition 1, stabilisation 2, treatment 1.5, safety 1.5, efficiency 0.5, time 1 (VF case: own weights) | |
+| Outcome | arrest (no circulation at the end; ROSC in resuscitation cases), stable (≥ 80 % of the last 60 s in target) or unstable | |
+| Stars | ★ alive (or the resuscitation objective met) and stabilisation ≥ 50; ★★ overall ≥ 70, no dangerous decision, decisive case action done; ★★★ overall ≥ 85, every score ≥ 60, safety ≥ 90, stable / ROSC | milestone 6 § 11 |
+| XP and levels | 20 per session + overall/2 × difficulty (1 / 1.3 / 1.6) + 15 per star + 10 first completion; levels at 0, 150, 400, 800, 1400, 2200, 3200 XP | game levels only |
+| Mastery | moving average per topic, α = 0.4 (overall score; patient safety from the safety score) | recent sessions count most |
+
 ## Presentation-only assumptions (UI)
 
 | Assumption          | Value                                                          |

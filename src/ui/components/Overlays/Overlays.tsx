@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
 import { MODULE_CATALOG } from '../../../content/modules/catalog';
 import { findModule } from '../../../game/session';
@@ -256,8 +256,28 @@ export function PauseMenu() {
   );
 }
 
-/** End-of-run card for scripted cases (P2): objective, no-flow, compression fraction. */
+const caseEnded = (s: Readonly<SimulationState>) => s.scenario.ended;
+
+/** A scored session whose case has ended (e.g. after an arrest) goes straight to the debrief. */
+export function AutoDebrief() {
+  const { ui } = useUi();
+  const { end } = useSession();
+  const ended = useEngineSelector(caseEnded);
+  const scored = ui.session?.scored ?? false;
+  useEffect(() => {
+    if (ended && scored) end();
+  }, [ended, scored, end]);
+  return null;
+}
+
+/** End-of-run card for scripted cases in unscored sessions: objective, no-flow, compression fraction. */
 export function RunSummaryCard() {
+  const { ui } = useUi();
+  if (ui.session?.scored) return null;
+  return <RunSummaryContent />;
+}
+
+function RunSummaryContent() {
   const t = useT();
   const engine = useEngine();
   const session = useSession();

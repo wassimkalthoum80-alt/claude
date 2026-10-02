@@ -136,6 +136,16 @@ export const MODULE_CATALOG: ModuleCatalog = [
     kind: 'menu',
     sections: [
       {
+        // Polished cases with patient variants (a different patient on every start); the title names the
+        // presentation, not the diagnosis.
+        id: 'cases',
+        titleKey: 'challenges.section.cases',
+        entries: [
+          available('asthma', 'challenges.asthma', 'asthma-hyperinflation'),
+          available('bleeding', 'challenges.bleeding', 'postop-bleeding'),
+        ],
+      },
+      {
         id: 'categories',
         titleKey: 'challenges.section.categories',
         entries: [
@@ -162,7 +172,7 @@ export const MODULE_CATALOG: ModuleCatalog = [
     id: 'progress',
     titleKey: 'module.progress.title',
     taglineKey: 'module.progress.tagline',
-    status: 'preparing',
+    status: 'available',
     scored: false,
     kind: 'screen',
     sections: [],

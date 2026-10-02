@@ -1,8 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { MODULE_CATALOG } from '../../content/modules/catalog';
 import { SCENARIOS } from '../../content/scenarios';
+import { recordExplored } from '../../game/progression';
 import { createSession } from '../../game/session';
 import type { ModuleId } from '../../game/types';
+import { finishScoredSession, MIN_DEBRIEF_S } from '../adapters/debrief';
+import { localProgressStore } from '../progressStore';
 import { useEngine } from './EngineContext';
 import { useUi, WORKSPACE_CLOSED } from './UiContext';
 
@@ -22,8 +25,13 @@ export interface SessionActions {
   start: (module: ModuleId, entryId: string) => void;
   /** restart the running session from its seed */
   restart: () => void;
-  /** end the running session and return to its module menu (debrief comes with scoring) */
+  /**
+   * end the running session: a scored session that ran long enough is scored and opens the debrief; otherwise
+   * back to the module menu
+   */
   end: () => void;
+  /** open the My Progress screen */
+  openProgress: () => void;
 }
 
 /**
@@ -41,7 +49,15 @@ export function useSession(): SessionActions {
   }, [engine]);
 
   const openModule = useCallback(
-    (m: ModuleId) => setUi({ screen: 'module', menuModule: m }),
+    (m: ModuleId) =>
+      m === 'progress'
+        ? setUi({ screen: 'progress', menuModule: null })
+        : setUi({ screen: 'module', menuModule: m }),
+    [setUi],
+  );
+
+  const openProgress = useCallback(
+    () => setUi({ ...WORKSPACE_CLOSED, screen: 'progress', session: null }),
     [setUi],
   );
 
@@ -65,6 +81,12 @@ export function useSession(): SessionActions {
         now: Date.now(),
       });
       engine.loadScenario(scenario, session.seed);
+      // Physiology Lab: unscored; opening an experiment counts towards exploring.
+      if (m === 'lab') {
+        const before = localProgressStore.load();
+        const r = recordExplored(before, m, entryId, Date.now());
+        if (r.profile !== before) localProgressStore.save(r.profile);
+      }
       engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: session.difficulty }, 'system');
       // The patient waits behind the session intro until the learner presses Start.
       engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
@@ -89,11 +111,17 @@ export function useSession(): SessionActions {
 
   const end = useCallback(() => {
     pause();
+    const session = ui.session;
+    if (session?.scored && engine.getSnapshot().time >= MIN_DEBRIEF_S) {
+      const debrief = finishScoredSession(engine, session, localProgressStore, Date.now());
+      setUi({ ...WORKSPACE_CLOSED, screen: 'debrief', menuModule: module, session: null, debrief });
+      return;
+    }
     setUi({ ...WORKSPACE_CLOSED, screen: 'module', menuModule: module, session: null });
-  }, [pause, setUi, module]);
+  }, [pause, setUi, module, engine, ui.session]);
 
   return useMemo(
-    () => ({ openModule, goHome, start, restart, end }),
-    [openModule, goHome, start, restart, end],
+    () => ({ openModule, goHome, start, restart, end, openProgress }),
+    [openModule, goHome, start, restart, end, openProgress],
   );
 }

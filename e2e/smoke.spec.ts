@@ -306,9 +306,9 @@ test('navigation: HOME → module menu → session intro → workspace → pause
   await expect(page.getByTestId('home-screen')).toContainText('For education only');
   // The patient does not run behind the menus.
   expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().control.paused)).toBe(true);
-  // Daily challenge hidden until validated cases exist; My progress greyed out.
+  // Daily challenge hidden until validated cases exist; My progress available.
   await expect(page.getByTestId('module-daily')).toHaveCount(0);
-  await expect(page.getByTestId('module-progress')).toBeDisabled();
+  await expect(page.getByTestId('module-progress')).toBeEnabled();
 
   // Scored module: difficulty, entries in preparation cannot start.
   await page.getByTestId('module-resus').click();
@@ -327,7 +327,7 @@ test('navigation: HOME → module menu → session intro → workspace → pause
   await expect(page.getByTestId('instructor-panel')).toHaveCount(0);
   await expect(page.getByTestId('cpr-button')).toBeVisible();
 
-  // Pause menu: no case list any more; end session returns to the module menu.
+  // Pause menu: no case list any more; ending before anything happened returns to the module menu (no debrief).
   await page.keyboard.press('p');
   await expect(page.getByTestId('menu-restart')).toBeVisible();
   await page.getByTestId('menu-end-session').click();
@@ -526,5 +526,81 @@ test('Physiology Lab cases: experiment card, new asthma patient on restart, call
   await page.getByTestId('action-procedures').click();
   await page.getByTestId('case-action-call-surgeon').click();
   await expect(page.getByTestId('case-actions')).toContainText('requested');
+  expect(errors).toEqual([]);
+});
+
+test('scored session → debrief with stars and decisions → My progress, kept after reload', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?debug');
+  await page.evaluate(() => window.localStorage.removeItem('resussim.progress.v1'));
+  await page.getByTestId('module-progress').click();
+  await expect(page.getByTestId('progress-screen')).toContainText('No scored sessions yet');
+  await expect(page.getByTestId('progress-screen')).toContainText(
+    'do not imply medical competence',
+  );
+  await page.getByTestId('progress-back').click();
+
+  // Clinical challenge: the intubated asthmatic. Give time to breathe out after 30 s.
+  await page.getByTestId('module-challenges').click();
+  await page.getByTestId('difficulty-beginner').click();
+  await page.getByTestId('entry-asthma').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.runFor(30);
+    e?.dispatch({ type: 'SET_VENT_SETTING', key: 'rr', value: 10 }, 'user');
+    e?.dispatch({ type: 'SET_VENT_SETTING', key: 'vt', value: 450 }, 'user');
+    e?.runFor(400);
+  });
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-end-session').click();
+
+  const debrief = page.getByTestId('debrief-screen');
+  await expect(debrief).toBeVisible();
+  const stars = Number(await debrief.locator('[data-stars]').first().getAttribute('data-stars'));
+  expect(stars).toBeGreaterThanOrEqual(2);
+  await expect(page.getByTestId('debrief-decisions')).toContainText('Ventilator');
+  await expect(page.getByTestId('debrief-decisions')).toContainText('MAP');
+  await expect(page.getByTestId('score-diagnosis')).toContainText('coming');
+  await expect(page.getByTestId('debrief-xp')).toContainText('XP');
+  await expect(debrief).toContainText('Key learning point');
+
+  await page.getByTestId('debrief-progress').click();
+  await expect(page.getByTestId('progress-history')).toContainText('falling blood pressure');
+  await expect(page.getByTestId('mastery-ventilation')).toContainText(/\d/);
+  await expect(page.getByTestId('achievement-first-session')).toHaveAttribute(
+    'data-earned',
+    'true',
+  );
+
+  // Stored on the device: still there after a reload; the module menu shows the best result.
+  await page.reload();
+  await page.getByTestId('module-progress').click();
+  await expect(page.getByTestId('progress-history')).toContainText('falling blood pressure');
+  await page.getByTestId('progress-back').click();
+  await page.getByTestId('module-challenges').click();
+  await expect(page.getByTestId('entry-asthma').locator('[data-stars]')).toHaveCount(1);
+  await page.getByTestId('menu-back').click();
+
+  // A resuscitation case that ends by itself opens the debrief with the CPR figures.
+  await page.getByTestId('module-resus').click();
+  await page.getByTestId('entry-vf-anaesthesia').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.runFor(22);
+    e?.dispatch({ type: 'CPR_START' }, 'user');
+    e?.runFor(130);
+  });
+  await expect(page.getByTestId('debrief-screen')).toContainText('CPR performance');
+  await expect(page.getByTestId('score-recognition')).toContainText('100');
+  await page.getByTestId('debrief-menu').click();
+  await expect(page.getByTestId('module-menu')).toBeVisible();
   expect(errors).toEqual([]);
 });

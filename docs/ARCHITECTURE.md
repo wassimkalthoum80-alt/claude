@@ -59,8 +59,9 @@ The UI imports the simulation only through `src/sim/index.ts`.
 ## App shell and sessions (milestone 6)
 
 ```
-HOME ──► module menu ──► session intro ──► workspace ──► pause menu ──► end session / main menu
-         (catalog)       (engine paused)   (engine runs)              (engine paused, workspace unmounted)
+HOME ──► module menu ──► session intro ──► workspace ──► pause menu ──► end session ──► debrief ──► My Progress
+         (catalog)       (engine paused)   (engine runs)              (engine paused,   (scored sessions)
+                                                                       workspace unmounted)
 ```
 
 - The **module catalog** (`src/content/modules/catalog.ts`) is data: modules, sections and entries; each
@@ -71,8 +72,16 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   — the engine stays the sole owner of the simulation, and its event log starts fresh for the session.
 - The session lives in presentation state (`UiState.session`, `UiState.screen`); `useSession()` holds the
   start / restart / end / home actions. Scored sessions hide the instructor panel and its hotkeys.
-- Difficulty changes help, never physiology; scoring and debrief (phase 3) will read the event log and
-  snapshots, never button presses alone.
+- Difficulty changes help, never physiology.
+- **Scoring and progression (phase 3)** — `src/game`, pure and React-free:
+  `scoringInputFrom(engine)` copies the event log, the 1 Hz monitor trends (`VitalSeries`), hints and the final
+  state; `assessDecisions` groups the learner's interventions and marks each from the measured deltas;
+  `scoreSession` gives sub-scores, overall, outcome, stars and feedback; `recordSession` / `recordExplored`
+  update the versioned `ProgressProfile` (XP, mastery, achievements, best stars). Thresholds and per-case
+  configuration live in `src/content/scoring/scoringConfig.ts`. The UI (`src/ui/adapters/debrief.ts`) scores once
+  when a scored session ends (`useSession().end`, or `AutoDebrief` when the case ends), stores the result in
+  `UiState.debrief` and opens `DebriefScreen`; `ProgressScreen` reads the profile through the `ProgressStore`
+  interface (`src/ui/progressStore.ts`, localStorage) — a server store can replace it later.
 
 ## Time model
 
@@ -114,7 +123,7 @@ HOME ──► module menu ──► session intro ──► workspace ──►
 - **Timeline, trends, hints:** `MonitorTrends` (`src/sim/devices`) records the measured numerics and ventilator
   settings at 1 Hz (4 h); `buildTimeline` (`src/ui/adapters/timeline.ts`, pure) turns the event log + these trends
   into entries with before → after values (3 min window). `ScenarioDefinition.hints` holds progressive hint topics;
-  `REQUEST_HINT` reveals the next level (`state.director.hints`, for scoring in phase 3). UI: `SessionTools`.
+  `REQUEST_HINT` reveals the next level (`state.director.hints`, read by the efficiency score). UI: `SessionTools`.
 - **Scenario framework additions:** `variants` (drawn from the seed by `resolveVariant`, merged into the scenario;
   `state.scenario.variant`), rule `commands` (consequences with a mechanism, source `scenario`, replay-safe),
   rule `levels` (help by difficulty, set with `SET_DIFFICULTY`), a scenario rule replaces a general rule with the
@@ -161,7 +170,7 @@ HOME ──► module menu ──► session intro ──► workspace ──►
 | Airway / BVM / SGA / ETT (M4) | `patient.airway.device`, `VentilatorDevice` / `RespiratoryModel` |
 | Player-driven compressions, feedback devices, manikins | new `CompressionSource` implementations |
 | 2D art, Three.js or Unity patient | new renderer consuming `PatientVisualState` |
-| Scoring, debrief, replay (milestone 6 phase 3) | `src/game` pure functions over `EventLog` + snapshots; deterministic re-run from the session seed |
+| Replay viewer | scoring and debrief exist (`src/game`); a replay viewer can re-run the session from its seed and log (`SimulationEngine.replay`) |
 
 ## Heart–lung interaction
 

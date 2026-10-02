@@ -86,7 +86,13 @@ function earned(p: ProgressProfile, last: SessionRecord | null): AchievementId[]
   const out: AchievementId[] = [];
   if (p.sessions.length > 0) out.push('first-session');
   if (p.sessions.some((s) => s.stars === 3)) out.push('three-stars');
-  if (last && last.scores.safety === 100 && last.durationS >= 120 && last.outcome !== 'arrest')
+  if (
+    last &&
+    last.scores.safety === 100 &&
+    last.stars >= 2 &&
+    last.durationS >= 120 &&
+    last.outcome !== 'arrest'
+  )
     out.push('steady-hands');
   if (p.sessions.some((s) => (s.scores.recognition ?? 0) >= 90)) out.push('fast-responder');
   if ((p.mastery.haemodynamics?.value ?? 0) >= 70 && (p.mastery.ventilation?.value ?? 0) >= 70)
