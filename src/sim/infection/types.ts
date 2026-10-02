@@ -81,6 +81,8 @@ export interface AntiinfectiveDef {
   nephrotoxic?: boolean;
   /** therapeutic drug monitoring is standard */
   tdm?: boolean;
+  /** reaches high concentrations in bladder urine regardless of oral bioavailability (cystitis agents) */
+  urinaryConcentrated?: boolean;
   /** 0..1 penetration per focus; missing focus = 1. `gut` = intraluminal colon (oral vancomycin, fidaxomicin). */
   penetration?: Partial<Record<Focus, number>>;
   /** 0..1 — activity retained on foreign material / biofilm (missing = 0.4) */
@@ -190,6 +192,8 @@ export interface Isolate {
   mechanisms: MechanismId[];
   /** drug-specific overrides (e.g. a particular resistance) */
   overrides?: Record<string, Susceptibility>;
+  /** Legionella pneumophila serogroup (default 1 — the only one the urinary antigen detects reliably) */
+  serogroup?: number;
 }
 
 /**
@@ -225,7 +229,12 @@ export type ProcedureId =
   | 'pleural-drainage'
   | 'remove-prosthesis'
   /** adjunct, not source control: dexamethasone with the first antibiotic dose (bacterial meningitis) */
-  | 'dexamethasone';
+  | 'dexamethasone'
+  /** non-antibiotic care that resolves some mimics (dehydration, deliriogenic drugs) */
+  | 'rehydration'
+  | 'medication-review'
+  /** multidisciplinary endocarditis team (cardiology, cardiac surgery, infectious diseases) */
+  | 'endocarditis-team';
 
 export const PROCEDURES: readonly ProcedureId[] = [
   'remove-cvc',
@@ -238,6 +247,17 @@ export const PROCEDURES: readonly ProcedureId[] = [
   'pleural-drainage',
   'remove-prosthesis',
   'dexamethasone',
+  'rehydration',
+  'medication-review',
+  'endocarditis-team',
+];
+
+/** Procedures that act at once and are not source control (adjuncts, consults, supportive care). */
+export const ADJUNCT_PROCEDURES: readonly ProcedureId[] = [
+  'dexamethasone',
+  'rehydration',
+  'medication-review',
+  'endocarditis-team',
 ];
 
 export interface SourceControlAction {
@@ -269,16 +289,31 @@ export interface InfectionSiteDef {
   /** needs source control for cure; without it a floor of burden persists and rises */
   needsSourceControl?: boolean;
   sourceControl?: SourceControlAction[];
-  /** d — effective therapy needed after clearance before stopping is safe (seeded ±) */
+  /**
+   * d — effective therapy needed before stopping is safe, counted from `durationFrom` (a clinical minimum: no random
+   * relaxation)
+   */
   minEffectiveDays: number;
+  /**
+   * when effective days start to count: first effective dose (default), documented clearance (≈ first negative blood
+   * culture: S. aureus bacteraemia, endocarditis, catheter infection) or adequate source control
+   */
+  durationFrom?: 'effective-start' | 'clearance' | 'source-control';
   /** h — onset (0 = present at start; later = superinfection scripted by the case) */
   onsetH?: number;
 }
 
-/** Non-infectious cause of inflammation (mimic). Antibiotics do not change it. */
+/**
+ * Non-infectious cause of inflammation (mimic), or a non-bacterial complication of an infection (e.g. septic embolic
+ * stroke). Antibiotics do not change it.
+ */
 export interface MimicDef {
   id: string;
   diagnosisKey: string;
+  /** 'complication': consequence of the infection (shown with the infections in the debrief), not a mimic */
+  kind?: 'mimic' | 'complication';
+  /** persists until one of these procedures is done, then resolves with `resolveTauH` */
+  resolvedBy?: ProcedureId[];
   /** 0..1 initial inflammatory drive */
   drive: number;
   /** h — time constant of spontaneous resolution (Infinity = persists) */
@@ -369,6 +404,12 @@ export interface CasePatient {
   baselinePlatelets?: number;
   /** a drug that interacts with rifampicin (e.g. a NOAC) */
   noac?: boolean;
+  /** chronic intermittent haemodialysis: drug clearance follows the dialysis schedule, not the creatinine */
+  dialysis?: 'intermittent-hd';
+  /** /µL — absolute neutrophil count at admission (neutropenia) */
+  baselineAnc?: number;
+  /** h — neutrophil recovery begins (ANC rises over ~3 days; host defence recovers with it) */
+  ancRecoveryH?: number;
   /** 0..1 — C. difficile infection already active at admission (its severity) */
   cdiAtAdmission?: number;
   /** multiplier of C. difficile acquisition and onset hazards (hospital pressure in the campaign; default 1) */
@@ -504,6 +545,7 @@ export type SpecimenKind =
   | 'puncture-culture'
   | 'cdiff-test'
   | 'legionella-antigen'
+  | 'legionella-pcr'
   | 'pneumococcal-antigen'
   | 'mrsa-screen'
   | 'mrgn-screen';
@@ -732,7 +774,15 @@ export type InfectionLogEntry =
       isolateId?: string;
       mechanism?: MechanismId;
     }
-  | { seq: number; t: number; kind: 'procedure-done'; procedure: ProcedureId; effective: boolean }
+  | {
+      seq: number;
+      t: number;
+      kind: 'procedure-done';
+      procedure: ProcedureId;
+      effective: boolean;
+      /** best source control reached by it (absent for adjuncts and procedures without a focus) */
+      control?: 'partial' | 'adequate';
+    }
   | { seq: number; t: number; kind: 'timeout-due' }
   | { seq: number; t: number; kind: 'shock'; preset: RealtimePreset }
   | { seq: number; t: number; kind: 'cured' | 'died' | 'case-end' };
@@ -740,6 +790,8 @@ export type InfectionLogEntry =
 export interface LabPanel {
   /** /µL ×1000 (G/L) */
   wbc: number;
+  /** /µL ×1000 (G/L) — absolute neutrophil count, reported in neutropenic patients */
+  anc?: number;
   /** mg/L */
   crp: number;
   /** ng/mL */
@@ -752,8 +804,8 @@ export interface LabPanel {
   platelets: number;
   /** mg/dL */
   bilirubin: number;
-  /** mg/L — vancomycin trough, only when running */
-  vancomycinTrough?: number;
+  /** mg·h/L — estimated vancomycin AUC₂₄ (from levels), only when running */
+  vancomycinAuc24?: number;
 }
 
 export interface VitalsPoint {

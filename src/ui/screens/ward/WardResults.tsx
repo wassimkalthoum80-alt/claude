@@ -14,13 +14,14 @@ import styles from './Ward.module.css';
 
 const LAB_UNITS: Record<keyof LabPanel, string> = {
   wbc: 'G/L',
+  anc: 'G/L',
   crp: 'mg/L',
   pct: 'ng/mL',
   creatinine: 'mg/dL',
   lactate: 'mmol/L',
   platelets: 'G/L',
   bilirubin: 'mg/dL',
-  vancomycinTrough: 'mg/L',
+  vancomycinAuc24: 'mg·h/L',
 };
 
 /** Laboratory values per day (last draw of each day). */

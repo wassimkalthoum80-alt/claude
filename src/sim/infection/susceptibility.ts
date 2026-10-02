@@ -190,7 +190,11 @@ export function orderActivity(
   const s = susceptibility(isolate, drug, lib);
   if (s === 'R') return 0;
   const need = s === 'S' ? 0.8 : 1.3;
-  const e = exposure(order, drug, ctx.gfrRelative, ctx.timeH, ctx.focus === 'gut');
+  // Gut lumen (non-absorbed agents) and bladder urine (cystitis agents excreted in high urinary concentrations): oral
+  // bioavailability does not limit the exposure at the focus.
+  const luminal =
+    ctx.focus === 'gut' || (ctx.focus === 'urine' && drug.urinaryConcentrated === true);
+  const e = exposure(order, drug, ctx.gfrRelative, ctx.timeH, luminal);
   const kill = smoothstep((e / need - 0.5) / 0.5);
   const pen = drug.penetration?.[ctx.focus] ?? (ctx.focus === 'gut' ? 0 : 1);
   const biofilm = ctx.foreignBody ? (drug.biofilm ?? 0.4) : 1;

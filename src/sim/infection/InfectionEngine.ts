@@ -4,6 +4,7 @@ import { SeededRng } from '../core/rng';
 import { takeSpecimen, type SampledSite, type ScheduledReport } from './microbiology';
 import { COURSE } from './params';
 import { combinedActivity, exposure, orderActivity } from './susceptibility';
+import { ADJUNCT_PROCEDURES } from './types';
 import type {
   ColonisationDef,
   CollateralKind,
@@ -51,9 +52,9 @@ interface SiteState {
   uncontrolledH: number;
   cleared: boolean;
   clearedAtH: number | null;
-  /** h of effective therapy accrued after clearance */
+  /** h of effective therapy accrued since the site's duration anchor (effective start, clearance or source control) */
   sterilisedH: number;
-  /** h of effective therapy needed (seeded) */
+  /** h of effective therapy needed (the case's clinical minimum) */
   requiredH: number;
   relapseAtH: number | null;
   relapseDecided: boolean;
@@ -62,7 +63,10 @@ interface SiteState {
 interface MimicState {
   def: MimicDef;
   active: boolean;
-  drive: number;
+  /** 0..1 — how much of the mimic is present (inflammatory drive and organ effect scale with it) */
+  level: number;
+  /** a resolving procedure was done (mimics with `resolvedBy`) */
+  treated: boolean;
 }
 
 interface Organs {
@@ -88,7 +92,13 @@ export interface InfectionTruth {
     requiredH: number;
     relapseAtH: number | null;
   }[];
-  mimics: readonly { id: string; diagnosisKey: string; active: boolean; drive: number }[];
+  mimics: readonly {
+    id: string;
+    diagnosisKey: string;
+    kind: 'mimic' | 'complication';
+    active: boolean;
+    drive: number;
+  }[];
   isolates: readonly Isolate[];
   colonisation: readonly ColonisationDef[];
   inflammation: number;
@@ -149,6 +159,13 @@ export class InfectionEngine {
   };
   private stoolsPer24h = 1;
   private dexamethasoneAtH: number | null = null;
+  /** h — sample time of the last positive C. difficile test (repeat testing / test of cure is rejected) */
+  private cdiffPositiveAtH: number | null = null;
+  /** h of linezolid exposure after which platelets fall (seeded per patient) */
+  private readonly linezolidFromH: number;
+  /** per-patient marker responsiveness (seeded): PCT scale and fever response */
+  private readonly pctFactor: number;
+  private readonly feverFactor: number;
 
   private vitals: VitalsPoint[] = [];
   private labs: { t: number; labs: LabPanel }[] = [];
@@ -168,6 +185,14 @@ export class InfectionEngine {
     this.variant = resolved.variant;
     this.library = opts.library;
     this.rng = new SeededRng(seed);
+    // Patient-level variability from a separate stream, so the course RNG sequence is unaffected.
+    // SIM-ASSUMPTION: PCT response ×0.5–1.5, fever response ×0.9–1.05 (blunted above 80 y), linezolid platelet fall
+    // from day 7–14 of exposure.
+    const patientRng = new SeededRng((seed ^ PATIENT_SALT) >>> 0);
+    this.pctFactor = patientRng.uniform(0.5, 1.5);
+    this.feverFactor =
+      patientRng.uniform(0.9, 1.05) * (opts.caseDef.patient.ageYears >= 80 ? 0.85 : 1);
+    this.linezolidFromH = 24 * patientRng.uniform(7, 14);
     const c = this.caseDef;
     for (const iso of c.isolates)
       this.isolates.set(iso.id, { ...iso, mechanisms: [...iso.mechanisms] });
@@ -184,7 +209,7 @@ export class InfectionEngine {
       superinfected: false,
     }));
     this.sites = c.infections.map((def) => this.newSite(def));
-    this.mimics = (c.mimics ?? []).map((def) => ({ def, active: false, drive: 0 }));
+    this.mimics = (c.mimics ?? []).map((def) => ({ def, active: false, level: 0, treated: false }));
     this.cdi.carrier = c.patient.cdiffCarrier ?? false;
     if (c.patient.cdiAtAdmission) {
       // Present at admission: active C. difficile infection (the case's own diagnosis, not collateral).
@@ -204,10 +229,10 @@ export class InfectionEngine {
     this.inflam = drive;
     this.bactInflam = this.bacterialDrive();
     this.crp = COURSE.crp.base + COURSE.crp.scale * (drive * 0.65) ** 1.3;
-    this.pct = COURSE.pct.base + COURSE.pct.scale * this.bactInflam ** 2;
+    this.pct = COURSE.pct.base + COURSE.pct.scale * this.pctFactor * this.bactInflam ** 2;
     // Patients arrive with the organ dysfunction their infection has already caused.
     this.organs = this.organTargets();
-    this.creatinine = c.patient.baselineCreatinine * (1 + 3 * this.organs.kidney);
+    this.creatinine = this.creatinineTarget();
     for (const init of c.initialTherapy ?? []) {
       this.orders.push(
         this.makeOrder(init.drugId, init.dose, init.route, false, null, init.startedH),
@@ -331,8 +356,9 @@ export class InfectionEngine {
       mimics: this.mimics.map((m) => ({
         id: m.def.id,
         diagnosisKey: m.def.diagnosisKey,
+        kind: m.def.kind ?? 'mimic',
         active: m.active,
-        drive: m.drive,
+        drive: this.mimicDrive(m),
       })),
       isolates: [...this.isolates.values()].map((i) => ({ ...i, mechanisms: [...i.mechanisms] })),
       colonisation: this.colonisation.map((c) => ({ ...c })),
@@ -421,14 +447,12 @@ export class InfectionEngine {
         return { accepted: true, orderId: o.id };
       }
       case 'PROCEDURE': {
-        if (cmd.procedure === 'dexamethasone') {
-          // Adjunct, given at once; its effect (fewer neurological sequelae) is applied in the organ targets.
-          this.dexamethasoneAtH ??= this.t;
+        if (ADJUNCT_PROCEDURES.includes(cmd.procedure)) {
           this.eventLog.append({
             t: this.t,
             kind: 'procedure-done',
             procedure: cmd.procedure,
-            effective: this.sites.some((x) => x.active && x.def.focus === 'cns'),
+            effective: this.applyAdjunct(cmd.procedure),
           });
           return { accepted: true };
         }
@@ -465,6 +489,25 @@ export class InfectionEngine {
         this.applyRealtimeOutcome(cmd.outcome);
         return { accepted: true };
     }
+  }
+
+  /** Adjuncts, consults and supportive care act at once. Returns whether it changed anything in this patient. */
+  private applyAdjunct(procedure: ProcedureId): boolean {
+    let effective = false;
+    if (procedure === 'dexamethasone') {
+      // Its effect (fewer neurological sequelae) is applied in the organ targets.
+      this.dexamethasoneAtH ??= this.t;
+      effective = this.sites.some((x) => x.active && x.def.focus === 'cns');
+    }
+    if (procedure === 'endocarditis-team')
+      effective = this.sites.some((x) => x.active && x.def.focus === 'valve');
+    for (const m of this.mimics) {
+      if (m.def.resolvedBy?.includes(procedure)) {
+        m.treated = true;
+        effective = true;
+      }
+    }
+    return effective;
   }
 
   private advanceTo(until: 'next-round' | 'next-event'): void {
@@ -524,7 +567,16 @@ export class InfectionEngine {
       colonisation: this.colonisation,
       therapy: this.orders,
       gfrRelative: this.gfrRelative(),
-      cdi: { carrier: this.cdi.carrier, active: this.cdi.active, stoolsPer24h: this.stoolsPer24h },
+      cdi: {
+        carrier: this.cdi.carrier,
+        active: this.cdi.active,
+        stoolsPer24h: this.stoolsPer24h,
+        ileus: this.cdiIleus(),
+        positiveAtH: this.cdiffPositiveAtH,
+        onPositive: () => {
+          this.cdiffPositiveAtH = this.t;
+        },
+      },
       lib: this.library,
       rng: this.rng,
       addIsolate: (iso) => {
@@ -611,7 +663,6 @@ export class InfectionEngine {
   }
 
   private newSite(def: InfectionSiteDef): SiteState {
-    const [lo, hi] = COURSE.requiredDaysSpread;
     return {
       def,
       active: false,
@@ -622,7 +673,7 @@ export class InfectionEngine {
       cleared: false,
       clearedAtH: null,
       sterilisedH: 0,
-      requiredH: def.minEffectiveDays * 24 * this.rng.uniform(lo, hi),
+      requiredH: def.minEffectiveDays * 24,
       relapseAtH: null,
       relapseDecided: false,
     };
@@ -639,7 +690,7 @@ export class InfectionEngine {
     for (const m of this.mimics) {
       if (!m.active && (m.def.onsetH ?? 0) <= this.t) {
         m.active = true;
-        m.drive = m.def.causedByDrugId ? 0 : m.def.drive;
+        m.level = m.def.causedByDrugId ? 0 : 1;
       }
     }
   }
@@ -649,18 +700,21 @@ export class InfectionEngine {
     this.procedurePending = this.procedurePending.filter((p) => p.doneAtH > this.t);
     for (const p of done) {
       let effective = false;
+      let control: 'partial' | 'adequate' | undefined;
       for (const site of this.sites) {
         const action = site.def.sourceControl?.find((a) => a.id === p.procedure);
         if (!action || !site.active) continue;
         effective = true;
         if (site.control !== 'adequate') site.control = action.result;
         if (site.control === 'adequate') site.uncontrolledH = 0;
+        if (action.result === 'adequate' || control === undefined) control = action.result;
       }
       this.eventLog.append({
         t: this.t,
         kind: 'procedure-done',
         procedure: p.procedure,
         effective,
+        ...(control ? { control } : {}),
       });
     }
   }
@@ -705,7 +759,7 @@ export class InfectionEngine {
   }
 
   private stepSites(dt: number): void {
-    const immunity = this.caseDef.patient.immunity;
+    const immunity = this.immunityNow();
     for (const s of this.sites) {
       if (!s.active) continue;
       if (s.relapseAtH !== null && this.t >= s.relapseAtH) {
@@ -717,9 +771,17 @@ export class InfectionEngine {
         this.collateral('relapse', 'collateral.relapse');
       }
       const act = this.siteActivity(s);
+      // Effective days count from the site's clinical anchor (first effective dose, clearance or source control).
+      const from = s.def.durationFrom ?? 'effective-start';
+      const anchored =
+        from === 'clearance'
+          ? s.cleared
+          : from === 'source-control'
+            ? s.control === 'adequate'
+            : true;
+      if (anchored && act >= COURSE.effectiveActivity) s.sterilisedH += dt;
       if (s.cleared) {
-        if (act >= COURSE.effectiveActivity) s.sterilisedH += dt;
-        else if (!s.relapseDecided && this.running().length === 0) {
+        if (act < COURSE.effectiveActivity && !s.relapseDecided && this.running().length === 0) {
           // Therapy stopped after clearance: relapse risk scales with the shortfall of effective days.
           s.relapseDecided = true;
           const shortfall = Math.max(0, 1 - s.sterilisedH / Math.max(1, s.requiredH));
@@ -928,8 +990,14 @@ export class InfectionEngine {
     if (!this.running().some((o) => this.library.drugs.get(o.drugId)?.nephrotoxic))
       this.nephrotox *= Math.exp(-dt / 120);
     const lin = this.running().find((o) => o.drugId === 'linezolid');
-    if (lin && this.t - lin.startedH === COURSE.linezolid.fromH)
+    if (
+      lin &&
+      this.t - lin.startedH >= this.linezolidFromH &&
+      !this.flags.has('linezolid-platelets')
+    ) {
+      this.flags.add('linezolid-platelets');
       this.collateral('thrombocytopenia', 'collateral.linezolid-platelets');
+    }
   }
 
   private stepMimics(dt: number): void {
@@ -937,12 +1005,19 @@ export class InfectionEngine {
       if (!m.active) continue;
       if (m.def.causedByDrugId) {
         const on = this.running().some((o) => o.drugId === m.def.causedByDrugId);
-        const target = on ? m.def.drive : 0;
-        m.drive += ((target - m.drive) * dt) / (on ? 12 : 36);
+        m.level += (((on ? 1 : 0) - m.level) * dt) / (on ? 12 : 36);
+      } else if (m.def.resolvedBy && !m.treated) {
+        // SIM-ASSUMPTION: a mimic with a specific remedy (rehydration, stopping a deliriogenic drug) persists until it
+        // is given, then resolves with its time constant.
+        continue;
       } else if (Number.isFinite(m.def.resolveTauH)) {
-        m.drive *= Math.exp(-dt / m.def.resolveTauH);
+        m.level *= Math.exp(-dt / m.def.resolveTauH);
       }
     }
+  }
+
+  private mimicDrive(m: MimicState): number {
+    return m.active ? m.def.drive * m.level : 0;
   }
 
   private bacterialDrive(): number {
@@ -953,7 +1028,7 @@ export class InfectionEngine {
 
   private inflammatoryDrive(): number {
     let miss = 1 - this.bacterialDrive();
-    for (const m of this.mimics) if (m.active) miss *= 1 - m.drive;
+    for (const m of this.mimics) if (m.active) miss *= 1 - this.mimicDrive(m);
     if (this.cdi.active) miss *= 1 - 0.6 * this.cdi.severity;
     return 1 - miss;
   }
@@ -976,7 +1051,7 @@ export class InfectionEngine {
     );
     const crpTarget = COURSE.crp.base + COURSE.crp.scale * this.inflam ** 1.3;
     this.crp = lag(this.crp, crpTarget, COURSE.crpTauH.rise, COURSE.crpTauH.fall);
-    const pctTarget = COURSE.pct.base + COURSE.pct.scale * this.bactInflam ** 2;
+    const pctTarget = COURSE.pct.base + COURSE.pct.scale * this.pctFactor * this.bactInflam ** 2;
     this.pct = lag(this.pct, pctTarget, COURSE.pctTauH.rise, COURSE.pctTauH.fall);
   }
 
@@ -996,16 +1071,18 @@ export class InfectionEngine {
         0,
         ...this.mimics
           .filter((m) => m.active && (m.def.organ ?? 'lung') === organ)
-          .map((m) => (m.def.organDrive ?? 0) * (m.drive / Math.max(0.01, m.def.drive))),
+          .map((m) => (m.def.organDrive ?? 0) * m.level),
       );
     const lungFocus = Math.max(
       0,
       ...this.sites.filter((s) => s.active && s.def.focus === 'lung').map((s) => 0.5 * s.burden),
     );
     const fulminantCdi = this.cdi.active ? Math.max(0, (this.cdi.severity - 0.6) * 1.5) : 0;
+    // SIM-ASSUMPTION: severe C. difficile colitis shows in the creatinine (fluid loss) — a visible severity criterion.
+    const cdiKidney = this.cdi.active ? 0.4 * Math.max(0, this.cdi.severity - 0.3) : 0;
     return {
       circ: Math.min(1, sev * w.circ + fulminantCdi),
-      kidney: Math.min(1, sev * w.kidney + this.nephrotox + mimicOrgan('kidney')),
+      kidney: Math.min(1, sev * w.kidney + this.nephrotox + mimicOrgan('kidney') + cdiKidney),
       lung: Math.min(1, sev * w.lung + lungFocus + mimicOrgan('lung')),
       liver: Math.min(1, sev * w.liver),
       coag: Math.min(1, sev * w.coag),
@@ -1019,25 +1096,25 @@ export class InfectionEngine {
   }
 
   /**
-   * SIM-ASSUMPTION: in bacterial meningitis, dexamethasone given before or within 1 h of the first antibiotic dose
-   * lowers the brain's share of organ dysfunction by 30 % (fewer neurological sequelae); later it does not help.
+   * SIM-ASSUMPTION: in bacterial meningitis, dexamethasone given just before or with the first antibiotic dose (≤ 1 h
+   * after it) lowers the brain's share of organ dysfunction by 30 % (fewer neurological sequelae); given within a few
+   * hours (≤ 4 h) after the first dose, by 15 %. The benefit is a teaching approximation, not a measured effect size.
    */
   private cnsSequelaeFactor(): number {
     const meningitis = this.sites.some((x) => x.active && x.def.focus === 'cns');
     if (!meningitis || this.dexamethasoneAtH === null) return 1;
     const first = this.firstAntibioticH;
-    return first === null || this.dexamethasoneAtH <= first + 1 ? 0.7 : 1;
+    if (first === null || this.dexamethasoneAtH <= first + 1) return 0.7;
+    return this.dexamethasoneAtH <= first + 4 ? 0.85 : 1;
   }
 
   private stepOrgans(dt: number): void {
-    const p = this.caseDef.patient;
     const target = this.organTargets();
     for (const k of Object.keys(target) as (keyof Organs)[]) {
       const tau = target[k] > this.organs[k] ? COURSE.organTauH.rise : COURSE.organTauH.recover;
       this.organs[k] += ((target[k] - this.organs[k]) * dt) / tau;
     }
-    const creatTarget = p.baselineCreatinine * (1 + 3 * this.organs.kidney);
-    this.creatinine += ((creatTarget - this.creatinine) * dt) / COURSE.creatinineTauH;
+    this.creatinine += ((this.creatinineTarget() - this.creatinine) * dt) / COURSE.creatinineTauH;
     if (this.organs.circ > COURSE.shockAbove && !this.shockActive) {
       this.shockActive = true;
       this.eventLog.append({ t: this.t, kind: 'shock', preset: this.realtimePreset() });
@@ -1049,9 +1126,50 @@ export class InfectionEngine {
 
   // ─── Vitals, labs, reports, calls ───────────────────────────────────────────────────────────────────────
 
+  /** mg/dL — creatinine the kidney state drives towards (dialysis: the pre-dialysis baseline). */
+  private creatinineTarget(): number {
+    const p = this.caseDef.patient;
+    if (p.dialysis) return p.baselineCreatinine;
+    return p.baselineCreatinine * (1 + 3 * this.organs.kidney);
+  }
+
+  /**
+   * Relative drug clearance (1 ≈ eGFR 100 mL/min/1.73 m²). SIM-ASSUMPTION: eGFR from creatinine, age and sex (CKD-EPI
+   * 2021), no upper cap below 1.8 so augmented renal clearance remains possible; intermittent haemodialysis is a fixed
+   * averaged clearance (0.32 → a renally adjusted "reduced" dose gives standard exposure), independent of creatinine.
+   */
   private gfrRelative(): number {
-    // SIM-ASSUMPTION: relative GFR ≈ 0.9 / creatinine (mg/dL), capped; ignores age/sex for simplicity.
-    return Math.min(1.3, 0.9 / Math.max(0.3, this.creatinine));
+    const p = this.caseDef.patient;
+    if (p.dialysis) return 0.315;
+    const female = p.sex === 'female';
+    const k = female ? 0.7 : 0.9;
+    const a = female ? -0.241 : -0.302;
+    const r = Math.max(0.2, this.creatinine) / k;
+    const egfr =
+      142 *
+      Math.min(r, 1) ** a *
+      Math.max(r, 1) ** -1.2 *
+      0.9938 ** p.ageYears *
+      (female ? 1.012 : 1);
+    return Math.min(1.8, egfr / 100);
+  }
+
+  /** 0..1 host defence; neutropenic patients recover it with their neutrophils. */
+  private immunityNow(): number {
+    const p = this.caseDef.patient;
+    return p.immunity + (1 - p.immunity) * this.ancRecovery();
+  }
+
+  /** 0..1 — fraction of neutrophil recovery (SIM-ASSUMPTION: linear over 72 h from `ancRecoveryH`). */
+  private ancRecovery(): number {
+    const from = this.caseDef.patient.ancRecoveryH;
+    if (from === undefined) return 0;
+    return Math.min(1, Math.max(0, (this.t - from) / 72));
+  }
+
+  /** C. difficile colitis so severe that the bowel stops (ileus): few stools despite active infection. */
+  private cdiIleus(): boolean {
+    return this.cdi.active && this.cdi.severity >= COURSE.cdi.ileusAbove;
   }
 
   private lactate(): number {
@@ -1062,17 +1180,20 @@ export class InfectionEngine {
     const p = this.caseDef.patient;
     const o = this.organs;
     const circadian = 0.2 * Math.sin(((this.hourOfDay() - 4) / 24) * 2 * Math.PI - Math.PI / 2);
-    const immuneFever = p.immunity > 0.4 ? 1 : 0.7;
+    const immuneFever = this.immunityNow() > 0.4 ? 1 : 0.7;
     return {
       t: this.t,
       temperatureC: round1(
-        COURSE.temperature.base + COURSE.temperature.rise * this.inflam * immuneFever + circadian,
+        COURSE.temperature.base +
+          COURSE.temperature.rise * this.inflam * immuneFever * this.feverFactor +
+          circadian,
       ),
       heartRate: Math.round(Math.min(165, 76 + 35 * this.inflam + 25 * o.circ)),
       map: Math.round(Math.max(40, 88 - 40 * o.circ)),
       respRate: Math.round(14 + 10 * this.inflam + 10 * o.lung),
       spo2: Math.round(Math.max(75, 97 - 14 * o.lung)),
-      urineMlH: Math.round(p.weightKg * 1.0 * (1 - o.kidney) ** 1.5),
+      // SIM-ASSUMPTION: dialysis patients keep a small residual diuresis (≈ 0.15 mL/kg/h).
+      urineMlH: Math.round(p.weightKg * (p.dialysis ? 0.15 : 1.0 * (1 - o.kidney) ** 1.5)),
     };
   }
 
@@ -1086,12 +1207,12 @@ export class InfectionEngine {
     const plt0 = (p.baselinePlatelets ?? 250000) / 1000;
     const lin = this.orders.find((o) => o.drugId === 'linezolid');
     const linDays = lin
-      ? Math.max(0, ((lin.stoppedH ?? this.t) - lin.startedH - COURSE.linezolid.fromH) / 24)
+      ? Math.max(0, ((lin.stoppedH ?? this.t) - lin.startedH - this.linezolidFromH) / 24)
       : 0;
     const vanco = this.running().find((o) => o.drugId === 'vancomycin');
     const vancoDrug = this.library.drugs.get('vancomycin');
     const panel: LabPanel = {
-      wbc: round1(wbc0 * (1 + COURSE.wbcRise * this.inflam) * (p.immunity < 0.4 ? 0.5 : 1)),
+      wbc: round1(wbc0 * (1 + COURSE.wbcRise * this.inflam) * (this.immunityNow() < 0.4 ? 0.5 : 1)),
       crp: Math.round(this.crp),
       pct: Math.round(this.pct * 100) / 100,
       creatinine: Math.round(this.creatinine * 100) / 100,
@@ -1103,9 +1224,17 @@ export class InfectionEngine {
       ),
       bilirubin: round1(0.6 + 4 * this.organs.liver),
     };
-    // SIM-ASSUMPTION: vancomycin trough ≈ 15 mg/L × exposure (target 15–20 mg/L).
+    if (p.baselineAnc !== undefined) {
+      // ANC in G/L, rising with recovery towards ≈ 2.5 G/L.
+      const anc0 = p.baselineAnc / 1000;
+      panel.anc = round1(anc0 + (2.5 - anc0) * this.ancRecovery());
+      if (this.ancRecovery() > 0) panel.wbc = Math.max(panel.wbc, round1(panel.anc * 1.6));
+    }
+    // SIM-ASSUMPTION: estimated vancomycin AUC₂₄ ≈ 500 mg·h/L × exposure (target 400–600 at MIC 1 mg/L).
     if (vanco && vancoDrug)
-      panel.vancomycinTrough = round1(15 * exposure(vanco, vancoDrug, this.gfrRelative(), this.t));
+      panel.vancomycinAuc24 = Math.round(
+        500 * exposure(vanco, vancoDrug, this.gfrRelative(), this.t),
+      );
     return panel;
   }
 
@@ -1163,12 +1292,19 @@ export class InfectionEngine {
         this.flags.delete(flag);
       }
     };
-    this.stoolsPer24h = this.cdi.active ? 3 + 12 * this.cdi.severity : 1;
+    // Ileus in fulminant colitis: stools stop although the infection is worse.
+    this.stoolsPer24h = this.cdiIleus() ? 1 : this.cdi.active ? 3 + 12 * this.cdi.severity : 1;
     once('fever', v.temperatureC >= 39, 'nurse.fever', false);
     once('hypotension', v.map < 65, 'nurse.hypotension', true);
     once('desaturation', v.spo2 < 90, 'nurse.desaturation', true);
-    once('oliguria', v.urineMlH < 0.5 * this.caseDef.patient.weightKg, 'nurse.oliguria', false);
+    once(
+      'oliguria',
+      !this.caseDef.patient.dialysis && v.urineMlH < 0.5 * this.caseDef.patient.weightKg,
+      'nurse.oliguria',
+      false,
+    );
     once('cdi-stools', this.cdi.active && this.stoolsPer24h >= 3, 'nurse.diarrhoea', false);
+    once('cdi-ileus', this.cdiIleus(), 'nurse.ileus', true);
   }
 
   private scheduledEvents(): void {
@@ -1242,3 +1378,6 @@ export class InfectionEngine {
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+
+/** XOR salt of the patient-variability stream (independent of the course RNG). */
+const PATIENT_SALT = 0x9c7a11;

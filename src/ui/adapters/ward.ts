@@ -240,13 +240,14 @@ export function noticesSince(log: readonly InfectionLogEntry[], afterSeq: number
 
 export const LAB_ROWS: readonly (keyof LabPanel)[] = [
   'wbc',
+  'anc',
   'crp',
   'pct',
   'creatinine',
   'lactate',
   'platelets',
   'bilirubin',
-  'vancomycinTrough',
+  'vancomycinAuc24',
 ];
 
 /** Last lab panel of each day (columns), newest last. */

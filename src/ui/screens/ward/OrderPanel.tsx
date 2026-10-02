@@ -44,6 +44,7 @@ const SPECIMENS: { order: SpecimenOrder; key: string }[] = [
   { order: { kind: 'puncture-culture', site: 'csf' }, key: 'specimen.csf' },
   { order: { kind: 'cdiff-test', site: 'stool' }, key: 'specimen.cdiff-test' },
   { order: { kind: 'legionella-antigen', site: 'urine' }, key: 'specimen.legionella-antigen' },
+  { order: { kind: 'legionella-pcr', site: 'sputum' }, key: 'specimen.legionella-pcr' },
   { order: { kind: 'pneumococcal-antigen', site: 'urine' }, key: 'specimen.pneumococcal-antigen' },
   { order: { kind: 'mrsa-screen', site: 'nose' }, key: 'specimen.mrsa-screen' },
   { order: { kind: 'mrgn-screen', site: 'gut' }, key: 'specimen.mrgn-screen' },

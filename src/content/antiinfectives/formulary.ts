@@ -149,6 +149,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['po'],
     bioavailability: 0.7,
     renallyCleared: true,
+    urinaryConcentrated: true,
     // SIM-ASSUMPTION: used for lower urinary tract infection; little renal-tissue exposure at the cystitis dose.
     penetration: {
       blood: 0.3,
@@ -635,6 +636,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['po'],
     bioavailability: 0.4,
     renallyCleared: true,
+    urinaryConcentrated: true,
     // SIM-ASSUMPTION: single oral dose for cystitis — bladder urine only, no renal-tissue or blood exposure.
     penetration: {
       blood: 0,
@@ -675,6 +677,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['po'],
     bioavailability: 0.9,
     renallyCleared: true,
+    urinaryConcentrated: true,
     penetration: {
       blood: 0,
       lung: 0,

@@ -171,7 +171,7 @@ export const infectioEn = {
   'micro.status.preliminary': 'preliminary',
   'micro.status.final': 'final',
   'micro.cdiff.rejected':
-    'Rejected: formed stool — C. difficile testing only with diarrhoea (≥ 3 unformed stools/24 h).',
+    'Rejected: formed stool (fewer than 3 unformed stools / 24 h; state ileus if suspected).',
   'micro.cdiff.negative': 'C. difficile: GDH and toxin negative.',
   'micro.cdiff.gdh-positive-toxin-negative':
     'C. difficile: GDH positive, toxin negative — colonisation possible, interpret with the clinical picture.',
@@ -1130,6 +1130,17 @@ export const infectioEn = {
   'mech.hlar': 'high-level aminoglycoside resistance (HLAR)',
   'mech.pbp5': 'ampicillin resistance (PBP5)',
   'aware.antifungal': 'Antifungal (not AWaRe)',
+  'proc.rehydration': 'Rehydration (i.v. or oral fluids)',
+  'proc.medication-review': 'Medication review — stop deliriogenic drugs',
+  'proc.endocarditis-team': 'Endocarditis team (cardiology, cardiac surgery, ID)',
+  'lab.anc': 'Neutrophils (ANC)',
+  'lab.vancomycinAuc24': 'Vancomycin AUC₂₄ (estimate)',
+  'specimen.legionella-pcr': 'Legionella PCR (respiratory sample)',
+  'micro.cdiff.gdh-naat-positive-toxin-negative':
+    'GDH/NAAT positive, toxin immunoassay negative — colonisation or CDI: clinical decision (a negative toxin test does not exclude CDI).',
+  'micro.cdiff.repeat':
+    'Rejected: repeat test within 7 days of a positive result (no test of cure).',
+  'nurse.ileus': 'Abdomen distended and tense, hardly any stool since yesterday.',
   'cls.penicillin': 'Penicillin',
   'cls.aminopenicillin': 'Aminopenicillins',
   'cls.aminopenicillin-bli': 'Aminopenicillin/BLI',

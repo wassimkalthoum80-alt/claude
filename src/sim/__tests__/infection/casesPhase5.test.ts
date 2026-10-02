@@ -120,9 +120,14 @@ describe('A2 — CoNS in one of two sets', () => {
   });
 
   it('line infection: the catheter set turns positive ≥ 2 h before the peripheral set', () => {
-    const e = make(consOneSet, seedFor(consOneSet, 'crbsi'));
-    runTo(e, 50);
-    const signals = micro(e).filter((m) => m.r.stage === 'positive-signal');
+    // First crbsi session in which both paired sets grow (each set is positive with high, not certain, probability).
+    let signals: ReturnType<typeof micro> = [];
+    for (let s = 1; s <= 300 && signals.length < 2; s++) {
+      const e = make(consOneSet, s);
+      if (e.variant !== 'crbsi') continue;
+      runTo(e, 50);
+      signals = micro(e).filter((m) => m.r.stage === 'positive-signal');
+    }
     expect(signals).toHaveLength(2);
     const [first, second] = signals;
     expect((second?.at ?? 0) - (first?.at ?? 0)).toBeGreaterThanOrEqual(2);

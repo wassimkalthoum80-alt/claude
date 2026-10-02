@@ -42,7 +42,17 @@ export interface SamplingInput {
   colonisation: readonly ColonisationDef[];
   therapy: readonly TherapyOrder[];
   gfrRelative: number;
-  cdi: { carrier: boolean; active: boolean; stoolsPer24h: number };
+  cdi: {
+    carrier: boolean;
+    active: boolean;
+    stoolsPer24h: number;
+    /** fulminant colitis with ileus: tested despite few stools */
+    ileus: boolean;
+    /** h — sample time of the last positive test (null: none) */
+    positiveAtH: number | null;
+    /** records a positive result at this sample time */
+    onPositive: () => void;
+  };
   lib: InfectionLibrary;
   rng: SeededRng;
   /** creates a new contaminant isolate (e.g. CoNS) in the engine state and returns its id */
@@ -318,54 +328,58 @@ function culture(input: SamplingInput): ScheduledReport[] {
   ];
 }
 
+/**
+ * Two-step C. difficile algorithm (GDH or NAAT screen, then toxin immunoassay). SIM-ASSUMPTION: an active infection
+ * is toxin-positive in 75 %; the rest — like toxigenic carriage — gives the discordant "GDH/NAAT positive, toxin
+ * negative" result that needs clinical interpretation (a negative toxin assay does not exclude CDI). The lab rejects
+ * formed stool (fewer than 3 unformed stools / 24 h) unless the request states ileus, and repeat tests within 7 days of
+ * a positive result (no test of cure).
+ */
 function cdiffTest(input: SamplingInput): ScheduledReport[] {
-  const { now, specimenId, cdi } = input;
+  const { now, specimenId, cdi, rng } = input;
   const atH = now + COURSE.rapidTestH.cdiff;
-  // Diagnostic stewardship: the lab rejects formed stool (no diarrhoea, no C. difficile testing).
-  if (cdi.stoolsPer24h < 3) {
-    return [
-      {
-        atH,
-        call: false,
-        report: {
-          stage: 'test-result',
-          specimenId,
-          test: 'cdiff-test',
-          positive: false,
-          detailKey: 'micro.cdiff.rejected',
-        },
-      },
-    ];
-  }
-  const detailKey = cdi.active
-    ? 'micro.cdiff.toxin-positive'
-    : cdi.carrier
-      ? 'micro.cdiff.gdh-positive-toxin-negative'
-      : 'micro.cdiff.negative';
-  return [
+  const result = (positive: boolean, detailKey: string, call = false): ScheduledReport[] => [
     {
       atH,
-      call: cdi.active,
-      report: {
-        stage: 'test-result',
-        specimenId,
-        test: 'cdiff-test',
-        positive: cdi.active,
-        detailKey,
-      },
+      call,
+      report: { stage: 'test-result', specimenId, test: 'cdiff-test', positive, detailKey },
     },
   ];
+  if (cdi.positiveAtH !== null && now - cdi.positiveAtH < COURSE.cdi.repeatRejectH)
+    return result(false, 'micro.cdiff.repeat');
+  if (cdi.stoolsPer24h < 3 && !cdi.ileus) return result(false, 'micro.cdiff.rejected');
+  if (cdi.active && rng.next() < COURSE.cdi.toxinPositive) {
+    cdi.onPositive();
+    return result(true, 'micro.cdiff.toxin-positive', true);
+  }
+  if (cdi.active || cdi.carrier) {
+    cdi.onPositive();
+    return result(true, 'micro.cdiff.gdh-naat-positive-toxin-negative');
+  }
+  return result(false, 'micro.cdiff.negative');
 }
 
-function antigenTest(input: SamplingInput, organismId: string): ScheduledReport[] {
+/**
+ * Urinary antigen (pneumococci; Legionella — detects L. pneumophila serogroup 1 only) or respiratory Legionella PCR
+ * (all serogroups). A negative antigen does not exclude Legionella.
+ */
+function antigenTest(
+  input: SamplingInput,
+  organismId: string,
+  method: 'antigen' | 'pcr' = 'antigen',
+): ScheduledReport[] {
   const positive = input.sites.some(
     (s) =>
       s.burden >= 0.1 &&
-      s.isolateIds.some((id) => input.isolates.get(id)?.organismId === organismId),
+      s.isolateIds.some((id) => {
+        const iso = input.isolates.get(id);
+        if (iso?.organismId !== organismId) return false;
+        return method === 'pcr' || organismId !== 'l-pneumophila' || (iso.serogroup ?? 1) === 1;
+      }),
   );
   return [
     {
-      atH: input.now + COURSE.rapidTestH.antigen,
+      atH: input.now + (method === 'pcr' ? COURSE.rapidTestH.pcr : COURSE.rapidTestH.antigen),
       call: false,
       report: {
         stage: 'test-result',
@@ -409,6 +423,8 @@ export function takeSpecimen(input: SamplingInput): ScheduledReport[] {
       return cdiffTest(input);
     case 'legionella-antigen':
       return antigenTest(input, 'l-pneumophila');
+    case 'legionella-pcr':
+      return antigenTest(input, 'l-pneumophila', 'pcr');
     case 'pneumococcal-antigen':
       return antigenTest(input, 's-pneumoniae');
     case 'mrsa-screen':

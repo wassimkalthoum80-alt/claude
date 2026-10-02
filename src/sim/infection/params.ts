@@ -26,8 +26,6 @@ export const COURSE = {
   effectiveActivity: 0.5,
   /** relapse probability at full shortfall of effective days; delay range (h) */
   relapse: { maxProbability: 0.85, delayH: [48, 120] as const, burden: 0.35 },
-  /** seeded spread of the required effective duration (× minEffectiveDays) */
-  requiredDaysSpread: [0.7, 1.1] as const,
 
   // ── Host response ──
   /** h — inflammation rise / fall time constants */
@@ -76,11 +74,17 @@ export const COURSE = {
     /** recurrence probability after treatment by agent */
     recurrence: { 'vancomycin-po': 0.25, fidaxomicin: 0.13, metronidazole: 0.3, other: 0.3 },
     recurrenceDelayH: [120, 336] as const,
+    /** severity above which fulminant colitis stops the bowel (ileus: few stools) */
+    ileusAbove: 0.75,
+    /** probability that an active infection shows a positive toxin immunoassay (else GDH/NAAT+, toxin −) */
+    toxinPositive: 0.75,
+    /** h — a repeat test within this window after a positive result is rejected (no test of cure) */
+    repeatRejectH: 168,
   },
   /** nephrotoxicity accumulation /h per exposure unit above 1.0 */
   nephrotoxPerH: 0.003,
-  /** linezolid: thrombocytopenia from day 10, fraction of baseline lost per day */
-  linezolid: { fromH: 240, plateletLossPerDay: 0.04 },
+  /** linezolid: fraction of baseline platelets lost per day once thrombocytopenia starts (seeded day 7–14) */
+  linezolid: { plateletLossPerDay: 0.04 },
   /** de-novo resistance multiplier peak at partial activity (1 + peak × 4a(1−a)) */
   deNovoPartialPeak: 3,
   /** devices raise colonisation/superinfection hazards */
@@ -108,7 +112,7 @@ export const COURSE = {
   /** h — other cultures: identification, susceptibility */
   cultureTimelineH: { identification: 24, susceptibility: 48 },
   /** h — antigen / toxin tests, MRE screens */
-  rapidTestH: { antigen: 2, cdiff: 4, screen: 24 },
+  rapidTestH: { antigen: 2, cdiff: 4, screen: 24, pcr: 24 },
   /** h — catheter blood culture positive this much earlier in line infection (seeded range) */
   catheterLeadH: [2.5, 5] as const,
   /** hour of day of the morning labs and the morning round */

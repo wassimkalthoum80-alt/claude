@@ -251,7 +251,7 @@ export {
 } from './infection/susceptibility';
 export { COURSE as INFECTION_COURSE } from './infection/params';
 export type * from './infection/types';
-export { PROCEDURES } from './infection/types';
+export { ADJUNCT_PROCEDURES, PROCEDURES } from './infection/types';
 export {
   WardMonitorSignals,
   nibpFromMap,

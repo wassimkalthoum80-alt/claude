@@ -445,7 +445,9 @@ export const vapPseudomonas: InfectionCase = {
               kind: 'deNovo',
               driverClasses: ['carbapenem'],
               gains: 'oprd-loss',
-              hazardPerH: 0.0012,
+              // SIM-ASSUMPTION: an efflux-overexpressing isolate needs one more step to lose carbapenem activity —
+              // a markedly higher porin-loss hazard than the wild type under carbapenem pressure.
+              hazardPerH: 0.004,
             },
           ],
         },

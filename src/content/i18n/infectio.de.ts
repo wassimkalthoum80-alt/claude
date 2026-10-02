@@ -178,7 +178,7 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'micro.status.preliminary': 'vorläufig',
   'micro.status.final': 'endgültig',
   'micro.cdiff.rejected':
-    'Abgelehnt: geformter Stuhl — C.-difficile-Diagnostik nur bei Diarrhoe (≥ 3 ungeformte Stühle/24 h).',
+    'Abgelehnt: geformter Stuhl (weniger als 3 ungeformte Stühle / 24 h; bei Verdacht auf Ileus angeben).',
   'micro.cdiff.negative': 'C. difficile: GDH und Toxin negativ.',
   'micro.cdiff.gdh-positive-toxin-negative':
     'C. difficile: GDH positiv, Toxin negativ — Kolonisation möglich, klinisch interpretieren.',
@@ -1156,6 +1156,17 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'mech.hlar': 'High-Level-Aminoglykosid-Resistenz (HLAR)',
   'mech.pbp5': 'Ampicillin-Resistenz (PBP5)',
   'aware.antifungal': 'Antimykotikum (nicht AWaRe)',
+  'proc.rehydration': 'Rehydratation (i.v. oder oral)',
+  'proc.medication-review': 'Medikationsprüfung — delirogene Medikamente absetzen',
+  'proc.endocarditis-team': 'Endokarditis-Team (Kardiologie, Herzchirurgie, Infektiologie)',
+  'lab.anc': 'Neutrophile (ANC)',
+  'lab.vancomycinAuc24': 'Vancomycin-AUC₂₄ (Schätzung)',
+  'specimen.legionella-pcr': 'Legionellen-PCR (Atemwegsmaterial)',
+  'micro.cdiff.gdh-naat-positive-toxin-negative':
+    'GDH/NAAT positiv, Toxin-Immunoassay negativ — Kolonisation oder CDI: klinische Entscheidung (ein negativer Toxintest schließt eine CDI nicht aus).',
+  'micro.cdiff.repeat':
+    'Abgelehnt: Wiederholung innerhalb von 7 Tagen nach positivem Befund (keine Kontrolle auf Heilung).',
+  'nurse.ileus': 'Bauch gebläht und gespannt, seit gestern kaum noch Stuhl.',
   'cls.penicillin': 'Penicillin',
   'cls.aminopenicillin': 'Aminopenicilline',
   'cls.aminopenicillin-bli': 'Aminopenicillin/BLI',
