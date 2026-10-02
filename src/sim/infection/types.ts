@@ -354,6 +354,8 @@ export interface CasePatient {
   noac?: boolean;
   /** 0..1 — C. difficile infection already active at admission (its severity) */
   cdiAtAdmission?: number;
+  /** multiplier of C. difficile acquisition and onset hazards (hospital pressure in the campaign; default 1) */
+  cdiRiskFactor?: number;
 }
 
 /** Working diagnosis the learner can grade (shown in the UI; truth is not). */

@@ -867,7 +867,8 @@ export class InfectionEngine {
     const p = this.caseDef.patient;
     if (
       !this.cdi.carrier &&
-      this.rng.next() < c.acquisitionPerDamageDayH * this.microbiomeDamage * dt
+      this.rng.next() <
+        c.acquisitionPerDamageDayH * this.microbiomeDamage * (p.cdiRiskFactor ?? 1) * dt
     )
       this.cdi.carrier = true;
     if (!this.cdi.carrier) return;
@@ -876,6 +877,7 @@ export class InfectionEngine {
       let hazard = c.hazardPerDamageDayH * this.microbiomeDamage;
       if (p.ageYears >= 65) hazard *= c.ageFactor;
       if (p.ppi) hazard *= c.ppiFactor;
+      hazard *= p.cdiRiskFactor ?? 1;
       if (recurrence || this.rng.next() < hazard * dt) {
         this.cdi.active = true;
         this.cdi.recurrenceAtH = null;

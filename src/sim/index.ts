@@ -4,6 +4,7 @@
 export { SimulationEngine, type EngineOptions } from './engine/SimulationEngine';
 export { TIME_SCALES, type TimeScale } from './core/Clock';
 export { TICK_S, SUBSTEP_HZ, SLOW_SIGNAL_HZ } from './core/constants';
+export { SeededRng } from './core/rng';
 export {
   VENT_LIMITS,
   MODE_CONTROLS,
