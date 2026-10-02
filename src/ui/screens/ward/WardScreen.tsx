@@ -17,6 +17,8 @@ import { finishWardSession, MIN_WARD_DEBRIEF_H } from '../../adapters/wardDebrie
 import { wardNurse, wardPatientVisual } from '../../adapters/wardPatient';
 import { BedsideView } from './BedsideView';
 import { OrderPanel } from './OrderPanel';
+import { SamplingDialog } from './SamplingDialog';
+import type { SamplingProcedure } from '../../adapters/sampling';
 import { WardMonitor } from './WardMonitor';
 import { useTk, useWard } from './useWard';
 import { WardChart } from './WardChart';
@@ -63,6 +65,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
   }, [ward, end, session, setUi]);
   const [ackSeq, setAckSeq] = useState(0);
   const [reserveDraft, setReserveDraft] = useState<StartCommand | null>(null);
+  const [sampling, setSampling] = useState<SamplingProcedure | null>(null);
   const [drawer, setDrawer] = useState<'consult' | 'failure' | null>(null);
   const [timeoutDone, setTimeoutDone] = useState(false);
 
@@ -210,6 +213,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
             startHourOfDay={start}
             dispatch={dispatch}
             onReserve={setReserveDraft}
+            onSample={setSampling}
           />
           <DiagnosisPanel caseDef={ward.caseDef} view={view} dispatch={dispatch} />
         </div>
@@ -260,6 +264,17 @@ export function WardScreen({ session }: { session: SessionConfig }) {
               ...(absApproval ? { absApproval: true } : {}),
             });
             setReserveDraft(null);
+          }}
+        />
+      )}
+      {sampling && (
+        <SamplingDialog
+          key={sampling}
+          procedure={sampling}
+          onCancel={() => setSampling(null)}
+          onSend={(specimen) => {
+            dispatch({ type: 'ORDER_SPECIMEN', specimen });
+            setSampling(null);
           }}
         />
       )}

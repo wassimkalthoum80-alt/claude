@@ -459,7 +459,18 @@ export interface SpecimenOrder {
   adequateVolume?: boolean;
   /** request rapid molecular tests on positive cultures */
   rapid?: boolean;
+  // Pre-analytics (milestone 7: sampling sequences). Omitted = good practice.
+  /** blood culture: skin and septum antisepsis with full contact time, no re-palpation */
+  antisepsisAdequate?: boolean;
+  /** urine: how the sample was collected */
+  urineCollection?: UrineCollection;
+  /** cultures: reached the lab within 2 h or refrigerated */
+  promptTransport?: boolean;
+  /** puncture fluid: also inoculated into blood-culture bottles at the bedside */
+  inoculatedBottles?: boolean;
 }
+
+export type UrineCollection = 'midstream' | 'catheter-port' | 'catheter-bag';
 
 export interface GrowthReport {
   isolateId: string;

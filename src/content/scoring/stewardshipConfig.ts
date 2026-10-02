@@ -71,6 +71,13 @@ export const STEWARDSHIP_WEIGHTS: StewardshipWeights = {
   wrongStatus: 8,
   missingTdm: 6,
   rejectedTest: 4,
+  preanalytics: {
+    rushedAntisepsis: 3,
+    lowVolume: 3,
+    bagUrine: 4,
+    delayedTransport: 2,
+    punctureTube: 2,
+  },
   harm: { cdi: 15, resistance: 10, relapse: 15, aki: 10, superinfection: 15, allergy: 5 },
 };
 

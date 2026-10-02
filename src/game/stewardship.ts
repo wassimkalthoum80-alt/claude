@@ -68,6 +68,14 @@ export interface StewardshipWeights {
   wrongStatus: number;
   missingTdm: number;
   rejectedTest: number;
+  /** pre-analytics from the sampling sequences (each counted once per case) */
+  preanalytics: {
+    rushedAntisepsis: number;
+    lowVolume: number;
+    bagUrine: number;
+    delayedTransport: number;
+    punctureTube: number;
+  };
   /** outcome-score deductions for harm caused during the course */
   harm: {
     cdi: number;
@@ -299,6 +307,34 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       });
     }
   }
+
+  // ── Pre-analytics (sampling sequences) ──
+  const poor = (s: (typeof specimens)[number]) =>
+    s.order.antisepsisAdequate === false ||
+    s.order.adequateVolume === false ||
+    s.order.urineCollection === 'catheter-bag' ||
+    s.order.promptTransport === false ||
+    s.order.inoculatedBottles === false;
+  const pa = w.preanalytics;
+  const anySpecimen = (f: (o: (typeof specimens)[number]['order']) => boolean) =>
+    specimens.some((s) => f(s.order));
+  if (anySpecimen((o) => o.antisepsisAdequate === false))
+    add('stw.rushedAntisepsis', -pa.rushedAntisepsis);
+  if (anySpecimen((o) => o.kind === 'blood-culture' && o.adequateVolume === false))
+    add('stw.lowVolume', -pa.lowVolume);
+  if (anySpecimen((o) => o.urineCollection === 'catheter-bag')) add('stw.bagUrine', -pa.bagUrine);
+  if (anySpecimen((o) => o.promptTransport === false))
+    add('stw.delayedTransport', -pa.delayedTransport);
+  if (anySpecimen((o) => o.inoculatedBottles === false)) add('stw.punctureTube', -pa.punctureTube);
+  // Credit only for samples taken through a sequence (they carry an explicit pre-analytic choice).
+  const sequenced = specimens.filter(
+    (s) =>
+      s.order.antisepsisAdequate !== undefined ||
+      s.order.urineCollection !== undefined ||
+      s.order.promptTransport !== undefined ||
+      s.order.inoculatedBottles !== undefined,
+  );
+  if (sequenced.length && !specimens.some(poor)) add('stw.preanalyticsGood', 0);
 
   // ── Reserve agents ──
   if (reserveDaysUnjustified > 0) {
@@ -570,7 +606,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         t: e.t,
         key: 'wtl.specimen',
         vars: { what: `specimen.${e.order.kind}` },
-        mark: e.onAntibiotics ? 'warn' : 'info',
+        mark: e.onAntibiotics || poor(e) ? 'warn' : 'info',
       });
     } else if (e.kind === 'command' && e.accepted) {
       const c = e.command;

@@ -756,9 +756,30 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
 
   // Cultures first, then the antibiotic.
   await page.getByTestId('tab-diagnostics').click();
+  // Blood cultures as an animated bedside sequence with pre-analytic choices (nothing judged here).
   await page.getByTestId('order-bc').click();
+  await expect(page.getByTestId('sampling')).toBeVisible();
+  await expect(page.getByTestId('sampling-next')).toBeDisabled();
+  await page.getByTestId('sampling-opt-access-peripheral').click();
+  await page.getByTestId('sampling-next').click();
+  await page.getByTestId('sampling-opt-antisepsis-full').click();
+  if (shots) await page.screenshot({ path: `${shots}/ward-1b-sampling.png` });
+  await page.getByTestId('sampling-next').click();
+  await expect(page.getByTestId('sampling-step')).toHaveAttribute('data-step', 'puncture');
+  await page.getByTestId('sampling-next').click();
+  await page.getByTestId('sampling-opt-volume-full').click();
+  await page.getByTestId('sampling-next').click();
+  await page.getByTestId('sampling-opt-sets-2').click();
+  await page.getByTestId('sampling-next').click();
+  await page.getByTestId('sampling-opt-send-standard').click();
+  await page.getByTestId('sampling-send').click();
+  await expect(page.getByTestId('sampling')).toBeHidden();
   await expect(page.getByTestId('ward-nurse')).toContainText('Blutkulturen');
   await page.getByTestId('order-specimen.urine-culture').click();
+  await page.getByTestId('sampling-opt-collect-midstream').click();
+  await page.getByTestId('sampling-next').click();
+  await page.getByTestId('sampling-opt-transport-prompt').click();
+  await page.getByTestId('sampling-send').click();
   await page.getByTestId('tab-therapy').click();
   await page.getByTestId('order-drug').selectOption('ceftriaxone');
   await page.getByTestId('order-submit').click();

@@ -168,8 +168,13 @@ function bloodCulture(input: SamplingInput): ScheduledReport[] {
     }
   }
   // Skin contaminants (coagulase-negative staphylococci, mostly methicillin-resistant in hospital).
+  // SIM-ASSUMPTION: rushed antisepsis (no contact time, re-palpation) quadruples contamination per set.
+  const pContamination =
+    order.antisepsisAdequate === false
+      ? COURSE.contaminationPerSetPoorAntisepsis
+      : COURSE.contaminationPerSet;
   let contaminatedSets = 0;
-  for (let i = 0; i < sets; i++) if (rng.next() < COURSE.contaminationPerSet) contaminatedSets++;
+  for (let i = 0; i < sets; i++) if (rng.next() < pContamination) contaminatedSets++;
   if (contaminatedSets > 0) {
     const id = input.addIsolate({
       organismId: 'cons',
@@ -247,6 +252,16 @@ function culture(input: SamplingInput): ScheduledReport[] {
   const { order, now, rng, lib, specimenId } = input;
   const foci = FOCI_OF[order.site] ?? [];
   const found = new Map<string, number>();
+  // SIM-ASSUMPTION: pre-analytics. Bag urine and delayed transport let bacteria multiply in the sample
+  // (one log higher counts, more mixed flora); puncture fluid in a plain tube loses yield.
+  const bag = order.site === 'urine' && order.urineCollection === 'catheter-bag';
+  const delayed = order.promptTransport === false;
+  const countFactor =
+    (bag ? COURSE.urineBag.countFactor : 1) * (delayed ? COURSE.delayedTransport.countFactor : 1);
+  const bottleYield =
+    order.site === 'puncture' && order.inoculatedBottles === false
+      ? COURSE.punctureTubeOnlyYield
+      : 1;
   for (const site of input.sites) {
     if (!foci.includes(site.focus) || site.burden < 0.1) continue;
     for (const isoId of site.isolateIds) {
@@ -254,7 +269,10 @@ function culture(input: SamplingInput): ScheduledReport[] {
       const org = iso && lib.organisms.get(iso.organismId);
       if (!iso || !org || org.noRoutineCulture) continue;
       // Superficial swabs often miss the real pathogen.
-      const p = (order.site === 'wound-swab' ? 0.6 : 0.95) * yieldFactor(input, iso, site.focus);
+      const p =
+        (order.site === 'wound-swab' ? 0.6 : 0.95) *
+        bottleYield *
+        yieldFactor(input, iso, site.focus);
       if (rng.next() < p) found.set(isoId, infectionCount(order.site, site.burden));
     }
   }
@@ -262,13 +280,17 @@ function culture(input: SamplingInput): ScheduledReport[] {
     if (!(COLONISATION_OF[order.site] ?? []).includes(c.site)) continue;
     const iso = input.isolates.get(c.isolateId);
     if (!iso) continue;
-    if (rng.next() < 0.9 * yieldFactor(input, iso, 'skin')) found.set(c.isolateId, c.count ?? 1e4);
+    if (rng.next() < 0.9 * yieldFactor(input, iso, 'skin'))
+      found.set(c.isolateId, Math.min(1e7, (c.count ?? 1e4) * countFactor));
   }
   const t1 = now + COURSE.cultureTimelineH.identification;
   if (found.size === 0) {
+    const pMixed =
+      (order.site === 'sputum' ? 0.3 : 0.08) +
+      (bag ? COURSE.urineBag.mixedFlora : 0) +
+      (delayed ? COURSE.delayedTransport.mixedFlora : 0);
     const mixed =
-      (order.site === 'sputum' || order.site === 'urine') &&
-      rng.next() < (order.site === 'sputum' ? 0.3 : 0.08);
+      (order.site === 'sputum' || order.site === 'urine') && rng.next() < Math.min(0.95, pMixed);
     return [
       {
         atH: t1,

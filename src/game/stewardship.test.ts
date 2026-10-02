@@ -171,6 +171,74 @@ describe('stewardship scoring — urosepsis', () => {
   });
 });
 
+describe('stewardship scoring — pre-analytics', () => {
+  it('credits clean sampling through the sequences', () => {
+    const e = make(feverRigors);
+    e.dispatch({
+      type: 'ORDER_SPECIMEN',
+      specimen: {
+        kind: 'blood-culture',
+        site: 'blood',
+        sets: 2,
+        adequateVolume: true,
+        antisepsisAdequate: true,
+      },
+    });
+    e.dispatch({
+      type: 'ORDER_SPECIMEN',
+      specimen: {
+        kind: 'urine-culture',
+        site: 'urine',
+        urineCollection: 'midstream',
+        promptTransport: true,
+      },
+    });
+    e.dispatch(start('ceftriaxone'));
+    runTo(e, 12);
+    expect(score(e).well.map((i) => i.key)).toContain('stw.preanalyticsGood');
+  });
+
+  it('names each pre-analytic slip once and marks the sample in the timeline', () => {
+    const e = make(feverRigors);
+    const sloppy: InfectionCommand = {
+      type: 'ORDER_SPECIMEN',
+      specimen: {
+        kind: 'blood-culture',
+        site: 'blood',
+        sets: 2,
+        adequateVolume: false,
+        antisepsisAdequate: false,
+      },
+    };
+    e.dispatch(sloppy);
+    e.dispatch(sloppy);
+    e.dispatch({
+      type: 'ORDER_SPECIMEN',
+      specimen: {
+        kind: 'urine-culture',
+        site: 'urine',
+        urineCollection: 'catheter-bag',
+        promptTransport: false,
+      },
+    });
+    e.dispatch(start('ceftriaxone'));
+    runTo(e, 12);
+    const r = score(e);
+    const keys = r.improve.map((i) => i.key);
+    for (const k of [
+      'stw.rushedAntisepsis',
+      'stw.lowVolume',
+      'stw.bagUrine',
+      'stw.delayedTransport',
+    ])
+      expect(keys.filter((x) => x === k)).toHaveLength(1);
+    expect(r.items.some((i) => i.key === 'stw.preanalyticsGood')).toBe(false);
+    expect(r.timeline.filter((t) => t.key === 'wtl.specimen').every((t) => t.mark === 'warn')).toBe(
+      true,
+    );
+  });
+});
+
 describe('stewardship scoring — asymptomatic bacteriuria', () => {
   it('withholding antibiotics and calling it non-infectious is the best answer', () => {
     const e = make(positiveUrine);

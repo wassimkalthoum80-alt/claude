@@ -678,6 +678,9 @@ lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/
 | Blood-culture yield | P(set positive) = bacteraemia × smoothstep((B − 0.15)/0.45) × 0.75 if low volume × (1 − 0.6·activity if antibiotics before, 0.3 if in the same hour) | cultures before antibiotics |
 | Time to positivity | organism TTP × (1.4 − 0.6·B) ± 1 h; peripheral set in line infection + 2.5–5 h | DTP ≥ 2 h in catheter infection |
 | Contamination | 2.5 % per set: CoNS (70 % methicillin-resistant) | contaminant vs. infection |
+| Pre-analytics: antisepsis | rushed skin/septum antisepsis (no contact time, re-palpation): contamination 10 % per set instead of 2.5 % | contamination benchmark < 3 % with good technique; rushed antisepsis is the main avoidable cause |
+| Pre-analytics: urine | sample from the drainage bag: colonising counts × 10 and +60 % chance of mixed flora; > 2 h at room temperature: counts × 10 and +30 % mixed flora (urine, sputum) | bacteria multiply in stagnant or warm urine; bag urine is not interpretable |
+| Pre-analytics: puncture fluid | sent only in a sterile tube: yield × 0.7 (vs. inoculation into blood-culture bottles at the bedside) | bedside inoculation raises the yield of ascites/pleural cultures |
 | Report timeline | positive signal + Gram (phone call) → rapid PCR + 2 h → species + 18 h → resistogram + 40 h; negative: preliminary 48 h, final 120 h; other cultures ID 24 h, AST 48 h; antigen 2 h, C. difficile 4 h, MRE screen 24 h | as taught in the course (day 0 / 1 / 2) |
 | Superficial swab | finds the true pathogen with 60 % (deep material 95 %) | |
 | C. difficile test | rejected without diarrhoea (< 3 stools/24 h); GDH+/toxin− in carriers; toxin+ in active disease | diagnostic stewardship |
@@ -719,6 +722,7 @@ Two independent axes; the debrief may use the hidden truth because the case is o
 | Duration | total days vs. the case target (fever and rigors: 7 d); tolerance −1 / +2 d; longer −4 per extra day (max −20); shorter −10 | short-course evidence for pyelonephritis |
 | Timeout and status | timeout missed (due at 48–72 h) −8, wrong judgement −5; a non-focus diagnosis declared probable/confirmed −8 | |
 | TDM / diagnostic stewardship | a TDM drug ≥ 48 h without levels −6; each rejected C. difficile test −4 | |
+| Pre-analytics (sampling sequences) | once per case: rushed antisepsis −3, < 8 mL per blood-culture bottle −3, bag urine −4, delayed transport −2, puncture fluid in a tube only −2; clean sampling through the sequences is credited | the sampling step is scored only in the debrief, never during the sequence |
 
 ## Presentation-only assumptions (UI)
 

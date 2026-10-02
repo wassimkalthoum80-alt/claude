@@ -358,6 +358,11 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   pleth (125 Hz) into ring buffers from the current course values — signals from state, never canned arrays; NIBP
   from MAP. `src/ui/screens/ward/WardMonitor.tsx` draws them as sweep traces (`drawSweep`, 25 mm/s) in its own rAF
   loop, with HR / SpO₂ / NIBP / temperature / RR numerics and alarm colours (`wardMonitorView`).
+- **Sampling sequences:** blood cultures, urine culture and a diagnostic puncture open an animated bedside sequence
+  (`src/ui/screens/ward/SamplingDialog.tsx`, `SamplingScene.tsx`). The steps and options are data in
+  `src/ui/adapters/sampling.ts`; each option patches a pre-analytic field of the `SpecimenOrder` (antisepsis, volume,
+  sets, urine collection, transport, bedside inoculation), sent as one `ORDER_SPECIMEN` command. The course model
+  decides the effect; nothing is judged or blocked during the sequence.
 - **Stewardship debrief (phase 3):** when the case ends (or the learner leaves after ≥ 12 h), `finishWardSession`
   (`src/ui/adapters/wardDebrief.ts`) calls the pure `scoreStewardship` (`src/game/stewardship.ts`) with the case,
   the final view, the EventLog and — now that the case is over — `getTruth()`. Weights, spectrum ranks and per-case

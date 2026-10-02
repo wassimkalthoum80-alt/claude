@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InfectionEngine } from '../../infection/InfectionEngine';
-import type { InfectionLogEntry, MicroReport } from '../../infection/types';
+import type { InfectionLogEntry, MicroReport, SpecimenOrder } from '../../infection/types';
 import {
   asymptomaticBacteriuria,
   atelectasis,
@@ -311,6 +311,57 @@ describe('microbiology timeline and pre-analytics', () => {
         return micro(e).some((r) => r.stage === 'positive-signal');
       });
     expect(positive(true)).toBeLessThan(positive(false) - 0.2);
+  });
+
+  it('rushed skin antisepsis raises blood-culture contamination', () => {
+    const contaminated = (antisepsisAdequate: boolean) =>
+      fraction(150, (seed) => {
+        const e = make(atelectasis, seed);
+        e.dispatch({
+          type: 'ORDER_SPECIMEN',
+          specimen: { kind: 'blood-culture', site: 'blood', sets: 2, antisepsisAdequate },
+        });
+        runTo(e, 72);
+        return micro(e).some(
+          (r) => r.stage === 'identification' && r.growth.some((g) => g.organismId === 'cons'),
+        );
+      });
+    expect(contaminated(false)).toBeGreaterThan(contaminated(true) + 0.08);
+  });
+
+  it('urine from the drainage bag or left on the ward reports higher counts', () => {
+    const count = (seed: number, specimen: Partial<SpecimenOrder>) => {
+      const e = make(asymptomaticBacteriuria, seed);
+      e.dispatch({
+        type: 'ORDER_SPECIMEN',
+        specimen: { kind: 'urine-culture', site: 'urine', ...specimen },
+      });
+      runTo(e, 30);
+      const id = micro(e).find((r) => r.stage === 'identification');
+      return id?.stage === 'identification' ? (id.growth[0]?.count ?? 0) : 0;
+    };
+    // The same seed draws the same organisms; only the pre-analytics differ.
+    const seed = [1, 2, 3, 4, 5, 6].find((n) => count(n, { urineCollection: 'catheter-port' }) > 0);
+    expect(seed).toBeDefined();
+    const port = count(seed ?? 1, { urineCollection: 'catheter-port' });
+    expect(count(seed ?? 1, { urineCollection: 'catheter-bag' })).toBe(port * 10);
+    expect(count(seed ?? 1, { urineCollection: 'catheter-port', promptTransport: false })).toBe(
+      port * 10,
+    );
+  });
+
+  it('puncture fluid inoculated into blood-culture bottles has the higher yield', () => {
+    const grows = (inoculatedBottles: boolean) =>
+      fraction(80, (seed) => {
+        const e = make(peritonitis, seed);
+        e.dispatch({
+          type: 'ORDER_SPECIMEN',
+          specimen: { kind: 'puncture-culture', site: 'puncture', inoculatedBottles },
+        });
+        runTo(e, 30);
+        return micro(e).some((r) => r.stage === 'identification' && r.growth.length > 0);
+      });
+    expect(grows(true)).toBeGreaterThan(grows(false) + 0.1);
   });
 
   it('line infection: the catheter culture turns positive ≥ 2 h before the peripheral one', () => {

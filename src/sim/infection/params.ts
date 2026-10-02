@@ -91,8 +91,16 @@ export const COURSE = {
   antibioticYieldLoss: { sameHour: 0.3, earlier: 0.6 },
   /** probability of a contaminated blood-culture set */
   contaminationPerSet: 0.025,
+  /** probability of a contaminated set when antisepsis was rushed (contact time, re-palpation) */
+  contaminationPerSetPoorAntisepsis: 0.1,
   /** yield factor with inadequate blood volume */
   lowVolumeYield: 0.75,
+  /** urine from the drainage bag: colonising counts × this, chance of mixed flora */
+  urineBag: { countFactor: 10, mixedFlora: 0.6 },
+  /** culture left at room temperature > 2 h: counts × this, added chance of mixed flora (urine, sputum) */
+  delayedTransport: { countFactor: 10, mixedFlora: 0.3 },
+  /** puncture fluid sent in a sterile tube only (not inoculated into blood-culture bottles) */
+  punctureTubeOnlyYield: 0.7,
   /** h after the positive signal: species ID, full susceptibility, rapid PCR */
   bcTimelineH: { identification: 18, susceptibility: 40, rapid: 2 },
   /** h — preliminary and final negative blood culture */

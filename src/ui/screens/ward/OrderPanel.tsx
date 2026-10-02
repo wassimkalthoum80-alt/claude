@@ -10,6 +10,7 @@ import {
   type InfectionView,
   type SpecimenOrder,
 } from '../../../sim';
+import { samplingFor, type SamplingProcedure } from '../../adapters/sampling';
 import { orderableDrugs, therapyRows, wardTime } from '../../adapters/ward';
 import { useTk } from './useWard';
 import styles from './Ward.module.css';
@@ -23,6 +24,8 @@ export interface OrderPanelProps {
   dispatch: (cmd: InfectionCommand) => void;
   /** a reserve drug was chosen: ask for the indication first */
   onReserve: (draft: StartCommand) => void;
+  /** blood cultures, urine, puncture: open the bedside sampling sequence */
+  onSample: (procedure: SamplingProcedure) => void;
 }
 
 type Tab = 'therapy' | 'diagnostics' | 'imaging' | 'procedures';
@@ -257,50 +260,20 @@ function TherapySheet({
   );
 }
 
-function Diagnostics({ view, dispatch }: Pick<OrderPanelProps, 'view' | 'dispatch'>) {
+function Diagnostics({
+  view,
+  dispatch,
+  onSample,
+}: Pick<OrderPanelProps, 'view' | 'dispatch' | 'onSample'>) {
   const tk = useTk();
-  const [sets, setSets] = useState(2);
-  const [volume, setVolume] = useState(true);
-  const [rapid, setRapid] = useState(false);
-  const bc = (site: 'blood' | 'catheter-blood') =>
-    dispatch({
-      type: 'ORDER_SPECIMEN',
-      specimen: {
-        kind: 'blood-culture',
-        site,
-        sets: site === 'blood' ? sets : 1,
-        adequateVolume: volume,
-        rapid,
-      },
-    });
   return (
     <div className={styles.diag}>
       <div className={styles.bcBox}>
         <h3>{tk('specimen.blood-culture')}</h3>
-        <div className={styles.formRow}>
-          <label>
-            {tk('ward.sets')}{' '}
-            <select value={sets} onChange={(e) => setSets(Number(e.target.value))}>
-              {[1, 2, 3].map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.check}>
-            <input type="checkbox" checked={volume} onChange={(e) => setVolume(e.target.checked)} />{' '}
-            {tk('ward.volume')}
-          </label>
-          <label className={styles.check}>
-            <input type="checkbox" checked={rapid} onChange={(e) => setRapid(e.target.checked)} />{' '}
-            {tk('ward.rapid')}
-          </label>
-        </div>
+        <p className={styles.dim}>{tk('ward.bc.hint')}</p>
         <div className={styles.buttons}>
-          <button type="button" onClick={() => bc('blood')} data-testid="order-bc">
-            {tk('ward.bc.peripheral')}
-          </button>
-          <button type="button" onClick={() => bc('catheter-blood')}>
-            {tk('ward.bc.catheter')}
+          <button type="button" onClick={() => onSample('blood-culture')} data-testid="order-bc">
+            {tk('ward.bc.take')}
           </button>
         </div>
       </div>
@@ -309,7 +282,11 @@ function Diagnostics({ view, dispatch }: Pick<OrderPanelProps, 'view' | 'dispatc
           <button
             key={s.key}
             type="button"
-            onClick={() => dispatch({ type: 'ORDER_SPECIMEN', specimen: s.order })}
+            onClick={() => {
+              const proc = samplingFor(s.order);
+              if (proc) onSample(proc);
+              else dispatch({ type: 'ORDER_SPECIMEN', specimen: s.order });
+            }}
             data-testid={`order-${s.key}`}
           >
             {tk(s.key)}
@@ -376,7 +353,12 @@ function Imaging({
   );
 }
 
-function Procedures({ view, log, startHourOfDay, dispatch }: Omit<OrderPanelProps, 'onReserve'>) {
+function Procedures({
+  view,
+  log,
+  startHourOfDay,
+  dispatch,
+}: Omit<OrderPanelProps, 'onReserve' | 'onSample'>) {
   const tk = useTk();
   const done = log.filter(
     (e): e is Extract<InfectionLogEntry, { kind: 'procedure-done' }> => e.kind === 'procedure-done',
@@ -441,7 +423,9 @@ export function OrderPanel(props: OrderPanelProps) {
       {tab === 'therapy' && (
         <TherapySheet view={props.view} dispatch={props.dispatch} onReserve={props.onReserve} />
       )}
-      {tab === 'diagnostics' && <Diagnostics view={props.view} dispatch={props.dispatch} />}
+      {tab === 'diagnostics' && (
+        <Diagnostics view={props.view} dispatch={props.dispatch} onSample={props.onSample} />
+      )}
       {tab === 'imaging' && (
         <Imaging log={props.log} startHourOfDay={props.startHourOfDay} dispatch={props.dispatch} />
       )}
