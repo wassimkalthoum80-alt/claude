@@ -68,6 +68,8 @@ export interface ScenarioDefinition {
   /** i18n keys (resolved by the UI) */
   titleKey: string;
   briefingKey: string;
+  /** i18n key — one-line presentation for the unknown-case mode ("67 y, POD 2, …"); no diagnosis */
+  presentationKey?: string;
   seed: number;
   patient: PatientInit;
   ventilator: VentSettings;

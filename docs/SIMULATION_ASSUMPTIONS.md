@@ -593,6 +593,18 @@ reference script) and ERC. Everything below is **educational calibration** unles
 | Cuff leak | a fixed fraction of each tidal volume escapes (0.35 / 0.6 in the exercises); the cuff check ends it | under-inflated cuff; exhaled volume and EtCO₂ fall |
 | Skills scoring | treatment = 0.6 × fix (≤ 60 s after the onset → 100, 0 at 300 s; never → 0) + 0.4 × measured effect of all decisions; diagnosis = first declaration correct → by time (≤ 90 s → 100, 0 at 480 s), corrected later → 40 % of that, never → 0; declaring a diagnosis counts as a response for recognition; ★★ needs the correct diagnosis (at some point) and the fix | the diagnosis is never shown before the learner's decision (milestone 6 § 5) |
 
+## Clinical Challenges (milestone 6 phase 6)
+
+| Assumption | Value | Rationale / source |
+|---|---|---|
+| Septic shock | vasoplegia 0.45 (0.4–0.5 by variant), capillary leak 0.5–0.7, −300 mL blood volume, +0.8–1.5 L interstitial, 38.9 °C; untreated MAP 71 → 57 mmHg in 20 min with HR 130–160 | fluid model (existing); fluid helps transiently, noradrenaline holds the pressure |
+| Antibiotics, cultures, source control | timed decisions without a physiological effect in the session (no infection model); antibiotics scored by time (≤ 10 min full, none after 60 min) | Surviving Sepsis Campaign 2021: antimicrobials within 1 h in septic shock |
+| Sepsis limits | lactate rises only with a global O₂ deficit; urine output stays relatively high | model limitations, stated for the reviewer |
+| Hypotension after induction | propofol 100 mg on top of TIVA in an 81-year-old, preload reserve 0.65–0.75, β-blockade 0.6–0.8: MAP 74 → ≈ 50 mmHg within 90 s, slow spontaneous recovery | existing propofol PK/PD and reflex model |
+| Push-dose noradrenaline | 10 µg via the line raises MAP ≈ +6 mmHg over 1–2 min (model calibrated on infusions; clinically often more) | to be reviewed |
+| Unknown case | one of the four challenges drawn from the session seed (`poolIndex`) | reproducible from the seed |
+| Not built | opioid overdose (needs a calibrated unassisted spontaneous-breathing model — normal drive moves only ≈ 190 mL per breath without support), cardiogenic shock (heart-failure preset did not respond convincingly) | backlog |
+
 ## Clinical audit: myocardial injury and arrhythmia from sustained ischaemia (`HeartLungModel.ts`)
 
 | Assumption                       | Value                                                                                                                                                                                                                                                                  | Rationale / source                                                                                                                                                        |

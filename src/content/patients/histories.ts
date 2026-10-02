@@ -509,6 +509,77 @@ export const HISTORIES: Record<string, PatientHistory> = {
       'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
     ),
   },
+  'septic-shock': {
+    caseId: 'SIM-6001',
+    diagnosis: t(
+      'Sigmoid diverticulitis; post-operative day 2 after open sigmoid resection',
+      'Sigmadivertikulitis; postoperativer Tag 2 nach offener Sigmaresektion',
+    ),
+    procedure: t(
+      'ICU, re-intubated last night for respiratory failure; propofol and sufentanil, noradrenaline low dose',
+      'Intensivstation, letzte Nacht bei respiratorischer Insuffizienz reintubiert; Propofol und Sufentanil, Noradrenalin niedrig dosiert',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [
+      t('Type 2 diabetes', 'Diabetes mellitus Typ 2'),
+      t('Obesity BMI 32', 'Adipositas BMI 32'),
+    ],
+    medications: [
+      t('Insulin sliding scale', 'Insulin nach Schema'),
+      t('Enoxaparin 40 mg s.c. daily', 'Enoxaparin 40 mg s.c. täglich'),
+    ],
+    findings: [
+      t('Temperature 38.9 °C since this morning', 'Temperatur 38,9 °C seit heute Morgen'),
+      t(
+        'Abdominal drain: increasing, cloudy output',
+        'Abdominelle Drainage: zunehmende, trübe Fördermenge',
+      ),
+    ],
+    fasting: t('Nil by mouth', 'Nahrungskarenz'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'induction-hypotension': {
+    caseId: 'SIM-6002',
+    diagnosis: t('Femoral neck fracture', 'Schenkelhalsfraktur'),
+    procedure: t(
+      'Hemiarthroplasty; general anaesthesia, induction just given (propofol), TIVA running',
+      'Hemiendoprothese; Allgemeinanästhesie, Einleitung gerade erfolgt (Propofol), TIVA läuft',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+      t(
+        'Heart failure with preserved ejection fraction',
+        'Herzinsuffizienz mit erhaltener Ejektionsfraktion',
+      ),
+      t('Mild dementia', 'Leichte Demenz'),
+    ],
+    medications: [
+      t(
+        'Bisoprolol 5 mg 1-0-0 (taken this morning)',
+        'Bisoprolol 5 mg 1-0-0 (heute Morgen eingenommen)',
+      ),
+      t('Torasemide 10 mg 1-0-0', 'Torasemid 10 mg 1-0-0'),
+      t('Ramipril 5 mg 1-0-0', 'Ramipril 5 mg 1-0-0'),
+    ],
+    findings: [
+      t(
+        'Fell yesterday evening; poor oral intake since',
+        'Gestern Abend gestürzt; seitdem kaum getrunken',
+      ),
+      t('Pre-induction blood pressure 145/80 mmHg', 'Blutdruck vor Einleitung 145/80 mmHg'),
+    ],
+    fasting: t('Fasting for 14 h', 'Seit 14 h nüchtern'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
   'fluid-maintenance': {
     ...SANDBOX,
     caseId: 'SIM-2001',

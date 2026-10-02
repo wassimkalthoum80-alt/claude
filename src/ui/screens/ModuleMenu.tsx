@@ -83,7 +83,14 @@ export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
                       data-testid={`entry-${e.id}`}
                     >
                       <span className={styles.entryText}>
-                        <span className={styles.entryTitle}>{t(e.titleKey as I18nKey)}</span>
+                        <span className={styles.entryTitle}>
+                          {t(e.titleKey as I18nKey)}
+                          {e.review === 'pending' && (
+                            <span className={styles.reviewBadge} data-testid={`review-${e.id}`}>
+                              {t('modmenu.reviewPending')}
+                            </span>
+                          )}
+                        </span>
                         <span className={styles.entryDesc}>{t(e.descriptionKey as I18nKey)}</span>
                       </span>
                       {ready && mod.scored && best[entryKey(mod.id, e.id)] && (

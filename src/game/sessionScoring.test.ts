@@ -43,6 +43,7 @@ describe('scoring real sessions (engine → log + trends → score)', () => {
     treated.dispatch({ type: 'SET_VENT_SETTING', key: 'rr', value: 10 }, 'user');
     treated.dispatch({ type: 'SET_VENT_SETTING', key: 'vt', value: 450 }, 'user');
     treated.dispatch({ type: 'SET_VENT_SETTING', key: 'ieRatio', value: 3 }, 'user');
+    treated.dispatch({ type: 'DECLARE_DIAGNOSIS', id: 'dynamic-hyperinflation' }, 'user');
     treated.runFor(570);
     const untreated = make(asthmaHyperinflation, seed);
     untreated.runFor(600);
@@ -66,6 +67,7 @@ describe('scoring real sessions (engine → log + trends → score)', () => {
     );
     e.runFor(120);
     e.dispatch({ type: 'SCENARIO_ACTION', id: 'call-surgeon' }, 'user');
+    e.dispatch({ type: 'DECLARE_DIAGNOSIS', id: 'haemorrhage' }, 'user');
     e.runFor(600);
     const s = score(e);
     expect(s.decisions.some((d) => d.reason === 'keyAction' && d.mark === 'effective')).toBe(true);
@@ -84,7 +86,7 @@ describe('scoring real sessions (engine → log + trends → score)', () => {
     expect(s.facts.keyActionMissed).toBe(true);
     expect(s.scores.treatment).toBe(0);
     expect(s.stars).toBeLessThanOrEqual(1);
-    expect(s.improve[0]?.key).toBe('fb.improve.keyAction');
+    expect(s.improve.map((f) => f.key)).toContain('fb.improve.keyAction');
   });
 
   it('silent disconnection: reconnecting in time keeps the patient safe; ignoring it ends in arrest', () => {

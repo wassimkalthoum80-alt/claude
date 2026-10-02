@@ -13,6 +13,7 @@ export const postopBleeding: ScenarioDefinition = {
   id: 'postop-bleeding',
   titleKey: 'scenario.postopBleeding.title',
   briefingKey: 'scenario.postopBleeding.briefing',
+  presentationKey: 'scenario.postopBleeding.presentation',
   seed: 4417,
   patient: {
     ...baselinePatient.patient,

@@ -556,8 +556,10 @@ test('scored session → debrief with stars and decisions → My progress, kept 
     e?.runFor(30);
     e?.dispatch({ type: 'SET_VENT_SETTING', key: 'rr', value: 10 }, 'user');
     e?.dispatch({ type: 'SET_VENT_SETTING', key: 'vt', value: 450 }, 'user');
-    e?.runFor(400);
   });
+  await page.getByTestId('tool-diagnosis').click();
+  await page.getByTestId('dx-dynamic-hyperinflation').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(400));
   await page.keyboard.press('p');
   await page.getByTestId('menu-end-session').click();
 
@@ -567,7 +569,7 @@ test('scored session → debrief with stars and decisions → My progress, kept 
   expect(stars).toBeGreaterThanOrEqual(2);
   await expect(page.getByTestId('debrief-decisions')).toContainText('Ventilator');
   await expect(page.getByTestId('debrief-decisions')).toContainText('MAP');
-  await expect(page.getByTestId('score-diagnosis')).toContainText('coming');
+  await expect(page.getByTestId('score-diagnosis')).toContainText('100');
   await expect(page.getByTestId('debrief-xp')).toContainText('XP');
   await expect(debrief).toContainText('Key learning point');
 
@@ -689,5 +691,39 @@ test('skills: tube check after intubation — working diagnosis in the drawer, j
   await expect(section).toBeVisible();
   await expect(section).toContainText('Actual cause');
   await expect(section).toContainText('Pneumothorax →');
+  expect(errors).toEqual([]);
+});
+
+test('clinical challenges: unknown case shows only the presentation and is revealed in the debrief', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await page.goto('/?debug');
+  await page.getByTestId('module-challenges').click();
+  await expect(page.getByTestId('review-sepsis')).toContainText('awaiting clinical review');
+  await expect(page.getByTestId('entry-cardiac')).toBeDisabled();
+  await page.getByTestId('entry-unknown').click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Unknown case');
+  // Only the one-line presentation — never the case title.
+  for (const title of [
+    'Feverish and hypotensive',
+    'Blood pressure after induction',
+    'Severe asthma',
+  ])
+    await expect(page.getByTestId('briefing-text')).not.toContainText(title);
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(60));
+  await page.getByTestId('tool-diagnosis').click();
+  await page.getByTestId('dx-septic-shock').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(30));
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-end-session').click();
+  await expect(page.getByTestId('debrief-revealed')).toContainText('The case:');
+  await expect(page.getByTestId('debrief-diagnosis')).toContainText('Septic shock');
   expect(errors).toEqual([]);
 });

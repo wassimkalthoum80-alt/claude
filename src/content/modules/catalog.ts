@@ -21,6 +21,17 @@ const available = (id: string, key: string, scenarioId: string): CatalogEntry =>
   scenarioId,
 });
 
+/** Not yet validated by the clinical owner: shown with a notice until reviewed (milestone 6 § 7). */
+const review = (e: CatalogEntry): CatalogEntry => ({ ...e, review: 'pending' });
+
+/** Scenarios the unknown-case mode draws from (the Clinical Challenges cases). */
+const CHALLENGE_POOL = [
+  'septic-shock',
+  'postop-bleeding',
+  'asthma-hyperinflation',
+  'induction-hypotension',
+] as const;
+
 /** Existing scenarios reused by several modules (scenario id, i18n title, i18n briefing as description). */
 const scenarioEntry = (id: string, scenarioKey: string, scenarioId: string): CatalogEntry => ({
   id,
@@ -143,24 +154,48 @@ export const MODULE_CATALOG: ModuleCatalog = [
     kind: 'menu',
     sections: [
       {
-        // Polished cases with patient variants (a different patient on every start); the title names the
-        // presentation, not the diagnosis.
-        id: 'cases',
-        titleKey: 'challenges.section.cases',
+        // D2: presentation only; the case is drawn from the validated pool and revealed in the debrief.
+        id: 'unknown',
+        titleKey: 'challenges.section.unknown',
         entries: [
-          available('asthma', 'challenges.asthma', 'asthma-hyperinflation'),
-          available('bleeding', 'challenges.bleeding', 'postop-bleeding'),
+          {
+            id: 'unknown',
+            titleKey: 'challenges.unknown.title',
+            descriptionKey: 'challenges.unknown.desc',
+            status: 'available',
+            pool: CHALLENGE_POOL,
+            review: 'pending',
+          },
         ],
+      },
+      // D1: by category. Titles name the presentation, not the diagnosis; every case has patient variants.
+      {
+        id: 'shock',
+        titleKey: 'challenges.shock.title',
+        entries: [review(available('sepsis', 'challenges.sepsis', 'septic-shock'))],
+      },
+      {
+        id: 'postoperative',
+        titleKey: 'challenges.postoperative.title',
+        entries: [review(available('bleeding', 'challenges.bleeding', 'postop-bleeding'))],
+      },
+      {
+        id: 'respiratory',
+        titleKey: 'challenges.respiratory.title',
+        entries: [review(available('asthma', 'challenges.asthma', 'asthma-hyperinflation'))],
+      },
+      {
+        id: 'anaesthesia',
+        titleKey: 'challenges.anaesthesia.title',
+        entries: [review(available('induction', 'challenges.induction', 'induction-hypotension'))],
       },
       {
         id: 'categories',
-        titleKey: 'challenges.section.categories',
+        titleKey: 'challenges.section.preparing',
         entries: [
-          preparing('shock', 'challenges.shock'),
-          preparing('respiratory', 'challenges.respiratory'),
           preparing('cardiac', 'challenges.cardiac'),
-          preparing('postoperative', 'challenges.postoperative'),
-          preparing('anaesthesia', 'challenges.anaesthesia'),
+          preparing('neuro', 'challenges.neuro'),
+          preparing('toxic', 'challenges.toxic'),
         ],
       },
     ],
@@ -216,6 +251,8 @@ export const MODULE_CATALOG: ModuleCatalog = [
           scenarioEntry('vent-low-volume', 'ventLowVolume', 'vent-low-volume'),
           scenarioEntry('vent-desaturation', 'ventDesaturation', 'vent-desaturation'),
           scenarioEntry('rhythm-trainer', 'rhythmTrainer', 'rhythm-trainer'),
+          scenarioEntry('septic-shock', 'septicShock', 'septic-shock'),
+          scenarioEntry('induction-hypotension', 'inductionHypotension', 'induction-hypotension'),
           ...FLUID_PRESETS.map(([id, key]) => scenarioEntry(id, key, id)),
         ],
       },

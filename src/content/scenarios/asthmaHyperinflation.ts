@@ -13,6 +13,7 @@ export const asthmaHyperinflation: ScenarioDefinition = {
   id: 'asthma-hyperinflation',
   titleKey: 'scenario.asthmaLab.title',
   briefingKey: 'scenario.asthmaLab.briefing',
+  presentationKey: 'scenario.asthmaLab.presentation',
   seed: 2408,
   endAfterArrestS: 120,
   variants: [

@@ -51,12 +51,16 @@ export function createSession(
   if (!mod || mod.status !== 'available' || mod.kind !== 'menu')
     throw new Error(`Module "${moduleId}" cannot start sessions`);
   const entry = findEntry(catalog, moduleId, entryId);
-  if (!entry || entry.status !== 'available' || !entry.scenarioId)
+  const pool = entry?.pool;
+  const scenarioId =
+    pool && pool.length > 0 ? pool[poolIndex(options.seed, pool.length)] : entry?.scenarioId;
+  if (!entry || entry.status !== 'available' || !scenarioId)
     throw new Error(`Entry "${moduleId}/${entryId}" cannot be started`);
   return {
     module: moduleId,
     entryId,
-    scenarioId: entry.scenarioId,
+    scenarioId,
+    ...(pool ? { unknown: true } : {}),
     titleKey: entry.titleKey,
     // Unscored modules have no difficulty; record the neutral level so sessions stay comparable.
     difficulty: mod.scored ? options.difficulty : 'beginner',
@@ -66,6 +70,14 @@ export function createSession(
     instructorPanel: !mod.scored,
     startedAt: options.now,
   };
+}
+
+/** Which scenario of an unknown-case pool a seed draws (deterministic, spread over neighbouring seeds). */
+export function poolIndex(seed: number, size: number): number {
+  let h = (seed ^ 0x5bd1e995) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
+  return ((h ^ (h >>> 15)) >>> 0) % size;
 }
 
 /**

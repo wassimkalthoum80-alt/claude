@@ -17,6 +17,10 @@ const isKey = (k: string): k is I18nKey => k in en;
 const MARK_ICON = { effective: '✓', questionable: '!', dangerous: '✕', neutral: '·', unrated: '·' };
 const DELTA_LABEL = { map: 'MAP', spo2: 'SpO₂', hr: 'HR', ppeak: 'Ppeak' } as const;
 
+function caseTitleKey(scenarioId: string): string {
+  return SCENARIOS.find((s) => s.id === scenarioId)?.titleKey ?? scenarioId;
+}
+
 function feedbackText(t: Translate, f: Feedback): string {
   return isKey(f.key) ? t(f.key, f.vars) : f.key;
 }
@@ -97,6 +101,11 @@ export function DebriefScreen({ data }: { data: DebriefData }) {
               {t(`difficulty.${session.difficulty}`)} · {formatMmSs(data.durationS)}{' '}
               {t('debrief.simTime')}
             </div>
+            {session.unknown && (
+              <div className={styles.meta} data-testid="debrief-revealed">
+                {t('debrief.revealed', { title: t(caseTitleKey(session.scenarioId) as I18nKey) })}
+              </div>
+            )}
           </div>
           <div className={styles.hero}>
             <span className={`${styles.outcome} ${styles[`outcome_${score.outcome}`] ?? ''}`}>

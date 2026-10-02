@@ -992,7 +992,7 @@ export const de: Record<I18nKey, string> = {
   'challenges.respiratory.title': 'Respiratorisches Versagen',
   'challenges.respiratory.desc': 'Validierte Fälle in Vorbereitung.',
   'challenges.cardiac.title': 'Kardial',
-  'challenges.cardiac.desc': 'Validierte Fälle in Vorbereitung.',
+  'challenges.cardiac.desc': 'Braucht validierte Fälle zu kardiogenem Schock und Herzinsuffizienz.',
   'challenges.postoperative.title': 'Postoperativ',
   'challenges.postoperative.desc': 'Validierte Fälle in Vorbereitung.',
   'challenges.anaesthesia.title': 'Anästhesie-Notfälle',
@@ -1581,4 +1581,76 @@ export const de: Record<I18nKey, string> = {
   'dir.onset': '',
   'fb.improve.noResponse':
     'Keine Reaktion auf die Verschlechterung — handeln oder das Problem benennen, sobald Sie es bemerken.',
+  'scenario.septicShock.title': 'Fieber und Hypotonie an Tag 2',
+  'scenario.septicShock.briefing':
+    'Intensivstation, zweiter Tag nach Sigmaresektion; letzte Nacht bei respiratorischer Insuffizienz reintubiert. Seit heute Morgen: Fieber, steigende Herzfrequenz, fallender Blutdruck, Noradrenalin niedrig dosiert. Der Patient gehört Ihnen.',
+  'scenario.septicShock.presentation':
+    '67 J., postoperativer Tag 2, beatmet — Fieber, zunehmende Tachykardie und Hypotonie.',
+  'scenario.inductionHypotension.title': 'Blutdruck nach der Einleitung',
+  'scenario.inductionHypotension.briefing':
+    'OP. Eine ältere Patientin mit Hüftfraktur; Ihr Kollege hat gerade die Einleitungsdosis Propofol zusätzlich zur laufenden TIVA gegeben und übergibt an Sie. Eine Noradrenalin-Spritze (10 µg/mL) liegt auf Pumpe P4 bereit.',
+  'scenario.inductionHypotension.presentation':
+    '81 J., Hüftfraktur, gerade narkotisiert — der Blutdruck fällt.',
+  'scenario.asthmaLab.presentation':
+    'Junger Erwachsener, vor 20 Minuten in der Notaufnahme intubiert — fallender Blutdruck.',
+  'scenario.postopBleeding.presentation':
+    'Intensivstation, 3 h nach offener Bauchoperation, beatmet — Tachykardie, die Pflege ist besorgt.',
+  'challenges.section.unknown': 'Unbekannter Fall',
+  'challenges.unknown.title': 'Unbekannter Fall',
+  'challenges.unknown.desc':
+    'Nur die Vorstellung. Untersuchen, testen, behandeln und die Diagnose benennen — der Fall wird im Debriefing aufgelöst.',
+  'challenges.sepsis.title': 'Fieber und Hypotonie an Tag 2',
+  'challenges.sepsis.desc':
+    'Beatmeter Intensivpatient nach Darmoperation. Bei jedem Start ein anderer Patient.',
+  'challenges.induction.title': 'Blutdruck nach der Einleitung',
+  'challenges.induction.desc':
+    'Ältere Patientin, Hüftfraktur, gerade narkotisiert. Bei jedem Start ein anderer Patient.',
+  'challenges.section.preparing': 'In Vorbereitung',
+  'challenges.neuro.title': 'Neuro',
+  'challenges.neuro.desc': 'Braucht Modelle für Hirndruck und Krampfanfälle.',
+  'challenges.toxic.title': 'Metabolisch / toxisch',
+  'challenges.toxic.desc':
+    'Braucht ein kalibriertes Spontanatmungsmodell (Opioid-Überdosis) und metabolische Modelle.',
+  'modmenu.reviewPending': 'klinische Prüfung ausstehend',
+  'debrief.revealed': 'Der Fall: {title}',
+  'act.cultures': 'Blutkulturen abnehmen',
+  'act.cultures.start': 'Ich nehme jetzt zwei Blutkultur-Sets ab.',
+  'act.cultures.done': 'Blutkulturen sind abgenommen und unterwegs ins Labor.',
+  'act.antibiotics': 'Breitspektrum-Antibiotika beginnen',
+  'act.antibiotics.start': 'Ich bereite die Antibiotika vor.',
+  'act.antibiotics.done': 'Die Antibiotika laufen.',
+  'act.sourceControl': 'Chirurgen rufen (Fokussanierung)',
+  'act.sourceControl.start': 'Der Chirurg ist unterwegs — CT und OP werden organisiert.',
+  'act.sourceControl.done':
+    'Chirurg: „Anastomoseninsuffizienz — wir nehmen den Patienten in den OP.“',
+  'dir.sepsis.warm':
+    'Der Patient fühlt sich heiß an, die Peripherie ist warm, und das Drainagesekret ist trüb.',
+  'hint.sepsis.title': 'Warum fällt der Blutdruck?',
+  'hint.sepsis.1': 'Achten Sie auf Temperatur, Herzfrequenz und Drainage.',
+  'hint.sepsis.2':
+    'Was zeigen Laktat und Urinausscheidung? Hilft ein Volumenbolus — und wie lange?',
+  'hint.sepsis.3':
+    'Vasodilatation und Kapillarleck: Volumen füllt nur vorübergehend, ein Vasopressor stellt den Tonus wieder her.',
+  'hint.sepsis.4':
+    'Volumenbolus, Noradrenalin auf MAD ≥ 65 mmHg titrieren, Blutkulturen, Antibiotika innerhalb einer Stunde und Fokussanierung (Chirurg).',
+  'hint.induction.title': 'Warum ist der Blutdruck gefallen?',
+  'hint.induction.1': 'Was wurde gerade gegeben — und wem?',
+  'hint.induction.2':
+    'Hohes Alter, nüchtern, Diuretikum und Betablocker: Wie viel Reserve hat diese Patientin?',
+  'hint.induction.3':
+    'Propofol erweitert die Gefäße und nimmt den Sympathikotonus; bei niedriger Vorlast und blockierter Herzfrequenzantwort fällt der Druck.',
+  'hint.induction.4':
+    'Vasopressor-Bolus geben (Noradrenalin 5–10 µg über P4), Volumen erwägen und das Hypnotikum reduzieren.',
+  'learn.septicShock':
+    'Septischer Schock ist Vasodilatation plus Kapillarleck: Volumen füllt nur vorübergehend, Noradrenalin stellt den Gefäßtonus wieder her. Über den Verlauf entscheiden Antibiotika in der ersten Stunde und die Fokussanierung.',
+  'learn.inductionHypotension':
+    'Ältere, nüchterne, betablockierte Patienten haben wenig Reserve: Einleitungsmedikamente nehmen den Sympathikotonus, der Blutdruck fällt. Vorausdenken — Vasopressor bereit, kleinere Dosen und Volumen bei niedriger Vorlast.',
+  'dx.septic-shock': 'Septischer Schock',
+  'dx.haemorrhage': 'Blutung / hämorrhagischer Schock',
+  'dx.anaesthetic-hypotension': 'Medikamentöse Vasodilatation (Anästhetikum) bei niedriger Vorlast',
+  'dx.dynamic-hyperinflation': 'Dynamische Überblähung (Air-Trapping)',
+  'dx.tension-pneumothorax': 'Spannungspneumothorax',
+  'dx.cardiogenic-shock': 'Kardiogener Schock',
+  'dx.anaphylaxis': 'Anaphylaxie',
+  'dx.pulmonary-embolism': 'Lungenembolie',
 };

@@ -77,7 +77,14 @@ export function BriefingOverlay() {
         <h1 id="briefing-title" className={styles.caseTitle}>
           {t((ui.session?.titleKey ?? scenario.titleKey) as I18nKey)}
         </h1>
-        <p className={styles.briefing}>{t(scenario.briefingKey as I18nKey)}</p>
+        {/* Unknown case: only the presentation — the briefing could give the diagnosis away. */}
+        <p className={styles.briefing} data-testid="briefing-text">
+          {t(
+            (ui.session?.unknown && scenario.presentationKey
+              ? scenario.presentationKey
+              : scenario.briefingKey) as I18nKey,
+          )}
+        </p>
         <div className={styles.caseLabel}>{t('briefing.controls')}</div>
         <Shortcuts />
         <div className={styles.footer}>

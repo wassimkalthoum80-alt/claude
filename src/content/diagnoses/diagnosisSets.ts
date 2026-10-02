@@ -17,4 +17,16 @@ export const DIAGNOSIS_SETS: Readonly<Record<string, readonly string[]>> = {
     'derecruitment',
   ],
   rhythm: ['vf', 'pvt', 'pea', 'asystole', 'sinus', 'sinus-brady', 'sinus-tachy'],
+  // Clinical Challenges: the leading diagnosis of a shocked or deteriorating patient (with plausible distractors
+  // that the engine does not simulate yet).
+  challenge: [
+    'septic-shock',
+    'haemorrhage',
+    'anaesthetic-hypotension',
+    'dynamic-hyperinflation',
+    'tension-pneumothorax',
+    'cardiogenic-shock',
+    'anaphylaxis',
+    'pulmonary-embolism',
+  ],
 };

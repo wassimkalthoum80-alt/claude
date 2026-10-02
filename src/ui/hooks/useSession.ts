@@ -71,15 +71,17 @@ export function useSession(): SessionActions {
       const entry = MODULE_CATALOG.find((x) => x.id === m)
         ?.sections.flatMap((s) => s.entries)
         .find((e) => e.id === entryId);
-      const scenario = SCENARIOS.find((s) => s.id === entry?.scenarioId);
-      if (!scenario) return;
+      const listed = SCENARIOS.find((s) => s.id === entry?.scenarioId);
+      if (!entry || (!listed && !entry.pool)) return;
       const session = createSession(MODULE_CATALOG, m, entryId, {
         difficulty: ui.difficulty,
-        // Cases with patient variants get a fresh seed per session (a different patient each time);
-        // the seed is kept in the session, so the run stays reproducible.
-        seed: scenario.variants ? freshSeed() : scenario.seed,
+        // Cases with patient variants and unknown cases get a fresh seed per session (a different patient or
+        // case each time); the seed is kept in the session, so the run stays reproducible.
+        seed: entry.pool || listed?.variants ? freshSeed() : (listed?.seed ?? freshSeed()),
         now: Date.now(),
       });
+      const scenario = SCENARIOS.find((s) => s.id === session.scenarioId);
+      if (!scenario) return;
       engine.loadScenario(scenario, session.seed);
       // Physiology Lab: unscored; opening an experiment counts towards exploring.
       if (m === 'lab') {

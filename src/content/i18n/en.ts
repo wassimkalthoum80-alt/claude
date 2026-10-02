@@ -989,7 +989,7 @@ export const en = {
   'challenges.respiratory.title': 'Respiratory failure',
   'challenges.respiratory.desc': 'Validated cases in preparation.',
   'challenges.cardiac.title': 'Cardiac',
-  'challenges.cardiac.desc': 'Validated cases in preparation.',
+  'challenges.cardiac.desc': 'Needs validated cardiogenic-shock and heart-failure cases.',
   'challenges.postoperative.title': 'Postoperative',
   'challenges.postoperative.desc': 'Validated cases in preparation.',
   'challenges.anaesthesia.title': 'Anaesthesia emergencies',
@@ -1571,6 +1571,77 @@ export const en = {
   'dir.onset': '',
   'fb.improve.noResponse':
     'No response to the deterioration — act or name the problem as soon as you notice it.',
+  'scenario.septicShock.title': 'Feverish and hypotensive on day 2',
+  'scenario.septicShock.briefing':
+    'ICU, second day after a sigmoid resection; re-intubated last night for respiratory failure. Since this morning: fever, rising heart rate, falling blood pressure, noradrenaline at a low dose. The patient is yours.',
+  'scenario.septicShock.presentation':
+    '67 y, post-operative day 2, ventilated — fever, increasing tachycardia and hypotension.',
+  'scenario.inductionHypotension.title': 'Blood pressure after induction',
+  'scenario.inductionHypotension.briefing':
+    'Theatre. An elderly patient with a hip fracture; your colleague has just given the induction dose of propofol on top of the running TIVA and leaves you to it. A noradrenaline syringe (10 µg/mL) is ready on pump P4.',
+  'scenario.inductionHypotension.presentation':
+    '81 y, hip fracture, just anaesthetised — the blood pressure is falling.',
+  'scenario.asthmaLab.presentation':
+    'Young adult, intubated in the emergency department 20 minutes ago — falling blood pressure.',
+  'scenario.postopBleeding.presentation':
+    'ICU, 3 h after open abdominal surgery, ventilated — tachycardia, the nurse is worried.',
+  'challenges.section.unknown': 'Unknown case',
+  'challenges.unknown.title': 'Unknown case',
+  'challenges.unknown.desc':
+    'Only the presentation. Examine, test, treat and name the diagnosis — the case is revealed in the debrief.',
+  'challenges.sepsis.title': 'Feverish and hypotensive on day 2',
+  'challenges.sepsis.desc':
+    'Ventilated ICU patient after bowel surgery. A different patient on every start.',
+  'challenges.induction.title': 'Blood pressure after induction',
+  'challenges.induction.desc':
+    'Elderly patient, hip fracture, just anaesthetised. A different patient on every start.',
+  'challenges.section.preparing': 'In preparation',
+  'challenges.neuro.title': 'Neuro',
+  'challenges.neuro.desc': 'Needs intracranial-pressure and seizure models.',
+  'challenges.toxic.title': 'Metabolic / toxic',
+  'challenges.toxic.desc':
+    'Needs a calibrated spontaneous-breathing model (opioid overdose) and metabolic models.',
+  'modmenu.reviewPending': 'awaiting clinical review',
+  'debrief.revealed': 'The case: {title}',
+  'act.cultures': 'Take blood cultures',
+  'act.cultures.start': 'I am taking two sets of blood cultures now.',
+  'act.cultures.done': 'Blood cultures are taken and on their way to the lab.',
+  'act.antibiotics': 'Start broad-spectrum antibiotics',
+  'act.antibiotics.start': 'I am preparing the antibiotics.',
+  'act.antibiotics.done': 'Antibiotics are running.',
+  'act.sourceControl': 'Call the surgeon (source control)',
+  'act.sourceControl.start': 'The surgeon is on the way — CT and theatre are being organised.',
+  'act.sourceControl.done': 'Surgeon: "Anastomotic leak — we will take the patient to theatre."',
+  'dir.sepsis.warm':
+    'The patient feels hot, the peripheries are warm, and the drain fluid looks cloudy.',
+  'hint.sepsis.title': 'Why is the pressure falling?',
+  'hint.sepsis.1': 'Look at the temperature, the heart rate and the drain.',
+  'hint.sepsis.2':
+    'What do lactate and the urine output show? Does a fluid challenge help — and for how long?',
+  'hint.sepsis.3':
+    'Vasodilation and capillary leak: fluid fills transiently, a vasopressor restores the tone.',
+  'hint.sepsis.4':
+    'Fluid bolus, titrate noradrenaline to MAP ≥ 65 mmHg, cultures, antibiotics within the hour, and source control (surgeon).',
+  'hint.induction.title': 'Why did the pressure fall?',
+  'hint.induction.1': 'What was just given — and to whom?',
+  'hint.induction.2':
+    'Old age, fasting, diuretic and β-blocker: how much reserve does this patient have?',
+  'hint.induction.3':
+    'Propofol dilates vessels and removes sympathetic tone; with a low preload and a blocked heart rate response the pressure falls.',
+  'hint.induction.4':
+    'Give a vasopressor bolus (noradrenaline 5–10 µg on P4), consider fluid, and reduce the hypnotic.',
+  'learn.septicShock':
+    'Septic shock is vasodilation plus capillary leak: fluid fills only transiently, noradrenaline restores the vascular tone. The outcome is decided by antibiotics within the first hour and by source control.',
+  'learn.inductionHypotension':
+    'Elderly, fasted, β-blocked patients have little reserve: induction drugs remove the sympathetic tone and the pressure falls. Anticipate it — a vasopressor ready, smaller doses, and fluid when the preload is low.',
+  'dx.septic-shock': 'Septic shock',
+  'dx.haemorrhage': 'Haemorrhage / hypovolaemic shock',
+  'dx.anaesthetic-hypotension': 'Drug-induced vasodilation (anaesthetic) with low preload',
+  'dx.dynamic-hyperinflation': 'Dynamic hyperinflation (air trapping)',
+  'dx.tension-pneumothorax': 'Tension pneumothorax',
+  'dx.cardiogenic-shock': 'Cardiogenic shock',
+  'dx.anaphylaxis': 'Anaphylaxis',
+  'dx.pulmonary-embolism': 'Pulmonary embolism',
 } as const;
 
 export type I18nKey = keyof typeof en;

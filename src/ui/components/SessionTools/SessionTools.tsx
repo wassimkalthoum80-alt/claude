@@ -42,7 +42,9 @@ export function SessionTools() {
       <div className={styles.row}>
         {tool('timeline', t('tools.timeline'))}
         {tool('trends', t('tools.trends'))}
-        {diagnosisOptions(engine.scenario.id) && tool('diagnosis', t('dx.button'))}
+        {ui.session?.scored &&
+          diagnosisOptions(engine.scenario.id) &&
+          tool('diagnosis', t('dx.button'))}
         {showHints && tool('hint', t('hint.button'))}
         {(engine.scenario.experiments?.length ?? 0) > 0 && tool('experiments', t('exp.button'))}
       </div>

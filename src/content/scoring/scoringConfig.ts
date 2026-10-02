@@ -168,6 +168,26 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
       },
     ],
   },
+  // ── Clinical Challenges ──
+  {
+    scenarioId: 'septic-shock',
+    topics: ['shock', 'haemodynamics', 'pharmacology'],
+    learningKey: 'learn.septicShock',
+    diagnosisSet: 'challenge',
+    diagnosis: 'septic-shock',
+    problemAtStart: true,
+    // Surviving Sepsis Campaign 2021: antimicrobials within 1 h of recognising septic shock.
+    keyActions: ['antibiotics'],
+    keyActionBand: { fullS: 600, zeroS: 3600 },
+  },
+  {
+    scenarioId: 'induction-hypotension',
+    topics: ['haemodynamics', 'pharmacology', 'patientSafety'],
+    learningKey: 'learn.inductionHypotension',
+    diagnosisSet: 'challenge',
+    diagnosis: 'anaesthetic-hypotension',
+    onsetCommands: ['PUMP_BOLUS'],
+  },
   // ── Skills Training: ventilation troubleshooting (diagnosis + fix per variant) ──
   {
     scenarioId: 'vent-high-pressure',
@@ -270,6 +290,8 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
   {
     scenarioId: 'asthma-hyperinflation',
     topics: ['ventilation', 'haemodynamics'],
+    diagnosisSet: 'challenge',
+    diagnosis: 'dynamic-hyperinflation',
     learningKey: 'learn.asthma',
     // Severe asthma: SpO₂ ≥ 90 % is accepted while the ventilation is being adjusted.
     rules: { spo2Min: 90 },
@@ -280,6 +302,8 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
   {
     scenarioId: 'postop-bleeding',
     topics: ['haemodynamics', 'shock'],
+    diagnosisSet: 'challenge',
+    diagnosis: 'haemorrhage',
     learningKey: 'learn.bleeding',
     problemAtStart: true,
     // Surgical bleeding needs the surgeon: requested within 5 min full marks, after 20 min none.

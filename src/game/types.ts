@@ -27,8 +27,15 @@ export interface CatalogEntry {
   titleKey: string;
   descriptionKey: string;
   status: CatalogStatus;
-  /** scenario that configures the engine; required when `status` is `available` */
+  /** scenario that configures the engine; required when `status` is `available` (unless `pool` is given) */
   scenarioId?: string;
+  /**
+   * unknown-case mode (milestone 6 § 7 D2): one of these scenarios is drawn from the session seed and presented
+   * without its title — only the one-line presentation
+   */
+  pool?: readonly string[];
+  /** `pending`: not yet validated by the clinical owner — shown with a notice (content rule, milestone 6 § 7) */
+  review?: 'pending';
 }
 
 export interface CatalogSection {
@@ -72,4 +79,6 @@ export interface SessionConfig {
   instructorPanel: boolean;
   /** ms since the Unix epoch (wall clock) — for the session history, never for the simulation */
   startedAt: number;
+  /** unknown case: the scenario was drawn from a pool and is shown by its presentation only */
+  unknown?: boolean;
 }

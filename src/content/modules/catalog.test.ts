@@ -13,8 +13,9 @@ describe('module catalog', () => {
     for (const mod of MODULE_CATALOG)
       for (const section of mod.sections)
         for (const entry of section.entries) {
-          if (entry.status === 'available')
+          if (entry.status === 'available' && !entry.pool)
             expect(scenarioIds.has(entry.scenarioId ?? ''), `${mod.id}/${entry.id}`).toBe(true);
+          for (const id of entry.pool ?? []) expect(scenarioIds.has(id), id).toBe(true);
           if (entry.scenarioId) expect(scenarioIds.has(entry.scenarioId)).toBe(true);
         }
   });

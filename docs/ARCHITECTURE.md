@@ -88,6 +88,11 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   (`src/content/diagnoses/diagnosisSets.ts`), the correct answer and the fix per variant live in the scoring config
   (`ScenarioScoring.variants`), merged by `withVariant` in `src/game/scoring.ts`. The rhythm trainer is the same
   framework: a rhythm is a variant plus its expected diagnosis and therapy — new rhythms need no code change.
+- **Clinical Challenges (phase 6)** — `src/content/scenarios/challengeCases.ts` plus the Lab cases reused as
+  challenges. A catalog entry may carry a `pool` (unknown case): `createSession` draws the scenario from the
+  session seed (`poolIndex`, reproducible) and marks the session `unknown`; the intro then shows the scenario's
+  `presentationKey` only, and the debrief reveals the case. `review: 'pending'` entries show "awaiting clinical
+  review" until the owner validates them. The diagnosis entry is the Phase 5 framework (set `challenge`).
 - **Resuscitation cases (phase 4)** — `src/content/scenarios/arrestCases.ts`: arrests arise from modelled causes
   (no scripted rhythm); return of circulation from the physiology (`REVERSIBLE_ROSC`, obstructive relief). The case
   ends by `endAfterRoscS` / `endAfterArrestS` / `maxDurationS` (engine, logged as `SCENARIO_END` with the reason).
