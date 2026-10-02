@@ -101,19 +101,22 @@ export function WardMonitor({
         <canvas ref={plethRef} className={styles.trace} role="img" aria-label="Pleth" />
       </div>
       <div className={styles.numerics}>
-        <div className={`${styles.num} ${styles.ecg} ${cls(m.alarms.hr)}`} data-testid="monitor-hr">
+        <div
+          className={`${styles.num} ${styles.ecg} ${styles.areaHr} ${cls(m.alarms.hr)}`}
+          data-testid="monitor-hr"
+        >
           <span className={styles.name}>{tk('monitor.hr')}</span>
           <b>{Math.round(m.input.heartRate)}</b>
         </div>
         <div
-          className={`${styles.num} ${styles.spo2} ${cls(m.alarms.spo2)}`}
+          className={`${styles.num} ${styles.spo2} ${styles.areaSpo2} ${cls(m.alarms.spo2)}`}
           data-testid="monitor-spo2"
         >
           <span className={styles.name}>SpO₂</span>
           <b>{m.spo2Valid ? Math.round(m.input.spo2) : '--'}</b>
         </div>
         <div
-          className={`${styles.num} ${styles.nibp} ${cls(m.alarms.nibp)}`}
+          className={`${styles.num} ${styles.nibp} ${styles.areaNibp} ${cls(m.alarms.nibp)}`}
           data-testid="monitor-nibp"
         >
           <span className={styles.name}>
@@ -125,14 +128,17 @@ export function WardMonitor({
           <small>({m.nibp.mean})</small>
         </div>
         <div
-          className={`${styles.num} ${styles.temp} ${cls(m.alarms.temp)}`}
+          className={`${styles.num} ${styles.temp} ${styles.areaTemp} ${cls(m.alarms.temp)}`}
           data-testid="monitor-temp"
         >
           <span className={styles.name}>{tk('monitor.temp')}</span>
           <b>{m.input.temperatureC.toFixed(1)}</b>
           <small>°C</small>
         </div>
-        <div className={`${styles.num} ${styles.rr} ${cls(m.alarms.rr)}`}>
+        <div
+          className={`${styles.num} ${styles.rr} ${styles.areaRr} ${cls(m.alarms.rr)}`}
+          data-testid="monitor-rr"
+        >
           <span className={styles.name}>{tk('monitor.rr')}</span>
           <b>{Math.round(m.input.respRate)}</b>
         </div>

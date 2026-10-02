@@ -33,8 +33,33 @@
 .numerics {
   display: grid;
   grid-template-columns: repeat(2, minmax(78px, auto));
+  /* HR beside the ECG; RR above the temperature; SpO₂ at the level of the pleth trace. */
+  grid-template-areas:
+    'hr rr'
+    'nibp temp'
+    'spo2 .';
   gap: 4px 12px;
   align-content: center;
+}
+
+.areaHr {
+  grid-area: hr;
+}
+
+.areaRr {
+  grid-area: rr;
+}
+
+.areaNibp {
+  grid-area: nibp;
+}
+
+.areaTemp {
+  grid-area: temp;
+}
+
+.areaSpo2 {
+  grid-area: spo2;
 }
 
 .num {
@@ -119,5 +144,8 @@
 
   .numerics {
     grid-template-columns: repeat(3, auto);
+    grid-template-areas:
+      'hr rr spo2'
+      'nibp temp .';
   }
 }
