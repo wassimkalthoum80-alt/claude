@@ -6,6 +6,7 @@ export const MODULE_ACCENT: Record<ModuleId, string> = {
   skills: 'var(--vent-flow)',
   resus: 'var(--art)',
   challenges: 'var(--ecg)',
+  infectio: 'var(--co2)',
   daily: 'var(--co2)',
   progress: 'var(--eeg)',
   instructor: 'var(--vent-pressure)',

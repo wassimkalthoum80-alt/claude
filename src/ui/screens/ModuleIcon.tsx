@@ -13,6 +13,9 @@ const PATHS: Record<ModuleId, string> = {
   // clipboard with a cross
   challenges:
     'M9 4h6v2.5H9zM9 5H6.5A1.5 1.5 0 0 0 5 6.5v13A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 17.5 5H15M12 10.5v6M9 13.5h6',
+  // microbe in a petri dish
+  infectio:
+    'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM10 9.5a2.2 2.2 0 1 0 0 .1M14.5 13a1.6 1.6 0 1 0 0 .1M9 14.5l1 1M15 8.5l.8-.8',
   // calendar
   daily: 'M4.5 6.5h15v13.5h-15zM4.5 10.5h15M8.5 4v4M15.5 4v4',
   // bar chart

@@ -201,6 +201,43 @@ export const MODULE_CATALOG: ModuleCatalog = [
     ],
   },
   {
+    // Milestone 7: multi-day ward cases on the infection course engine (entries name infection cases).
+    id: 'infectio',
+    titleKey: 'module.infectio.title',
+    taglineKey: 'module.infectio.tagline',
+    status: 'available',
+    scored: true,
+    kind: 'menu',
+    engine: 'course',
+    sections: [
+      {
+        id: 'basics',
+        titleKey: 'infectio.section.basics',
+        entries: [
+          review(available('positive-urine', 'infectio.positiveUrine', 'ward-positive-urine')),
+        ],
+      },
+      {
+        id: 'sepsis',
+        titleKey: 'infectio.section.sepsis',
+        entries: [
+          review(available('fever-rigors', 'infectio.feverRigors', 'ward-fever-rigors')),
+          preparing('peritonitis', 'infectio.peritonitis'),
+        ],
+      },
+      {
+        id: 'staph',
+        titleKey: 'infectio.section.staph',
+        entries: [preparing('sab-line', 'infectio.sabLine')],
+      },
+      {
+        id: 'collateral',
+        titleKey: 'infectio.section.collateral',
+        entries: [preparing('cdi', 'infectio.cdi'), preparing('vap-mrgn', 'infectio.vapMrgn')],
+      },
+    ],
+  },
+  {
     // Architecture only (date-derived seed in src/game/session.ts); shown once validated cases exist.
     id: 'daily',
     titleKey: 'module.daily.title',

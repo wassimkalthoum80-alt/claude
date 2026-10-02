@@ -1,4 +1,6 @@
 /** English UI strings (default language). Keys are shared with de.ts. */
+import { infectioEn } from './infectio.en';
+
 export const en = {
   'app.title': 'ResusSim',
   'app.subtitle': 'Resuscitation & Ventilation Simulator',
@@ -1642,6 +1644,7 @@ export const en = {
   'dx.cardiogenic-shock': 'Cardiogenic shock',
   'dx.anaphylaxis': 'Anaphylaxis',
   'dx.pulmonary-embolism': 'Pulmonary embolism',
+  ...infectioEn,
 } as const;
 
 export type I18nKey = keyof typeof en;

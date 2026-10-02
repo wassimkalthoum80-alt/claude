@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { MODULE_CATALOG } from '../../content/modules/catalog';
 import { SCENARIOS } from '../../content/scenarios';
+import { INFECTION_CASE_BY_ID } from '../../content/infection/cases';
 import { recordExplored } from '../../game/progression';
 import { createSession } from '../../game/session';
 import type { ModuleId } from '../../game/types';
@@ -68,9 +69,22 @@ export function useSession(): SessionActions {
 
   const start = useCallback(
     (m: ModuleId, entryId: string) => {
-      const entry = MODULE_CATALOG.find((x) => x.id === m)
-        ?.sections.flatMap((s) => s.entries)
-        .find((e) => e.id === entryId);
+      const mod = MODULE_CATALOG.find((x) => x.id === m);
+      const entry = mod?.sections.flatMap((s) => s.entries).find((e) => e.id === entryId);
+      if (mod?.engine === 'course') {
+        // Infectiology: the ward screen creates its own course engine from the case and the session seed;
+        // the real-time engine stays paused.
+        const infectionCase = INFECTION_CASE_BY_ID.get(entry?.scenarioId ?? '');
+        if (!entry || !infectionCase) return;
+        pause();
+        const session = createSession(MODULE_CATALOG, m, entryId, {
+          difficulty: ui.difficulty,
+          seed: infectionCase.seed,
+          now: Date.now(),
+        });
+        setUi({ ...WORKSPACE_CLOSED, screen: 'ward', session, briefingOpen: true });
+        return;
+      }
       const listed = SCENARIOS.find((s) => s.id === entry?.scenarioId);
       if (!entry || (!listed && !entry.pool)) return;
       const session = createSession(MODULE_CATALOG, m, entryId, {
@@ -94,7 +108,7 @@ export function useSession(): SessionActions {
       engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
       setUi({ ...WORKSPACE_CLOSED, screen: 'session', session, briefingOpen: true });
     },
-    [engine, setUi, ui.difficulty],
+    [engine, pause, setUi, ui.difficulty],
   );
 
   const restart = useCallback(() => {
@@ -114,13 +128,18 @@ export function useSession(): SessionActions {
   const end = useCallback(() => {
     pause();
     const session = ui.session;
+    if (ui.screen === 'ward') {
+      // Phase 3 adds the stewardship debrief; until then the ward case returns to its menu.
+      setUi({ ...WORKSPACE_CLOSED, screen: 'module', menuModule: module, session: null });
+      return;
+    }
     if (session?.scored && engine.getSnapshot().time >= MIN_DEBRIEF_S) {
       const debrief = finishScoredSession(engine, session, localProgressStore, Date.now());
       setUi({ ...WORKSPACE_CLOSED, screen: 'debrief', menuModule: module, session: null, debrief });
       return;
     }
     setUi({ ...WORKSPACE_CLOSED, screen: 'module', menuModule: module, session: null });
-  }, [pause, setUi, module, engine, ui.session]);
+  }, [pause, setUi, module, engine, ui.session, ui.screen]);
 
   return useMemo(
     () => ({ openModule, goHome, start, restart, end, openProgress }),

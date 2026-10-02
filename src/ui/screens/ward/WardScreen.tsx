@@ -1,0 +1,239 @@
+import { useCallback, useMemo, useState } from 'react';
+import { INFECTION_LIBRARY as LIB } from '../../../content/infection/library';
+import type { SessionConfig } from '../../../game/types';
+import type { InfectionCommand, InfectionLogEntry } from '../../../sim';
+import {
+  consultQuestions,
+  hoursUntil,
+  noticesSince,
+  proactivePrompts,
+  wardTime,
+  type FailureAction,
+} from '../../adapters/ward';
+import { useSession } from '../../hooks/useSession';
+import { useUi } from '../../hooks/UiContext';
+import { OrderPanel } from './OrderPanel';
+import { useTk, useWard } from './useWard';
+import { WardChart } from './WardChart';
+import {
+  BriefingDialog,
+  ConsultDrawer,
+  DiagnosisPanel,
+  EndDialog,
+  FailureWorkup,
+  NoticeDialog,
+  PatientCard,
+  ReserveDialog,
+  TimeoutDialog,
+} from './WardDialogs';
+import { LabsTable, MicroInbox } from './WardResults';
+import styles from './Ward.module.css';
+
+type StartCommand = Extract<InfectionCommand, { type: 'START_ANTIINFECTIVE' }>;
+
+const NO_LOG: readonly InfectionLogEntry[] = [];
+
+/**
+ * Infectiology ward round (milestone 7 phase 2): chart, labs, microbiology inbox, orders, working diagnoses.
+ * Composition only — the course engine owns the patient; this screen reads its view and dispatches commands.
+ */
+export function WardScreen({ session }: { session: SessionConfig }) {
+  const tk = useTk();
+  const ward = useWard(session);
+  const { ui, setUi } = useUi();
+  const { end } = useSession();
+  const [ackSeq, setAckSeq] = useState(0);
+  const [reserveDraft, setReserveDraft] = useState<StartCommand | null>(null);
+  const [drawer, setDrawer] = useState<'consult' | 'failure' | null>(null);
+  const [timeoutDone, setTimeoutDone] = useState(false);
+
+  const dispatch = useCallback(
+    (cmd: InfectionCommand) => ward?.engine.dispatch(cmd, 'user'),
+    [ward],
+  );
+  const view = ward?.view;
+  const log = ward?.engine.log ?? NO_LOG;
+  // The log grows with every view change; recompute derived data per view.
+  const notices = useMemo(
+    () => (view ? noticesSince(log, ackSeq).filter((n) => n.kind !== 'timeout') : []),
+    [view, log, ackSeq],
+  );
+  const timeoutDue = useMemo(
+    () => !timeoutDone && view !== undefined && log.some((e) => e.kind === 'timeout-due'),
+    [view, log, timeoutDone],
+  );
+  const questions = useMemo(
+    () => (view ? consultQuestions(view, log, LIB, ward?.caseDef) : []),
+    [view, log, ward?.caseDef],
+  );
+  const prompts = proactivePrompts(session.difficulty, questions);
+
+  if (!ward || !view) return null;
+  const start = ward.caseDef.startHourOfDay;
+  const now = wardTime(view.timeH, start);
+  const acknowledge = () => setAckSeq(log.at(-1)?.seq ?? 0);
+  const advance = (hours: number) => {
+    acknowledge();
+    dispatch({ type: 'ADVANCE', hours });
+  };
+
+  const onFailureAction = (a: FailureAction) => {
+    if (a.kind === 'imaging') dispatch({ type: 'ORDER_IMAGING', kind: a.imaging });
+    else if (a.kind === 'specimen') dispatch({ type: 'ORDER_SPECIMEN', specimen: a.specimen });
+    else if (a.kind === 'labs') dispatch({ type: 'ORDER_LABS' });
+    else if (a.kind === 'tdm')
+      for (const o of view.therapy)
+        if (o.stoppedH === null && LIB.drugs.get(o.drugId)?.tdm && !o.tdm)
+          dispatch({ type: 'ORDER_TDM', orderId: o.id });
+    // 'review-therapy': the learner reviews the sheet and resistogram — no automatic action.
+  };
+
+  const showNotices = notices.length > 0 && !ui.briefingOpen;
+  return (
+    <div className={styles.ward} data-testid="ward-screen">
+      <header className={styles.topbar}>
+        <button type="button" className={styles.back} onClick={end} data-testid="ward-exit">
+          ‹ {tk('ward.exit')}
+        </button>
+        <div className={styles.title}>
+          <span className={styles.caseTitle}>{tk(ward.caseDef.titleKey)}</span>
+          <span className={styles.clock} data-testid="ward-clock">
+            {tk('ward.day', { n: now.day })} · {now.clock}
+          </span>
+        </div>
+        <div className={styles.timeControls} role="group" aria-label={tk('ward.time')}>
+          <button
+            type="button"
+            onClick={() => advance(4)}
+            disabled={!!view.ended}
+            data-testid="advance-4"
+          >
+            +4 h
+          </button>
+          <button
+            type="button"
+            onClick={() => advance(hoursUntil(view.hourOfDay, 12))}
+            disabled={!!view.ended}
+          >
+            {tk('ward.toNoon')}
+          </button>
+          <button
+            type="button"
+            onClick={() => advance(hoursUntil(view.hourOfDay, 18))}
+            disabled={!!view.ended}
+          >
+            {tk('ward.toEvening')}
+          </button>
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={() => advance(hoursUntil(view.hourOfDay, 8))}
+            disabled={!!view.ended}
+            data-testid="advance-round"
+          >
+            {tk('ward.toRound')}
+          </button>
+        </div>
+        <div className={styles.tools}>
+          <button
+            type="button"
+            onClick={() => setDrawer(drawer === 'consult' ? null : 'consult')}
+            aria-pressed={drawer === 'consult'}
+            data-testid="open-consult"
+          >
+            {tk('abs.button')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawer(drawer === 'failure' ? null : 'failure')}
+            aria-pressed={drawer === 'failure'}
+          >
+            {tk('failure.button')}
+          </button>
+          <span className={styles.abDays} data-testid="ab-days">
+            {tk('ward.abDays', { n: view.antibioticDays })}
+          </span>
+        </div>
+      </header>
+
+      {prompts.length > 0 && (
+        <div className={styles.prompts} data-testid="ward-prompts">
+          {prompts.slice(0, 2).map((q) => (
+            <span key={q.key + JSON.stringify(q.vars ?? {})}>💬 {tk(q.key, q.vars)}</span>
+          ))}
+        </div>
+      )}
+
+      <main className={styles.grid}>
+        <div className={styles.col}>
+          <PatientCard caseDef={ward.caseDef} />
+          <WardChart view={view} startHourOfDay={start} />
+          <DiagnosisPanel caseDef={ward.caseDef} view={view} dispatch={dispatch} />
+        </div>
+        <div className={styles.col}>
+          <LabsTable view={view} startHourOfDay={start} />
+          <MicroInbox log={log} startHourOfDay={start} />
+        </div>
+        <div className={styles.col}>
+          <OrderPanel
+            view={view}
+            log={log}
+            startHourOfDay={start}
+            dispatch={dispatch}
+            onReserve={setReserveDraft}
+          />
+        </div>
+      </main>
+
+      <footer className={styles.footer}>{tk('app.disclaimer')}</footer>
+
+      {drawer === 'consult' && (
+        <ConsultDrawer
+          questions={questions}
+          onFailure={() => setDrawer('failure')}
+          onClose={() => {
+            setDrawer(null);
+          }}
+        />
+      )}
+      {drawer === 'failure' && (
+        <FailureWorkup onAction={onFailureAction} onClose={() => setDrawer(null)} />
+      )}
+
+      {ui.briefingOpen && (
+        <BriefingDialog
+          caseDef={ward.caseDef}
+          onStart={() => {
+            acknowledge();
+            setUi({ briefingOpen: false });
+          }}
+        />
+      )}
+      {showNotices && <NoticeDialog notices={notices} start={start} onClose={acknowledge} />}
+      {!showNotices && timeoutDue && !view.ended && (
+        <TimeoutDialog
+          caseDef={ward.caseDef}
+          onSubmit={(review) => {
+            dispatch({ type: 'TIMEOUT_REVIEW', review });
+            setTimeoutDone(true);
+          }}
+        />
+      )}
+      {reserveDraft && (
+        <ReserveDialog
+          drugNameKey={LIB.drugs.get(reserveDraft.drugId)?.nameKey ?? reserveDraft.drugId}
+          onCancel={() => setReserveDraft(null)}
+          onConfirm={(indication, absApproval) => {
+            dispatch({
+              ...reserveDraft,
+              indication,
+              ...(absApproval ? { absApproval: true } : {}),
+            });
+            setReserveDraft(null);
+          }}
+        />
+      )}
+      {view.ended && !showNotices && <EndDialog outcome={view.ended} onClose={end} />}
+    </div>
+  );
+}

@@ -3,21 +3,26 @@ import { createSession, findEntry, visibleModules } from '../../game/session';
 import { en, type I18nKey } from '../i18n/en';
 import { de } from '../i18n/de';
 import { SCENARIOS } from '../scenarios';
+import { INFECTION_CASES } from '../infection/cases';
 import { AUTOSTART, MODULE_CATALOG } from './catalog';
 
 const scenarioIds = new Set(SCENARIOS.map((s) => s.id));
+const caseIds = new Set(INFECTION_CASES.map((c) => c.id));
 const hasKey = (k: string): k is I18nKey => k in en;
 
 describe('module catalog', () => {
   it('every available entry starts an existing scenario; nothing points to a missing one', () => {
-    for (const mod of MODULE_CATALOG)
+    for (const mod of MODULE_CATALOG) {
+      // Course modules (Infectiology) start infection cases, the others physiology scenarios.
+      const ids = mod.engine === 'course' ? caseIds : scenarioIds;
       for (const section of mod.sections)
         for (const entry of section.entries) {
           if (entry.status === 'available' && !entry.pool)
-            expect(scenarioIds.has(entry.scenarioId ?? ''), `${mod.id}/${entry.id}`).toBe(true);
-          for (const id of entry.pool ?? []) expect(scenarioIds.has(id), id).toBe(true);
-          if (entry.scenarioId) expect(scenarioIds.has(entry.scenarioId)).toBe(true);
+            expect(ids.has(entry.scenarioId ?? ''), `${mod.id}/${entry.id}`).toBe(true);
+          for (const id of entry.pool ?? []) expect(ids.has(id), id).toBe(true);
+          if (entry.scenarioId) expect(ids.has(entry.scenarioId)).toBe(true);
         }
+    }
   });
 
   it('every module, section and entry text exists in English and German', () => {
@@ -48,6 +53,7 @@ describe('module catalog', () => {
       'skills',
       'resus',
       'challenges',
+      'infectio',
       'progress',
       'instructor',
     ]);

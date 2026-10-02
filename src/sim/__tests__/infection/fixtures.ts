@@ -67,7 +67,14 @@ export const peritonitis: InfectionCase = {
       virulence: 0.8,
       bacteraemia: 0.3,
       needsSourceControl: true,
-      sourceControl: [{ id: 'drain', labelKey: 'sc.drain', delayH: 4, result: 'adequate' }],
+      sourceControl: [
+        {
+          id: 'interventional-drainage',
+          labelKey: 'proc.interventional-drainage',
+          delayH: 4,
+          result: 'adequate',
+        },
+      ],
       minEffectiveDays: 3,
     },
   ],
@@ -93,7 +100,12 @@ export const lineInfection: InfectionCase = {
       foreignBody: true,
       needsSourceControl: true,
       sourceControl: [
-        { id: 'remove-line', labelKey: 'sc.remove-line', delayH: 1, result: 'adequate' },
+        {
+          id: 'remove-peripheral-line',
+          labelKey: 'proc.remove-peripheral-line',
+          delayH: 1,
+          result: 'adequate',
+        },
       ],
       minEffectiveDays: 12,
     },

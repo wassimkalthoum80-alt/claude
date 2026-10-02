@@ -687,6 +687,9 @@ lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/
 | Resistance — four mechanisms | selection (e.g. AmpC derepression under 3rd-gen cephalosporins) hazard × burden; de novo (e.g. porin loss under carbapenem) hazard × burden × (1 + 3·4a(1−a)) × 2 if uncontrolled — partial activity favours mutants; transmission = ward flora acquisition hazard × (1 + 2·damage) × 1.5 with devices; colonisation → superinfection hazard | never "x days of meropenem → 4MRGN"; the debrief names the mechanism |
 | Nephrotoxicity | +0.003/h × (exposure − 1) for nephrotoxic drugs, added to kidney dysfunction, recovers τ 120 h; vancomycin trough ≈ 15 × exposure mg/L | TDM protects |
 | Linezolid | platelets − 4 %/day from day 10 | |
+| Procedures (phase 2) | a procedure that matches a focus takes the case's delay; any other takes 2 h and has no effect | generic buttons do not reveal the hidden focus |
+| Case end | cured only for cases with an infection (cleared, no therapy 48 h, no relapse pending); cases without infection run to their time limit | asymptomatic bacteriuria is not "cured" |
+| Oral switch offer (UI) | oral form with bioavailability ≥ 0.7 offered as "→ oral" | ciprofloxacin ≈ 0.75 qualifies |
 | CO₂ | ≈ 7 kg CO₂e per i.v. dose, 0.2 kg per oral day (extrapolated from one ciprofloxacin estimate, Born et al. BMJ Qual Saf 2023) | order of magnitude only |
 
 ## Presentation-only assumptions (UI)

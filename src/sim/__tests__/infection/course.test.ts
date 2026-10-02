@@ -40,7 +40,7 @@ describe('determinism', () => {
       e.dispatch(bloodCultures);
       e.dispatch(start('piperacillin-tazobactam'));
       runTo(e, 30);
-      e.dispatch({ type: 'SOURCE_CONTROL', infectionId: 'abscess', actionId: 'drain' });
+      e.dispatch({ type: 'PROCEDURE', procedure: 'interventional-drainage' });
       e.dispatch({ type: 'ORDER_SPECIMEN', specimen: { kind: 'drain-culture', site: 'drain' } });
       runTo(e, 120);
       return JSON.stringify({ log: e.log, view: e.getView() });
@@ -107,10 +107,10 @@ describe('the four states: burden, source control, inflammation, organs', () => 
   it('source control + active drug cures', () => {
     const e = make(peritonitis);
     e.dispatch(start('piperacillin-tazobactam'));
-    e.dispatch({ type: 'SOURCE_CONTROL', infectionId: 'abscess', actionId: 'drain' });
+    e.dispatch({ type: 'PROCEDURE', procedure: 'interventional-drainage' });
     runTo(e, 72);
     expect(e.getTruth().sites[0]?.cleared).toBe(true);
-    expect(e.log.some((l) => l.kind === 'source-control-done')).toBe(true);
+    expect(e.log.some((l) => l.kind === 'procedure-done' && l.effective)).toBe(true);
   });
 
   it('broader antibiotics do not rescue an uncontrolled focus', () => {
@@ -125,7 +125,7 @@ describe('the four states: burden, source control, inflammation, organs', () => 
     expect(burden(broad, 'crbsi')).toBeGreaterThan(0.5);
     const removed = make(lineInfection);
     removed.dispatch(start('cefazolin'));
-    removed.dispatch({ type: 'SOURCE_CONTROL', infectionId: 'crbsi', actionId: 'remove-line' });
+    removed.dispatch({ type: 'PROCEDURE', procedure: 'remove-peripheral-line' });
     runTo(removed, 96);
     expect(removed.getTruth().sites[0]?.cleared).toBe(true);
   });
@@ -245,7 +245,7 @@ describe('ground truth vs. evidence', () => {
     const run = (antifungal: boolean) => {
       const x = make(peritonitis);
       x.dispatch(start('piperacillin-tazobactam'));
-      x.dispatch({ type: 'SOURCE_CONTROL', infectionId: 'abscess', actionId: 'drain' });
+      x.dispatch({ type: 'PROCEDURE', procedure: 'interventional-drainage' });
       if (antifungal) x.dispatch(start('anidulafungin'));
       runTo(x, 96);
       return x.getTruth().inflammation;

@@ -5,7 +5,7 @@
 
 /** The entries of the HOME screen. */
 export type ModuleId =
-  'lab' | 'skills' | 'resus' | 'challenges' | 'daily' | 'progress' | 'instructor';
+  'lab' | 'skills' | 'resus' | 'challenges' | 'infectio' | 'daily' | 'progress' | 'instructor';
 
 /** Difficulty changes the help, never the physiology (milestone 6 § 9). */
 export type Difficulty = 'beginner' | 'intermediate' | 'expert';
@@ -56,6 +56,11 @@ export interface ModuleDefinition {
    * `screen`: the module is its own screen (My progress), no sessions.
    */
   kind: 'menu' | 'screen';
+  /**
+   * which engine runs the sessions: `physiology` (default — the real-time SimulationEngine; entries name a
+   * scenario) or `course` (the multi-day InfectionEngine; entries name an infection case)
+   */
+  engine?: 'physiology' | 'course';
   sections: readonly CatalogSection[];
 }
 

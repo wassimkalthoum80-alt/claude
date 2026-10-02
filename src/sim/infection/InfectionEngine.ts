@@ -18,6 +18,7 @@ import type {
   LabPanel,
   MechanismId,
   MimicDef,
+  ProcedureId,
   RealtimeOutcome,
   RealtimePreset,
   ResistancePotential,
@@ -122,12 +123,7 @@ export class InfectionEngine {
   private nextSpecimen = 1;
   private nextIsolate = 1;
   private scheduled: ScheduledReport[] = [];
-  private sourcePending: {
-    infectionId: string;
-    actionId: string;
-    doneAtH: number;
-    result: 'partial' | 'adequate';
-  }[] = [];
+  private procedurePending: { procedure: ProcedureId; doneAtH: number }[] = [];
   private declared: Record<string, InfectionStatus> = {};
   private isolation = false;
 
@@ -195,6 +191,7 @@ export class InfectionEngine {
       );
       this.firstAntibioticH ??= init.startedH;
     }
+    for (const sp of c.initialSpecimens ?? []) this.orderSpecimen(sp);
     this.recordVitals();
     this.eventLog.append({ t: 0, kind: 'labs', labs: this.labPanel() });
     this.labs.push({ t: 0, labs: this.labPanel() });
@@ -273,11 +270,7 @@ export class InfectionEngine {
       labs: this.labs,
       therapy: this.orders.map((o) => ({ ...o })),
       antibioticDays: this.antibioticDays(),
-      sourceControlPending: this.sourcePending.map(({ infectionId, actionId, doneAtH }) => ({
-        infectionId,
-        actionId,
-        doneAtH,
-      })),
+      proceduresPending: this.procedurePending.map((p) => ({ ...p })),
       declared: { ...this.declared },
       isolation: this.isolation,
       stoolsPer24h: Math.round(this.stoolsPer24h),
@@ -393,19 +386,17 @@ export class InfectionEngine {
         o.tdmFromH = this.t + 24;
         return { accepted: true, orderId: o.id };
       }
-      case 'SOURCE_CONTROL': {
-        const site = this.sites.find((s) => s.def.id === cmd.infectionId);
-        const action = site?.def.sourceControl?.find((a) => a.id === cmd.actionId);
-        // Never block: an action without a matching focus is accepted and simply changes nothing.
-        if (!site || !action) return { accepted: true, reason: 'no-effect' };
-        this.sourcePending.push({
-          infectionId: site.def.id,
-          actionId: action.id,
-          doneAtH: this.t + action.delayH,
-          result: action.result,
-        });
+      case 'PROCEDURE': {
+        // SIM-ASSUMPTION: a procedure without a matching focus takes 2 h and changes nothing.
+        const actions = this.sites
+          .flatMap((x) => x.def.sourceControl ?? [])
+          .filter((a) => a.id === cmd.procedure);
+        const delay = Math.min(...actions.map((a) => a.delayH), 2);
+        this.procedurePending.push({ procedure: cmd.procedure, doneAtH: this.t + delay });
         return { accepted: true };
       }
+      case 'TIMEOUT_REVIEW':
+        return { accepted: true };
       case 'ORDER_IMAGING': {
         const reportKey = this.imagingFinding(cmd.kind);
         this.eventLog.append({ t: this.t, kind: 'imaging', imaging: cmd.kind, reportKey });
@@ -609,18 +600,22 @@ export class InfectionEngine {
   }
 
   private completeSourceControl(): void {
-    const done = this.sourcePending.filter((p) => p.doneAtH <= this.t);
-    this.sourcePending = this.sourcePending.filter((p) => p.doneAtH > this.t);
+    const done = this.procedurePending.filter((p) => p.doneAtH <= this.t);
+    this.procedurePending = this.procedurePending.filter((p) => p.doneAtH > this.t);
     for (const p of done) {
-      const site = this.sites.find((s) => s.def.id === p.infectionId);
-      if (!site) continue;
-      if (site.control !== 'adequate') site.control = p.result;
-      if (site.control === 'adequate') site.uncontrolledH = 0;
+      let effective = false;
+      for (const site of this.sites) {
+        const action = site.def.sourceControl?.find((a) => a.id === p.procedure);
+        if (!action || !site.active) continue;
+        effective = true;
+        if (site.control !== 'adequate') site.control = action.result;
+        if (site.control === 'adequate') site.uncontrolledH = 0;
+      }
       this.eventLog.append({
         t: this.t,
-        kind: 'source-control-done',
-        infectionId: p.infectionId,
-        actionId: p.actionId,
+        kind: 'procedure-done',
+        procedure: p.procedure,
+        effective,
       });
     }
   }
@@ -1101,6 +1096,8 @@ export class InfectionEngine {
     const h = this.hourOfDay();
     if (h === COURSE.labsHour) this.drawLabs();
     if (h === COURSE.roundHour) this.eventLog.append({ t: this.t, kind: 'round' });
+    for (const c of this.caseDef.scriptedCalls ?? [])
+      if (c.atH === this.t) this.call(c.source, c.messageKey, c.urgent);
     if (
       !this.timeoutLogged &&
       this.firstAntibioticH !== null &&
@@ -1123,7 +1120,10 @@ export class InfectionEngine {
     }
     const allClear = this.sites.every((s) => !s.active || (s.cleared && s.relapseAtH === null));
     const noTherapy = this.running().length === 0;
+    // Cases without an infection (bacteriuria, mimics) run to their time limit; there is nothing to cure.
+    const hadInfection = this.sites.some((x) => x.active);
     if (
+      hadInfection &&
       allClear &&
       noTherapy &&
       !this.cdi.active &&

@@ -193,8 +193,35 @@ export interface ResistancePotential {
 
 // ─── Case definition (ground truth, hidden from the learner) ────────────────────────────────────────────────
 
+/**
+ * Generic bedside/interventional procedures offered to the learner. They are not tied to a hidden diagnosis: a
+ * case maps the procedures that control one of its foci; any other procedure is performed without effect.
+ */
+export type ProcedureId =
+  | 'remove-cvc'
+  | 'remove-peripheral-line'
+  | 'remove-urinary-catheter'
+  | 'urological-decompression'
+  | 'interventional-drainage'
+  | 'surgical-source-control'
+  | 'debridement'
+  | 'pleural-drainage'
+  | 'remove-prosthesis';
+
+export const PROCEDURES: readonly ProcedureId[] = [
+  'remove-cvc',
+  'remove-peripheral-line',
+  'remove-urinary-catheter',
+  'urological-decompression',
+  'interventional-drainage',
+  'surgical-source-control',
+  'debridement',
+  'pleural-drainage',
+  'remove-prosthesis',
+];
+
 export interface SourceControlAction {
-  id: string;
+  id: ProcedureId;
   labelKey: string;
   /** h until done */
   delayH: number;
@@ -340,6 +367,14 @@ export interface InfectionCase {
   startHourOfDay: number;
   /** h — case ends at the latest */
   maxDurationH: number;
+  /** specimens already taken at admission (t = 0, before any antibiotic) */
+  initialSpecimens?: SpecimenOrder[];
+  /** scripted nurse/lab/relative calls (e.g. pressure to treat) */
+  scriptedCalls?: { atH: number; source: CallSource; messageKey: string; urgent: boolean }[];
+  /** i18n key of the admission examination text */
+  examKey?: string;
+  /** i18n key of the one-line presentation (menu and header) */
+  presentationKey?: string;
   /** antibiotics already running at start */
   initialTherapy?: { drugId: string; dose: DoseLevel; route: DrugRoute; startedH: number }[];
 }
@@ -497,13 +532,25 @@ export type InfectionCommand =
   | { type: 'STOP_ANTIINFECTIVE'; orderId: string }
   | { type: 'SET_PLANNED_DAYS'; orderId: string; days: number }
   | { type: 'ORDER_TDM'; orderId: string }
-  | { type: 'SOURCE_CONTROL'; infectionId: string; actionId: string }
+  | { type: 'PROCEDURE'; procedure: ProcedureId }
+  | { type: 'TIMEOUT_REVIEW'; review: TimeoutReview }
   | { type: 'ORDER_IMAGING'; kind: ImagingKind }
   | { type: 'ORDER_LABS' }
   | { type: 'DECLARE_INFECTION_STATUS'; diagnosisId: string; status: InfectionStatus }
   | { type: 'ISOLATION'; on: boolean }
   | { type: 'ABS_CONSULT'; topic?: string }
   | { type: 'APPLY_REALTIME_OUTCOME'; outcome: RealtimeOutcome };
+
+/** The learner's answers at the antibiotic timeout (logged for scoring; the orders themselves change therapy). */
+export interface TimeoutReview {
+  infection: 'likely' | 'unlikely' | 'unsure';
+  /** working diagnosis judged most likely, if any */
+  diagnosisId?: string;
+  sourceControl: 'adequate' | 'needed' | 'not-applicable';
+  plan: ('continue' | 'narrow' | 'stop' | 'oral' | 'escalate')[];
+  /** d — intended total duration */
+  plannedTotalDays?: number;
+}
 
 /** Structured result of a real-time episode returned to the course (bidirectional bridge). */
 export interface RealtimeOutcome {
@@ -609,7 +656,7 @@ export type InfectionLogEntry =
       isolateId?: string;
       mechanism?: MechanismId;
     }
-  | { seq: number; t: number; kind: 'source-control-done'; infectionId: string; actionId: string }
+  | { seq: number; t: number; kind: 'procedure-done'; procedure: ProcedureId; effective: boolean }
   | { seq: number; t: number; kind: 'timeout-due' }
   | { seq: number; t: number; kind: 'shock'; preset: RealtimePreset }
   | { seq: number; t: number; kind: 'cured' | 'died' | 'case-end' };
@@ -682,7 +729,7 @@ export interface InfectionView {
   therapy: readonly TherapyOrder[];
   /** count of 24-h periods with at least one running anti-infective */
   antibioticDays: number;
-  sourceControlPending: readonly { infectionId: string; actionId: string; doneAtH: number }[];
+  proceduresPending: readonly { procedure: ProcedureId; doneAtH: number }[];
   declared: Readonly<Record<string, InfectionStatus>>;
   isolation: boolean;
   /** stool frequency /24 h (nurse-observed) */

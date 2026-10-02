@@ -1,4 +1,5 @@
 import type { I18nKey } from './en';
+import { infectioDe } from './infectio.de';
 
 /** Deutsche Oberflächentexte. CLINICAL REVIEW: Fachbegriffe bitte durch ärztliche Reviewer prüfen lassen. */
 export const de: Record<I18nKey, string> = {
@@ -1653,4 +1654,5 @@ export const de: Record<I18nKey, string> = {
   'dx.cardiogenic-shock': 'Kardiogener Schock',
   'dx.anaphylaxis': 'Anaphylaxie',
   'dx.pulmonary-embolism': 'Lungenembolie',
+  ...infectioDe,
 };

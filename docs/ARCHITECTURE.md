@@ -331,3 +331,18 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
 - **Ground truth vs. evidence:** cases define the hidden truth (infections, mimics, colonisers, latent resistance).
   `getView()` exposes only what a clinician could see; `getTruth()` is for the debrief, tests and the instructor.
 - Deterministic: one seeded RNG; same seed + same commands → identical log and view.
+
+### Ward-round screen (milestone 7 phase 2)
+
+- `ModuleDefinition.engine = 'course'` marks the Infectiology module; its entries name infection cases
+  (`src/content/infection/cases.ts`). `useSession.start` opens `screen: 'ward'` and keeps the real-time engine paused.
+- `src/ui/screens/ward/useWard.ts` creates one `InfectionEngine` per session (case + seed) and reads it with
+  `useSyncExternalStore`; every interaction is `engine.dispatch(...)`.
+- `src/ui/adapters/ward.ts` (pure, tested): ward time, therapy sheet, microbiology inbox, notices since the last
+  acknowledgement, lab columns, chart series, the Socratic ABS consultant (questions from evidence only, never a
+  drug to give), difficulty-dependent proactive prompts, and the treatment-failure checklist.
+- Source control is offered as **generic procedures** (`PROCEDURE` command, `PROCEDURES` list). A case maps the
+  procedures that control one of its foci; others are performed without effect, so buttons never reveal the truth.
+- The antibiotic timeout is logged with `TIMEOUT_REVIEW`; reserve orders carry `indication` / `absApproval`.
+- Texts: `src/content/i18n/infectio.en.ts` / `infectio.de.ts`, generated from one EN/DE table and spread into the
+  main dictionaries.

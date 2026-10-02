@@ -727,3 +727,75 @@ test('clinical challenges: unknown case shows only the presentation and is revea
   await expect(page.getByTestId('debrief-diagnosis')).toContainText('Septic shock');
   expect(errors).toEqual([]);
 });
+
+test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, timeout, reserve check', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(e.message));
+  const shots = process.env.WARD_SHOTS;
+
+  await page.goto('/?lang=de');
+  await page.getByTestId('module-infectio').click();
+  await expect(page.getByTestId('review-fever-rigors')).toBeVisible();
+  await page.getByTestId('difficulty-beginner').click();
+  await page.getByTestId('entry-fever-rigors').click();
+  await expect(page.getByTestId('ward-briefing')).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/ward-1-briefing.png` });
+  await page.getByTestId('ward-start').click();
+  await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:00/);
+
+  // Cultures first, then the antibiotic.
+  await page.getByTestId('tab-diagnostics').click();
+  await page.getByTestId('order-bc').click();
+  await page.getByTestId('order-specimen.urine-culture').click();
+  await page.getByTestId('tab-therapy').click();
+  await page.getByTestId('order-drug').selectOption('ceftriaxone');
+  await page.getByTestId('order-submit').click();
+  await expect(page.getByTestId('therapy-sheet')).toContainText('Ceftriaxon');
+  await page.getByTestId('status-urinary').selectOption('suspected');
+
+  // Advance to the morning round: the lab calls with the Gram stain on the way.
+  await page.getByTestId('advance-round').click();
+  await expect(page.getByTestId('ward-notices')).toBeVisible();
+  await expect(page.getByTestId('ward-notices')).toContainText(/Mikrobiologie/);
+  if (shots) await page.screenshot({ path: `${shots}/ward-2-call.png` });
+  await page.getByTestId('notices-ok').click();
+  for (let i = 0; i < 6; i++) {
+    if (await page.getByTestId('ward-timeout').isVisible()) break;
+    if (await page.getByTestId('notices-ok').isVisible())
+      await page.getByTestId('notices-ok').click();
+    else await page.getByTestId('advance-round').click();
+  }
+  // 48 h after the first dose: the antibiotic timeout.
+  await expect(page.getByTestId('ward-timeout')).toBeVisible();
+  await expect(page.getByTestId('resistogram').first()).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/ward-3-timeout.png` });
+  await page.getByTestId('timeout-infection-likely').check();
+  await page.getByTestId('timeout-focus').selectOption('urinary');
+  await page.getByTestId('timeout-source-adequate').check();
+  await page.getByTestId('timeout-plan-oral').check();
+  await page.getByTestId('timeout-submit').click();
+  await expect(page.getByTestId('ward-timeout')).toBeHidden();
+  if (shots) await page.screenshot({ path: `${shots}/ward-4-round.png` });
+
+  // A reserve agent is never blocked, but asks for the indication.
+  await page.getByTestId('order-drug').selectOption('cefiderocol');
+  await page.getByTestId('order-submit').click();
+  await expect(page.getByTestId('ward-reserve')).toBeVisible();
+  await page.getByTestId('reserve-empirical-high-risk').check();
+  await page.getByTestId('reserve-confirm').click();
+  await expect(page.getByTestId('therapy-sheet')).toContainText('Cefiderocol');
+
+  // The ABS consultant asks (it never prescribes).
+  await page.getByTestId('open-consult').click();
+  await expect(page.getByTestId('abs-consult')).toContainText(/Reservesubstanz/);
+  if (shots) await page.screenshot({ path: `${shots}/ward-5-consult.png` });
+
+  await page.getByTestId('ward-exit').click();
+  await expect(page.getByTestId('module-menu')).toBeVisible();
+  expect(errors).toEqual([]);
+});
