@@ -1,4 +1,4 @@
-import type { Command, LogEntry, ReadonlyMonitorTrends } from '../../sim';
+import type { Command, LogEntry, ReadonlyMonitorTrends } from '../sim';
 
 /** s — how long after an intervention the "after" values are read */
 export const TIMELINE_AFTER_S = 180;
@@ -51,7 +51,7 @@ const COMMANDS = new Set<Command['type']>([
 ]);
 
 /** Commands whose effect on the patient is worth showing as before → after. */
-const INTERVENTION_COMMANDS = new Set<string>([
+export const INTERVENTION_COMMANDS = new Set<string>([
   'SET_VENT_SETTING',
   'SET_VENT_MODE',
   'SET_CIRCUIT',
@@ -71,7 +71,7 @@ const HIDDEN_EVENTS = new Set<string>([
   'REAL_TIME_RESTORED',
 ]);
 
-const INTERVENTION_EVENTS = new Set<string>([
+export const INTERVENTION_EVENTS = new Set<string>([
   'BOLUS_GIVEN',
   'INFUSION_CHANGED',
   'SHOCK_DELIVERED',
@@ -96,7 +96,7 @@ function ventSetting(key: string, value: number): string {
   return `${VENT_LABEL[key] ?? key} ${value}`;
 }
 
-function commandDetail(c: Command): string {
+export function commandDetail(c: Command): string {
   switch (c.type) {
     case 'SET_VENT_SETTING':
       return ventSetting(c.key, c.value);

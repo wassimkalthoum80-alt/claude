@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
 import type { MonitorTrendChannel, ReadonlyMonitorTrends, SimulationState } from '../../../sim';
 import { formatCaseTime } from '../../adapters/format';
-import { buildTimeline } from '../../adapters/timeline';
+import { buildTimeline } from '../../../game/timeline';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT } from '../../hooks/UiContext';
 import { useEngineSelector } from '../../hooks/useEngineSelector';

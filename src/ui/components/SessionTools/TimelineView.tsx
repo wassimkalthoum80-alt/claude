@@ -2,7 +2,7 @@ import type { I18nKey } from '../../../content/i18n/en';
 import { en } from '../../../content/i18n/en';
 import type { SimulationState } from '../../../sim';
 import { formatCaseTime, formatMmSs } from '../../adapters/format';
-import { buildTimeline, type TimelineEntry } from '../../adapters/timeline';
+import { buildTimeline, type TimelineEntry } from '../../../game/timeline';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT } from '../../hooks/UiContext';
 import { useEngineSelector } from '../../hooks/useEngineSelector';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { erc2025 } from '../../content/guidelines/erc2025';
-import { asthmaBreathStacking } from '../../content/scenarios';
-import { SimulationEngine } from '../../sim';
+import { erc2025 } from '../content/guidelines/erc2025';
+import { asthmaBreathStacking } from '../content/scenarios';
+import { SimulationEngine } from '../sim';
 import { buildTimeline } from './timeline';
 
 describe('session timeline', () => {
