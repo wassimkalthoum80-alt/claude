@@ -12,9 +12,10 @@ import type { AntiinfectiveDef, DrugRoute, Focus } from '../../sim/infection/typ
  * CLINICAL REVIEW: doses, categories, penetration and costs must be confirmed by the owner.
  */
 
-// SIM-ASSUMPTION: CO2 footprint. One published estimate (Born et al., BMJ Qual Saf 2023) gives one week of
-// ciprofloxacin as ≈ 100 kg CO2e i.v. (2 doses/day) versus ≈ 1.4 kg orally. We extrapolate ≈ 7 kg CO2e per i.v.
-// dose and ≈ 0.2 kg per oral day to every drug; educational orders of magnitude only.
+// SIM-ASSUMPTION: CO2 footprint — a non-quantitative game index, not a life-cycle assessment. One published estimate
+// (Born et al., BMJ Qual Saf 2023) gives one week of ciprofloxacin as ≈ 100 kg CO2e i.v. (2 doses/day) versus ≈ 1.4 kg
+// orally. We extrapolate ≈ 7 index units per i.v. dose and ≈ 0.2 per oral day to every drug, so courses can be
+// compared by route and number of doses; real drug-specific footprints differ widely.
 const co2 = (ivDosesPerDay: number | null, oral: boolean): Partial<Record<DrugRoute, number>> => ({
   ...(ivDosesPerDay !== null ? { iv: 7 * ivDosesPerDay } : {}),
   ...(oral ? { po: 0.2 } : {}),
@@ -148,7 +149,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['po'],
     bioavailability: 0.7,
     renallyCleared: true,
-    // SIM-ASSUMPTION: used for lower urinary tract infection only.
+    // SIM-ASSUMPTION: used for lower urinary tract infection; little renal-tissue exposure at the cystitis dose.
     penetration: {
       blood: 0.3,
       lung: 0.2,
@@ -159,6 +160,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
       cns: 0,
       gut: 0,
       line: 0.2,
+      kidney: 0.3,
     },
     microbiomeDamage: 0.1,
     costPerDayEur: 3,
@@ -403,7 +405,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['iv', 'po'],
     bioavailability: 0.9,
     renallyCleared: false,
-    penetration: { ...QUINOLONE, urine: 0.3 },
+    penetration: { ...QUINOLONE, urine: 0.3, kidney: 0.5 },
     microbiomeDamage: 0.65,
     costPerDayEur: 5,
     co2KgPerDay: co2(1, true),
@@ -490,6 +492,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
       cns: 0,
       line: 0,
       gut: 1,
+      kidney: 0,
     },
     microbiomeDamage: 0.5,
     costPerDayEur: 40,
@@ -515,6 +518,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
       cns: 0,
       line: 0,
       gut: 1,
+      kidney: 0,
     },
     // Narrow spectrum: spares much of the protective gut flora.
     microbiomeDamage: 0.1,
@@ -588,7 +592,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['iv', 'po'],
     bioavailability: 0.9,
     renallyCleared: false,
-    penetration: { cns: 0.3, urine: 0.4, gut: 0 },
+    penetration: { cns: 0.3, urine: 0.4, gut: 0, kidney: 0.4 },
     microbiomeDamage: 0.3,
     costPerDayEur: 2,
     co2KgPerDay: co2(2, true),
@@ -601,22 +605,37 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     category: 'watch',
     routes: ['iv', 'po'],
     bioavailability: 0.5,
-    renallyCleared: false,
-    penetration: { cns: 0.1, urine: 0.3, gut: 0 },
+    renallyCleared: true,
+    penetration: { cns: 0.1, urine: 0.3, gut: 0, kidney: 0.3 },
     microbiomeDamage: 0.4,
     costPerDayEur: 3,
     co2KgPerDay: co2(2, true),
     regimenKey: 'abx.reg.clarithromycin',
   },
   {
+    id: 'azithromycin',
+    nameKey: 'abx.azithromycin',
+    drugClass: 'macrolide',
+    category: 'watch',
+    routes: ['iv', 'po'],
+    bioavailability: 0.37,
+    renallyCleared: false,
+    penetration: { cns: 0.1, urine: 0.3, kidney: 0.3, gut: 0 },
+    microbiomeDamage: 0.4,
+    costPerDayEur: 3,
+    co2KgPerDay: co2(1, true),
+    regimenKey: 'abx.reg.azithromycin',
+  },
+  {
     id: 'fosfomycin-po',
     nameKey: 'abx.fosfomycin-po',
     drugClass: 'fosfomycin',
-    category: 'access',
+    // WHO AWaRe 2025: oral fosfomycin is a Watch antibiotic.
+    category: 'watch',
     routes: ['po'],
     bioavailability: 0.4,
     renallyCleared: true,
-    // SIM-ASSUMPTION: single oral dose for cystitis — urine only.
+    // SIM-ASSUMPTION: single oral dose for cystitis — bladder urine only, no renal-tissue or blood exposure.
     penetration: {
       blood: 0,
       lung: 0,
@@ -627,6 +646,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
       cns: 0,
       gut: 0,
       line: 0,
+      kidney: 0,
     },
     microbiomeDamage: 0.05,
     costPerDayEur: 8,
@@ -665,6 +685,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
       cns: 0,
       gut: 0,
       line: 0,
+      kidney: 0,
     },
     microbiomeDamage: 0.05,
     costPerDayEur: 2,
@@ -693,7 +714,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     routes: ['iv'],
     renallyCleared: false,
     // Low serum and urine levels: not for bloodstream or urinary infection.
-    penetration: { blood: 0.3, urine: 0.1, cns: 0.1, gut: 0 },
+    penetration: { blood: 0.3, urine: 0.1, cns: 0.1, gut: 0, kidney: 0.2 },
     microbiomeDamage: 0.5,
     costPerDayEur: 120,
     co2KgPerDay: co2(2, false),
@@ -719,7 +740,7 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     id: 'fluconazole',
     nameKey: 'abx.fluconazole',
     drugClass: 'azole',
-    category: 'access',
+    category: 'antifungal',
     routes: ['iv', 'po'],
     bioavailability: 0.9,
     renallyCleared: true,
@@ -733,11 +754,11 @@ export const ANTIINFECTIVES: readonly AntiinfectiveDef[] = [
     id: 'anidulafungin',
     nameKey: 'abx.anidulafungin',
     drugClass: 'echinocandin',
-    category: 'watch',
+    category: 'antifungal',
     routes: ['iv'],
     renallyCleared: false,
     // Poor peritoneal penetration (≈ 0.3) and none into CNS/urine.
-    penetration: { cns: 0.05, urine: 0.05, abdomen: 0.3, gut: 0 },
+    penetration: { cns: 0.05, urine: 0.05, abdomen: 0.3, gut: 0, kidney: 0.3 },
     microbiomeDamage: 0.05,
     costPerDayEur: 250,
     co2KgPerDay: co2(1, false),

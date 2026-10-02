@@ -387,7 +387,7 @@ describe('microbiology timeline and pre-analytics', () => {
   it('rapid PCR on a positive culture reports mecA', () => {
     const c = {
       ...lineInfection,
-      isolates: [{ id: 'sa', organismId: 's-aureus', mechanisms: ['mrsa' as const] }],
+      isolates: [{ id: 'sa', organismId: 's-aureus', mechanisms: ['meca' as const] }],
     };
     const e = make(c, 2);
     e.dispatch({

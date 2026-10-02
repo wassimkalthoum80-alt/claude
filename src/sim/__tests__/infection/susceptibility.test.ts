@@ -48,8 +48,11 @@ describe('content integrity', () => {
       for (const id of Object.keys(o.intrinsicDrugs ?? {}))
         expect(drugIds, `${o.id}:${id}`).toContain(id);
     for (const id of lib.guidelines.reserveDrugs) expect(drugIds).toContain(id);
-    for (const g of lib.guidelines.mrgnGroups)
-      for (const id of g.drugs) expect(drugIds).toContain(id);
+    for (const groups of Object.values(lib.guidelines.mrgnGroups))
+      for (const g of groups ?? []) for (const id of g.drugs) expect(drugIds).toContain(id);
+    for (const m of MECHANISMS)
+      for (const drugs of Object.values(m.groupDrugs ?? {}))
+        for (const id of Object.keys(drugs ?? {})) expect(drugIds, id).toContain(id);
   });
 
   it('oral drugs declare a bioavailability', () => {
@@ -67,7 +70,13 @@ describe('susceptibility (EUCAST categories from spectrum + mechanisms)', () => 
     expect(s('p-aeruginosa', [], 'piperacillin-tazobactam')).toBe('S');
     expect(s('e-faecalis', [], 'ceftriaxone')).toBe('R');
     expect(s('e-faecalis', [], 'ampicillin')).toBe('S');
-    expect(s('e-faecium', [], 'ampicillin')).toBe('R');
+    // E. faecium ampicillin resistance is isolate-dependent (PBP5), not a species rule
+    expect(s('e-faecium', [], 'ampicillin')).toBe('S');
+    expect(s('e-faecium', ['pbp5'], 'ampicillin')).toBe('R');
+    // E. cloacae complex: expected resistance from chromosomal AmpC is part of the species baseline
+    expect(s('e-cloacae', [], 'cefuroxime')).toBe('R');
+    expect(s('e-cloacae', [], 'amoxicillin-clavulanate')).toBe('R');
+    expect(s('a-baumannii', [], 'doxycycline')).toBe('R');
     expect(s('b-fragilis', [], 'metronidazole')).toBe('S');
     expect(s('s-aureus', [], 'cefazolin')).toBe('S');
     expect(s('c-albicans', [], 'meropenem')).toBe('R');
@@ -96,14 +105,34 @@ describe('susceptibility (EUCAST categories from spectrum + mechanisms)', () => 
   });
 
   it('MRSA and VRE', () => {
-    expect(s('s-aureus', ['mrsa'], 'cefazolin')).toBe('R');
-    expect(s('s-aureus', ['mrsa'], 'vancomycin')).toBe('S');
+    expect(s('s-aureus', ['meca'], 'cefazolin')).toBe('R');
+    expect(s('s-aureus', ['meca'], 'vancomycin')).toBe('S');
     expect(s('e-faecium', ['vana'], 'vancomycin')).toBe('R');
     expect(s('e-faecium', ['vana'], 'linezolid')).toBe('S');
   });
 
   it('a mechanism never turns an intrinsic resistance into S', () => {
     expect(s('s-maltophilia', ['kpc'], 'meropenem-vaborbactam')).toBe('R');
+    // a KPC "unaffected" entry does not erase an MBL's resistance to the same drug
+    expect(s('k-pneumoniae', ['kpc', 'mbl'], 'ceftazidime-avibactam')).toBe('R');
+  });
+
+  it('adding an inhibitor to an active carbapenem creates no resistance', () => {
+    expect(s('s-aureus', [], 'meropenem-vaborbactam')).toBe('S');
+    expect(s('b-fragilis', [], 'imipenem-relebactam')).toBe('S');
+    expect(s('s-aureus', ['meca'], 'meropenem-vaborbactam')).toBe('R');
+  });
+
+  it('mechanisms are drug- and species-specific', () => {
+    // OprD loss: imipenem R, meropenem only raised
+    expect(s('p-aeruginosa', ['oprd-loss'], 'imipenem')).toBe('R');
+    expect(s('p-aeruginosa', ['oprd-loss'], 'meropenem')).toBe('I');
+    // MBL: aztreonam-avibactam evidence from Enterobacterales does not transfer to P. aeruginosa
+    expect(s('k-pneumoniae', ['mbl'], 'aztreonam-avibactam')).toBe('S');
+    expect(s('p-aeruginosa', ['mbl'], 'aztreonam-avibactam')).toBe('R');
+    // fluconazole resistance is drug-specific; C. glabrata wild type is fluconazole I
+    expect(s('c-glabrata', [], 'fluconazole')).toBe('I');
+    expect(s('c-albicans', ['fluconazole-resistance'], 'fluconazole')).toBe('R');
   });
 });
 
@@ -114,14 +143,23 @@ describe('MRGN classification (KRINKO)', () => {
     expect(mrgnClass(iso('k-pneumoniae', ['kpc']), lib)).toBe('4MRGN'); // carbapenemase → 4MRGN
   });
 
+  it('carbapenemase → 4MRGN also in the non-fermenters', () => {
+    expect(mrgnClass(iso('p-aeruginosa', ['mbl']), lib)).toBe('4MRGN');
+    expect(mrgnClass(iso('a-baumannii', ['oxa48']), lib)).toBe('4MRGN');
+  });
+
   it('P. aeruginosa: efflux 3MRGN → porin loss 4MRGN', () => {
     expect(mrgnClass(iso('p-aeruginosa', ['efflux']), lib)).toBe('3MRGN');
+    // 3MRGN phenotype: all cephalosporin markers R, a carbapenem option left
+    expect(s('p-aeruginosa', ['efflux'], 'cefepime')).toBe('R');
+    expect(s('p-aeruginosa', ['efflux'], 'meropenem')).toBe('I');
+    expect(mrgnClass(iso('p-aeruginosa', ['oprd-loss']), lib)).toBe('none');
     expect(mrgnClass(iso('p-aeruginosa', ['efflux', 'oprd-loss']), lib)).toBe('4MRGN');
     expect(s('p-aeruginosa', ['efflux', 'oprd-loss'], 'ceftolozane-tazobactam')).toBe('S');
   });
 
   it('MRSA and VRE labels', () => {
-    expect(mrgnClass(iso('s-aureus', ['mrsa']), lib)).toBe('MRSA');
+    expect(mrgnClass(iso('s-aureus', ['meca']), lib)).toBe('MRSA');
     expect(mrgnClass(iso('e-faecium', ['vana']), lib)).toBe('VRE');
   });
 
@@ -137,9 +175,9 @@ describe('activity: exposure, penetration, biofilm', () => {
   const ctx = { focus: 'blood' as const, gfrRelative: 1, foreignBody: false, timeH: 0 };
   it('daptomycin does not work in the lung', () => {
     expect(
-      orderActivity(order('daptomycin'), iso('s-aureus', ['mrsa']), { ...ctx, focus: 'lung' }, lib),
+      orderActivity(order('daptomycin'), iso('s-aureus', ['meca']), { ...ctx, focus: 'lung' }, lib),
     ).toBe(0);
-    expect(orderActivity(order('daptomycin'), iso('s-aureus', ['mrsa']), ctx, lib)).toBeGreaterThan(
+    expect(orderActivity(order('daptomycin'), iso('s-aureus', ['meca']), ctx, lib)).toBeGreaterThan(
       0.9,
     );
   });

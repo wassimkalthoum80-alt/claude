@@ -255,7 +255,7 @@ export const consOneSet: InfectionCase = {
       patch: {
         examKey: 'case.consOneSet.examCrbsi',
         mimics: [],
-        isolates: [{ id: 'cons', organismId: 'cons', mechanisms: ['mrsa'] }],
+        isolates: [{ id: 'cons', organismId: 'cons', mechanisms: ['meca'] }],
         infections: [
           {
             id: 'crbsi',

@@ -50,7 +50,7 @@ export interface SamplingInput {
 }
 
 const FOCI_OF: Partial<Record<SpecimenSite, Focus[]>> = {
-  urine: ['urine'],
+  urine: ['urine', 'kidney'],
   sputum: ['lung'],
   tbas: ['lung'],
   bal: ['lung'],
@@ -179,7 +179,7 @@ function bloodCulture(input: SamplingInput): ScheduledReport[] {
   if (contaminatedSets > 0) {
     const id = input.addIsolate({
       organismId: 'cons',
-      mechanisms: rng.next() < 0.7 ? ['mrsa'] : [],
+      mechanisms: rng.next() < 0.7 ? ['meca'] : [],
     });
     const org = lib.organisms.get('cons');
     growth.set(id, { sets: contaminatedSets, ttp: (org?.ttpH ?? 22) + rng.uniform(-3, 6) });

@@ -68,11 +68,15 @@ const ALL_ANTIBACTERIAL: DrugClass[] = [
   'fidaxomicin',
   'rifamycin',
 ];
+/**
+ * New β-lactam/β-lactamase-inhibitor combinations whose partner drug has no useful Gram-positive or anaerobic activity
+ * (ceftazidime, ceftolozane, aztreonam). Meropenem-vaborbactam and imipenem-relebactam are deliberately absent: the
+ * carbapenem component keeps its own spectrum (e.g. MSSA, B. fragilis); adding an inhibitor creates no resistance.
+ * Whether they are a sensible or licensed choice for such organisms is a treatment question, not an S/I/R one.
+ */
 const NEW_BLBLI_GN_ONLY = {
   'ceftazidime-avibactam': 'R',
   'ceftolozane-tazobactam': 'R',
-  'meropenem-vaborbactam': 'R',
-  'imipenem-relebactam': 'R',
   'aztreonam-avibactam': 'R',
 } as const;
 
@@ -106,7 +110,14 @@ export const ORGANISMS: readonly OrganismDef[] = [
     nameKey: 'org.e-cloacae',
     group: 'enterobacterales',
     morphology: 'gnr',
-    intrinsic: ENTEROBACTERALES_BASE,
+    // Expected resistant phenotype (chromosomal AmpC): aminopenicillins ± inhibitor, 1st/2nd-generation cephalosporins.
+    intrinsic: {
+      ...ENTEROBACTERALES_BASE,
+      aminopenicillin: 'R',
+      'aminopenicillin-bli': 'R',
+      ceph1: 'R',
+      ceph2: 'R',
+    },
     chromosomal: ['ampc-inducible'],
     ttpH: 12,
   },
@@ -170,7 +181,12 @@ export const ORGANISMS: readonly OrganismDef[] = [
       macrolide: 'R',
     },
     // Sulbactam itself is active against A. baumannii.
-    intrinsicDrugs: { 'amoxicillin-clavulanate': 'R', 'aztreonam-avibactam': 'R' },
+    // Doxycycline activity is not inferred from minocycline/tigecycline activity.
+    intrinsicDrugs: {
+      'amoxicillin-clavulanate': 'R',
+      'aztreonam-avibactam': 'R',
+      doxycycline: 'R',
+    },
     ttpH: 14,
   },
   {
@@ -189,11 +205,11 @@ export const ORGANISMS: readonly OrganismDef[] = [
       nitrofuran: 'R',
       tetracycline: 'I',
     },
+    // Cefiderocol or aztreonam-avibactam activity is not guaranteed by species identity (no EUCAST breakpoints):
+    // they stay under the class default and are not reported on the panel.
     intrinsicDrugs: {
       ciprofloxacin: 'R',
       moxifloxacin: 'I',
-      cefiderocol: 'S',
-      'aztreonam-avibactam': 'S',
     },
     ttpH: 18,
   },
@@ -296,13 +312,15 @@ export const ORGANISMS: readonly OrganismDef[] = [
       isoxazolylpenicillin: 'R',
       'folate-antagonist': 'R',
       lincosamide: 'R',
+      // Intrinsic low-level aminoglycoside resistance: no monotherapy. Synergy with a cell-wall agent needs the absence
+      // of high-level resistance (mechanism 'hlar'); SIM-ASSUMPTION: synergy itself is not modelled.
       aminoglycoside: 'R',
       macrolide: 'R',
       nitroimidazole: 'R',
       fluoroquinolone: 'I',
       fidaxomicin: 'R',
     },
-    intrinsicDrugs: { ...NEW_BLBLI_GN_ONLY, meropenem: 'I' },
+    intrinsicDrugs: { ...NEW_BLBLI_GN_ONLY, meropenem: 'I', 'meropenem-vaborbactam': 'I' },
     ttpH: 14,
   },
   {
@@ -310,14 +328,10 @@ export const ORGANISMS: readonly OrganismDef[] = [
     nameKey: 'org.e-faecium',
     group: 'enterococcus',
     morphology: 'gpc-chains',
+    // Ampicillin resistance is common but isolate-dependent (mechanism 'pbp5'), not a species rule.
     intrinsic: {
       ...all(GRAM_NEGATIVE_ONLY),
       ...all(ANTIFUNGALS),
-      penicillin: 'R',
-      aminopenicillin: 'R',
-      'aminopenicillin-bli': 'R',
-      ureidopenicillin: 'R',
-      'ureidopenicillin-bli': 'R',
       ceph1: 'R',
       ceph2: 'R',
       ceph3: 'R',
@@ -334,7 +348,11 @@ export const ORGANISMS: readonly OrganismDef[] = [
       fluoroquinolone: 'R',
       fidaxomicin: 'R',
     },
-    intrinsicDrugs: { ...NEW_BLBLI_GN_ONLY },
+    intrinsicDrugs: {
+      ...NEW_BLBLI_GN_ONLY,
+      'meropenem-vaborbactam': 'R',
+      'imipenem-relebactam': 'R',
+    },
     ttpH: 14,
   },
   {
@@ -438,6 +456,9 @@ export const ORGANISMS: readonly OrganismDef[] = [
     nameKey: 'org.c-difficile',
     group: 'cdiff',
     morphology: 'gpr',
+    // Not an antibiogram: C. difficile is never cultured or tested here (noRoutineCulture). This map encodes only CDI
+    // treatment suitability in the gut lumen (oral vancomycin, fidaxomicin, metronidazole); collateral microbiome damage
+    // is a separate drug property (microbiomeDamage).
     intrinsic: {
       ...all(ALL_ANTIBACTERIAL),
       ...all(ANTIFUNGALS),
@@ -461,7 +482,9 @@ export const ORGANISMS: readonly OrganismDef[] = [
     nameKey: 'org.c-glabrata',
     group: 'yeast',
     morphology: 'yeast',
-    intrinsic: { ...all(ALL_ANTIBACTERIAL), azole: 'I', echinocandin: 'S' },
+    // Fluconazole: susceptible at increased exposure (wild type); other azoles are judged drug by drug.
+    intrinsic: { ...all(ALL_ANTIBACTERIAL), echinocandin: 'S' },
+    intrinsicDrugs: { fluconazole: 'I' },
     ttpH: 40,
   },
 ];
@@ -477,9 +500,11 @@ export const MECHANISMS: readonly MechanismDef[] = [
     classes: { penicillin: 'R', aminopenicillin: 'R', ureidopenicillin: 'R' },
   },
   {
-    id: 'mrsa',
-    labelKey: 'mech.mrsa',
+    // Methicillin resistance (mecA/mecC): "MRSA" only in S. aureus; in CoNS it is methicillin-resistant CoNS.
+    id: 'meca',
+    labelKey: 'mech.meca',
     classes: all(ALL_EXCEPT_NEW),
+    drugs: { 'meropenem-vaborbactam': 'R', 'imipenem-relebactam': 'R' },
     rapidTest: 'mecA',
   },
   {
@@ -524,6 +549,9 @@ export const MECHANISMS: readonly MechanismDef[] = [
       'ceph3-antipseudomonal': 'R',
     },
   },
+  // Mechanism drug entries describe what the enzyme does to that drug: 'S' means "not hydrolysed" — it never improves
+  // the isolate's category (other mechanisms and the wild type still apply). A mechanism predicts likely activity of a
+  // newer agent; the complete isolate phenotype decides.
   {
     id: 'kpc',
     labelKey: 'mech.kpc',
@@ -564,13 +592,17 @@ export const MECHANISMS: readonly MechanismDef[] = [
     labelKey: 'mech.mbl',
     classes: all(BETA_LACTAMS),
     drugs: { 'aztreonam-avibactam': 'S', cefiderocol: 'S' },
+    // MBL P. aeruginosa usually carries further permeability/efflux mechanisms: aztreonam-avibactam evidence from MBL
+    // Enterobacterales does not transfer.
+    groupDrugs: { pseudomonas: { 'aztreonam-avibactam': 'R', cefiderocol: 'I' } },
     carbapenemase: true,
     rapidTest: 'carbapenemase',
   },
   {
+    // OprD loss mainly affects imipenem; meropenem rises modestly unless further mechanisms add up.
     id: 'oprd-loss',
     labelKey: 'mech.oprd-loss',
-    classes: { carbapenem: 'R' },
+    drugs: { imipenem: 'R', meropenem: 'I' },
   },
   {
     id: 'efflux',
@@ -579,9 +611,10 @@ export const MECHANISMS: readonly MechanismDef[] = [
       ureidopenicillin: 'R',
       'ureidopenicillin-bli': 'R',
       'ceph3-antipseudomonal': 'R',
-      ceph4: 'I',
+      ceph4: 'R',
       fluoroquinolone: 'R',
     },
+    // SIM-ASSUMPTION: one representative efflux phenotype (MexAB/MexXY overexpression), not a validated isolate set.
     drugs: { meropenem: 'I' },
   },
   { id: 'fq-resistance', labelKey: 'mech.fq-resistance', classes: { fluoroquinolone: 'R' } },
@@ -589,6 +622,25 @@ export const MECHANISMS: readonly MechanismDef[] = [
     id: 'aminoglycoside-resistance',
     labelKey: 'mech.aminoglycoside-resistance',
     classes: { aminoglycoside: 'R' },
+  },
+  {
+    // Enterococci: high-level aminoglycoside resistance — no synergy with a cell-wall agent.
+    id: 'hlar',
+    labelKey: 'mech.hlar',
+    classes: { aminoglycoside: 'R' },
+  },
+  {
+    // E. faecium: altered PBP5 — resistant to penicillins and carbapenems.
+    id: 'pbp5',
+    labelKey: 'mech.pbp5',
+    classes: {
+      penicillin: 'R',
+      aminopenicillin: 'R',
+      'aminopenicillin-bli': 'R',
+      ureidopenicillin: 'R',
+      'ureidopenicillin-bli': 'R',
+      carbapenem: 'R',
+    },
   },
   { id: 'vana', labelKey: 'mech.vana', classes: { glycopeptide: 'R' }, rapidTest: 'vanA' },
   {
@@ -605,7 +657,8 @@ export const MECHANISMS: readonly MechanismDef[] = [
   {
     id: 'fluconazole-resistance',
     labelKey: 'mech.fluconazole-resistance',
-    classes: { azole: 'R' },
+    // Drug-specific: fluconazole resistance does not automatically make every azole resistant.
+    drugs: { fluconazole: 'R' },
   },
 ];
 
@@ -668,7 +721,7 @@ export const AST_PANELS: Partial<Record<OrganismDef['group'], readonly string[]>
     'cefiderocol',
     'colistin',
   ],
-  stenotrophomonas: ['cotrimoxazole', 'levofloxacin', 'cefiderocol'],
+  stenotrophomonas: ['cotrimoxazole', 'levofloxacin'],
   staphylococcus: [
     'penicillin-g',
     'flucloxacillin',

@@ -44,14 +44,27 @@ export type DrugClass =
   | 'azole'
   | 'echinocandin';
 
-/** WHO-AWaRe-like stewardship category. */
-export type AwareCategory = 'access' | 'watch' | 'reserve';
+/** WHO AWaRe category; antifungals are not part of AWaRe ('antifungal' = local antifungal stewardship group). */
+export type AwareCategory = 'access' | 'watch' | 'reserve' | 'antifungal';
 
 export type DrugRoute = 'iv' | 'po';
 
-/** Anatomical compartment of an infection, used for penetration. */
+/**
+ * Anatomical compartment of an infection, used for penetration. `urine` = bladder / lower urinary tract (cystitis);
+ * `kidney` = renal parenchyma and upper tract (pyelonephritis, urosepsis) — bladder-only agents do not reach it.
+ */
 export type Focus =
-  'blood' | 'lung' | 'urine' | 'abdomen' | 'skin' | 'bone' | 'valve' | 'cns' | 'gut' | 'line';
+  | 'blood'
+  | 'lung'
+  | 'urine'
+  | 'kidney'
+  | 'abdomen'
+  | 'skin'
+  | 'bone'
+  | 'valve'
+  | 'cns'
+  | 'gut'
+  | 'line';
 
 export interface AntiinfectiveDef {
   id: string;
@@ -97,7 +110,7 @@ export type Susceptibility = 'S' | 'I' | 'R';
 
 export type MechanismId =
   | 'penicillinase'
-  | 'mrsa'
+  | 'meca'
   | 'esbl'
   | 'ampc-inducible'
   | 'ampc-derepressed'
@@ -108,6 +121,8 @@ export type MechanismId =
   | 'efflux'
   | 'fq-resistance'
   | 'aminoglycoside-resistance'
+  | 'hlar'
+  | 'pbp5'
   | 'vana'
   | 'cotrim-resistance'
   | 'macrolide-resistance'
@@ -120,14 +135,16 @@ export interface MechanismDef {
   labelKey: string;
   /** classes that become R (or I) */
   classes?: Partial<Record<DrugClass, Susceptibility>>;
-  /** individual drugs that become R (or I), override classes */
+  /** individual drugs that become R (or I), override classes; 'S' = the mechanism leaves this drug unaffected */
   drugs?: Record<string, Susceptibility>;
+  /** species-group-specific drug effects (e.g. MBL in P. aeruginosa vs Enterobacterales), applied in addition */
+  groupDrugs?: Partial<Record<OrganismGroup, Record<string, Susceptibility>>>;
   /**
    * Activity cap 0..1 for drugs still reported S/I but clinically unreliable with this mechanism
    * (e.g. piperacillin-tazobactam against ESBL producers in bloodstream infection).
    */
   activityCap?: Record<string, number>;
-  /** a carbapenemase: Enterobacterales with it count as 4MRGN (KRINKO) */
+  /** a carbapenemase: organisms of the guideline's carbapenemase groups count as 4MRGN (KRINKO) */
   carbapenemase?: boolean;
   /** detectable by a rapid PCR panel */
   rapidTest?: 'mecA' | 'carbapenemase' | 'vanA' | 'ctx-m';
@@ -446,8 +463,15 @@ export interface AbsGuidelines {
   reserveClasses: DrugClass[];
   /** drugs treated as reserve outside a proven indication */
   reserveDrugs: string[];
-  /** MRGN classification (KRINKO): the four antibiotic groups, each with its marker drugs */
-  mrgnGroups: { label: string; drugs: string[] }[];
+  /**
+   * MRGN classification (KRINKO): the four antibiotic groups with their marker drugs (a group counts when any marker
+   * is R — "and/or"), species-specific where the table differs.
+   */
+  mrgnGroups: Partial<Record<MrgnSpecies, { label: string; drugs: string[] }[]>>;
+  /** species in which 3MRGN requires carbapenem susceptibility (otherwise any three groups) */
+  mrgn3RequiresCarbapenemS: MrgnSpecies[];
+  /** species in which a detected carbapenemase means 4MRGN regardless of the phenotype */
+  carbapenemase4Mrgn: MrgnSpecies[];
   /** count EUCAST "I" as resistant for the MRGN class */
   mrgnCountsI: boolean;
 }
@@ -555,6 +579,9 @@ export type MicroReport =
     };
 
 export type MrgnClass = 'none' | '3MRGN' | '4MRGN' | 'MRSA' | 'VRE';
+
+/** Gram-negative groups covered by the KRINKO MRGN classification. */
+export type MrgnSpecies = 'enterobacterales' | 'pseudomonas' | 'acinetobacter';
 
 // ─── Commands ───────────────────────────────────────────────────────────────────────────────────────────────
 

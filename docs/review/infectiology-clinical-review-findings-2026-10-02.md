@@ -1,0 +1,306 @@
+# ResusSim infectiology / ABS — clinical review findings
+
+Review date: 2 October 2026. Reviewed: all 18 cases, G1–G5, and Part 4 of `infectiology-clinical-review.md`.
+
+The main corrections concern **focus-specific drug suitability, treatment-duration logic, febrile neutropenia, bloodstream infection work-up, and the separation of susceptibility from clinical treatment recommendations**. Several documented scoring rules could reward an inappropriate treatment or penalize a reasonable one.
+
+Only findings requiring a change are listed. Related IDs share a row where the correction is the same. Part 4 has no item IDs; its exact assumption labels are used instead. This is a review of the supplied specification, not a verification of the underlying TypeScript implementation. Doses below refer to adults with normal renal function unless another population is specified.
+
+Priority: **high** = could teach unsafe management or materially mis-score it; **medium** = clinically relevant qualification or misleading generalization; **low** = terminology or wording. “Review judgment” denotes a design recommendation, not a guideline-mandated numerical threshold. Sources are linked in each row; their dates and scope matter, particularly when an older guideline remains the available source for a specific question.
+
+## Part 1 — Cases
+
+### A1 — Positive urine culture
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| A1-COL; A1-S7 | A single voided specimen with 10⁴ CFU/mL is not the formal definition of asymptomatic bacteriuria. The absence of urinary symptoms alone also does not exclude systemic UTI. | Keep the low count and call it **„Zufallsbefund geringer Keimzahl ohne klinischen Hinweis auf einen Harnwegsinfekt“**. Debrief: no antibiotics when neither urinary nor systemic infection features are present. Mention pregnancy and urological procedures with mucosal trauma as treatment exceptions. Do not order repeat cultures merely to satisfy a definition in this patient. | [IDSA ASB 2019][ASB] | medium |
+| A1-V2; A1-V3 | The stated noninfectious explanation for delirium is not linked to a learner action; spontaneous resolution can teach that recognizing the label is sufficient. | Require assessment for dehydration, retention, hypoxia and medication effects; credit appropriate rehydration or stopping oxybutynin. **„Ein Delir allein belegt keinen Harnwegsinfekt; andere Ursachen suchen und behandeln.“** | [IDSA ASB 2019][ASB]; review judgment | medium |
+
+### A2 — CoNS in blood cultures
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| A2-S7 | “One of two, late positivity = contamination” is too definitive in a patient with a CVC and parenteral nutrition. | **„Eine Kontamination ist wahrscheinlich, eine Katheterinfektion aber nicht ausgeschlossen. Bei stabilem Patienten zunächst erneute, gepaarte Blutkultur-Sets peripher und aus dem ZVK abnehmen; nicht reflexhaft Vancomycin beginnen.“** | [IDSA CRBSI 2009, recommendation 38][CRBSI] | high |
+| A2-V2-S5; A2-V2-S7 | Duration is counted from the first dose; “catheter set positive first” lacks a diagnostic threshold and sampling conditions. | For uncomplicated CoNS CRBSI after removal, use **5–7 days**, counted from documented clearance. Support a catheter source with **DTP ≥2 h**, using contemporaneous samples of comparable blood volume. Replace the grammatical error with **„Das aus dem Katheter entnommene Blutkultur-Set wurde mindestens zwei Stunden früher positiv.“** | [IDSA CRBSI 2009][CRBSI] | medium |
+| A2-V2; D2-V3; G4-M2 | Methicillin-resistant CoNS are labelled `[mrsa]`; MRSA specifically means methicillin-resistant **S. aureus**. | Rename the shared mechanism to `methicillin-resistance` with mecA/mecC as applicable. Display **„Methicillin-resistente KNS“** for CoNS and **„MRSA“** only for S. aureus. | [EUCAST expected phenotypes][EXPECTED]; microbiological terminology | medium |
+
+### A3 — Tracheal aspirate
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| A3-T2; A3-S7 | The routine sample is the trigger for the case, but the debrief does not address the unnecessary diagnostic action that created the treatment pressure. | Add **„Ohne klinischen Verdacht auf eine Atemwegsinfektion keine routinemäßige respiratorische Kultur zur Therapieentscheidung veranlassen. Ein Überwachungsprogramm der Hygiene ist davon getrennt zu betrachten.“** | [AWMF HAP 2024][HAP]; diagnostic-stewardship judgment | medium |
+
+### B1 — Pyelonephritis with bacteraemia
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| B1-S5; B1-S7 | “First dose” can count an inactive empirical drug in the ESBL variant. Seven days is presented as an unconditional stop date. | **„Insgesamt meist 7 Tage wirksame Therapie ab der ersten wirksamen Gabe, wenn klinische Besserung und Fokuskontrolle vorliegen; bei fehlendem Ansprechen erneut nach Obstruktion oder Abszess suchen.“** Obtain cultures promptly without materially delaying urgent treatment. | [IDSA cUTI 2025][CUTI]; [SSC 2026][SSC] | high |
+| B1-T3 | “Somnolent, aber orientierbar” is imprecise and does not clearly document the newly described confusion. | For the intended case: **„Somnolent, auf Ansprache weckbar und kurzzeitig kontaktfähig, zeitlich desorientiert.“** If orientation is intact after awakening, document that explicitly instead. | Medical-German review; case consistency | low |
+
+### B2 — CAP, Legionella and empyema
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| B2-T2; B2-S7 | Moderate CAP is asserted without adequate severity information. Plain oral amoxicillin is then presented as interchangeable with the initial regimen for moderate hospitalized CAP. | Provide SpO₂/oxygen need and the admission/severity criterion. If genuinely moderate: initial **ampicillin/sulbactam 3 g IV every 8 h**, with a macrolide according to presentation; oral amoxicillin can be targeted step-down for susceptible pneumococci. Stop at about **5 days only after ≥48 h clinical stability**. | [AWMF CAP 2021, recommendations E40–42 and treatment table][CAP] | medium |
+| B2-V2-S4; B2-V2-CHK1 | A universal five-day Legionella course and equal first-line status for doxycycline oversimplify treatment. “β-lactams do not reach intracellular pathogens” is false as a general rule. | Use **5–10 days according to drug, severity and response**, with longer treatment when clinically indicated. Prefer an appropriate macrolide or respiratory fluoroquinolone; add azithromycin to accepted options. **„β-Laktame sind gegen Legionellen klinisch nicht ausreichend wirksam.“** | [AWMF CAP 2021, Legionella/duration sections][CAP] | medium |
+| B2-V2-S7; B2-V2-CHK2 | Testing is framed as something to do after β-lactam failure; urinary antigen alone can miss Legionella. | Request Legionella testing at the initial relevant assessment. Explain that urine antigen mainly detects **L. pneumophila serogroup 1**; a negative test does not exclude disease. With persisting suspicion add respiratory PCR/culture. | [RKI Legionellosis guide][LEGIONELLA] | medium |
+| B2-V3-S4; B2-V3-CHK1 | A fixed 14-day course and a 96-h drainage deadline can reward waiting after empyema recognition. CT appearance alone also does not replace pleural sampling. | Prompt ultrasound-guided assessment and drainage when indicated by pus, positive microbiology or pleural-fluid findings. Count delay from **recognition**, not admission. Use response-guided duration, commonly **2–6 weeks**; do not impose 14 days as a universal upper limit. | [BTS Pleural Disease 2023][PLEURA] | high |
+
+### B3 — Postoperative peritonitis
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| B3-CHK1; B3-S5; B3-INF1 | The check gives equivalent credit for surgery and a drain explicitly described as only partial control of an ongoing faecal leak. | Credit **adequate** source control, not merely a procedure. A partial drain does not start the four-day stop clock. Reassess ongoing leakage and arrange definitive control; in sepsis target early control, ideally **within 6 h of diagnosis**, subject to feasibility. | [STOP-IT trial][STOPIT]; [SSC 2026][SSC] | high |
+| B3-S7; B3-CHK2 | A blanket ban on antifungals/VRE-active drugs can penalize appropriate treatment if sterile-site samples, bloodstream infection or deterioration change the indication. | Limit the no-treatment rule to colonization of an **old drain**. Distinguish operative/fresh sterile specimens and drains placed **≤24 h** earlier. With invasive candidiasis or another documented infection, allow indicated therapy. **„Candida oder VRE aus einer länger liegenden Drainage allein begründen keine gezielte Therapie.“** | [IDSA Candidiasis 2016, intra-abdominal candidiasis][CANDIDA] | high |
+
+### B4 — VAP
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| B4-V2; G4-M10 | The variant is named `3mrgn`, yet cefepime remains I and carbapenems remain available. That phenotype does not establish resistance to three KRINKO groups. | Derive MRGN from the complete species-specific phenotype. Either rename the variant or make **all relevant cephalosporin representatives R** as well as piperacillin and ciprofloxacin R, while retaining a carbapenem option if teaching 3MRGN. | [KRINKO 2019][MRGN19]; [Mainz microbiology classification guidance][MRGNMAINZ] | high |
+| B4-CHK1 | “Sample within 6 h” does not verify the feedback claim “before the first dose,” especially with a one-hour antibiotic target. | Test actual event order: **sample time ≤ first-antibiotic time**, unless sampling would delay urgent treatment. Give credit for a clinically appropriate sample obtained as soon as feasible after emergency treatment. | [AWMF HAP 2024][HAP]; review judgment | medium |
+| B4-CHK2 | “A combination no longer helps when susceptibility is known” is too absolute; the count also ignores a second infection. | **„Bei klinischer Stabilisierung und fehlender weiterer Indikation auf eine wirksame, ausreichend exponierte Substanz deeskalieren.“** Exempt justified treatment of another focus or a specialist-selected regimen. | [AWMF HAP 2024][HAP] | medium |
+
+### B5 — ESBL ICU infection
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| B5-S7; B5-S5 | “Carbapenem while unstable, then de-escalate by antibiogram” leaves open unsuitable step-down choices in bacteraemic ESBL UTI. | Count effective therapy. For step-down require clinical stability, source control and adequate bloodstream/renal-tissue exposure: **TMP-SMX or ciprofloxacin/levofloxacin if susceptible**. If no appropriate alternative exists, continuing a carbapenem is correct. Do not reward nitrofurantoin or single-dose oral fosfomycin here. | [IDSA AMR 2026, ESBL cUTI][AMR26]; [IDSA cUTI 2025][CUTI] | high |
+
+### C1–C2 — S. aureus bloodstream infection
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| C1-S7; C2-S4; C2-S7 | “Never contamination” is an unnecessary absolute; 14 days is not appropriate for every SAB. The diagnostic prerequisites are not encoded. | **„S. aureus in der Blutkultur zunächst als klinisch relevant behandeln.“** Use 14 days only after evaluation excludes deep/metastatic infection. Date from documented clearance; if focus removal is later, consider that later start. Persistent bacteraemia requires reassessment, not an automatic stop date. | [IDSA/ESCMID SAB consensus 2026][SAB26] | high |
+| C1-IMG1; C1-V1 | The “uncomplicated” variant describes thrombophlebitis with pus. A confirmed infected thrombus would change the treatment category. | Describe **„Lokale Infektion der Einstichstelle mit Phlebitis“** unless suppurative thrombosis is intended. If duplex confirms an infected thrombus, activate the complicated/endovascular pathway and longer therapy. | [IDSA CRBSI 2009][CRBSI] | high |
+| C1-CHK3; C2-CHK2 | One follow-up culture anywhere between 24 and 96 h can miss persistent SAB for several days. | Obtain **≥2 follow-up sets at 48 h after the initial positive sample**, then **1–2 sets every 24–48 h until negative**; earlier/more intensive sampling when clinically indicated. | [IDSA/ESCMID SAB consensus 2026][SAB26] | high |
+| C1-CHK4; C2-CHK3 | Any TTE or TEE within five days passes, irrespective of persistent cultures, image quality or metastatic findings. | Start with TTE; require risk-based TEE despite a negative TTE with persistent cultures ≥48 h, emboli, cardiac devices/valve risk or multiple noncontiguous foci. Reassess risk dynamically. | [IDSA/ESCMID SAB consensus 2026][SAB26] | high |
+| C1-V2-S7; C1-V2-CHK1 | Any persistence/new pain is equated with a proven metastatic focus and “at least six weeks”; the MRI deadline is unrelated to symptom onset. | Investigate promptly when back pain appears; immediate escalation with neurological deficits. **Six weeks fits confirmed bacterial vertebral osteomyelitis**, not every episode of persistent SAB. Set duration after the actual focus is established. | [IDSA Native Vertebral Osteomyelitis 2015][NVO]; [SAB consensus 2026][SAB26] | high |
+| C2-P; C2-S7 | A haemodialysis patient is represented by creatinine alone, with no dialysis schedule, residual function or dialysis-adjusted regimen. | Add explicit intermittent-HD status and timing, residual diuresis and pre-/post-dialysis sampling. Dose vancomycin/daptomycin using an HD-specific regimen; **do not infer clearance from creatinine 2.2 mg/dL**. | [Vancomycin consensus 2020][VANCO]; [Cubicin SmPC][DAPTO] | high |
+
+### C3 — Endocarditis
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| C3-S5; C3-V2-S5; C3-V3-S5 | “First dose” can include ineffective treatment and predates clearance in initially culture-positive IE. | Count from **effective therapy; in initially positive blood cultures, from the first negative culture**. Do not automatically restart after valve surgery. | [ESC Endocarditis 2023][ESC23] | high |
+| C3-S7; C3-V2-S7; C3-INF1 | Endocarditis Team review is deferred until complications; an 11-mm vegetation with significant regurgitation already warrants assessment. | **„Bei Diagnosestellung das Endokarditis-Team einbeziehen; Operationsindikation anhand von Herzinsuffizienz, Infektionskontrolle und Embolierisiko prüfen.“** | [ESC Endocarditis 2023][ESC23] | high |
+| C3-V2; C3-V2-CHK1 | Septic embolism is classified as a noninfectious mimic. A compulsory operation by an arbitrary clock is not equivalent to assessing its indication. | Model it as an **infectious complication**. Credit urgent brain imaging and Endocarditis Team/surgical assessment. With the stated nonhaemorrhagic stroke and continuing indication, do not delay surgery solely because a stroke occurred. | [ESC Endocarditis 2023][ESC23]; review judgment | high |
+| C3-V3-CHK1; G3-28 | Ceftriaxone and gentamicin are treated as interchangeable six-week partners; gentamicin has no HLAR gate or synergy dose. | Preferred case regimen: **ampicillin 2 g IV every 4 h + ceftriaxone 2 g IV every 12 h for 6 weeks**. A gentamicin alternative requires absence of HLAR, renal/TDM assessment and a separate **3 mg/kg/day** synergy regimen, generally limited to the first **2 weeks**. | [ESC Endocarditis 2023][ESC23] | high |
+
+### D1 — C. difficile
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| D1-V2; D1-S7; D1-CHK3 | The “severe” variant depends on an invisible scalar. Severe and fulminant CDI do not have identical treatment requirements. | Define severity using visible findings: leukocytes, creatinine change, temperature, abdominal/imaging findings. Add a distinct **fulminant/complicated** branch for hypotension/shock, ileus, megacolon or perforation, with urgent multidisciplinary management and a guideline-specific regimen. Do not let ordinary oral-treatment selection alone pass that branch. | [DGVS GI Infections 2023][CDI23] | high |
+| D1-S7; D1-CHK2; D1-CHK4 | “Only diarrhoea” misses ileus; a 12-h isolation window can normalize avoidable exposure. | **„Bei neu aufgetretenen ≥3 ungeformten Stühlen/24 h ohne plausible andere Ursache testen; bei Ileus und CDI-Verdacht Sonderdiagnostik veranlassen.“** Start contact precautions when CDI is suspected; review laxatives and avoid test-of-cure. | [IDSA/SHEA CDI diagnostic guideline][CDIDIAG]; [DGVS 2023][CDI23] | high |
+
+### D2 — Febrile neutropenia
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| D2-T3 | “Perianal not examined because neutropenic” teaches omission of an important potential focus. | **„Perianal vorsichtig inspiziert; keine digitale rektale Untersuchung.“** Also avoid unnecessary rectal instrumentation. | [AGIHO FUO update 2024, published 2025][FN] | high |
+| D2-MIM1; D2-S1; D2-S3; D2-V1-S1; D2-V1-S3; D2-V2-S3 | FUO is labelled proven noninfectious; the E. coli bacteraemia variant still has working diagnosis “none.” | Use **„Febrile Neutropenie ohne nachgewiesenen Fokus“**, infection status **uncertain**, empirical treatment indicated. For D2-V2: **„Febrile Neutropenie mit E.-coli-Bakteriämie“**. Distinguish ANC from total leukocyte count in D2-P. | [AGIHO FUO update][FN]; internal consistency | high |
+| D2-S2; D2-V1-S2; D2-V2-S2; D2-V3-S2; G2-1 | The two-hour score contradicts the case’s one-hour teaching message. | Use one consistent **≤1-h teaching target from recognition**, with immediate action in instability. Label it as the simulator’s operational target; AGIHO requires prompt empirical treatment. | [AGIHO FUO update][FN]; internal consistency | high |
+| D2-S7; D2-V1-S7; D2-V1-CHK1; D2-V2-CHK1 | The no-antifungal rule is unsafe in prolonged high-risk neutropenia. | Add expected neutropenia duration and prophylaxis. Persistent/recurrent fever after **72–96 h** may warrant mould-active therapy in high-risk patients without prophylaxis, or a validated pre-emptive pathway. Do not penalize that decision as reflex escalation. | [AGIHO FUO update][FN] | high |
+| D2-S4; D2-V1-S4; D2-S7; D2-V1-S7 | A fixed five-day total course and “in recovery” can imply that neutrophil recovery is necessary. | For FUO, base stopping on **3–5 days of defervescence plus clinical recovery**, irrespective of ANC, with close monitoring. Documented infection follows its own duration. | [AGIHO FUO update][FN] | high |
+| D2-V3-S7; D2-V3-CHK1; D2-IMG1 | “Remove a port whenever it is the focus” overgeneralizes; paired peripheral sampling is not taught. | Obtain paired peripheral/port cultures. **In this variant, remove because pocket/tunnel involvement is present.** Distinguish selected uncomplicated CoNS intraluminal CRBSI, where salvage can be considered under a specialist protocol. | [IDSA CRBSI 2009][CRBSI] | medium |
+
+### E1 — Bacterial meningitis
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| E1-CHK2 | “Later it does not help” is an unjustified one-hour biological cutoff; the model also gives a universal 30% effect. | **„Dexamethason 10 mg IV unmittelbar vor oder mit der ersten Antibiotikagabe, dann alle 6 h; bei Pneumokokken vier Tage. Bei bereits begonnener Therapie kann die Gabe noch innerhalb weniger Stunden erwogen werden.“** Remove the absolute no-benefit claim. | [DGN bacterial meningitis 2023][MENINGITIS] | high |
+| E1-CHK3 | The >50-year rule is not the German adult guideline’s empirical default; oral-only amoxicillin in G3 could satisfy the checkbox. | German adult default: **ceftriaxone 2 g IV every 12 h + ampicillin 2 g IV every 4 h**, not age-gated. Require **IV route and CNS-appropriate dosing**; oral amoxicillin must not pass. | [DGN bacterial meningitis 2023][MENINGITIS] | high |
+| E1-CHK1; E1-S7 | Giving antibiotics before CT does not assess whether CT was needed or whether CSF was obtained promptly. | Add the alternative **immediate LP → immediate therapy** when no imaging indication exists. If LP/CT causes delay, treat after blood cultures without waiting. GCS 13 alone should not automatically trigger a mandatory CT branch. | [DGN bacterial meningitis 2023][MENINGITIS] | high |
+| E1-INF1; E1-T3 | An otogenic focus is described, but source control is explicitly “no.” | Require prompt ENT assessment and appropriate imaging/source treatment. Allow mastoiditis or another drainable parameningeal focus to trigger surgery. | [DGN bacterial meningitis 2023][MENINGITIS] | high |
+
+### E3 — Cat bite
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| E3-S7; E3-CHK1; E3-V2-S7 | “Pasteurella needs amoxicillin/clavulanate” confuses polymicrobial empirical bite coverage with definitive treatment. Plain penicillin/ampicillin can pass the empirical check. | **„Infizierte Katzenbisse zunächst gegen aerobe und anaerobe Bissflora behandeln, z. B. Amoxicillin/Clavulansäure bzw. bei stationärer IV-Therapie Ampicillin/Sulbactam. Nach verlässlicher Erregersicherung kann gezielt deeskaliert werden.“** Accept plain penicillin/ampicillin only as justified targeted treatment. | [IDSA SSTI 2014][SSTI]; [NICE NG184][BITES] | high |
+| E3-V2; E3-V2-CHK1 | The variant changes the infection but does not visibly add a required operative-control field; antibiotics could therefore cure it in the physiological model despite a missed operation. | Explicitly set **required hand-surgical source control** in the infection model, not only a score checkbox. Credit urgent consultation at recognition; teach pain on passive extension and tendon-sheath involvement. | [NICE NG184, hospital referral for deep infection][BITES]; specification consistency | high |
+
+### N1–N3 — Noninfectious mimics
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| N1-S7; N1-MIM2 | Atelektasis is taught as a cause of postoperative fever, a persistent clinical myth. | **„Frühes postoperatives Fieber ist häufig Ausdruck der Entzündungsreaktion. Atelektasen können gleichzeitig bestehen, gelten aber nicht als gesicherte Fieberursache.“** Remove a fever-driving effect assigned solely to uncomplicated atelectasis; retain its respiratory effects. | [Engoren, Chest 1995: primary study][ATELECTASIS] | medium |
+| N2-V2 | Aspiration changes the briefing but retains the base examination with distended jugular veins and oedema, while imaging has a normal-sized heart. | Supply an aspiration-specific examination or deliberately model concomitant heart failure. Add reassessment over **24–48 h**; improvement supports chemical pneumonitis, while persistence/deterioration prompts reassessment for bacterial pneumonia or another cause. | Internal case consistency; [ATS/IDSA CAP 2019][CAP19] | medium |
+| N3-S7; N3-CHK2; N3-MIM1 | “Fever is no reason to escalate” is too categorical. Drug fever is not proven by relative bradycardia. | **„Fieber allein rechtfertigt keine Eskalation. Klinischen Verlauf, neue Foci, Resistenz, Fokuskontrolle und Arzneimittel prüfen; bei Instabilität sofort handeln.“** Use **„Arzneimittelfieber“** and model resolution after withdrawal, with competing explanations excluded. | [German S3 Sepsis 2025][SEPSISDE]; clinical/medical-German review | medium |
+| N3-V2-S3; N3-V2-CHK1 | The correct diagnosis remains “none” despite a pulmonary embolism; mandatory CTPA within 48 h ignores diagnostic pathways and acuity. | Record **„Lungenarterienembolie“** as the working diagnosis. Credit a probability- and stability-based work-up, with prompt imaging when indicated; do not award a universal 48-h safe waiting period. | [ESC Acute PE 2019][PE]; review judgment | medium |
+
+## Part 2 — Global settings
+
+### G1–G2 — Scoring and guideline targets
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| G2-1; all `*-S2` using `suspected → 3 h` | The three-hour possible-sepsis pathway is applied to all suspected infection and even no-infection cases. | Separate **shock/probable or definite sepsis: immediately, ideally ≤1 h**; **possible sepsis without shock: rapid assessment, ≤3 h if concern persists**; **low likelihood without shock: monitor/defer**. No antibiotic countdown for established noninfectious cases. Start clocks at recognition, not mechanically at admission. | [SSC 2026][SSC] | high |
+| G1-3; G1-4; G2-4 | Universal blood-culture penalties can reward unnecessary testing; endocarditis needs a different collection plan. | Make cultures indication-specific. Normally **≥2 sets** when bloodstream infection is suspected; **3 sets before treatment for stable suspected IE**. Do not penalize omission in uncomplicated localized infection where not indicated, or delay emergency antibiotics to satisfy a sampling sequence. | [SSC 2026][SSC]; [ESC 2023][ESC23] | high |
+| G1-5; G1-13 | Retrospective hidden truth can penalize justified empirical treatment and uncertainty when the information available initially supported infection. | Score the decision **using information available at that time**, followed by reassessment and stopping when infection becomes unlikely. Allow “uncertain” as an appropriate status. Keep preventable over-treatment separate from reasonable empirical treatment. | Review judgment; [SSC 2026][SSC] | high |
+| G1-6; G2-6 | Reserve treatment requires proven resistance, excluding justified empirical treatment in selected high-risk patients and other appropriate indications. | Accept **documented suspected or confirmed indications**, including prior isolates and severe allergy/intolerance when relevant. Reassess after results. Never require 4MRGN/MRSA/VRE proof before appropriate emergency treatment. | [WHO AWaRe][AWARE]; review judgment | high |
+| G1-7; G1-8; G1-18 | A scalar spectrum rank cannot determine clinical suitability; it mislabels narrow Gram-positive drugs as broad and can reward a wrong-site agent. | First filter by **syndrome, focus penetration, route, organism, dose, interactions and patient factors**; then compare appropriate alternatives. Split “coverage breadth,” “ecological pressure,” and “Reserve status” into separate fields. | [EUCAST S/I/R][SIR]; [IDSA cUTI 2025][CUTI]; review judgment | high |
+| G1-9; G2-5 | Twenty-four hours of stable vitals plus bioavailability ≥0.7 is insufficient for a safe IV-to-oral switch, especially in IE, CNS infection or complicated SAB. | Require functioning absorption, an evidence-supported oral regimen at the site, source control and syndrome-specific criteria. Disable the generic switch penalty for these infections; specialist step-down needs its own pathway. | [ESC 2023][ESC23]; [IDSA cUTI 2025][CUTI] | high |
+| G1-10; G1-11; G2-D7; G2-D14 | One universal ±day tolerance and fixed complicated-SAB/PJI durations create false precision. Thirteen days could pass a 14-day SAB minimum. | Use indication-specific minimums/ranges and starting events. Confirmed deep SAB often needs **4–6 weeks or a focus-specific course**, not a universal 28 days. PJI duration must depend on surgery, pathogen and retained material; **84 days is not universal**. | [SAB consensus 2026][SAB26]; [DATIPO trial][PJI]; review judgment | high |
+| G1-14 | “TDM after ≥48 h” ignores the indication, early target attainment and dialysis. | For serious MRSA infection, seek vancomycin target exposure within **24–48 h**; apply drug- and modality-specific sampling schedules. A level without interpretation/dose adjustment must not automatically earn full credit. | [Vancomycin consensus 2020][VANCO] | high |
+| G1-17 | Random CDI, allergy, AKI or resistance automatically lowers stewardship/outcome scores even after appropriate care; several appear on both axes. | Report consequences, but assess **preventable prescribing errors** separately. Avoid double deductions and do not equate an unavoidable adverse event with inappropriate treatment. | Assessment-design judgment; document labels the score unvalidated | medium |
+| G2-7; Part 4 “MRGN class” | The shared marker list omits species-specific rules; the carbapenemase override is limited to Enterobacterales. | Implement the **species-specific KRINKO table**, including AND/OR rules. Apply the confirmed-carbapenemase 4MRGN rule to the relevant covered organisms, including Pseudomonas/Acinetobacter, not only Enterobacterales. Use **non-meningitis breakpoints for MRGN classification**, retaining infection-specific treatment interpretation. | [KRINKO 2019][MRGN19]; [2026 clarification][MRGN26] | high |
+| G2-8 | The reference list is too vague to audit and names an older AMR guidance version despite 2026 updates. | Record exact title, version/publication date, URL, recommendation/table and review date. Add **IDSA AMR 2026, IDSA/ESCMID SAB 2026, EUCAST bacteria v16.1, and KRINKO 2026 clarification**. “MRE 2025” and “PAP” need identifiable documents. | [IDSA AMR 2026][AMR26]; [SAB 2026][SAB26]; [EUCAST v16.1][BREAKPOINTS]; [KRINKO 2026][MRGN26] | medium |
+
+### G3 — Formulary
+
+The corrections below are indication-specific. They are not a request to replace every valid routine dose with the highest dose.
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| G3-2; G3-11; G3-12; G3-16 | Generic doses omit key regimens needed by the supplied meningitis/endocarditis cases. | Add **ampicillin 2 g q4h** for meningitis/E. faecalis IE; **ceftriaxone 2 g q12h** for enterococcal IE; **cefotaxime 2 g q6h** as a meningitis regimen under EUCAST dosing assumptions; **meropenem 2 g q8h** when selected for meningitis. | [DGN 2023][MENINGITIS]; [ESC 2023][ESC23]; [EUCAST dosage table 2026][DOSES] | high |
+| G3-6 | The high-exposure regimen is defined by daily dose but not infusion time. | Specify the EUCAST high regimen: **piperacillin/tazobactam 4.5 g q6h infused over 3 h**, with an appropriate initial loading administration. Do not make “extended infusion” a universal multiplicative bonus independent of dose/MIC. | [EUCAST dosage table 2026][DOSES] | high |
+| G3-7 | “Renal: no” can be read as no adjustment needed even in severe renal failure. | **„Meist keine Anpassung bei leichter/mäßiger Niereninsuffizienz; bei CrCl <10 mL/min Dosis/Intervall prüfen, besonders bei hohen Dosen.“** | [Flucloxacillin IV SmPC][FLUCLOX] | medium |
+| G3-19 | A dose range of 1.5–3 g conceals the required pneumonia regimen. | State **1.5 g q8h for cUTI/cIAI; 3 g q8h for HAP/VAP** (ceftolozane/tazobactam total dose), renal adjustment as indicated. | [EMA Zerbaxa SmPC][ZERBAXA] | high |
+| G3-21 | The name omits cilastatin although the total 1.25-g dose includes it. | **„Imipenem/Cilastatin/Relebactam 500/500/250 mg IV alle 6 h“**; show all three components consistently. | [Recarbrio SmPC][RECARBRIO] | medium |
+| G3-22 | “Loading” is not a usable dose or infusion instruction. | **Aztreonam/avibactam 2/0.67 g loading**, then **1.5/0.5 g every 6 h**, each infused over **3 h**, with product-specific renal adjustment. | [Emblaveo SmPC][EMBLAVEO] | medium |
+| G3-23 | The standard cefiderocol dose omits augmented renal clearance, relevant to ICU cases. | Add **CrCl ≥120 mL/min: 2 g every 6 h over 3 h**; standard and reduced-clearance schedules remain separate. | [EMA Fetcroja SmPC][FETCROJA] | medium |
+| G3-24 | There is no IV high-exposure ciprofloxacin regimen despite EUCAST I and Pseudomonas teaching. | Add **400 mg IV q8h** as the high-exposure regimen; oral high exposure **750 mg q12h**, with renal/interaction assessment. | [EUCAST dosage table 2026][DOSES] | medium |
+| G3-27 | “960 mg” hides the two components and is presented as a universal systemic regimen. | Display **trimethoprim/sulfamethoxazole 160/800 mg**. Label the usual fixed dose by indication; provide separate **weight-based trimethoprim dosing** for infections requiring it, instead of applying the routine UTI dose to every susceptible pathogen. | [Co-trimoxazole SmPC][COTRIM]; formulary-design judgment | medium |
+| G3-30; C2-S7 | Trough 15–20 mg/L is presented as the universal vancomycin target. | For serious MRSA infection use **AUC24 400–600 mg·h/L**, assuming MIC 1 mg/L; renal function and actual exposure guide maintenance. Do not replace an HD-specific monitoring protocol with this generic daily regimen. | [ASHP/IDSA/PIDS/SIDP vancomycin consensus 2020][VANCO] | high |
+| G3-33; Part 4 “Linezolid” | No monitoring is specified, and thrombocytopenia starts deterministically on day 10. | Add **weekly CBC**, more frequent monitoring when clinically indicated; renal dysfunction increases toxicity risk despite no routine labelled dose reduction. Model variable onset and consider TDM where available, not a fixed 4%-per-day loss. | [Linezolid SmPC][LINEZOLID]; model-design judgment | medium |
+| G3-34 | 8–12 mg/kg is shown as the single routine daptomycin regimen, without indication or monitoring. | Distinguish labelled adult **6 mg/kg/day for relevant SAB/right-sided IE indications** from specialist high-dose regimens. Label higher doses as indication-dependent/off-label where applicable. Add **baseline and at least weekly CPK**, renal adjustment, and the pneumonia exclusion. | [EMA Cubicin SmPC][DAPTO] | medium |
+| G3-38 | Clarithromycin is marked as requiring no renal adjustment. | Set renal adjustment to **yes**: ordinarily **reduce dose by 50% when CrCl <30 mL/min**, with further interaction-specific considerations. | [Clarithromycin SmPC][CLARITHRO] | high |
+| G3-39; G3-45; G3-46 | Oral fosfomycin has the wrong WHO AWaRe category; antifungals are assigned antibacterial AWaRe categories. | **Oral fosfomycin = Watch** in WHO AWaRe; **fluconazole/anidulafungin = not applicable**. A separate local antifungal stewardship classification must be labelled as such. | [WHO antibiotics portal][FOSFAWARE]; [WHO AWaRe 2025][AWARE] | medium |
+| G3-40 | IV fosfomycin “combination only” is categorical rather than indication-dependent. | **„Kombination bei schweren invasiven Infektionen häufig sinnvoll; Monotherapie nicht grundsätzlich ausgeschlossen. Indikation, Erreger, Resistenzrisiko und aktuelle Fachinformation beachten.“** Add sodium load and potassium monitoring to the practical teaching. | [EMA fosfomycin referral assessment][FOSFIV] | medium |
+
+### G4 — Organisms and resistance mechanisms
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| G4, table structure (especially G4-O2, G4-O4–G4-O18, G4-O21) | “Intrinsically I” mixes susceptibility, drug-specific R/S overrides and treatment suitability. No listed resistance can imply clinical susceptibility. | Store separately: **expected resistant phenotype; isolate MIC/SIR; breakpoint indication; clinical suitability at the focus**. Add “no breakpoint/insufficient evidence/not tested.” Do not manufacture S or R from absent data. | [EUCAST expected phenotypes][EXPECTED]; [guidance when no breakpoints exist, 2026][NOBP] | high |
+| G4-O3 | E. cloacae complex lacks baseline resistance associated with chromosomal AmpC unless an optional mechanism is attached. | Make the expected resistance to **ampicillin/amoxicillin, amoxicillin-clavulanate, ampicillin-sulbactam, first-generation cephalosporins and cefuroxime** part of this species’ baseline. | [EUCAST expected resistant phenotypes][EXPECTED] | high |
+| G4-O5; G4-O6; G4-O7 | Pseudomonas defaults can imply standard-dose S; A. baumannii lacks expected doxycycline resistance; S. maltophilia has contradictory class-R/drug-S entries. | Apply drug-specific MIC/exposure rules. **A. baumannii: do not infer doxycycline activity from minocycline/tigecycline activity.** For S. maltophilia, cefiderocol or aztreonam/avibactam activity is not guaranteed by species identity. | [EUCAST expected phenotypes][EXPECTED]; [breakpoints v16.1][BREAKPOINTS]; [no-breakpoint guidance][NOBP] | high |
+| G4-O8; G4-O9; G4-O15; G4-O17 | Meropenem/vaborbactam and imipenem/relebactam are automatically R against organisms where the carbapenem component may retain activity, e.g. MSSA, susceptible B. fragilis or Listeria. | Remove these blanket biological R claims. Record **“not a recommended/validated treatment for this indication”** where appropriate; infer no additional resistance merely from adding an inhibitor to an active parent drug. | [EUCAST no-breakpoint guidance][NOBP]; pharmacological/model review | high |
+| G4-O13; G4-O14; G4-M12 | Aminoglycoside resistance is not separated from high-level resistance, so the model cannot represent enterococcal synergy correctly. E. faecium ampicillin resistance is universalized. | Separate baseline low-level aminoglycoside resistance from **HLAR** and model synergy explicitly. Make E. faecium ampicillin susceptibility isolate-dependent; common resistance is not a universal species rule. | [EUCAST bacteria v16.1, enterococci][BREAKPOINTS] | high |
+| G4-O16 | A 96-h blood-culture positivity value suggests Legionella will routinely be recovered through the standard culture pathway. | Route diagnosis to **urine antigen, respiratory PCR and special Legionella culture**, with method-specific timing. Routine negative blood cultures must not exclude Legionella pneumonia. | [RKI Legionellosis guide][LEGIONELLA] | medium |
+| G4-O19 | C. difficile is labelled intrinsically resistant to nearly all drugs not chosen for CDI. Clinical failure and microbiome disruption are confused with susceptibility. | Keep **CDI treatment suitability/luminal activity** separate from in-vitro resistance and collateral microbiome effects. Do not output a fabricated conventional antibiogram for the stool organism. | [EUCAST bacteria v16.1, anaerobes][BREAKPOINTS]; [DGVS 2023][CDI23] | high |
+| G4-O21; G4-M17 | “Azole I” for C. glabrata and “fluconazole resistance → all azoles R” collapse different drugs and mechanisms. | Use **drug-specific antifungal susceptibility**. Fluconazole may be increased-exposure susceptible or resistant depending on testing; do not automatically infer another azole’s category. | [EUCAST antifungal breakpoint resources][FUNGI] | medium |
+| G4-M3; G4-M4; G4-M5; G4-M7 | Mechanism labels overwrite the laboratory SIR category and fixed activity caps are applied independently of focus. | Keep **MIC-derived SIR** separate from the syndrome-specific treatment recommendation. A mechanism label must not itself fabricate a reported SIR result; a susceptible report may still be an unsuitable clinical choice in an invasive infection. Identify activity caps explicitly as model assumptions. | [EUCAST v16.1][BREAKPOINTS]; [IDSA AMR 2026][AMR26] | high |
+| G4-M6; G4-M8 | Detecting a carbapenemase unconditionally sets newer drugs to S. | A resistance mechanism may predict likely activity, **not guarantee it**. Apply the complete isolate phenotype and co-resistance; do not allow a KPC/MBL override to erase resistance to cefiderocol or a β-lactam/inhibitor combination. | [EUCAST S/I/R][SIR]; [IDSA AMR 2026][AMR26] | high |
+| G4-M8 | NDM/VIM is treated identically across species; aztreonam/avibactam efficacy in MBL Enterobacterales cannot be generalized to MBL Pseudomonas. | Make mechanism effects **species-specific**. Separate MBL Enterobacterales from MBL P. aeruginosa and account for the latter’s additional permeability/efflux mechanisms. | [IDSA AMR 2026, CRE and DTR Pseudomonas sections][AMR26] | high |
+| G4-M9; G4-M10 | OprD loss makes the entire carbapenem class R; one generic efflux mechanism produces one fixed phenotype. | Model **imipenem and meropenem MIC changes separately**. OprD loss particularly affects imipenem; meropenem’s category depends on additional mechanisms. Use several validated isolate phenotypes instead of one universal efflux pattern. | [Köhler et al., primary OprD/efflux study][OPRD]; microbiological model review | high |
+
+### G5 — Hospital campaign
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| G5-1–G5-7; G5-R | Uncalibrated per-patient changes are displayed as hospital percentages/incidence; a high score reverses every resistance metric. Increased CDI incidence also directly selects “severe” CDI. | Keep the mechanic, but display a **fictional ecological-pressure index**, or use a genuinely denominator-based hospital model. Link CDI exposure to infection risk; determine severity from host/clinical factors. Do not make every resistance prevalence improve after each successful case. | Model/teaching judgment; no guideline supplies these numerical effects | medium |
+
+## Part 4 — Model assumptions
+
+These are documented model properties rather than item IDs. The changes target misleading clinical consequences, not the mere use of simplified mathematics.
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| Part 4 — “Duration”; all `*-INF*` minimum-effective-days fields | Effective days begin only after hidden clearance, but the case score often starts at the first dose. A seeded 0.7–1.1 multiplier can also undermine clinical minimums. | Accrue **effective treatment from the clinically specified start event**. Do not add another full course after hidden burden reaches zero. Use patient variability for response/complications, not random relaxation of a mandatory minimum. | [STOP-IT][STOPIT]; [IDSA cUTI][CUTI]; internal consistency | high |
+| Part 4 — “Case end”; B2-V3, C1-V2, C2, C3, E1-V2, E3-V2 case limits | Several cases end before the planned 14–42-day treatment and follow-up can be completed; “48 h off therapy” cannot exclude later relapse. | Extend/fast-forward the course or end with a **scored discharge/OPAT and follow-up plan**. Do not classify an ongoing appropriate course as too short or uncured merely because the scenario ends. Assess scheduled relapse outcomes separately. | Internal timing consistency; review judgment | high |
+| Part 4 — “Relative GFR”; “Exposure”; C2-P | `0.9/creatinine` is not a patient-specific filtration estimate and cannot represent dialysis, AKI or augmented clearance. | Use the renal measure required by each regimen, incorporating age/body size where appropriate; model dynamic AKI, residual function and RRT separately. Separate loading from maintenance dosing. Avoid a hard clearance ceiling that suppresses augmented renal clearance. | [EMA Emblaveo][EMBLAVEO]; [EMA Fetcroja][FETCROJA]; model review | high |
+| Part 4 — “Exposure”; “Activity”; “Nephrotoxicity” | Fixed S/I thresholds, a universal infusion multiplier and “TDM fixes exposure at 1.15” make monitoring a treatment and treat unlike PK/PD targets as identical. | Use drug-/regimen-specific exposure rules or validated categorical approximations. **TDM produces a measurement; the learner must interpret and adjust.** Renal accumulation must not automatically improve efficacy without corresponding toxicity. Never allow a negative nephrotoxicity increment at exposure <1. | [EUCAST S/I/R][SIR]; [vancomycin consensus][VANCO]; mathematical/model review | high |
+| Part 4 — Stewardship “De-escalation”; “Oral switch offer (UI)” | The document explicitly says cystitis-only agents are not distinguished from pyelonephritis, and oral switching is driven by bioavailability. | Split **bladder, renal parenchyma, prostate and bloodstream** suitability. Nitrofurantoin and the listed single-dose oral fosfomycin regimen must not count as effective pyelonephritis/bacteraemia step-down. Absorption fraction alone is not a switch criterion. | [Nitrofurantoin German SmPC][NITRO]; [IDSA cUTI][CUTI] | high |
+| Part 4 — “Polymicrobial site” | Every detected organism can become the least-covered pathogen, irrespective of sampling quality and clinical relevance. | First distinguish **causative isolates from colonizers/contaminants**. Apply mandatory coverage only to the causal set; otherwise an old-drain Candida or VRE result can falsely prevent cure. | [IDSA intra-abdominal candidiasis][CANDIDA]; model consistency | high |
+| Part 4 — “PCT”; “Temperature / HR / WBC”; “Organ dysfunction” | Deterministic marker/fever rules and a 3–4-day pathway to shock can make severe infection too easy to exclude or too safe to observe. | Include overlapping inflammatory-marker distributions, early/afebrile/hypothermic sepsis and rapid deterioration in selected high-risk scenarios. Do not let a low PCT or absence of fever rule out invasive infection. Use urgent event timing finer than one hour. | [German S3 Sepsis 2025][SEPSISDE]; model/teaching judgment | high |
+| Part 4 — “Bridge episode (phase 4)” | An oxygen face mask is assigned PSV 4 and PEEP 5, which provides positive-pressure support absent from an ordinary mask. | For a conventional oxygen mask use **no imposed PSV/PEEP**. If NIV is intended, label it NIV and model its ventilatory/haemodynamic effects; use device-appropriate FiO₂. | Respiratory-physiology/model consistency | high |
+| Part 4 — “Bridge outcome”; “Real-time bridge” | Internal renal-injury scores are called AKI stages, and mechanical ventilation automatically implies a minimum lung-injury state. | Derive clinical AKI stage from **creatinine and urine-output criteria**. Separate ventilation for airway protection/procedures from respiratory organ failure. Keep internal severity variables distinct from clinical diagnoses. | [KDIGO AKI guidance][AKI]; physiological/model review | high |
+| Part 4 — “C. difficile test”; G1-15 | Every toxin-negative carrier is classified as not infected and every active case toxin-positive; all patients without ≥3 stools are rejected, including ileus. | Model a **multistep GDH/NAAT/toxin algorithm** with clinical interpretation of discordant results. A negative toxin EIA does not by itself exclude CDI. Include an ileus exception and suppress repeat testing/test-of-cure. | [IDSA/SHEA CDI diagnostic guideline][CDIDIAG] | high |
+| Part 4 — “Pre-analytics: puncture fluid”; G1-16 | A generic “sterile tube only” penalty could incorrectly apply to CSF and implies that blood-culture bottles replace all other specimen containers. | Restrict bedside blood-culture-bottle inoculation to appropriate specimen types such as **pleural/ascitic fluid**. Send additional sterile material for microscopy/chemistry and other indicated tests. **CSF in a sterile tube is not an error.** | [BTS pleural guideline][PLEURA]; [DGN meningitis][MENINGITIS]; scope correction | medium |
+| Part 4 — “CO₂” | One ciprofloxacin life-cycle estimate is extrapolated to every IV drug and compared per dose with oral therapy per day. | Compare matched **drug/regimen/course** units; use sourced drug-specific estimates and a range, or label a non-quantitative game index. Remove universal “7 kg per IV dose” accuracy. | Dimensional/methodological review; supplied assumption explicitly states extrapolation | medium |
+
+## Additional medical-German corrections
+
+| Item ID | Problem | Suggested change (concrete value or wording) | Guideline/source | Priority |
+| --- | --- | --- | --- | --- |
+| B2-T3; B2-V2; B4-T3; C1-T3; N2-T3 | “RGs” is informal and does not specify the relevant finding. | Use **„Rasselgeräusche“**, with site and character where intended, e.g. **„inspiratorische feinblasige Rasselgeräusche rechts basal“**. Do not invent a character not present in the intended examination. | Medical-German review | low |
+| B2-IMG3; B3-IMG1; B3-IMG2 | “Pleuraverhalt/Verhalt” is less clear than specifying the collection and site. | **„Abgekapselte pleurale Flüssigkeitskollektion rechts …, vereinbar mit einem Empyem.“** Abdomen: **„Flüssigkeitskollektion im kleinen Becken“**. | Medical-German review | low |
+| C1-IMG2 | “LWK 3/4: both endplates” is anatomically imprecise. | **„Ödem und Kontrastmittelaufnahme der Grundplatte von LWK 3, der Deckplatte von LWK 4 und der dazwischenliegenden Bandscheibe; kleine epidurale Phlegmone, kein abgekapselter Abszess.“** | Anatomical/medical-German review | low |
+| A1-V2; A1-V3; A3-V2; B2-V3; C1-V2; C3-V2; E3-V2; N3-V2 | Doubled quotation marks are exposed in variant call text. | Render a single German quotation pair: **„…“**. | Editorial review | low |
+
+## Missing teaching points and common ward errors to add
+
+These are proposed teaching additions, not claims that every case must contain every complication.
+
+| Case or module | Teaching point / common error to include |
+| --- | --- |
+| B1/B5 — obstructed urinary source | Add an infected obstructed collecting system. The learner must arrange **urgent decompression**, not keep escalating antibiotics; document a urine specimen from the appropriate site after catheter replacement. |
+| C1/C2 — infection bundle | Include an **infectious-diseases consultation**, implanted-material history, repeated focused examinations and follow-up cultures. Introduce back/joint pain, a new conduction abnormality or recurrent positive cultures as triggers for additional work-up. |
+| C2/G3 — dialysis and changing renal function | Show an antibiotic given before HD and removed by dialysis; a separate case of recovering AKI should expose failure to increase an unnecessarily reduced maintenance dose. Include augmented clearance in a younger ICU patient. |
+| B3 — perioperative prophylaxis | Explicitly score stopping the four-day continuation of “prophylaxis.” Teach correct timing/redosing during surgery and distinguish prophylaxis from a newly established postoperative infection. |
+| B3 — unresolved focus | Persistent fever after appropriate therapy should trigger reassessment of **ongoing leak, undrained collection or inadequate source control**, rather than an automatic longer antibiotic course. |
+| D2 — risk-stratified neutropenic fever | Provide ANC trajectory, expected duration, prophylaxis, previous resistant isolates and relevant drug exposure. Add neutropenic enterocolitis and an invasive mould scenario, with appropriate mould-active treatment options (e.g. liposomal amphotericin B or a suitable empiric echinocandin regimen); fluconazole alone cannot fill this role. |
+| D1 — CDI diagnosis and recurrence | Include recent laxative use, GDH/NAAT-positive/toxin-negative results, an ileus presentation and recurrence. Teach clinical cure rather than repeat stool clearance, and document whether a PPI still has an indication. |
+| D1/G3 — penicillin allergy | Use the childhood “rash” label to teach a structured history, distinction from anaphylaxis/SCAR, and an appropriate supervised allergy-evaluation pathway. Do not equate an unverified label with a proven class allergy. |
+| E1 — emergency differential | Add meningococcal disease with appropriate precautions/contact management; an encephalitic presentation should make the learner consider **empirical aciclovir** while HSV is assessed. |
+| E3 — hand infection | Require tetanus-status assessment, exposure/travel-specific rabies risk assessment, hand function and tendon/joint examination, deep sampling when surgery occurs, and prompt hand-surgical involvement. |
+| New — candidemia | Contrast Candida in airway/old-drain samples with **Candida in blood**. Teach antifungal treatment, susceptibility, serial cultures, source assessment and a duration anchored to clearance and clinical recovery. |
+| New — AmpC and resistance | Add E. cloacae complex infection with an initially attractive ceftriaxone result and a focus/severity-dependent treatment decision; avoid teaching every susceptible report as automatically appropriate. |
+| New — necrotizing infection | Include rapidly progressive pain out of proportion, immediate surgical involvement, timely empirical coverage and toxin-suppression considerations. Imaging must not become a reason to delay necessary surgery. |
+| New — S. lugdunensis | Make one “CoNS” isolate **S. lugdunensis**, requiring species identification and recognition that the generic contamination shortcut is inappropriate. |
+| New — antibiotic toxicity/interaction | Add cefepime neurotoxicity during renal dysfunction, carbapenem–valproate interaction, TMP-SMX-associated hyperkalaemia, rifampicin interactions, QT risk and missed aminoglycoside/vancomycin monitoring. |
+| Sampling and laboratory workflow | Include blood volume, separate sampling sites, paired catheter/peripheral timing, source-labelled deep specimens, urine obtained from a sampling port rather than the drainage bag, and delayed results outside laboratory operating hours. |
+| Prescribing and handover | Require documented indication, dose/route, review date, stop/review plan and responsibility for pending results. Include duplicate anaerobic coverage, unnecessary continuation of an empirical second agent, and inducible clindamycin resistance when interpreting an antibiogram. |
+| Patient safety and stewardship | Let the learner receive full credit for **continuing an appropriately broad or IV drug** when there is no safe narrower/oral option. Show avoidable over-treatment and avoidable under-treatment as separate errors. |
+
+Priority implementation order: **(1)** focus/route/exposure eligibility, **(2)** clocks, durations and case endpoints, **(3)** D2 and SAB/meningitis safeguards, **(4)** isolate susceptibility and resistance rules, **(5)** conditional scoring and visible clinical criteria, then wording and expanded cases. The physiological response and the score should use the same clinical rules.
+
+## Source register
+
+Accessed 2 October 2026. Manufacturer product information is used for labelled dosing and monitoring; clinical guidelines may support indication-specific off-label regimens. CAP 2021 and older syndrome guidelines are identified by their actual publication year rather than relabelled as 2026 guidance. For broad sources, the relevant section is specified in the table. Assessment-design judgments are not presented as guideline requirements.
+
+[SSC]: https://www.sccm.org/clinical-resources/guidelines/guidelines/surviving-sepsis-campaign-international-guidelines-for-management-of-sepsis-and-septic-shock-2026
+[ASB]: https://www.idsociety.org/practice-guideline/asymptomatic-bacteriuria/
+[CRBSI]: https://www.idsociety.org/practice-guideline/iv-catheter
+[CAP]: https://register.awmf.org/assets/guidelines/020-020l_S3_Behandlung-von-erwachsenen-Patienten-mit-ambulant-erworbener-Pneumonie__2021-05.pdf
+[HAP]: https://register.awmf.org/assets/guidelines/020-013l_S3_Epidemiologie-Diagnostik-Therapie-erwachsener-Patienten-nosokomiale-Pneumonie__2024-03.pdf
+[CAP19]: https://www.idsociety.org/practice-guideline/community-acquired-pneumonia-cap-in-adults/
+[LEGIONELLA]: https://www.rki.de/DE/Aktuelles/Publikationen/RKI-Ratgeber/Ratgeber/Ratgeber_Legionellose.html
+[PLEURA]: https://thorax.bmj.com/content/78/Suppl_3/s1
+[CUTI]: https://www.idsociety.org/practice-guideline/complicated-urinary-tract-infections/
+[STOPIT]: https://pubmed.ncbi.nlm.nih.gov/25992746/
+[CANDIDA]: https://www.idsociety.org/practice-guideline/candidiasis/
+[AMR26]: https://www.idsociety.org/practice-guideline/amr-guidance/
+[SAB26]: https://www.idsociety.org/practice-guideline/staphylococcus-aureus-bacteremia/
+[ESC23]: https://academic.oup.com/eurheartj/article/44/39/3948/7243107
+[NVO]: https://www.idsociety.org/practice-guideline/vertebral-osteomyelitis/
+[CDI23]: https://www.dgvs.de/new-leitlinien/chapter_69b3f02cc3103/
+[CDIDIAG]: https://www.idsociety.org/practice-guideline/clostridium-difficile/
+[FN]: https://pmc.ncbi.nlm.nih.gov/articles/PMC11836497/
+[MENINGITIS]: https://link.springer.com/article/10.1186/s42466-023-00264-6
+[SSTI]: https://www.idsociety.org/practice-guideline/skin-and-soft-tissue-infections/
+[BITES]: https://www.nice.org.uk/guidance/ng184/chapter/Recommendations
+[ATELECTASIS]: https://pubmed.ncbi.nlm.nih.gov/7813318/
+[PE]: https://www.escardio.org/guidelines/clinical-practice-guidelines/all-esc-practice-guidelines/acute-pulmonary-embolism/
+[PJI]: https://www.nejm.org/doi/full/10.1056/NEJMoa2020198
+[VANCO]: https://www.idsociety.org/practice-guideline/vancomycin/
+[MRGN19]: https://edoc.rki.de/bitstream/handle/176904/5997/09_19.pdf?isAllowed=y&sequence=1
+[MRGN26]: https://gpk.de/downloadp/STIKO_2026_Bulletin_KW_06_KRINKO-Verwendung-unterschiedlicher-Breakpoints-im-Rahmen-der-MRGNEinstufung-Konsiliarlabor-Neuberufungen.pdf
+[AWARE]: https://www.who.int/publications/i/item/B09489
+[FOSFAWARE]: https://aware.essentialmeds.org/list?query=fosfomycin
+[BREAKPOINTS]: https://www.eucast.org/fileadmin/eucast/pdf/breakpoints/v_16.1_Breakpoint_Tables.pdf
+[EXPECTED]: https://www.eucast.org/fileadmin/eucast/pdf/expert_rules/Expected_Resistant_Phenotypes_v1.2_20230113.pdf
+[SIR]: https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/definition-of-s-i-and-r/
+[NOBP]: https://www.eucast.org/fileadmin/eucast/pdf/guidance_documents/When_there_are_no_breakpoints_revision_20260710.pdf
+[DOSES]: https://www.eucast.org/fileadmin/eucast/pdf/breakpoints/Dosages_v_16.0_Breakpoint_Tables.pdf
+[FUNGI]: https://www.eucast.org/fileadmin/eucast/pdf/AFST/clinical_breakpoints/AFST_BP_v12.1.pdf
+[OPRD]: https://journals.asm.org/doi/10.1128/aac.43.2.424
+[FLUCLOX]: https://www.medicines.org.uk/emc/product/12395/smpc
+[ZERBAXA]: https://www.ema.europa.eu/en/documents/product-information/zerbaxa-epar-product-information_en.pdf
+[RECARBRIO]: https://www.medicines.org.uk/emc/product/11675/smpc
+[EMBLAVEO]: https://www.medicines.org.uk/emc/product/15895/smpc
+[FETCROJA]: https://www.ema.europa.eu/en/documents/product-information/fetcroja-epar-product-information_en.pdf
+[LINEZOLID]: https://www.medicines.org.uk/emc/product/10239/smpc
+[DAPTO]: https://www.ema.europa.eu/en/documents/product-information/cubicin-epar-product-information_en.pdf
+[CLARITHRO]: https://www.medicines.org.uk/emc/product/11562/smpc
+[FOSFIV]: https://www.ema.europa.eu/en/documents/referral/fosfomycin-article-31-referral-assessment-report_en.pdf
+[NITRO]: https://www.fachinfo.de/pdf/009279
+[AKI]: https://kdigo.org/guidelines/acute-kidney-injury/
+
+[SEPSISDE]: https://register.awmf.org/assets/guidelines/079-001l_S3_Sepsis-Praevention-Diagnose-Therapie-Nachsorge_2025-07.pdf
+[COTRIM]: https://www.medicines.org.uk/emc/product/6997/smpc
+[MRGNMAINZ]: https://www.unimedizin-mainz.de/medizinische-mikrobiologie-und-hygiene/infektionsmedizin-diagnostik-und-patientenversorgung/mrgn-klassifikation.html

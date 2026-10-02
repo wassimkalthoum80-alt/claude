@@ -539,8 +539,14 @@ export function buildInfectioReview(): string {
         ],
         [
           'G2-7',
-          'MRGN marker groups (only R counts)',
-          abs2026.mrgnGroups.map((g) => `${g.label}: ${g.drugs.join(', ')}`).join('; '),
+          'MRGN marker groups per species (only R counts; any marker R = group)',
+          Object.entries(abs2026.mrgnGroups)
+            .map(
+              ([sp, groups]) =>
+                `${sp}: ${(groups ?? []).map((g) => `${g.label}: ${g.drugs.join(', ')}`).join('; ')}`,
+            )
+            .join(' · ') +
+            ` · 3MRGN needs carbapenem S in: ${abs2026.mrgn3RequiresCarbapenemS.join(', ')} · carbapenemase = 4MRGN in: ${abs2026.carbapenemase4Mrgn.join(', ')}`,
         ],
         ...Object.entries(abs2026.durationDays).map(([k, v], i) => [
           `G2-D${i + 1}`,

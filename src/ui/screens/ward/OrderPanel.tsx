@@ -189,7 +189,7 @@ function TherapySheet({
           aria-label={tk('ward.drug')}
         >
           <option value="">{tk('ward.chooseDrug')}</option>
-          {(['access', 'watch', 'reserve'] as const).map((cat) => (
+          {(['access', 'watch', 'reserve', 'antifungal'] as const).map((cat) => (
             <optgroup key={cat} label={tk(`aware.${cat}`)}>
               {groups[cat].map((d) => (
                 <option key={d.id} value={d.id}>

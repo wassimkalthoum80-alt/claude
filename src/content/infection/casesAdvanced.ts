@@ -44,7 +44,7 @@ export const mrsaBacteraemia: InfectionCase = {
     reserve: 0.45,
     devices: ['cvc'],
   },
-  isolates: [{ id: 'mrsa', organismId: 's-aureus', mechanisms: ['mrsa'] }],
+  isolates: [{ id: 'mrsa', organismId: 's-aureus', mechanisms: ['meca'] }],
   infections: [MRSA_LINE],
   initialSpecimens: [
     { kind: 'blood-culture', site: 'blood', sets: 1, adequateVolume: true },
@@ -239,7 +239,7 @@ export const febrileNeutropenia: InfectionCase = {
       id: 'port-infection',
       patch: {
         mimics: [],
-        isolates: [{ id: 'cons', organismId: 'cons', mechanisms: ['mrsa'] }],
+        isolates: [{ id: 'cons', organismId: 'cons', mechanisms: ['meca'] }],
         infections: [
           {
             id: 'port',
@@ -500,7 +500,8 @@ export const esblIcu: InfectionCase = {
     {
       id: 'cauti',
       diagnosisKey: 'dx.esblCauti',
-      focus: 'urine',
+      // catheter-associated urosepsis with bacteraemia: upper tract / systemic, not cystitis
+      focus: 'kidney',
       isolateIds: ['kp'],
       initialBurden: 0.55,
       growthPerH: 0.012,

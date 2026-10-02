@@ -5,6 +5,7 @@ import type {
   Isolate,
   MechanismId,
   MrgnClass,
+  MrgnSpecies,
   Susceptibility,
   TherapyOrder,
 } from './types';
@@ -35,6 +36,8 @@ export function susceptibility(
     if (!m) continue;
     const effect = m.drugs?.[drug.id] ?? m.classes?.[drug.drugClass];
     if (effect) s = worse(s, effect);
+    const groupEffect = m.groupDrugs?.[org.group]?.[drug.id];
+    if (groupEffect) s = worse(s, groupEffect);
   }
   return isolate.overrides?.[drug.id] ?? s;
 }
@@ -74,14 +77,16 @@ export function reportedMechanisms(isolate: Isolate): MechanismId[] {
 }
 
 /**
- * KRINKO class. Gram-negatives: count the four groups (marker drugs) that are R; Enterobacterales with a
- * carbapenemase are 4MRGN regardless; 3MRGN in Enterobacterales requires carbapenem susceptibility.
+ * KRINKO class, species-specific: count the four antibiotic groups in which any marker drug is R ("and/or"). A
+ * detected carbapenemase means 4MRGN in the configured species; 3MRGN in Enterobacterales and A. baumannii requires
+ * carbapenem susceptibility, in P. aeruginosa any three groups. One breakpoint set (non-meningitis) is used for the
+ * class; the infection-specific treatment interpretation is separate.
  */
 export function mrgnClass(isolate: Isolate, lib: InfectionLibrary): MrgnClass {
   const org = lib.organisms.get(isolate.organismId);
   if (!org) return 'none';
   const mechs = mechanismsOf(isolate, lib);
-  if (org.group === 'staphylococcus' && org.id === 's-aureus' && mechs.includes('mrsa'))
+  if (org.group === 'staphylococcus' && org.id === 's-aureus' && mechs.includes('meca'))
     return 'MRSA';
   if (org.group === 'enterococcus' && mechs.includes('vana')) return 'VRE';
   if (
@@ -91,25 +96,23 @@ export function mrgnClass(isolate: Isolate, lib: InfectionLibrary): MrgnClass {
   ) {
     return 'none';
   }
+  const species: MrgnSpecies = org.group;
   const g = lib.guidelines;
+  const groups = g.mrgnGroups[species] ?? [];
   const counts = (s: Susceptibility) => s === 'R' || (g.mrgnCountsI && s === 'I');
-  const groupR = g.mrgnGroups.map((grp) =>
+  const groupR = groups.map((grp) =>
     grp.drugs.some((id) => {
       const d = lib.drugs.get(id);
       return d ? counts(susceptibility(isolate, d, lib)) : false;
     }),
   );
   const nR = groupR.filter(Boolean).length;
-  if (org.group === 'enterobacterales') {
-    const carbapenemase = mechs.some((m) => lib.mechanisms.get(m)?.carbapenemase);
-    if (carbapenemase || nR === 4) return '4MRGN';
-    const carbapenemIndex = g.mrgnGroups.findIndex((grp) => grp.label === 'carbapenems');
-    if (nR >= 3 && carbapenemIndex >= 0 && !groupR[carbapenemIndex]) return '3MRGN';
-    return 'none';
-  }
-  if (nR === 4) return '4MRGN';
-  if (nR === 3) return '3MRGN';
-  return 'none';
+  const carbapenemase = mechs.some((m) => lib.mechanisms.get(m)?.carbapenemase);
+  if ((carbapenemase && g.carbapenemase4Mrgn.includes(species)) || nR === 4) return '4MRGN';
+  if (nR < 3) return 'none';
+  if (!g.mrgn3RequiresCarbapenemS.includes(species)) return '3MRGN';
+  const carbapenemIndex = groups.findIndex((grp) => grp.label === 'carbapenems');
+  return carbapenemIndex >= 0 && !groupR[carbapenemIndex] ? '3MRGN' : 'none';
 }
 
 const BETA_LACTAM_CLASSES = new Set([

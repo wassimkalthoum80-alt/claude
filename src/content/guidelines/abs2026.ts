@@ -46,12 +46,31 @@ export const abs2026: AbsGuidelines = {
   prophylaxis: { beforeIncisionMinH: 1, vancomycinBeforeIncisionH: 2, maxDurationH: 24 },
   reserveClasses: ['new-bl-bli', 'siderophore-ceph', 'polymyxin', 'glycylcycline'],
   reserveDrugs: ['linezolid', 'daptomycin', 'fosfomycin-iv'],
-  mrgnGroups: [
-    { label: 'acylureidopenicillins', drugs: ['piperacillin'] },
-    { label: '3rd/4th-gen cephalosporins', drugs: ['cefotaxime', 'ceftazidime', 'cefepime'] },
-    { label: 'carbapenems', drugs: ['imipenem', 'meropenem'] },
-    { label: 'fluoroquinolones', drugs: ['ciprofloxacin'] },
-  ],
+  // KRINKO 2012/2019 tables: marker drugs per species ("and/or" within a group).
+  mrgnGroups: {
+    enterobacterales: [
+      { label: 'acylureidopenicillins', drugs: ['piperacillin'] },
+      { label: '3rd/4th-gen cephalosporins', drugs: ['cefotaxime', 'ceftazidime'] },
+      { label: 'carbapenems', drugs: ['imipenem', 'meropenem'] },
+      { label: 'fluoroquinolones', drugs: ['ciprofloxacin'] },
+    ],
+    pseudomonas: [
+      { label: 'acylureidopenicillins', drugs: ['piperacillin'] },
+      { label: '3rd/4th-gen cephalosporins', drugs: ['ceftazidime', 'cefepime'] },
+      { label: 'carbapenems', drugs: ['imipenem', 'meropenem'] },
+      { label: 'fluoroquinolones', drugs: ['ciprofloxacin'] },
+    ],
+    acinetobacter: [
+      { label: 'acylureidopenicillins', drugs: ['piperacillin'] },
+      { label: '3rd/4th-gen cephalosporins', drugs: ['cefotaxime', 'ceftazidime'] },
+      { label: 'carbapenems', drugs: ['imipenem', 'meropenem'] },
+      { label: 'fluoroquinolones', drugs: ['ciprofloxacin'] },
+    ],
+  },
+  mrgn3RequiresCarbapenemS: ['enterobacterales', 'acinetobacter'],
+  // CLINICAL REVIEW: confirmed carbapenemase → 4MRGN regardless of phenotype (KRINKO 2019; reviewer asked to include
+  // P. aeruginosa and Acinetobacter, owner to confirm against the current KRINKO text).
+  carbapenemase4Mrgn: ['enterobacterales', 'acinetobacter', 'pseudomonas'],
   // SIM-ASSUMPTION: only "R" counts toward the MRGN class (EUCAST "I" = susceptible at increased exposure).
   mrgnCountsI: false,
 };

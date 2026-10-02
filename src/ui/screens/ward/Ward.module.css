@@ -442,7 +442,8 @@
 
 .cat_access,
 .cat_watch,
-.cat_reserve {
+.cat_reserve,
+.cat_antifungal {
   font: 600 10px/1 var(--font-ui);
   padding: 2px 5px;
   border-radius: 3px;
@@ -461,6 +462,11 @@
 .cat_reserve {
   color: var(--bad);
   border: 1px solid rgba(255, 74, 74, 0.55);
+}
+
+.cat_antifungal {
+  color: var(--text-dim, #9aa7b4);
+  border: 1px solid rgba(154, 167, 180, 0.45);
 }
 
 .orderForm {

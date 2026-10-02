@@ -1,6 +1,7 @@
 import type { Difficulty } from '../../game/types';
 import type {
   AntiinfectiveDef,
+  AwareCategory,
   InfectionCase,
   InfectionLibrary,
   InfectionLogEntry,
@@ -91,13 +92,12 @@ export function therapyRows(view: InfectionView, lib: InfectionLibrary): Therapy
 }
 
 /** Orderable drugs grouped by AWaRe-like category (lab-only markers excluded). */
-export function orderableDrugs(
-  lib: InfectionLibrary,
-): Record<'access' | 'watch' | 'reserve', AntiinfectiveDef[]> {
-  const out = {
-    access: [] as AntiinfectiveDef[],
-    watch: [] as AntiinfectiveDef[],
-    reserve: [] as AntiinfectiveDef[],
+export function orderableDrugs(lib: InfectionLibrary): Record<AwareCategory, AntiinfectiveDef[]> {
+  const out: Record<AwareCategory, AntiinfectiveDef[]> = {
+    access: [],
+    watch: [],
+    reserve: [],
+    antifungal: [],
   };
   for (const d of lib.drugs.values()) {
     if (d.labOnly) continue;
