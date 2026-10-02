@@ -45,8 +45,12 @@ export function hoursUntil(hourOfDay: number, target: number): number {
 
 // ─── Therapy sheet ────────────────────────────────────────────────────────────────────────────────────────
 
-/** Oral forms offered as a switch when at least this bioavailable (ciprofloxacin ≈ 0.75 qualifies). */
-export const ORAL_SWITCH_MIN_BIOAVAILABILITY = 0.7;
+/**
+ * Oral forms offered as a switch when the approved oral regimen reaches at least this share of the i.v. exposure
+ * (drug–route–regimen, not raw bioavailability: oral azithromycin qualifies, cefuroxime axetil does not). The offer is a
+ * convenience; clinical eligibility (absorption, no shock, syndrome) is judged in the debrief.
+ */
+export const ORAL_SWITCH_MIN_EXPOSURE = 0.8;
 
 export function isReserve(drug: AntiinfectiveDef, lib: InfectionLibrary): boolean {
   return (
@@ -82,7 +86,7 @@ export function therapyRows(view: InfectionView, lib: InfectionLibrary): Therapy
       oralAvailable:
         order.route === 'iv' &&
         drug.routes.includes('po') &&
-        (drug.bioavailability ?? 0) >= ORAL_SWITCH_MIN_BIOAVAILABILITY,
+        (drug.oralExposure ?? 1) >= ORAL_SWITCH_MIN_EXPOSURE,
     });
   }
   // Running first, then most recent.
@@ -248,6 +252,7 @@ export const LAB_ROWS: readonly (keyof LabPanel)[] = [
   'platelets',
   'bilirubin',
   'vancomycinAuc24',
+  'vancomycinPreDialysis',
 ];
 
 /** Last lab panel of each day (columns), newest last. */
@@ -335,7 +340,7 @@ export function consultQuestions(
     if (
       o.route === 'iv' &&
       d.routes.includes('po') &&
-      (d.bioavailability ?? 0) >= ORAL_SWITCH_MIN_BIOAVAILABILITY &&
+      (d.oralExposure ?? 1) >= ORAL_SWITCH_MIN_EXPOSURE &&
       day >= 2 &&
       afebrile24
     ) {

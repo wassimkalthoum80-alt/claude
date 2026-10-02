@@ -79,6 +79,53 @@ export const feverRigors: InfectionCase = {
         patient: { ppi: true },
       },
     },
+    {
+      // infected obstructed collecting system (ureteric stone): decompression is the source control
+      id: 'obstructed',
+      patch: {
+        infections: [
+          {
+            id: 'pyelonephritis',
+            diagnosisKey: 'dx.obstructedPyelonephritis',
+            focus: 'kidney',
+            isolateIds: ['ec'],
+            initialBurden: 0.62,
+            growthPerH: 0.012,
+            virulence: 0.85,
+            bacteraemia: 0.8,
+            needsSourceControl: true,
+            sourceControl: [
+              {
+                id: 'urological-decompression',
+                labelKey: 'proc.urological-decompression',
+                delayH: 3,
+                result: 'adequate',
+              },
+            ],
+            minEffectiveDays: 7,
+          },
+        ],
+        findings: [
+          {
+            kind: 'sono-urinary',
+            reportKey: 'imaging.sono-urinary.hydronephrosis',
+            infectionId: 'pyelonephritis',
+            uncontrolled: true,
+          },
+          {
+            kind: 'ct-abdomen',
+            reportKey: 'imaging.ct-abdomen.obstruction',
+            infectionId: 'pyelonephritis',
+            uncontrolled: true,
+          },
+          {
+            kind: 'sono-urinary',
+            reportKey: 'imaging.sono-urinary.decompressed',
+            infectionId: 'pyelonephritis',
+          },
+        ],
+      },
+    },
   ],
 };
 

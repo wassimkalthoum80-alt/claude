@@ -109,7 +109,7 @@ describe('kidney function and dialysis', () => {
     const vanco = lib.drugs.get('vancomycin');
     if (!vanco) throw new Error('missing drug');
     // the engine uses a fixed averaged clearance of 0.315 for dialysis patients
-    expect(exposure(order('vancomycin', 'reduced'), vanco, 0.315, 0)).toBeCloseTo(1, 1);
+    expect(exposure(order('vancomycin', 'reduced'), vanco, 0.315, 24)).toBeCloseTo(1, 1);
     const e = make({
       ...pyelo(),
       patient: { ...pyelo().patient, baselineCreatinine: 5.8, dialysis: 'intermittent-hd' },

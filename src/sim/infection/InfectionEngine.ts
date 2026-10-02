@@ -95,7 +95,7 @@ export interface InfectionTruth {
   mimics: readonly {
     id: string;
     diagnosisKey: string;
-    kind: 'mimic' | 'complication';
+    kind: 'mimic' | 'complication' | 'uncertain';
     active: boolean;
     drive: number;
   }[];
@@ -229,7 +229,7 @@ export class InfectionEngine {
     this.inflam = drive;
     this.bactInflam = this.bacterialDrive();
     this.crp = COURSE.crp.base + COURSE.crp.scale * (drive * 0.65) ** 1.3;
-    this.pct = COURSE.pct.base + COURSE.pct.scale * this.pctFactor * this.bactInflam ** 2;
+    this.pct = this.pctTarget();
     // Patients arrive with the organ dysfunction their infection has already caused.
     this.organs = this.organTargets();
     this.creatinine = this.creatinineTarget();
@@ -634,7 +634,8 @@ export class InfectionEngine {
       this.organs.kidney,
       0.7 * Math.min(1, Math.max(0, o.renalInjury)),
     );
-    if (o.respiratoryFailure) this.organs.lung = Math.max(this.organs.lung, 0.5);
+    // An oxygen/support requirement carries over as moderate lung dysfunction (not labelled ARDS).
+    if (o.respiratoryFailure) this.organs.lung = Math.max(this.organs.lung, 0.4);
     if (o.peakLactate > 4) this.organs.liver = Math.max(this.organs.liver, 0.2);
   }
 
@@ -757,6 +758,12 @@ export class InfectionEngine {
     for (const id of s.def.isolateIds) {
       const iso = this.isolates.get(id);
       act = Math.min(act, iso ? combinedActivity(running, iso, ctx, this.library) : 0);
+    }
+    const combo = s.def.requiresCombination;
+    if (combo) {
+      const ids = new Set(running.map((o) => o.drugId));
+      if (!combo.groups.every((g) => g.some((id) => ids.has(id))))
+        act = Math.min(act, combo.capWithout);
     }
     if (s.def.needsSourceControl && s.control !== 'adequate')
       act *= COURSE.uncontrolledActivity[s.control];
@@ -969,6 +976,8 @@ export class InfectionEngine {
     if (this.cdi.severity < 0.03 && act > 0.5) {
       this.cdi.active = false;
       this.cdi.severity = 0;
+      // the episode is over: a new symptomatic episode may be tested again
+      this.cdiffPositiveAtH = null;
       const pRec = c.recurrence[agent as keyof typeof c.recurrence] ?? c.recurrence.other;
       if (this.rng.next() < pRec * (ongoingDamage > 0.5 ? 1.5 : 1)) {
         this.cdi.recurrenceAtH =
@@ -1025,6 +1034,21 @@ export class InfectionEngine {
     return m.active ? m.def.drive * m.level : 0;
   }
 
+  /**
+   * ng/mL — PCT target: bacterial drive, plus a modest share of sterile surgical/trauma inflammation (mimics with
+   * `pctDrive`), scaled by the patient's responsiveness. SIM-ASSUMPTION: overlapping distributions — a PCT cut-off
+   * never reveals the hidden infection status.
+   */
+  private pctTarget(): number {
+    let sterile = 0;
+    for (const m of this.mimics)
+      if (m.active && m.def.pctDrive)
+        sterile = Math.max(sterile, m.def.pctDrive * this.mimicDrive(m));
+    return (
+      COURSE.pct.base + COURSE.pct.scale * this.pctFactor * (this.bactInflam ** 2 + sterile ** 2)
+    );
+  }
+
   private bacterialDrive(): number {
     let miss = 1;
     for (const s of this.sites) if (s.active) miss *= 1 - s.burden * s.def.virulence;
@@ -1056,7 +1080,7 @@ export class InfectionEngine {
     );
     const crpTarget = COURSE.crp.base + COURSE.crp.scale * this.inflam ** 1.3;
     this.crp = lag(this.crp, crpTarget, COURSE.crpTauH.rise, COURSE.crpTauH.fall);
-    const pctTarget = COURSE.pct.base + COURSE.pct.scale * this.pctFactor * this.bactInflam ** 2;
+    const pctTarget = this.pctTarget();
     this.pct = lag(this.pct, pctTarget, COURSE.pctTauH.rise, COURSE.pctTauH.fall);
   }
 
@@ -1199,6 +1223,7 @@ export class InfectionEngine {
       spo2: Math.round(Math.max(75, 97 - 14 * o.lung)),
       // SIM-ASSUMPTION: dialysis patients keep a small residual diuresis (≈ 0.15 mL/kg/h).
       urineMlH: Math.round(p.weightKg * (p.dialysis ? 0.15 : 1.0 * (1 - o.kidney) ** 1.5)),
+      vasopressor: o.circ > COURSE.vasopressorAbove,
     };
   }
 
@@ -1236,10 +1261,12 @@ export class InfectionEngine {
       if (this.ancRecovery() > 0) panel.wbc = Math.max(panel.wbc, round1(panel.anc * 1.6));
     }
     // SIM-ASSUMPTION: estimated vancomycin AUC₂₄ ≈ 500 mg·h/L × exposure (target 400–600 at MIC 1 mg/L).
-    if (vanco && vancoDrug)
-      panel.vancomycinAuc24 = Math.round(
-        500 * exposure(vanco, vancoDrug, this.gfrRelative(), this.t),
-      );
+    // Haemodialysis: the pre-dialysis level (target 15–20 mg/L) is monitored instead.
+    if (vanco && vancoDrug) {
+      const e = exposure(vanco, vancoDrug, this.gfrRelative(), this.t);
+      if (p.dialysis) panel.vancomycinPreDialysis = round1(17.5 * e);
+      else panel.vancomycinAuc24 = Math.round(500 * e);
+    }
     return panel;
   }
 

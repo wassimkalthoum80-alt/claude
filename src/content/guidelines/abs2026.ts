@@ -59,10 +59,11 @@ export const abs2026: AbsGuidelines = {
       { label: 'carbapenems', drugs: ['imipenem', 'meropenem'] },
       { label: 'fluoroquinolones', drugs: ['ciprofloxacin'] },
     ],
+    // P. aeruginosa: within the cephalosporin and carbapenem groups both representatives must be R
     pseudomonas: [
       { label: 'acylureidopenicillins', drugs: ['piperacillin'] },
-      { label: '3rd/4th-gen cephalosporins', drugs: ['ceftazidime', 'cefepime'] },
-      { label: 'carbapenems', drugs: ['imipenem', 'meropenem'] },
+      { label: '3rd/4th-gen cephalosporins', drugs: ['ceftazidime', 'cefepime'], all: true },
+      { label: 'carbapenems', drugs: ['imipenem', 'meropenem'], all: true },
       { label: 'fluoroquinolones', drugs: ['ciprofloxacin'] },
     ],
     acinetobacter: [
@@ -73,8 +74,8 @@ export const abs2026: AbsGuidelines = {
     ],
   },
   mrgn3RequiresCarbapenemS: ['enterobacterales', 'acinetobacter'],
-  // CLINICAL REVIEW: confirmed carbapenemase → 4MRGN regardless of phenotype (KRINKO 2019; reviewer asked to include
-  // P. aeruginosa and Acinetobacter, owner to confirm against the current KRINKO text).
+  // Confirmed carbapenemase → 4MRGN regardless of phenotype (KRINKO 2019 table, incl. P. aeruginosa — confirmed in the
+  // second clinical review).
   carbapenemase4Mrgn: ['enterobacterales', 'acinetobacter', 'pseudomonas'],
   // SIM-ASSUMPTION: only "R" counts toward the MRGN class (EUCAST "I" = susceptible at increased exposure).
   mrgnCountsI: false,

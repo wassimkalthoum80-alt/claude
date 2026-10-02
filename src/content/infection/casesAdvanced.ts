@@ -60,6 +60,11 @@ export const mrsaBacteraemia: InfectionCase = {
       infectionId: 'line',
       minBurden: 0.05,
     },
+    {
+      kind: 'duplex-catheter-vein',
+      reportKey: 'imaging.duplex-catheter-vein.thrombus',
+      infectionId: 'thrombus',
+    },
   ],
   workingDiagnoses: WORKING_DIAGNOSES,
   variants: [
@@ -169,7 +174,13 @@ export const endocarditis: InfectionCase = {
       patch: {
         isolates: [{ id: 'vs', organismId: 'e-faecalis', mechanisms: [] }],
         infections: [
-          { ...VALVE, diagnosisKey: 'dx.endocarditisEnterococcal', minEffectiveDays: 42 },
+          {
+            ...VALVE,
+            diagnosisKey: 'dx.endocarditisEnterococcal',
+            minEffectiveDays: 42,
+            // E. faecalis endocarditis needs ampicillin + ceftriaxone (gentamicin synergy is outside this case)
+            requiresCombination: { groups: [['ampicillin'], ['ceftriaxone']], capWithout: 0.45 },
+          },
         ],
       },
     },
@@ -210,6 +221,8 @@ export const febrileNeutropenia: InfectionCase = {
     {
       id: 'neutropenic-fever',
       diagnosisKey: 'dx.neutropenicFever',
+      // a syndrome in which infection is not excluded — never shown as a proven non-infectious cause
+      kind: 'uncertain',
       // ≈ 38.2 °C at presentation
       drive: 0.55,
       // SIM-ASSUMPTION: fever without a documented focus settles over ~2–3 days under empirical therapy.
@@ -227,6 +240,7 @@ export const febrileNeutropenia: InfectionCase = {
   workingDiagnoses: [
     ...WORKING_DIAGNOSES,
     { id: 'bloodstream', labelKey: 'wd.bloodstream', focus: 'blood' },
+    { id: 'fn-fuo', labelKey: 'wd.fnFuo' },
   ],
   variants: [
     { id: 'no-focus', patch: {} },

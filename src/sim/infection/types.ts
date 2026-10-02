@@ -81,6 +81,14 @@ export interface AntiinfectiveDef {
   nephrotoxic?: boolean;
   /** therapeutic drug monitoring is standard */
   tdm?: boolean;
+  /** h — the first level should be ordered within this window after the start (default 48) */
+  tdmOrderWithinH?: number;
+  /**
+   * relative exposure of the standard ORAL regimen compared with the i.v. regimen (default 1: the oral dose is chosen to
+   * reach the intended exposure — e.g. azithromycin despite 37 % bioavailability). Low only where the approved oral
+   * regimen genuinely under-exposes (cefuroxime axetil). Bioavailability itself is display information.
+   */
+  oralExposure?: number;
   /** reaches high concentrations in bladder urine regardless of oral bioavailability (cystitis agents) */
   urinaryConcentrated?: boolean;
   /** 0..1 penetration per focus; missing focus = 1. `gut` = intraluminal colon (oral vancomycin, fidaxomicin). */
@@ -141,6 +149,8 @@ export interface MechanismDef {
   drugs?: Record<string, Susceptibility>;
   /** species-group-specific drug effects (e.g. MBL in P. aeruginosa vs Enterobacterales), applied in addition */
   groupDrugs?: Partial<Record<OrganismGroup, Record<string, Susceptibility>>>;
+  /** extra effects when another mechanism is also present (e.g. OprD loss + efflux → meropenem R) */
+  withMechanism?: { mechanism: MechanismId; drugs: Record<string, Susceptibility> }[];
   /**
    * Activity cap 0..1 for drugs still reported S/I but clinically unreliable with this mechanism
    * (e.g. piperacillin-tazobactam against ESBL producers in bloodstream infection).
@@ -234,7 +244,9 @@ export type ProcedureId =
   | 'rehydration'
   | 'medication-review'
   /** multidisciplinary endocarditis team (cardiology, cardiac surgery, infectious diseases) */
-  | 'endocarditis-team';
+  | 'endocarditis-team'
+  /** therapeutic anticoagulation after bleeding-risk assessment (venous thromboembolism) */
+  | 'anticoagulation';
 
 export const PROCEDURES: readonly ProcedureId[] = [
   'remove-cvc',
@@ -250,6 +262,7 @@ export const PROCEDURES: readonly ProcedureId[] = [
   'rehydration',
   'medication-review',
   'endocarditis-team',
+  'anticoagulation',
 ];
 
 /** Procedures that act at once and are not source control (adjuncts, consults, supportive care). */
@@ -258,6 +271,7 @@ export const ADJUNCT_PROCEDURES: readonly ProcedureId[] = [
   'rehydration',
   'medication-review',
   'endocarditis-team',
+  'anticoagulation',
 ];
 
 export interface SourceControlAction {
@@ -299,6 +313,11 @@ export interface InfectionSiteDef {
    * culture: S. aureus bacteraemia, endocarditis, catheter infection) or adequate source control
    */
   durationFrom?: 'effective-start' | 'clearance' | 'source-control';
+  /**
+   * regimen requirement of the syndrome (e.g. E. faecalis endocarditis: ampicillin AND ceftriaxone): unless one drug of
+   * every group runs, the site's activity is capped (SIM-ASSUMPTION: regimen adequacy, not a synergy PK model)
+   */
+  requiresCombination?: { groups: string[][]; capWithout: number };
   /** h — onset (0 = present at start; later = superinfection scripted by the case) */
   onsetH?: number;
 }
@@ -310,8 +329,14 @@ export interface InfectionSiteDef {
 export interface MimicDef {
   id: string;
   diagnosisKey: string;
-  /** 'complication': consequence of the infection (shown with the infections in the debrief), not a mimic */
-  kind?: 'mimic' | 'complication';
+  /**
+   * 'complication': consequence of the infection (shown with the infections in the debrief); 'uncertain': a syndrome in
+   * which infection is not excluded (febrile neutropenia without a documented focus) — never presented as a proven
+   * non-infectious cause
+   */
+  kind?: 'mimic' | 'complication' | 'uncertain';
+  /** 0..1 — share of its inflammation that raises PCT (sterile surgical/trauma inflammation: modest PCT rise) */
+  pctDrive?: number;
   /** persists until one of these procedures is done, then resolves with `resolveTauH` */
   resolvedBy?: ProcedureId[];
   /** 0..1 initial inflammatory drive */
@@ -376,7 +401,9 @@ export type ImagingKind =
   | 'line-inspection'
   | 'ct-head'
   | 'ct-pa'
-  | 'duplex-legs';
+  | 'duplex-legs'
+  | 'sono-chest'
+  | 'duplex-catheter-vein';
 
 export interface CasePatient {
   ageYears: number;
@@ -410,6 +437,8 @@ export interface CasePatient {
   baselineAnc?: number;
   /** h — neutrophil recovery begins (ANC rises over ~3 days; host defence recovers with it) */
   ancRecoveryH?: number;
+  /** enteral route not usable (vomiting, ileus, unsafe swallowing, malabsorption) — no oral switch */
+  enteralImpaired?: boolean;
   /** 0..1 — C. difficile infection already active at admission (its severity) */
   cdiAtAdmission?: number;
   /** multiplier of C. difficile acquisition and onset hazards (hospital pressure in the campaign; default 1) */
@@ -508,8 +537,13 @@ export interface AbsGuidelines {
    * MRGN classification (KRINKO): the four antibiotic groups with their marker drugs (a group counts when any marker
    * is R — "and/or"), species-specific where the table differs.
    */
-  mrgnGroups: Partial<Record<MrgnSpecies, { label: string; drugs: string[] }[]>>;
-  /** species in which 3MRGN requires carbapenem susceptibility (otherwise any three groups) */
+  mrgnGroups: Partial<
+    Record<
+      MrgnSpecies,
+      { label: string; drugs: string[]; /** every marker must be R */ all?: boolean }[]
+    >
+  >;
+  /** species in which 3MRGN requires the carbapenems not R (S or I; otherwise any three groups) */
   mrgn3RequiresCarbapenemS: MrgnSpecies[];
   /** species in which a detected carbapenemase means 4MRGN regardless of the phenotype */
   carbapenemase4Mrgn: MrgnSpecies[];
@@ -688,7 +722,10 @@ export interface RealtimeOutcome {
   renalInjury: number;
   /** intubated at handover (airway protection or procedure) */
   ventilated: boolean;
-  /** respiratory organ failure in the episode (SaO₂ < 90 % or FiO₂ ≥ 0.6 needed) — not implied by intubation */
+  /**
+   * persistent oxygenation failure in the episode (SaO₂ < 90 % for ≥ 5 min, or FiO₂ ≥ 0.6 with SaO₂ < 94 % for ≥ 10 min)
+   * — an oxygen/support requirement, not a diagnosis of lung injury; not implied by intubation or preoxygenation
+   */
   respiratoryFailure: boolean;
   /** min — until MAP ≥ 65 without escalation (null = not reached) */
   timeToStabiliseMin: number | null;
@@ -812,6 +849,8 @@ export interface LabPanel {
   bilirubin: number;
   /** mg·h/L — estimated vancomycin AUC₂₄ (from levels), only when running */
   vancomycinAuc24?: number;
+  /** mg/L — vancomycin pre-dialysis level (haemodialysis patients, target 15–20 mg/L), only when running */
+  vancomycinPreDialysis?: number;
 }
 
 export interface VitalsPoint {
@@ -829,6 +868,8 @@ export interface VitalsPoint {
   spo2: number;
   /** mL/h */
   urineMlH: number;
+  /** a vasopressor is needed (course circulation) */
+  vasopressor?: boolean;
 }
 
 export interface TherapyOrder {

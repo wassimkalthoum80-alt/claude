@@ -38,6 +38,10 @@ export function susceptibility(
     if (effect) s = worse(s, effect);
     const groupEffect = m.groupDrugs?.[org.group]?.[drug.id];
     if (groupEffect) s = worse(s, groupEffect);
+    for (const w of m.withMechanism ?? []) {
+      const combined = w.drugs[drug.id];
+      if (combined && mechanismsOf(isolate, lib).includes(w.mechanism)) s = worse(s, combined);
+    }
   }
   return isolate.overrides?.[drug.id] ?? s;
 }
@@ -100,12 +104,13 @@ export function mrgnClass(isolate: Isolate, lib: InfectionLibrary): MrgnClass {
   const g = lib.guidelines;
   const groups = g.mrgnGroups[species] ?? [];
   const counts = (s: Susceptibility) => s === 'R' || (g.mrgnCountsI && s === 'I');
-  const groupR = groups.map((grp) =>
-    grp.drugs.some((id) => {
+  const groupR = groups.map((grp) => {
+    const r = (id: string) => {
       const d = lib.drugs.get(id);
       return d ? counts(susceptibility(isolate, d, lib)) : false;
-    }),
-  );
+    };
+    return grp.all ? grp.drugs.every(r) : grp.drugs.some(r);
+  });
   const nR = groupR.filter(Boolean).length;
   const carbapenemase = mechs.some((m) => lib.mechanisms.get(m)?.carbapenemase);
   if ((carbapenemase && g.carbapenemase4Mrgn.includes(species)) || nR === 4) return '4MRGN';
@@ -141,8 +146,8 @@ const DOSE_FACTOR = { reduced: 0.5, standard: 1, high: 1.6 } as const;
 /**
  * Relative drug exposure (1 = standard dose at normal kidney function, target attained for an S isolate).
  * SIM-ASSUMPTION: exposure ∝ dose × (1 / relative GFR)^0.6 for renally cleared drugs; extended β-lactam
- * infusion ×1.3; oral route × bioavailability / 0.8 (capped at 1); after a TDM result the dose is individualised
- * to an exposure of 1.15.
+ * infusion ×1.3; oral route × the drug's oral-regimen exposure (default 1); a reduced (renal) regimen starts with a full
+ * loading dose (first 12 h standard); after a TDM result the dose is individualised to an exposure of 1.15.
  */
 export function exposure(
   order: TherapyOrder,
@@ -153,11 +158,15 @@ export function exposure(
   luminal = false,
 ): number {
   if (order.tdm && order.tdmFromH !== null && timeH >= order.tdmFromH) return 1.15;
-  let e = DOSE_FACTOR[order.dose];
+  // SIM-ASSUMPTION: a renally reduced regimen starts with a full loading dose — standard exposure for the first 12 h.
+  let e =
+    order.dose === 'reduced' && timeH - order.startedH < 12
+      ? DOSE_FACTOR.standard
+      : DOSE_FACTOR[order.dose];
   if (drug.renallyCleared)
     e *= Math.min(2.5, Math.max(0.6, (1 / Math.max(0.1, gfrRelative)) ** 0.6));
   if (order.extendedInfusion && isBetaLactam(drug)) e *= 1.3;
-  if (order.route === 'po' && !luminal) e *= Math.min(1, (drug.bioavailability ?? 1) / 0.8);
+  if (order.route === 'po' && !luminal) e *= drug.oralExposure ?? 1;
   return e;
 }
 

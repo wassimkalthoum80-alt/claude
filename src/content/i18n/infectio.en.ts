@@ -268,7 +268,7 @@ export const infectioEn = {
   'lab.platelets': 'Platelets',
   'lab.bilirubin': 'Bilirubin',
   'lab.vancomycinTrough': 'Vancomycin trough',
-  'dose.reduced': 'reduced (renal)',
+  'dose.reduced': 'reduced maintenance (renal/dialysis; full loading dose)',
   'dose.standard': 'standard',
   'dose.high': 'high',
   'aware.access': 'Access',
@@ -327,7 +327,7 @@ export const infectioEn = {
   'abx.reg.piperacillin': 'lab marker only',
   'abx.piperacillin-tazobactam': 'Piperacillin/tazobactam',
   'abx.reg.piperacillin-tazobactam':
-    '3–4 × 4.5 g i.v.; high exposure 4 × 4.5 g, each infused over 3 h after an initial loading infusion',
+    'standard 4.5 g every 6 h over 30 min or every 8 h over 4 h; high exposure 4 × 4.5 g each over 3 h after an initial loading infusion; adapt to indication and kidney function',
   'abx.flucloxacillin': 'Flucloxacillin',
   'abx.reg.flucloxacillin':
     '4–6 × 2 g i.v. (bacteraemia 4 × 3 g or 6 × 2 g); usually no renal adjustment in mild–moderate impairment — check dose/interval if CrCl < 10 mL/min',
@@ -387,7 +387,8 @@ export const infectioEn = {
   'abx.reg.vancomycin':
     'loading 25–30 mg/kg, then AUC-guided dosing (target AUC₂₄ 400–600 mg·h/L at MIC 1 mg/L); haemodialysis: dose after each session by level',
   'abx.vancomycin-po': 'Vancomycin oral',
-  'abx.reg.vancomycin-po': '4 × 125 mg p.o. (C. difficile)',
+  'abx.reg.vancomycin-po':
+    '4 × 125 mg p.o. (C. difficile); fulminant colitis 4 × 500 mg enterally (+ rectal in ileus)',
   'abx.fidaxomicin': 'Fidaxomicin',
   'abx.reg.fidaxomicin': '2 × 200 mg p.o. for 10 days',
   'abx.linezolid': 'Linezolid',
@@ -703,13 +704,13 @@ export const infectioEn = {
   'imaging.ct-abdomen.colitis':
     'Wall thickening of the whole colon with pericolic stranding; no perforation, colon diameter 5 cm.',
   'dx.cdi': 'C. difficile infection (colitis) after clindamycin',
-  'stw.chk.sourceControl.ok': 'Adequate source control within about 6 h of the diagnosis.',
+  'stw.chk.sourceControl.ok':
+    'Adequate source control within about 6 h of the initial recognition.',
   'stw.chk.sourceControl.missed':
     'Adequate source control late or missing: a partial drain of an ongoing leak is not control — reassess and arrange definitive control.',
-  'stw.chk.noReflexCover.ok':
-    'No targeted therapy for Candida or VRE from a long-standing drain alone.',
+  'stw.chk.noReflexCover.ok': 'No antifungal for Candida from a long-standing drain alone.',
   'stw.chk.noReflexCover.missed':
-    '{drug} for Candida or VRE from a long-standing drain alone: that does not justify targeted therapy (operative or fresh specimens, blood cultures or deterioration would).',
+    '{drug} for Candida from a long-standing drain alone: only invasive Candida (or a defined high-risk indication) justifies it.',
   'stw.chk.lineOut.ok': 'Infected line removed within 6 h.',
   'stw.chk.lineOut.missed':
     'The infected line stayed in too long: the focus keeps seeding the blood.',
@@ -717,9 +718,9 @@ export const infectioEn = {
   'stw.chk.mssaDrug.missed':
     'No cefazolin or flucloxacillin: for MSSA they beat vancomycin and broad agents.',
   'stw.chk.followUpBc.ok':
-    'Follow-up blood cultures (≥ 2 sets) about 48 h after the first positive culture.',
+    '≥ 2 follow-up blood-culture sets about 48 h after the first positive culture.',
   'stw.chk.followUpBc.missed':
-    'No timely follow-up blood cultures (≥ 2 sets at 48 h): persistence and the start of the duration stay unknown.',
+    'No ≥ 2 follow-up sets at about 48 h (grace ± 8 h): persistence and the start of the duration stay unknown.',
   'stw.chk.echo.ok': 'Echocardiography to look for endocarditis.',
   'stw.chk.echo.missed':
     'No echocardiography: endocarditis is not excluded in S. aureus bacteraemia.',
@@ -730,7 +731,8 @@ export const infectioEn = {
   'stw.chk.stopTrigger.missed': 'The triggering antibiotic kept running.',
   'stw.chk.cdiffTest.ok': 'Stool tested for C. difficile.',
   'stw.chk.cdiffTest.missed': 'No C. difficile test for new diarrhoea under antibiotics.',
-  'stw.chk.cdiDrug.ok': 'Fidaxomicin or oral vancomycin.',
+  'stw.chk.cdiDrug.ok':
+    'Fidaxomicin or oral vancomycin (fidaxomicin preferred with a high recurrence risk).',
   'stw.chk.cdiDrug.missed':
     'Neither fidaxomicin nor oral vancomycin: first choice for C. difficile infection.',
   'stw.chk.isolation.ok': 'Contact precautions as soon as CDI was suspected.',
@@ -738,11 +740,11 @@ export const infectioEn = {
   'stw.learn.peritonitis':
     'Source control is the treatment; antibiotics support it. Only adequate control starts the clock — about 4 days after it (a partial drain of an ongoing leak is not control). Stop the continued "prophylaxis". Candida or VRE from a long-standing drain alone do not justify targeted therapy.',
   'stw.learn.sabLine':
-    'Treat S. aureus in the blood as clinically relevant: remove the line, cefazolin or flucloxacillin, ID consultation, ≥ 2 follow-up sets 48 h after the first positive culture and every 24–48 h until negative, TTE (TEE with risk factors or persistence). 14 days from the first negative culture — only once deep or metastatic foci are excluded.',
+    'Treat S. aureus in the blood as clinically relevant: remove the line, cefazolin or flucloxacillin, ID consultation, ≥ 2 follow-up sets 48 h after the first positive culture and every 24–48 h until negative; TTE — TEE when cultures stay positive ≥ 48 h or with other risk features. 14 days from the first negative culture only after the work-up has excluded deep foci.',
   'stw.learn.sabSpine':
     'New back pain in S. aureus bacteraemia: image promptly (immediately with neurological deficits). Confirmed vertebral osteomyelitis: 6 weeks, set once the focus is established — persistent bacteraemia needs reassessment, not an automatic stop date.',
   'stw.learn.cdi':
-    'Test new ≥ 3 unformed stools/24 h without another plausible cause (with ileus and suspicion: special diagnostics); contact precautions at suspicion; stop the trigger, review laxatives and the PPI; fidaxomicin or oral vancomycin. Judge severity by visible criteria (leukocytes, creatinine, temperature, abdomen and imaging); fulminant colitis (shock, ileus, megacolon) needs urgent multidisciplinary care. No test of cure.',
+    'Test new ≥ 3 unformed stools/24 h without another plausible cause (ileus: special diagnostics); contact precautions at suspicion; stop the trigger, review laxatives and the PPI. With a high recurrence risk (age > 65, ongoing antibiotics) prefer fidaxomicin; oral vancomycin is an alternative. Fulminant colitis (shock, ileus, megacolon): enteral vancomycin 4 × 500 mg (rectal in ileus) plus i.v. metronidazole, urgent surgical/ICU assessment (IDSA/SHEA pathway). No test of cure.',
   'bridge.label': 'Real-time episode of the ward case',
   'bridge.kind.admission': 'Emergency department · real time',
   'bridge.kind.shock': 'Shock · real time',
@@ -894,15 +896,18 @@ export const infectioEn = {
   'stw.chk.noEscalation.ok': 'No reflex escalation for fever alone.',
   'stw.chk.noEscalation.missed':
     '{drug} for fever under antibiotics: escalation without a new focus treats the thermometer.',
-  'stw.chk.ctpa.ok': 'Work-up for embolism (CT angiography or leg duplex) after the new dyspnoea.',
-  'stw.chk.ctpa.missed': 'New dyspnoea without a probability-based work-up for pulmonary embolism.',
+  'stw.chk.ctpa.ok': 'Immediate reassessment and imaging for embolism after the new dyspnoea.',
+  'stw.chk.ctpa.missed':
+    'New dyspnoea without prompt probability-based imaging (CT-PA; a positive proximal DVT can establish the indication — a negative duplex does not exclude PE).',
   'stw.chk.cvcOut.ok': 'Infected central line removed.',
   'stw.chk.cvcOut.missed': 'The infected central line stayed in.',
   'stw.chk.noColonisationTx.ok': 'No antifungal for Candida in the airway of an improving patient.',
   'stw.chk.noColonisationTx.missed':
     '{drug} for airway colonisation: Candida in tracheal aspirate is almost never pneumonia.',
-  'stw.chk.noBroadCap.ok': 'No broad-spectrum agent for a moderate community-acquired pneumonia.',
-  'stw.chk.noBroadCap.missed': '{drug} for a community-acquired pneumonia without risk factors.',
+  'stw.chk.noBroadCap.ok':
+    'No unnecessary antipseudomonal therapy, carbapenem or MRSA cover in CAP without risk factors.',
+  'stw.chk.noBroadCap.missed':
+    '{drug}: no antipseudomonal therapy, carbapenem or MRSA cover in CAP without corresponding risk factors.',
   'stw.chk.atypical.ok': 'Legionella covered (macrolide or respiratory fluoroquinolone).',
   'stw.chk.atypical.missed':
     'Legionella not covered: β-lactams are not clinically effective against Legionella.',
@@ -910,7 +915,7 @@ export const infectioEn = {
     'Legionella testing at the initial assessment (urine antigen; PCR if suspicion persists).',
   'stw.chk.legionellaAg.missed':
     'No early Legionella testing despite the clues — and a negative urine antigen does not exclude it (serogroup 1 only).',
-  'stw.chk.drainage.ok': 'Empyema drained within 24 h of its recognition.',
+  'stw.chk.drainage.ok': 'Empyema drained within 24 h of the drainage indication.',
   'stw.chk.drainage.missed':
     'Empyema not drained promptly after recognition: antibiotics alone do not clear pus.',
   'stw.learn.postopFever':
@@ -922,7 +927,7 @@ export const infectioEn = {
   'stw.learn.consContaminant':
     'A contaminant is likely, but a catheter infection is not excluded. In a stable patient first take repeat paired blood-culture sets peripherally and from the central line; do not start vancomycin reflexively.',
   'stw.learn.consCrbsi':
-    'The set drawn from the catheter turned positive at least two hours earlier (differential time to positivity ≥ 2 h, simultaneous samples of comparable volume), the insertion site is red: a catheter infection. Remove the catheter; uncomplicated CoNS infection then needs 5–7 days from clearance.',
+    'The set drawn from the catheter turned positive at least two hours earlier (DTP ≥ 2 h, simultaneous samples of comparable volume), the insertion site is red: a catheter infection. Remove the catheter; uncomplicated course: 5–7 days after removal — day 1 is the day of the first negative blood culture.',
   'stw.learn.icuSputum':
     'Enterococci and Candida in a tracheal aspirate of an improving patient are colonisers — treat pneumonia by its signs, not by the report. Without clinical suspicion of a respiratory infection do not send routine respiratory cultures for treatment decisions; infection-control surveillance is separate.',
   'stw.learn.cap':
@@ -930,7 +935,7 @@ export const infectioEn = {
   'stw.learn.capLegionella':
     'Diarrhoea, headache, hotel stay: test for Legionella at the first assessment (the urine antigen detects serogroup 1 only — PCR if suspicion persists). Macrolide (azithromycin, clarithromycin) or levofloxacin/moxifloxacin for 5–10 days by drug, severity and response. β-lactams are not clinically effective against Legionella.',
   'stw.learn.capEmpyema':
-    'Persistent fever on a fitting antibiotic: look for a complication. Pus, positive microbiology or typical pleural-fluid findings mean ultrasound-guided drainage promptly after recognition (CT appearance alone does not replace pleural sampling). The duration is response-guided, commonly 2–6 weeks.',
+    'Persistent fever on a fitting antibiotic: assess the pleura with ultrasound and guided sampling. Pus, positive microbiology or pleural pH ≤ 7.2 mean drainage when safely accessible (in obvious empyema the sample is taken at drain insertion). The duration is response-guided and individual, commonly 2–6 weeks.',
   'infectio.section.special': 'Special situations',
   'wd.endocarditis': 'Endocarditis',
   'wd.meningitis': 'Meningitis',
@@ -976,7 +981,8 @@ export const infectioEn = {
     'Mrs A., 48, is on day 10 after a cycle of chemotherapy for lymphoma; neutrophils (ANC) this morning 0.3 G/L, expected recovery in about 4 days (standard risk, expected neutropenia < 7 days; no antifungal prophylaxis indicated). At 22:00 she has 38.3 °C and feels cold. Port catheter in the right chest. Blood pressure stable. You are on call.',
   'case.fn.exam':
     'Examination: mild mucositis, no cough, lungs clear, abdomen soft, port site without redness, no skin lesions; perianal region carefully inspected (no digital rectal examination): unremarkable.',
-  'dx.neutropenicFever': 'Febrile neutropenia without a documented focus (FUO)',
+  'dx.neutropenicFever':
+    'Febrile neutropenia without a documented focus; infection not excluded, empirical therapy indicated',
   'dx.fnGramNegative': 'Febrile neutropenia with E. coli bacteraemia (gut translocation)',
   'dx.portInfection': 'Port catheter infection with CoNS',
   'imaging.line-inspection.portRed':
@@ -1009,9 +1015,10 @@ export const infectioEn = {
     'Endocarditis team reassessed the surgical indication after the embolism.',
   'stw.chk.valveSurgery.missed':
     'Embolism without reassessing surgery with the team — a non-haemorrhagic stroke alone is no reason to delay an indicated operation.',
-  'stw.chk.enterococcalCombo.ok': 'Ampicillin plus ceftriaxone for E. faecalis endocarditis.',
+  'stw.chk.enterococcalCombo.ok':
+    'Ampicillin 2 g every 4 h plus ceftriaxone 2 g every 12 h i.v., given together.',
   'stw.chk.enterococcalCombo.missed':
-    'E. faecalis endocarditis needs ampicillin plus ceftriaxone (gentamicin only without high-level resistance, as a separate synergy regimen).',
+    'E. faecalis endocarditis needs ampicillin 2 g every 4 h plus ceftriaxone 2 g every 12 h i.v., running together (gentamicin synergy is outside this case).',
   'stw.chk.fnDrug.ok': 'Pseudomonas-active β-lactam for febrile neutropenia.',
   'stw.chk.fnDrug.missed': 'No pseudomonas-active β-lactam in febrile neutropenia.',
   'stw.chk.noEscalationFn.ok':
@@ -1034,21 +1041,21 @@ export const infectioEn = {
   'stw.chk.debridement.missed':
     'Tendon-sheath signs (pain on passive extension) without urgent hand surgery.',
   'stw.learn.mrsa':
-    'MRSA bacteraemia on haemodialysis: remove the catheter; vancomycin with a loading dose, then dosed after each session by pre-dialysis levels (or daptomycin in a dialysis regimen) — clearance is not estimated from the creatinine. Follow-up cultures, echo, ID consultation; 14 days from the first negative culture once complications are excluded.',
+    'MRSA bacteraemia on haemodialysis: remove the catheter; vancomycin with a loading dose, then maintenance after each session guided by the pre-dialysis level (target 15–20 mg/L) — the dialysis protocol is executed automatically here; clearance is not estimated from the creatinine. Follow-up cultures, echo (TEE with persistence), ID consultation; 14 days from the first negative culture once complications are excluded.',
   'stw.learn.mrsaThrombosis':
-    'Cultures still positive after the catheter is out: a complicated bacteraemia (septic thrombosis) — TEE, repeat cultures until negative, at least 4 weeks (focus-specific).',
+    'Persistent bacteraemia after the catheter is out: look for endocarditis, septic thrombosis and other foci (TEE, duplex of the catheterised vein). Here a septic thrombosis — at least 4 weeks, by focus and specialist assessment.',
   'stw.learn.endocarditis':
-    'Three blood-culture sets before the first dose in the stable patient, TEE, and the endocarditis team at diagnosis: assess the surgical indication by heart failure, uncontrolled infection and embolic risk. A targeted β-lactam for 4 weeks, counted from the first negative culture.',
+    'Three blood-culture sets before the first dose in the stable patient, TEE, the endocarditis team at diagnosis (surgical indication by heart failure, uncontrolled infection, embolic risk). Follow-up cultures document clearance: the 4 weeks of targeted β-lactam count from the first negative culture.',
   'stw.learn.endocarditisEnterococcal':
     'E. faecalis endocarditis: ampicillin 2 g every 4 h plus ceftriaxone 2 g every 12 h for 6 weeks. Gentamicin only if high-level resistance is excluded — 3 mg/kg/day with levels, usually ≤ 2 weeks.',
   'stw.learn.fn':
-    'Febrile neutropenia: a pseudomonas-active β-lactam within 1 h of recognition (at once if unstable), paired cultures (peripheral and port). The infection status stays uncertain — empirical therapy is indicated. Stable with persistent fever: no reflex vancomycin; in standard-risk, short neutropenia no early antifungal (prolonged high-risk neutropenia without prophylaxis: consider mould-active therapy after 72–96 h). No focus: stop after 3–5 days of defervescence and clinical recovery, irrespective of the neutrophil count.',
+    'Febrile neutropenia without a documented focus: infection is not excluded — a pseudomonas-active β-lactam within 1 h of recognition (at once if unstable), paired cultures (peripheral and port). Stable with persistent fever: no reflex vancomycin; in standard-risk, short neutropenia no empirical antifungal — elapsed time alone is no indication (prolonged high-risk neutropenia without prophylaxis: mould-active therapy after 72–96 h of fever). No focus: stop after 3–5 days of defervescence and clinical recovery, irrespective of the neutrophil count.',
   'stw.learn.fnGramNegative':
     'In neutropenia a Gram-negative bacteraemia kills within hours: the first dose must not wait.',
   'stw.learn.fnPort':
-    'Fever in neutropenia with a port: paired cultures through the port and peripherally. Here the pocket/tunnel is infected — remove the port. (A selected uncomplicated intraluminal CoNS infection may be treated with port salvage under a specialist protocol.)',
+    'Fever in neutropenia with a port: paired cultures through the port and peripherally. Here the pocket/tunnel is infected — remove the port. (A selected uncomplicated intraluminal CoNS infection may be treated with the port retained under a specialist protocol.)',
   'stw.learn.meningitis':
-    'Suspected bacterial meningitis: blood cultures, then immediate lumbar puncture when there is no imaging indication, and treat at once — dexamethasone 10 mg i.v. just before or with the first dose (then every 6 h, 4 days for pneumococci). If CT or LP would delay therapy, treat after the blood cultures without waiting. German adult default: ceftriaxone 2 g every 12 h plus ampicillin 2 g every 4 h i.v. An otogenic focus needs ENT source treatment.',
+    'Suspected bacterial meningitis: blood cultures, then an immediate lumbar puncture with CSF and paired serum values when there is no imaging indication — treat at once; dexamethasone 10 mg i.v. just before or with the first dose (then every 6 h, 4 days for pneumococci). If CT or LP would delay therapy, treat after the blood cultures and puncture later. German adult default: ceftriaxone 2 g every 12 h plus ampicillin 2 g every 4 h i.v. Responding pneumococcal meningitis: 10–14 days; Listeria ≥ 21 days. An otogenic focus needs ENT source treatment.',
   'stw.learn.meningitisListeria':
     'Older patient, cephalosporin not working: Listeria — ampicillin for 21 days.',
   'stw.learn.catBite':
@@ -1159,7 +1166,7 @@ export const infectioEn = {
   'wd.pulmonaryEmbolism': 'Pulmonary embolism',
   'wd.bloodstream': 'Bloodstream infection without a clear focus',
   'imaging.ct-head.otomastoiditis':
-    'No contraindication to lumbar puncture; opacified right middle ear and mastoid air cells — otomastoiditis.',
+    'No space-occupying lesion, no hydrocephalus, no marked brain oedema; opacified right middle ear and mastoid cells — otomastoiditis. Check further clinical and coagulation contraindications to lumbar puncture.',
   'case.notPneumonia.examAspiration':
     'Examination: tachypnoeic, coarse crackles right base, no ankle oedema, jugular veins not distended; traces of vomit in the mouth. Reassess over 24–48 h: improvement supports chemical pneumonitis.',
   'case.meningitis.examListeria':
@@ -1188,15 +1195,16 @@ export const infectioEn = {
     'No infectious-diseases consultation in S. aureus bacteraemia (it improves outcome).',
   'stw.chk.teeRisk.ok': 'TEE for persistent bacteraemia or a deep focus.',
   'stw.chk.teeRisk.missed':
-    'Persistent bacteraemia or a deep focus without TEE: a negative TTE does not exclude endocarditis.',
+    'Persistent bacteraemia (≥ 48 h) or a deep focus without TEE: a negative TTE does not close the work-up.',
   'stw.chk.pairedBc.ok': 'Paired blood cultures (peripheral and through the catheter).',
   'stw.chk.pairedBc.missed':
     'No paired peripheral and catheter cultures: a catheter infection cannot be judged (differential time to positivity).',
   'stw.chk.endoTeam.ok': 'Endocarditis team involved at diagnosis.',
   'stw.chk.endoTeam.missed':
     'Vegetation with significant regurgitation without the endocarditis team: assess the surgical indication at diagnosis.',
-  'stw.chk.ctHeadEmbolic.ok': 'Urgent brain imaging for the new deficit.',
-  'stw.chk.ctHeadEmbolic.missed': 'New neurological deficit without urgent brain imaging.',
+  'stw.chk.ctHeadEmbolic.ok': 'Stroke pathway at once: immediate brain imaging.',
+  'stw.chk.ctHeadEmbolic.missed':
+    'New hemiparesis without an immediate stroke alert and brain/vascular imaging. (IV thrombolysis is not recommended in endocarditis-associated stroke; thrombectomy for selected large-vessel occlusions.)',
   'stw.chk.noEarlyAntifungal.ok':
     'No empirical antifungal in the first 96 h of standard-risk neutropenia.',
   'stw.chk.noEarlyAntifungal.missed':
@@ -1210,6 +1218,82 @@ export const infectioEn = {
     'Medication review: the deliriogenic drug (oxybutynin) was stopped.',
   'stw.chk.medicationReview.missed':
     'Delirium without a medication review: the new anticholinergic drug kept running.',
+  'proc.anticoagulation': 'Therapeutic anticoagulation (after bleeding-risk assessment)',
+  'imaging.kind.sono-chest': 'Thoracic ultrasound (± guided pleural sampling)',
+  'imaging.kind.duplex-catheter-vein': 'Duplex of the catheterised vein',
+  'imaging.sono-chest.normal': 'No pleural effusion, normal lung sliding.',
+  'imaging.duplex-catheter-vein.normal':
+    'Catheterised vein patent and compressible, no thrombus (central segments: CT if suspicion persists).',
+  'imaging.sono-chest.atelectasis':
+    'Small basal consolidations with dynamic air bronchogram, no relevant effusion.',
+  'imaging.sono-chest.consolidation':
+    'Right lower-lobe consolidation with air bronchogram; small anechoic effusion, no septation.',
+  'imaging.sono-chest.empyema':
+    'Septated, echogenic right pleural effusion. Ultrasound-guided diagnostic puncture: turbid fluid, pH 6.9, glucose low — complicated parapneumonic effusion / empyema: drainage indicated.',
+  'imaging.duplex-catheter-vein.thrombus':
+    'Non-compressible internal jugular vein with an echogenic thrombus at the former catheter site — consistent with septic thrombosis (assess the central extent).',
+  'imaging.sono-urinary.hydronephrosis':
+    'Right hydronephrosis grade II with a dilated proximal ureter; obstructing stone suspected — infected obstructed system: urgent decompression.',
+  'imaging.sono-urinary.decompressed':
+    'Right kidney decompressed (stent/nephrostomy in place), no residual hydronephrosis.',
+  'imaging.ct-abdomen.obstruction':
+    '7-mm stone in the right proximal ureter with hydronephrosis and perirenal stranding.',
+  'dx.obstructedPyelonephritis':
+    'Obstructive pyelonephritis (ureteric stone) with E. coli bacteraemia',
+  'wd.fnFuo': 'Febrile neutropenia without a documented focus',
+  'lab.vancomycinPreDialysis': 'Vancomycin pre-dialysis level (target 15–20)',
+  'stw.empiricalReasonable':
+    'The empirical choice was appropriate and on time ({target} h) — an unexpected resistance made it inactive.',
+  'stw.switchedOnResult': 'Therapy adapted {h} h after the result showing the resistance.',
+  'stw.switchLate':
+    'Effective therapy only {h} h after the result showing the resistance — adapt within about 12 h.',
+  'stw.empiricalStoppedOk':
+    'A reasonable empirical start, stopped at reassessment ({days} d) — no deduction.',
+  'stw.culturesSoonAfter':
+    'In shock the dose did not wait; blood cultures followed as soon as feasible.',
+  'stw.durationNotAssessable':
+    'No documented clearance (negative follow-up blood culture): the stop date cannot be set — take follow-up cultures and plan a review.',
+  'stw.durationWorkupIncomplete':
+    'Course of {days} d, but the work-up that allows it is incomplete (echocardiography; TEE with persistent bacteraemia).',
+  'stw.chk.noReflexVre.ok': 'No anti-VRE agent for drain colonisation.',
+  'stw.chk.noReflexVre.missed':
+    '{drug} for VRE from a long-standing drain alone: only an invasive VRE infection justifies it.',
+  'stw.chk.fulminantVanco.ok': 'Fulminant colitis: enteral vancomycin 4 × 500 mg.',
+  'stw.chk.fulminantVanco.missed':
+    'Fulminant colitis with ileus on standard treatment: escalate to enteral vancomycin 4 × 500 mg (rectal in ileus).',
+  'stw.chk.fulminantMetro.ok': 'Fulminant colitis: metronidazole i.v. added.',
+  'stw.chk.fulminantMetro.missed':
+    'Fulminant colitis with ileus without i.v. metronidazole (IDSA/SHEA pathway).',
+  'stw.chk.fulminantImaging.ok': 'Urgent abdominal imaging and surgical/ICU assessment.',
+  'stw.chk.fulminantImaging.missed':
+    'Ileus in C. difficile colitis without urgent imaging (megacolon, perforation) and surgical/ICU assessment.',
+  'stw.chk.duplexVein.ok': 'Duplex of the catheterised vein for the persistent bacteraemia.',
+  'stw.chk.duplexVein.missed':
+    'Persistent bacteraemia without looking for septic thrombosis (duplex of the catheterised vein).',
+  'stw.chk.followUpBcIe.ok': 'Follow-up blood cultures document clearance (start of the 4 weeks).',
+  'stw.chk.followUpBcIe.missed':
+    'No follow-up blood cultures: clearance — and so the start of the course — stays undocumented.',
+  'stw.chk.lp.ok': 'Lumbar puncture with CSF analysis (and paired serum values).',
+  'stw.chk.lp.missed':
+    'No lumbar puncture: CSF diagnostics belong to meningitis care when safe — therapy must never wait for it.',
+  'stw.chk.pasteurella.alt':
+    'Ceftriaxone plus metronidazole: adequate aerobic/anaerobic cover, but not the preferred regimen (amoxicillin/clavulanate, ampicillin/sulbactam).',
+  'stw.chk.anticoagulation.ok': 'Therapeutic anticoagulation after the bleeding-risk assessment.',
+  'stw.chk.anticoagulation.missed':
+    'Venous thromboembolism found, but no anticoagulation decision.',
+  'stw.chk.pleuraWorkup.ok':
+    'Persistent fever: pleural assessment (ultrasound-guided sampling or CT).',
+  'stw.chk.pleuraWorkup.missed':
+    'Persistent fever on a fitting antibiotic without assessing the pleura (ultrasound and sampling).',
+  'stw.chk.renalImaging.ok': 'Renal ultrasound/CT to look for obstruction.',
+  'stw.chk.renalImaging.missed': 'Urosepsis without imaging for obstruction in the first 12 h.',
+  'stw.chk.decompression.ok': 'Infected obstructed kidney decompressed urgently.',
+  'stw.chk.decompression.missed':
+    'Infected obstruction without urgent decompression: broadening antibiotics does not replace it.',
+  'stw.learn.obstruction':
+    'Urosepsis with an obstructed kidney: image early, decompress urgently (stent or nephrostomy) — antibiotics alone cannot control an infected obstruction; repeatedly broadening them is the classic error.',
+  'stw.learn.pe':
+    'Fever with new dyspnoea under antibiotics: reassess haemodynamics and oxygenation at once, then a probability-based pathway (CT-PA; a proximal DVT can establish treatment). Anticoagulate after a bleeding-risk assessment — interim treatment when imaging is delayed and probability is high.',
   'cls.penicillin': 'Penicillin',
   'cls.aminopenicillin': 'Aminopenicillins',
   'cls.aminopenicillin-bli': 'Aminopenicillin/BLI',

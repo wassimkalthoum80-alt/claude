@@ -136,6 +136,13 @@ const findingRows = (code: string, f: readonly FindingRule[]) =>
     tDe(r.reportKey),
   ]);
 
+const SEVERITY_LABEL: Record<StewardshipConfig['severity'], string> = {
+  septicShock: 'septic shock',
+  sepsis: 'probable/definite sepsis',
+  febrileNeutropenia: 'febrile neutropenia (from recognition)',
+  suspected: 'possible sepsis without shock (game target for stable syndromes)',
+};
+
 function anchorText(c: CaseCheck): string {
   const f = c.from;
   if (!f) return '';
@@ -143,6 +150,7 @@ function anchorText(c: CaseCheck): string {
     f.call ? `call "${f.call}"` : '',
     f.finding ? `finding ${f.finding.join('/')}` : '',
     f.firstPositiveBloodCulture ? 'the first positive blood-culture sample' : '',
+    f.persistentBacteraemia ? 'persistent bacteraemia (positive follow-up culture ≥ 48 h)' : '',
   ].filter(Boolean);
   return parts.length ? ` (counted from ${parts.join(' or ')})` : '';
 }
@@ -158,7 +166,7 @@ function checkCore(c: CaseCheck): string {
     case 'imaging':
       return `imaging ${c.imaging.join(' or ')} within ${c.withinH} h`;
     case 'test':
-      return `test ${[c.specimen].flat().join(' or ')} within ${c.withinH} h${c.beforeAntibiotic ? ', before the first antibiotic' : ''}`;
+      return `test ${[c.specimen].flat().join(' or ')}${c.site ? ` (${c.site})` : ''} within ${c.withinH} h${c.beforeAntibiotic ? ', before the first antibiotic (in shock ≤ 2 h after it)' : ''}`;
     case 'followUpBloodCultures':
       return `follow-up blood cultures (≥ ${c.minSets ?? 1} set(s)) ${c.fromH}–${c.withinH} h after ${c.from?.firstPositiveBloodCulture ? 'the first positive sample' : 'effective therapy'}${c.untilNegative ? ', repeated every ≤ 48 h until negative' : ''}`;
     case 'pairedCultures':
@@ -170,17 +178,17 @@ function checkCore(c: CaseCheck): string {
     case 'preferDrugs':
       return `one of: ${c.drugIds.join(', ')}`;
     case 'empiricalDrugs':
-      return `first (empirical) regimen contains one of: ${c.drugIds.join(', ')}`;
+      return `first (empirical) regimen contains one of: ${c.drugIds.join(', ')}${c.alternatives ? `; accepted non-preferred alternative: ${c.alternatives.map((g) => g.join(' + ')).join(' / ')} (−${c.altPenalty ?? 0})` : ''}`;
     case 'avoidClasses':
-      return `none of the classes: ${c.classes.join(', ')}${c.beforeH !== undefined ? ` before ${c.beforeH} h` : ''}${c.unlessCausativeGroups ? ` (unless a causative ${c.unlessCausativeGroups.join('/')} makes it indicated)` : ''}`;
+      return `none of the classes: ${c.classes.join(', ')}${c.beforeH !== undefined ? ` before ${c.beforeH} h` : ''}${c.unlessCausativeGroups ? ` (unless a causative ${c.unlessCausativeGroups.join('/')} makes it indicated)` : ''}${c.unlessShock ? ' (not judged after shock)' : ''}`;
     case 'isolation':
       return `contact isolation within ${c.withinH} h`;
     case 'requireDrugs':
-      return `each group covered: ${c.groups.map((g) => `[${g.join(' / ')}]`).join(' + ')}${c.minDose ? ` at ≥ ${c.minDose} dose` : ''}${c.route ? ` ${c.route}` : ''}`;
+      return `each group covered: ${c.groups.map((g) => `[${g.join(' / ')}]`).join(' + ')}${c.minDose ? ` at ≥ ${c.minDose} dose` : ''}${c.route ? ` ${c.route}` : ''}${c.concurrentDays ? `, all running together ≥ ${c.concurrentDays} d (or until case end)` : ''}`;
     case 'antibioticBeforeImaging':
       return `first antibiotic before ${c.imaging}`;
     case 'monotherapyAfterAst':
-      return `≤ 1 antibacterial ${c.withinH} h after the resistogram`;
+      return `≤ 1 antibacterial ${c.withinH} h after the resistogram (only if stable: no shock/vasopressor in the preceding 24 h)`;
   }
 }
 
@@ -201,7 +209,7 @@ function scoringSection(code: string, cfg: StewardshipConfig, prefix: string): s
         [
           `${prefix}-S2`,
           'Severity → time-to-antibiotic target',
-          `${cfg.severity} → ${abs2026.timeToAntibioticH[cfg.severity]} h`,
+          `${SEVERITY_LABEL[cfg.severity]} → ${abs2026.timeToAntibioticH[cfg.severity]} h`,
         ],
         [
           `${prefix}-S3`,
@@ -221,6 +229,42 @@ function scoringSection(code: string, cfg: StewardshipConfig, prefix: string): s
           : []),
         ...(cfg.bloodCultureSetsTarget
           ? [[`${prefix}-S6b`, 'Blood-culture sets before therapy', cfg.bloodCultureSetsTarget]]
+          : []),
+        ...(cfg.empiricalOptions
+          ? [
+              [
+                `${prefix}-S6d`,
+                'Appropriate empirical options (judged on the information available)',
+                cfg.empiricalOptions.join(', '),
+              ],
+            ]
+          : []),
+        ...(cfg.definitiveOptions
+          ? [
+              [
+                `${prefix}-S6e`,
+                'Syndrome-appropriate definitive options (de-escalation ranks only these)',
+                cfg.definitiveOptions.join(', '),
+              ],
+            ]
+          : []),
+        ...(cfg.durationPrerequisite
+          ? [
+              [
+                `${prefix}-S6f`,
+                'Work-up required before a course counts as adequate',
+                `${cfg.durationPrerequisite.imaging.join(' or ')}${cfg.durationPrerequisite.teeIfPersistent ? '; TEE if bacteraemia persists ≥ 48 h' : ''}`,
+              ],
+            ]
+          : []),
+        ...(cfg.empiricalStartReasonable
+          ? [
+              [
+                `${prefix}-S6g`,
+                'Empirical start reasonable — stopped at reassessment costs nothing',
+                'yes',
+              ],
+            ]
           : []),
         ...(cfg.oralSwitch === false
           ? [[`${prefix}-S6c`, 'Generic i.v.→oral switch judged', 'no (specialist pathway)']]
@@ -558,7 +602,7 @@ export function buildInfectioReview(): string {
       [
         [
           'G2-1',
-          'Time to antibiotic (h): septic shock / sepsis / febrile neutropenia / suspected',
+          'Time to antibiotic (h): septic shock / probable sepsis / febrile neutropenia / possible sepsis without shock (rapid assessment, therapy ≤ 3 h if suspicion persists; game target for stable non-septic syndromes)',
           `${abs2026.timeToAntibioticH.septicShock} / ${abs2026.timeToAntibioticH.sepsis} / ${abs2026.timeToAntibioticH.febrileNeutropenia} / ${abs2026.timeToAntibioticH.suspected}`,
         ],
         ['G2-2', 'Source control (h)', abs2026.sourceControlH],
@@ -576,14 +620,14 @@ export function buildInfectioReview(): string {
         ],
         [
           'G2-7',
-          'MRGN marker groups per species (only R counts; any marker R = group)',
+          'MRGN marker groups per species (only R counts; a group counts when any marker is R, or — marked [all] — when every marker is R)',
           Object.entries(abs2026.mrgnGroups)
             .map(
               ([sp, groups]) =>
-                `${sp}: ${(groups ?? []).map((g) => `${g.label}: ${g.drugs.join(', ')}`).join('; ')}`,
+                `${sp}: ${(groups ?? []).map((g) => `${g.label}${g.all ? ' [all]' : ''}: ${g.drugs.join(', ')}`).join('; ')}`,
             )
             .join(' · ') +
-            ` · 3MRGN needs carbapenem S in: ${abs2026.mrgn3RequiresCarbapenemS.join(', ')} · carbapenemase = 4MRGN in: ${abs2026.carbapenemase4Mrgn.join(', ')}`,
+            ` · 3MRGN needs the carbapenems not R (S or I) in: ${abs2026.mrgn3RequiresCarbapenemS.join(', ')} · carbapenemase = 4MRGN in: ${abs2026.carbapenemase4Mrgn.join(', ')}`,
         ],
         ...Object.entries(abs2026.durationDays).map(([k, v], i) => [
           `G2-D${i + 1}`,
@@ -629,15 +673,21 @@ export function buildInfectioReview(): string {
     ),
   );
 
-  out.push('## G4 Organisms (intrinsic resistance) and resistance mechanisms\n');
+  out.push('## G4 Organisms (modelled baseline phenotype) and resistance mechanisms\n');
+  out.push(
+    "> Baseline = expected resistance plus the simulator's default wild-type categories. Isolates may override it " +
+      '(measured phenotype); clinical suitability caps are listed with the mechanisms; drugs without an interpretable ' +
+      'breakpoint are not reported on the panel. For Legionella and C. difficile the map is treatment suitability, ' +
+      'not an antibiogram.\n',
+  );
   out.push(
     table(
       [
         'Item',
         'Organism',
         'Gram/morphology',
-        'Intrinsically R',
-        'Intrinsically I',
+        'Baseline R (classes)',
+        'Baseline I (classes) · drug-level baseline (R/I/S)',
         'Time to positivity (h)',
       ],
       ORGANISMS.map((o, i) => {
@@ -648,9 +698,10 @@ export function buildInfectioReview(): string {
           .filter(([, v]) => v === 'I')
           .map(([k]) => k);
         const dr = Object.entries(o.intrinsicDrugs ?? {}).map(([k, v]) => `${k} ${v}`);
+        const suitability = o.id === 'l-pneumophila' || o.id === 'c-difficile';
         return [
           `G4-O${i + 1}`,
-          orgName(o.id),
+          `${orgName(o.id)}${suitability ? ' [treatment-suitability map, not AST]' : ''}`,
           o.morphology,
           r.join(', '),
           [...ii, ...dr].join(', '),
@@ -661,16 +712,28 @@ export function buildInfectioReview(): string {
   );
   out.push(
     table(
-      ['Item', 'Mechanism', 'Classes affected', 'Single drugs', 'Activity caps (SIM-ASSUMPTION)'],
+      [
+        'Item',
+        'Mechanism',
+        'Typical phenotype: classes',
+        'Typical phenotype: single drugs (S = not affected)',
+        'Clinical suitability caps (SIM-ASSUMPTION)',
+      ],
       MECHANISMS.map((m, i) => [
         `G4-M${i + 1}`,
         tEn(m.labelKey),
         Object.entries(m.classes ?? {})
           .map(([k, v]) => `${k} ${v}`)
           .join(', '),
-        Object.entries(m.drugs ?? {})
-          .map(([k, v]) => `${k} ${v}`)
-          .join(', '),
+        [
+          ...Object.entries(m.drugs ?? {}).map(([k, v]) => `${k} ${v}`),
+          ...Object.entries(m.groupDrugs ?? {}).flatMap(([g, d]) =>
+            Object.entries(d ?? {}).map(([k, v]) => `${k} ${v} (${g})`),
+          ),
+          ...(m.withMechanism ?? []).flatMap((w) =>
+            Object.entries(w.drugs).map(([k, v]) => `${k} ${v} (with ${w.mechanism})`),
+          ),
+        ].join(', '),
         Object.entries(m.activityCap ?? {})
           .map(([k, v]) => `${k} ≤ ${v}`)
           .join(', '),
@@ -693,7 +756,7 @@ export function buildInfectioReview(): string {
       CAMPAIGN_CONFIG.metrics.map((m, i) => [
         `G5-${i + 1}`,
         tEn(m.labelKey),
-        `${m.baseline} ${m.unit}`,
+        `${m.baseline} (index)`,
         m.floor,
         m.ceiling,
         Object.entries(m.drivers)
@@ -704,7 +767,7 @@ export function buildInfectioReview(): string {
     ),
   );
   out.push(
-    `**G5-R** Recovery per case: ${CAMPAIGN_CONFIG.recovery * 100} % of the distance to the floor × (case score / 100). Variant links: ${Object.entries(
+    `**G5-R** Fictional selection-pressure indices (game values — no prevalence or incidence). Recovery per case, only for indices the case did not drive: ${CAMPAIGN_CONFIG.recovery * 100} % of the distance to the floor × (case score / 100). Variant links: ${Object.entries(
       CAMPAIGN_CONFIG.variantDrivers,
     )
       .map(

@@ -18,7 +18,15 @@ import {
   wardTime,
 } from './ward';
 
-const make = (c: InfectionCase) => new InfectionEngine({ caseDef: c, library: LIB });
+/** The case's first (classic) variant, so the lesson under test does not depend on the variant draw. */
+const make = (c: InfectionCase) => {
+  const first = c.variants?.[0]?.id;
+  for (let seed = c.seed; first && seed < c.seed + 500; seed++) {
+    const e = new InfectionEngine({ caseDef: c, library: LIB, seed });
+    if (e.variant === first) return e;
+  }
+  return new InfectionEngine({ caseDef: c, library: LIB });
+};
 const runTo = (e: InfectionEngine, h: number) => {
   while (e.timeH < h && !e.getView().ended) e.advance(h - e.timeH);
 };

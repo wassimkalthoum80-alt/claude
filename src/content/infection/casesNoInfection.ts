@@ -16,6 +16,8 @@ const POSTOP_INFLAMMATION = {
   diagnosisKey: 'dx.postopInflammation',
   // ≈ 38 °C at the start (temperature rises 2.6 °C per unit of inflammation)
   drive: 0.35,
+  // sterile surgical inflammation raises PCT modestly on day 1 (overlapping with early infection)
+  pctDrive: 0.4,
   // SIM-ASSUMPTION: the surgical inflammatory response settles over 1–2 days.
   resolveTauH: 30,
 };
@@ -54,7 +56,10 @@ export const postopFever: InfectionCase = {
   ],
   colonisation: [{ isolateId: 'ec', site: 'urine', count: 1e4 }],
   scriptedCalls: [{ atH: 3, source: 'nurse', messageKey: 'nurse.postopFever', urgent: false }],
-  findings: [{ kind: 'cxr', reportKey: 'imaging.cxr.atelectasis', mimicId: 'atelectasis' }],
+  findings: [
+    { kind: 'cxr', reportKey: 'imaging.cxr.atelectasis', mimicId: 'atelectasis' },
+    { kind: 'sono-chest', reportKey: 'imaging.sono-chest.atelectasis', mimicId: 'atelectasis' },
+  ],
   workingDiagnoses: WORKING_DIAGNOSES,
   variants: [
     { id: 'atelectasis', patch: {} },
@@ -191,8 +196,9 @@ export const feverOnAntibiotics: InfectionCase = {
             id: 'pulmonary-embolism',
             diagnosisKey: 'dx.pulmonaryEmbolism',
             drive: 0.25,
-            // SIM-ASSUMPTION: anticoagulation is part of routine care once found; the course does not model it.
+            // persists until therapeutic anticoagulation is started (after a bleeding-risk assessment)
             resolveTauH: 72,
+            resolvedBy: ['anticoagulation'],
             organDrive: 0.25,
             organ: 'lung',
           },
@@ -382,6 +388,8 @@ export const cap: InfectionCase = {
   isolates: [{ id: 'sp', organismId: 's-pneumoniae', mechanisms: [] }],
   infections: [CAP],
   findings: [
+    { kind: 'sono-chest', reportKey: 'imaging.sono-chest.empyema', infectionId: 'empyema' },
+    { kind: 'sono-chest', reportKey: 'imaging.sono-chest.consolidation', infectionId: 'cap' },
     { kind: 'cxr', reportKey: 'imaging.cxr.lobar', infectionId: 'cap' },
     { kind: 'cxr', reportKey: 'imaging.cxr.effusion', infectionId: 'empyema' },
     { kind: 'ct-chest', reportKey: 'imaging.ct-chest.empyema', infectionId: 'empyema' },
@@ -423,8 +431,8 @@ export const cap: InfectionCase = {
                 result: 'adequate',
               },
             ],
-            // response-guided, commonly 2–6 weeks
-            minEffectiveDays: 21,
+            // response-guided, commonly 2–6 weeks: the engine minimum is the lowest accepted course (14 d)
+            minEffectiveDays: 14,
             onsetH: 30,
           },
         ],

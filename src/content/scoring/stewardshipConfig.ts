@@ -62,11 +62,13 @@ export const STEWARDSHIP_WEIGHTS: StewardshipWeights = {
   oralWindowH: 24,
   ivTooLongPerDay: 4,
   ivTooLongMax: 12,
-  durationTolerance: [1, 2],
+  // no accepted course shorter than the engine's clinical minimum (engine and score agree)
+  durationTolerance: [0, 2],
   tooLongPerDay: 4,
   tooLongMax: 20,
   tooShort: 10,
   noStopPlan: 4,
+  durationNotAssessable: 6,
   treatedThenStopped: 10,
   lateTdm: 3,
   timeoutMissed: 8,
@@ -103,8 +105,9 @@ export const SPECTRUM_BREADTH: Partial<Record<DrugClass, number>> = {
 const SAB_FOLLOW_UP: CaseCheck = {
   kind: 'followUpBloodCultures',
   from: { firstPositiveBloodCulture: true },
-  fromH: 36,
-  withinH: 72,
+  // ≥ 2 sets at 48 h after the first positive sample (operational grace ± 8 h), then every 24–48 h until negative
+  fromH: 40,
+  withinH: 56,
   minSets: 2,
   untilNegative: true,
   okKey: 'stw.chk.followUpBc.ok',
@@ -127,26 +130,31 @@ const ID_CONSULT: CaseCheck = {
   key: 'stw.chk.idConsult.missed',
   penalty: 5,
 };
+/** Persistent bacteraemia (a follow-up culture ≥ 48 h after the first positive one grows again): TEE. */
 const TEE_PERSISTENT: CaseCheck = {
   kind: 'imaging',
   imaging: ['tee'],
-  withinH: 168,
+  from: { persistentBacteraemia: true },
+  withinH: 72,
   okKey: 'stw.chk.teeRisk.ok',
   key: 'stw.chk.teeRisk.missed',
   penalty: 6,
 };
 const FN_NO_GP_ESCALATION: CaseCheck = {
+  // fever alone in a stable course: not judged after shock or with a Gram-positive organism
   kind: 'avoidClasses',
   classes: ['glycopeptide', 'oxazolidinone', 'lipopeptide'],
+  unlessShock: true,
+  unlessCausativeGroups: ['staphylococcus', 'enterococcus', 'streptococcus'],
   okKey: 'stw.chk.noEscalationFn.ok',
   key: 'stw.chk.noEscalationFn.missed',
   penalty: 10,
 };
 const FN_NO_EARLY_ANTIFUNGAL: CaseCheck = {
-  // standard-risk, short expected neutropenia: no empirical antifungal in the first 96 h
+  // standard-risk, short expected neutropenia: no empirical antifungal — elapsed time alone does not create an indication
   kind: 'avoidClasses',
   classes: ['echinocandin', 'azole'],
-  beforeH: 96,
+  unlessCausativeGroups: ['yeast'],
   okKey: 'stw.chk.noEarlyAntifungal.ok',
   key: 'stw.chk.noEarlyAntifungal.missed',
   penalty: 6,
@@ -159,6 +167,7 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     focusDiagnosisId: 'urinary',
     // ≈ 7 days of effective therapy from the first effective dose, if clinical improvement and no obstruction/abscess
     targetDays: 7,
+    empiricalOptions: ['ceftriaxone', 'cefotaxime', 'piperacillin-tazobactam'],
     learningKey: 'stw.learn.feverRigors',
   },
   'ward-positive-urine': {
@@ -175,14 +184,15 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     // ≈ 4 days after adequate source control (STOP-IT); a partial drain does not start the clock
     targetDays: 4,
     durationFrom: 'source-control',
+    empiricalOptions: ['piperacillin-tazobactam'],
     learningKey: 'stw.learn.peritonitis',
     checks: [
       {
         kind: 'procedure',
         procedures: ['surgical-source-control', 'interventional-drainage'],
         adequateOnly: true,
-        // sepsis: early control, ideally within 6 h of the diagnosis (the turbid drain is reported at 2 h)
-        withinH: 8,
+        // sepsis: ideally within 6 h of the initial recognition (fever, peritonism and drain output at admission)
+        withinH: 6,
         okKey: 'stw.chk.sourceControl.ok',
         key: 'stw.chk.sourceControl.missed',
         penalty: 20,
@@ -196,12 +206,22 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
         penalty: 6,
       },
       {
+        // antifungal: justified only by invasive Candida — old-drain colonisation alone is no indication
         kind: 'avoidClasses',
-        classes: ['echinocandin', 'azole', 'oxazolidinone', 'lipopeptide'],
+        classes: ['echinocandin', 'azole'],
         unlessCausativeGroups: ['yeast'],
         okKey: 'stw.chk.noReflexCover.ok',
         key: 'stw.chk.noReflexCover.missed',
-        penalty: 12,
+        penalty: 8,
+      },
+      {
+        // anti-VRE agent: justified only by invasive VRE / susceptible Gram-positive infection
+        kind: 'avoidClasses',
+        classes: ['oxazolidinone', 'lipopeptide'],
+        unlessCausativeGroups: ['enterococcus'],
+        okKey: 'stw.chk.noReflexVre.ok',
+        key: 'stw.chk.noReflexVre.missed',
+        penalty: 8,
       },
     ],
   },
@@ -214,6 +234,8 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     durationFrom: 'first-negative-blood-culture',
     durationTolerance: [0, 3],
     oralSwitch: false,
+    definitiveOptions: ['cefazolin', 'flucloxacillin'],
+    durationPrerequisite: { imaging: ['tte', 'tee'], teeIfPersistent: true },
     learningKey: 'stw.learn.sabLine',
     checks: [
       {
@@ -233,6 +255,7 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
       },
       SAB_FOLLOW_UP,
       SAB_ECHO,
+      TEE_PERSISTENT,
       ID_CONSULT,
     ],
   },
@@ -268,6 +291,35 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
         penalty: 10,
       },
       {
+        // fulminant colitis (ileus): enteral vancomycin 4 × 500 mg (+ rectal in ileus) and i.v. metronidazole
+        // (IDSA/SHEA pathway), urgent imaging and surgical/ICU assessment — standard treatment does not complete it
+        kind: 'requireDrugs',
+        groups: [['vancomycin-po']],
+        minDose: 'high',
+        from: { call: 'nurse.ileus' },
+        okKey: 'stw.chk.fulminantVanco.ok',
+        key: 'stw.chk.fulminantVanco.missed',
+        penalty: 10,
+      },
+      {
+        kind: 'requireDrugs',
+        groups: [['metronidazole']],
+        route: 'iv',
+        from: { call: 'nurse.ileus' },
+        okKey: 'stw.chk.fulminantMetro.ok',
+        key: 'stw.chk.fulminantMetro.missed',
+        penalty: 6,
+      },
+      {
+        kind: 'imaging',
+        imaging: ['ct-abdomen'],
+        from: { call: 'nurse.ileus' },
+        withinH: 6,
+        okKey: 'stw.chk.fulminantImaging.ok',
+        key: 'stw.chk.fulminantImaging.missed',
+        penalty: 6,
+      },
+      {
         // contact precautions as soon as CDI is suspected
         kind: 'isolation',
         withinH: 6,
@@ -290,6 +342,7 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     focusDiagnosisId: null,
     targetDays: null,
     learningKey: 'stw.learn.notPneumonia',
+    empiricalStartReasonable: true,
     checks: [
       {
         kind: 'stopDrug',
@@ -390,6 +443,8 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     durationFrom: 'first-negative-blood-culture',
     durationTolerance: [0, 3],
     oralSwitch: false,
+    definitiveOptions: ['vancomycin', 'daptomycin'],
+    durationPrerequisite: { imaging: ['tte', 'tee'], teeIfPersistent: true },
     learningKey: 'stw.learn.mrsa',
     checks: [
       {
@@ -402,6 +457,7 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
       },
       SAB_FOLLOW_UP,
       SAB_ECHO,
+      TEE_PERSISTENT,
       ID_CONSULT,
     ],
   },
@@ -415,8 +471,18 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     durationTolerance: [0, 7],
     bloodCultureSetsTarget: 3,
     oralSwitch: false,
+    definitiveOptions: ['penicillin-g', 'ceftriaxone', 'ampicillin', 'vancomycin'],
     learningKey: 'stw.learn.endocarditis',
     checks: [
+      {
+        // clearance must be documented: follow-up cultures after effective therapy
+        kind: 'followUpBloodCultures',
+        fromH: 48,
+        withinH: 96,
+        okKey: 'stw.chk.followUpBcIe.ok',
+        key: 'stw.chk.followUpBcIe.missed',
+        penalty: 8,
+      },
       {
         kind: 'imaging',
         imaging: ['tee'],
@@ -447,12 +513,12 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     infectionPresent: false,
     empiricalIndicated: true,
     severity: 'febrileNeutropenia',
-    focusDiagnosisId: null,
     // FUO: stop after 3–5 days of defervescence and clinical recovery, irrespective of the neutrophil count
     targetDays: 3,
     durationFrom: 'defervescence',
     durationTolerance: [0, 2],
     oralSwitch: false,
+    focusDiagnosisId: 'fn-fuo',
     learningKey: 'stw.learn.fn',
     checks: [
       {
@@ -475,10 +541,22 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
     infectionPresent: true,
     severity: 'sepsis',
     focusDiagnosisId: 'meningitis',
+    // uncomplicated responding pneumococcal meningitis: 10–14 days
     targetDays: 10,
+    durationTolerance: [0, 4],
     oralSwitch: false,
     learningKey: 'stw.learn.meningitis',
     checks: [
+      {
+        // lumbar puncture with CSF analysis when safe (immediately if no imaging indication) — never delaying therapy
+        kind: 'test',
+        specimen: 'puncture-culture',
+        site: 'csf',
+        withinH: 4,
+        okKey: 'stw.chk.lp.ok',
+        key: 'stw.chk.lp.missed',
+        penalty: 10,
+      },
       {
         kind: 'antibioticBeforeImaging',
         imaging: 'ct-head',
@@ -518,6 +596,10 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
         // empirical cover of the aerobic and anaerobic bite flora; plain penicillin only as targeted therapy
         kind: 'empiricalDrugs',
         drugIds: ['amoxicillin-clavulanate', 'ampicillin-sulbactam'],
+        // justified non-preferred alternative with aerobic and anaerobic cover
+        alternatives: [['ceftriaxone', 'metronidazole']],
+        altKey: 'stw.chk.pasteurella.alt',
+        altPenalty: 2,
         okKey: 'stw.chk.pasteurella.ok',
         key: 'stw.chk.pasteurella.missed',
         penalty: 12,
@@ -572,6 +654,34 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
 export const STEWARDSHIP_VARIANTS: Readonly<
   Record<string, Readonly<Record<string, Partial<StewardshipConfig>>>>
 > = {
+  'ward-fever-rigors': {
+    obstructed: {
+      learningKey: 'stw.learn.obstruction',
+      checks: [
+        {
+          kind: 'imaging',
+          imaging: ['sono-urinary', 'ct-abdomen'],
+          withinH: 12,
+          okKey: 'stw.chk.renalImaging.ok',
+          key: 'stw.chk.renalImaging.missed',
+          penalty: 6,
+        },
+        {
+          // an infected obstructed system needs urgent decompression — escalating antibiotics does not replace it
+          kind: 'procedure',
+          procedures: ['urological-decompression'],
+          adequateOnly: true,
+          from: {
+            finding: ['imaging.sono-urinary.hydronephrosis', 'imaging.ct-abdomen.obstruction'],
+          },
+          withinH: 6,
+          okKey: 'stw.chk.decompression.ok',
+          key: 'stw.chk.decompression.missed',
+          penalty: 20,
+        },
+      ],
+    },
+  },
   'ward-positive-urine': {
     'delirium-dehydration': {
       checks: [
@@ -603,16 +713,27 @@ export const STEWARDSHIP_VARIANTS: Readonly<
   'ward-fever-on-antibiotics': {
     'pulmonary-embolism': {
       focusDiagnosisId: 'pulmonary-embolism',
+      learningKey: 'stw.learn.pe',
       checks: [
         {
-          // probability- and stability-based work-up once dyspnoea is reported
+          // immediate reassessment and probability-based imaging once dyspnoea is reported (a positive proximal DVT
+          // can establish the treatment indication; a negative duplex alone does not exclude PE)
           kind: 'imaging',
           imaging: ['ct-pa', 'duplex-legs'],
           from: { call: 'nurse.dyspnoea' },
-          withinH: 24,
+          withinH: 4,
           okKey: 'stw.chk.ctpa.ok',
           key: 'stw.chk.ctpa.missed',
           penalty: 8,
+        },
+        {
+          kind: 'procedure',
+          procedures: ['anticoagulation'],
+          from: { finding: ['imaging.ct-pa.embolism', 'imaging.duplex-legs.dvt'] },
+          withinH: 6,
+          okKey: 'stw.chk.anticoagulation.ok',
+          key: 'stw.chk.anticoagulation.missed',
+          penalty: 10,
         },
       ],
     },
@@ -664,15 +785,25 @@ export const STEWARDSHIP_VARIANTS: Readonly<
       ],
     },
     empyema: {
-      // response-guided, commonly 2–6 weeks
+      // response-guided, commonly 2–6 weeks (engine minimum 14 d = lowest accepted)
       targetDays: 21,
       durationTolerance: [7, 21],
       learningKey: 'stw.learn.capEmpyema',
       checks: [
         {
+          // investigation after the persistent-fever call: thoracic ultrasound (guided sampling) or CT
+          kind: 'imaging',
+          imaging: ['sono-chest', 'ct-chest'],
+          from: { call: 'nurse.stillFebrile' },
+          withinH: 12,
+          okKey: 'stw.chk.pleuraWorkup.ok',
+          key: 'stw.chk.pleuraWorkup.missed',
+          penalty: 6,
+        },
+        {
           kind: 'procedure',
           procedures: ['pleural-drainage'],
-          from: { finding: ['imaging.cxr.effusion', 'imaging.ct-chest.empyema'] },
+          from: { finding: ['imaging.sono-chest.empyema', 'imaging.ct-chest.empyema'] },
           withinH: 24,
           okKey: 'stw.chk.drainage.ok',
           key: 'stw.chk.drainage.missed',
@@ -686,17 +817,29 @@ export const STEWARDSHIP_VARIANTS: Readonly<
       targetDays: 28,
       durationTolerance: [0, 14],
       learningKey: 'stw.learn.mrsaThrombosis',
-      checks: [TEE_PERSISTENT],
+      checks: [
+        {
+          // persistent bacteraemia: look for septic thrombosis of the catheterised vein
+          kind: 'imaging',
+          imaging: ['duplex-catheter-vein'],
+          from: { persistentBacteraemia: true },
+          withinH: 48,
+          okKey: 'stw.chk.duplexVein.ok',
+          key: 'stw.chk.duplexVein.missed',
+          penalty: 8,
+        },
+      ],
     },
   },
   'ward-endocarditis': {
     embolic: {
       checks: [
         {
+          // acute stroke pathway: immediate brain (and vascular) imaging at the first decision point
           kind: 'imaging',
           imaging: ['ct-head'],
           from: { call: 'nurse.embolic' },
-          withinH: 6,
+          withinH: 1,
           okKey: 'stw.chk.ctHeadEmbolic.ok',
           key: 'stw.chk.ctHeadEmbolic.missed',
           penalty: 8,
@@ -718,8 +861,12 @@ export const STEWARDSHIP_VARIANTS: Readonly<
       learningKey: 'stw.learn.endocarditisEnterococcal',
       checks: [
         {
+          // ampicillin 2 g every 4 h + ceftriaxone 2 g every 12 h i.v., running together
           kind: 'requireDrugs',
           groups: [['ampicillin'], ['ceftriaxone']],
+          minDose: 'high',
+          route: 'iv',
+          concurrentDays: 10,
           okKey: 'stw.chk.enterococcalCombo.ok',
           key: 'stw.chk.enterococcalCombo.missed',
           penalty: 12,
@@ -736,7 +883,7 @@ export const STEWARDSHIP_VARIANTS: Readonly<
       focusDiagnosisId: 'bloodstream',
       targetDays: 7,
       durationFrom: 'first-effective-dose',
-      durationTolerance: [1, 2],
+      durationTolerance: [0, 2],
       learningKey: 'stw.learn.fnGramNegative',
       checks: [FN_NO_GP_ESCALATION, FN_NO_EARLY_ANTIFUNGAL],
     },
@@ -745,7 +892,7 @@ export const STEWARDSHIP_VARIANTS: Readonly<
       focusDiagnosisId: 'line',
       targetDays: 7,
       durationFrom: 'first-negative-blood-culture',
-      durationTolerance: [1, 2],
+      durationTolerance: [0, 2],
       learningKey: 'stw.learn.fnPort',
       checks: [
         {
@@ -773,7 +920,11 @@ export const STEWARDSHIP_VARIANTS: Readonly<
         },
       ],
     },
-    listeria: { targetDays: 21, learningKey: 'stw.learn.meningitisListeria' },
+    listeria: {
+      targetDays: 21,
+      durationTolerance: [0, 7],
+      learningKey: 'stw.learn.meningitisListeria',
+    },
   },
   'ward-cat-bite': {
     tenosynovitis: {
@@ -809,7 +960,16 @@ export const STEWARDSHIP_VARIANTS: Readonly<
           key: 'stw.chk.mri.missed',
           penalty: 8,
         },
-        TEE_PERSISTENT,
+        {
+          // a deep focus: TEE even with a negative TTE
+          kind: 'imaging',
+          imaging: ['tee'],
+          from: { call: 'nurse.backPain' },
+          withinH: 72,
+          okKey: 'stw.chk.teeRisk.ok',
+          key: 'stw.chk.teeRisk.missed',
+          penalty: 6,
+        },
       ],
     },
   },

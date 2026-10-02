@@ -22,6 +22,7 @@ const LAB_UNITS: Record<keyof LabPanel, string> = {
   platelets: 'G/L',
   bilirubin: 'mg/dL',
   vancomycinAuc24: 'mg·h/L',
+  vancomycinPreDialysis: 'mg/L',
 };
 
 /** Laboratory values per day (last draw of each day). */

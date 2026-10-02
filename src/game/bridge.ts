@@ -12,6 +12,10 @@ export const BRIDGE_SAMPLE_S = 5;
 export const BRIDGE_MAP_TARGET = 65;
 /** s — MAP must stay at target this long to count as stabilised */
 export const BRIDGE_STABLE_S = 300;
+/** s — SaO₂ < 90 % for this long counts as respiratory failure */
+export const BRIDGE_HYPOXIA_S = 300;
+/** s — FiO₂ ≥ 60 % with SaO₂ < 94 % for this long counts as respiratory failure */
+export const BRIDGE_HIGH_FIO2_S = 600;
 
 export interface BridgeSample {
   /** s */
@@ -110,7 +114,20 @@ export function realtimeOutcome(
     .filter((p) => p.kind === 'volumetric')
     .reduce((sum, p) => sum + p.deliveredMl, 0);
   const injury = s.patient.fluid.renal.injury;
-  const respiratoryFailure = samples.some((x) => x.spo2 < 90 || x.fio2 >= 60);
+  // Persistent impairment only: brief preoxygenation or an isolated high FiO2 setting is not respiratory failure.
+  const sustained = (pred: (x: BridgeSample) => boolean, minS: number) => {
+    let from: number | null = null;
+    for (const x of samples) {
+      if (pred(x)) {
+        from ??= x.t;
+        if (x.t - from >= minS) return true;
+      } else from = null;
+    }
+    return false;
+  };
+  const respiratoryFailure =
+    sustained((x) => x.spo2 < 90, BRIDGE_HYPOXIA_S) ||
+    sustained((x) => x.fio2 >= 60 && x.spo2 < 94, BRIDGE_HIGH_FIO2_S);
   return {
     survived: s.patient.cardio.spontaneousCirculation,
     durationMin: Math.round((end / 60) * 10) / 10,

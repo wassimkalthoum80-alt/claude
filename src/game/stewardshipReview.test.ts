@@ -100,12 +100,17 @@ describe('courses still running at case end are judged by their plan', () => {
     const open = v(endocarditis, 'viridans');
     for (let i = 0; i < 3; i++) open.dispatch(cultures(1));
     open.dispatch(start('ceftriaxone'));
+    runTo(open, 72);
+    open.dispatch(cultures(2));
     runTo(open, open.caseDef.maxDurationH + 1);
     expect(keys(open)).toContain('stw.noStopPlan');
 
     const planned = v(endocarditis, 'viridans');
     for (let i = 0; i < 3; i++) planned.dispatch(cultures(1));
-    planned.dispatch(start('ceftriaxone', { plannedDays: 30 }));
+    // 28 days counted from the first negative culture (sampled at 72 h)
+    planned.dispatch(start('ceftriaxone', { plannedDays: 31 }));
+    runTo(planned, 72);
+    planned.dispatch(cultures(2));
     runTo(planned, planned.caseDef.maxDurationH + 1);
     expect(keys(planned)).toContain('stw.plannedOk');
     expect(keys(planned)).not.toContain('stw.tooShort');

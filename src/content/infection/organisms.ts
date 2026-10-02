@@ -158,7 +158,19 @@ export const ORGANISMS: readonly OrganismDef[] = [
       'folate-antagonist': 'R',
       nitrofuran: 'R',
     },
-    intrinsicDrugs: { moxifloxacin: 'R', 'fosfomycin-po': 'R' },
+    // EUCAST: wild-type P. aeruginosa is reported I ("susceptible, increased exposure") for these agents — high-dose
+    // regimens are required; meropenem is interpreted per isolate (S here).
+    intrinsicDrugs: {
+      moxifloxacin: 'R',
+      'fosfomycin-po': 'R',
+      piperacillin: 'I',
+      'piperacillin-tazobactam': 'I',
+      ceftazidime: 'I',
+      cefepime: 'I',
+      imipenem: 'I',
+      ciprofloxacin: 'I',
+      levofloxacin: 'I',
+    },
     ttpH: 16,
   },
   {
@@ -195,7 +207,8 @@ export const ORGANISMS: readonly OrganismDef[] = [
     group: 'stenotrophomonas',
     morphology: 'gnr',
     intrinsic: {
-      ...all(BETA_LACTAMS),
+      // β-lactams R except cefiderocol (siderophore) and aztreonam/avibactam: not excluded by species
+      ...all(BETA_LACTAMS.filter((c) => c !== 'siderophore-ceph' && c !== 'new-bl-bli')),
       ...all(GRAM_POSITIVE_ONLY),
       ...all(ANTIFUNGALS),
       aminoglycoside: 'R',
@@ -207,9 +220,15 @@ export const ORGANISMS: readonly OrganismDef[] = [
     },
     // Cefiderocol or aztreonam-avibactam activity is not guaranteed by species identity (no EUCAST breakpoints):
     // they stay under the class default and are not reported on the panel.
+    // Cefiderocol (IDSA 2026 preferred, limited evidence) and aztreonam/avibactam (alternative) stay possible; no EUCAST
+    // breakpoints — not reported on the panel. The other new BL/BLI combinations are R (L1/L2 enzymes).
     intrinsicDrugs: {
       ciprofloxacin: 'R',
       moxifloxacin: 'I',
+      'ceftazidime-avibactam': 'R',
+      'ceftolozane-tazobactam': 'R',
+      'meropenem-vaborbactam': 'R',
+      'imipenem-relebactam': 'R',
     },
     ttpH: 18,
   },
@@ -518,13 +537,16 @@ export const MECHANISMS: readonly MechanismDef[] = [
       ceph1: 'R',
       ceph2: 'R',
       ceph3: 'R',
-      'ceph3-antipseudomonal': 'R',
-      ceph4: 'R',
     },
-    // SIM-ASSUMPTION: piperacillin-tazobactam may test S but is unreliable in ESBL bloodstream infection
-    // (randomised evidence favours carbapenems); modelled as an activity cap.
+    // Typical CTX-M phenotype when the case gives no measured AST (cases can set a measured phenotype per isolate via
+    // `overrides`): cefotaxime/ceftriaxone R, ceftazidime and cefepime often only I.
+    drugs: { ceftazidime: 'I', cefepime: 'I' },
+    // SIM-ASSUMPTION: clinical suitability, separate from the lab category — piperacillin-tazobactam and cefepime may test
+    // S/I but are unreliable in invasive ESBL infection (IDSA AMR 2026); modelled as activity caps.
     activityCap: {
       'piperacillin-tazobactam': 0.35,
+      cefepime: 0.35,
+      ceftazidime: 0.35,
       'amoxicillin-clavulanate': 0.3,
       'ampicillin-sulbactam': 0.3,
     },
@@ -603,6 +625,8 @@ export const MECHANISMS: readonly MechanismDef[] = [
     id: 'oprd-loss',
     labelKey: 'mech.oprd-loss',
     drugs: { imipenem: 'R', meropenem: 'I' },
+    // together with efflux overexpression meropenem becomes resistant (Köhler et al. 1999)
+    withMechanism: [{ mechanism: 'efflux', drugs: { meropenem: 'R' } }],
   },
   {
     id: 'efflux',

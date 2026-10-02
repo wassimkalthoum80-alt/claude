@@ -32,7 +32,15 @@ import {
 import { InfectionEngine, type InfectionCase, type InfectionCommand } from '../sim';
 import { scoreStewardship } from './stewardship';
 
-const make = (c: InfectionCase) => new InfectionEngine({ caseDef: c, library: LIB });
+/** The case's first (classic) variant, so the lesson under test does not depend on the variant draw. */
+const make = (c: InfectionCase) => {
+  const first = c.variants?.[0]?.id;
+  for (let seed = c.seed; first && seed < c.seed + 500; seed++) {
+    const e = new InfectionEngine({ caseDef: c, library: LIB, seed });
+    if (e.variant === first) return e;
+  }
+  return new InfectionEngine({ caseDef: c, library: LIB });
+};
 const runTo = (e: InfectionEngine, h: number) => {
   while (e.timeH < h && !e.getView().ended) e.advance(h - e.timeH);
 };
@@ -619,8 +627,8 @@ describe('stewardship scoring — phase 5 bloodstream and special cases', () => 
 
   it('C3 enterococcal: ampicillin + ceftriaxone is credited, 6-week target', () => {
     const e = v(endocarditis, 'enterococcal');
-    e.dispatch(start('ampicillin'));
-    e.dispatch(start('ceftriaxone'));
+    e.dispatch(start('ampicillin', { dose: 'high' }));
+    e.dispatch(start('ceftriaxone', { dose: 'high' }));
     runTo(e, 24);
     expect(keysOf(e)).toContain('stw.chk.enterococcalCombo.ok');
     expect(result(e).metrics.targetDays).toBe(42);

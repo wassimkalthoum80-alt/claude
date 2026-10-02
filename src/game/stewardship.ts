@@ -15,6 +15,7 @@ import {
   type OrganismGroup,
   type ProcedureId,
   type SpecimenKind,
+  type SpecimenSite,
   type TherapyOrder,
 } from '../sim';
 import type { Outcome, Stars } from './scoringTypes';
@@ -41,9 +42,9 @@ export interface StewardshipConfig {
   /** i18n key of the take-home message */
   learningKey: string;
   /**
-   * where the target duration is counted from (default: first effective dose). 'first-negative-blood-culture' falls
-   * back to the first effective dose when no follow-up culture was taken; 'defervescence' = start of a 24-h afebrile
-   * period (febrile neutropenia without a focus).
+   * where the target duration is counted from (default: first effective dose). 'first-negative-blood-culture' needs a
+   * documented negative follow-up culture — without it the stop date is not assessable; 'defervescence' = start of a
+   * 24-h afebrile period (febrile neutropenia without a focus).
    */
   durationFrom?:
     | 'first-dose'
@@ -59,6 +60,17 @@ export interface StewardshipConfig {
   bloodCultureSetsTarget?: number;
   /** the generic i.v.→oral switch is judged (false: endocarditis, CNS, complicated S. aureus bacteraemia) */
   oralSwitch?: boolean;
+  /**
+   * guideline-appropriate empirical drugs: when the first regimen contains one and an occult resistance makes it
+   * inactive, timeliness is judged on the empirical choice and the response to the result, not on hidden truth
+   */
+  empiricalOptions?: string[];
+  /** a start on the information available is reasonable here; stopping it at reassessment costs nothing */
+  empiricalStartReasonable?: boolean;
+  /** syndrome-appropriate definitive drugs: de-escalation only ranks these (e.g. S. aureus bacteraemia) */
+  definitiveOptions?: string[];
+  /** work-up that must be complete before a course is judged adequate (e.g. echo; TEE if bacteraemia persists) */
+  durationPrerequisite?: { imaging: ImagingKind[]; teeIfPersistent?: boolean };
   /** case-specific actions the debrief checks */
   checks?: CaseCheck[];
 }
@@ -72,6 +84,8 @@ export interface CheckAnchor {
   call?: string;
   finding?: string[];
   firstPositiveBloodCulture?: boolean;
+  /** sample time of the first follow-up blood culture ≥ 48 h after the first positive one that grew again */
+  persistentBacteraemia?: boolean;
 }
 
 /**
@@ -88,19 +102,36 @@ export type CaseCheck = { okKey: string; key: string; penalty: number; from?: Ch
       /** only a procedure that gives adequate source control counts (a partial drain does not) */
       adequateOnly?: boolean;
     }
-  /** every group has at least one drug ordered, optionally at a minimum dose and route (e.g. CNS doses i.v.) */
-  | { kind: 'requireDrugs'; groups: string[][]; minDose?: DoseLevel; route?: 'iv' | 'po' }
+  /**
+   * every group has at least one drug ordered, optionally at a minimum dose and route (e.g. CNS doses i.v.), and — with
+   * `concurrentDays` — all groups running together that long (or until the case ends)
+   */
+  | {
+      kind: 'requireDrugs';
+      groups: string[][];
+      minDose?: DoseLevel;
+      route?: 'iv' | 'po';
+      concurrentDays?: number;
+    }
   /** the first antibiotic is given before this imaging (or the imaging is not needed) */
   | { kind: 'antibioticBeforeImaging'; imaging: ImagingKind }
-  /** combination reduced to one antibacterial by this many hours after the causative resistogram */
+  /**
+   * combination reduced to one antibacterial by this many hours after the causative resistogram — judged only once the
+   * patient is stable (no shock or vasopressor in the preceding 24 h)
+   */
   | { kind: 'monotherapyAfterAst'; withinH: number }
   | { kind: 'imaging'; imaging: ImagingKind[]; withinH: number }
   | {
       kind: 'test';
       specimen: SpecimenKind | SpecimenKind[];
       withinH: number;
-      /** taken before the first antibiotic dose (a later sample counts as late) */
+      /**
+       * taken before the first antibiotic dose (a later sample counts as late, unless shock made the dose urgent and the
+       * sample followed within 2 h)
+       */
       beforeAntibiotic?: boolean;
+      /** only specimens from this site (e.g. CSF for the puncture-culture kind) */
+      site?: SpecimenSite;
     }
   /**
    * follow-up blood cultures from/within h after the anchor (default: effective therapy; S. aureus: the first positive
@@ -121,8 +152,17 @@ export type CaseCheck = { okKey: string; key: string; penalty: number; from?: Ch
   | { kind: 'stopDrug'; drugId: string; withinH: number }
   /** at least one of these drugs is ordered */
   | { kind: 'preferDrugs'; drugIds: string[] }
-  /** the first (empirical) regimen contains one of these drugs */
-  | { kind: 'empiricalDrugs'; drugIds: string[] }
+  /**
+   * the first (empirical) regimen contains one of these drugs; an `alternatives` regimen (all drugs of a group) with
+   * adequate coverage is a non-preferred choice (`altKey`, small deduction), not inadequate coverage
+   */
+  | {
+      kind: 'empiricalDrugs';
+      drugIds: string[];
+      alternatives?: string[][];
+      altKey?: string;
+      altPenalty?: number;
+    }
   /**
    * none of these drug classes is ordered (optionally only before h; not judged when a causative organism of these
    * groups makes the class indicated)
@@ -132,6 +172,8 @@ export type CaseCheck = { okKey: string; key: string; penalty: number; from?: Ch
       classes: DrugClass[];
       beforeH?: number;
       unlessCausativeGroups?: OrganismGroup[];
+      /** not judged when shock occurred (fever alone in a stable course is the subject) */
+      unlessShock?: boolean;
     }
   | { kind: 'isolation'; withinH: number }
 );
@@ -183,6 +225,8 @@ export interface StewardshipWeights {
     delayedTransport: number;
     punctureTube: number;
   };
+  /** no documented clearance or incomplete work-up: the course cannot be judged adequate */
+  durationNotAssessable: number;
   /** fraction of the harm deduction kept when the event happened despite appropriate prescribing */
   unavoidableHarmFactor: number;
   /** outcome-score deductions for harm caused during the course */
@@ -372,6 +416,12 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     ...specimens.filter((s) => s.order.kind === 'blood-culture').map((s) => s.order.sets ?? 1),
   );
   const cause = causative(input);
+  /** shock made immediate antibiotics urgent at this hour (sampling may follow the first dose) */
+  const urgentAt = (t: number) =>
+    config.severity === 'septicShock' || log.some((e) => e.kind === 'shock' && e.t <= t);
+  const allergies = input.caseDef.patient.allergies ?? [];
+  const allergic = (d: AntiinfectiveDef) =>
+    allergies.includes(d.id) || allergies.includes(d.drugClass);
 
   // ── Time to effective therapy ──
   let timeToActiveH: number | null = null;
@@ -396,6 +446,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     timeToActiveH = firstAntibioticH;
   /** h of the first effective dose in course time (duration anchor; before the bridge adjustment) */
   const firstEffectiveH = timeToActiveH;
+  const firstDoseCourseH = firstAntibioticH;
 
   // Real-time bridge: the episode happened at the bridge hour while course time stood still. An antibiotic given in
   // it counts at its real minute; one ordered after the handover also waited the length of the episode.
@@ -411,6 +462,15 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         ? rt.t + o.antibioticsAtMin / 60
         : timeToActiveH + o.durationMin / 60;
     timeToActiveH = Math.round(timeToActiveH * 100) / 100;
+  }
+  // The first dose on the same (bridge-adjusted) clock, for judging the empirical choice.
+  let firstDoseH = firstDoseCourseH;
+  if (rt?.command.type === 'APPLY_REALTIME_OUTCOME' && firstDoseH !== null && firstDoseH >= rt.t) {
+    const o = rt.command.outcome;
+    firstDoseH =
+      o.antibioticsAtMin !== null && firstDoseH === rt.t
+        ? rt.t + o.antibioticsAtMin / 60
+        : firstDoseH + o.durationMin / 60;
   }
 
   // ── Resistogram of the causative isolates ──
@@ -428,21 +488,30 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   let reserveDaysUnjustified = 0;
   let co2Kg = 0;
   let costEur = 0;
-  const provenResistance = truth.isolates.some((iso) => {
-    const m = mrgnClass(iso, lib);
-    return m === '4MRGN' || m === 'MRSA' || m === 'VRE';
-  });
+  /** an equally effective, non-reserve, non-allergenic option exists for every causative isolate at its focus */
+  const nonReserveAlternative =
+    cause.length > 0 &&
+    cause.every(({ iso, focus }) =>
+      [...lib.drugs.values()].some(
+        (d) =>
+          !d.labOnly &&
+          !isReserve(d, lib) &&
+          !allergic(d) &&
+          activity(probe(d, d.routes.includes('iv') ? 'iv' : 'po'), iso, focus, lib, 24) >= 0.9,
+      ),
+    );
   /**
    * Reserve days without justification. A documented indication (suspected or confirmed: prior isolate, high-risk
-   * empirical use, severe allergy) or ABS approval justifies the start; without proven resistance, days beyond the
-   * de-escalation window after the resistogram are no longer justified.
+   * empirical use, severe allergy) or ABS approval justifies the start. After the resistogram the current indication
+   * is reassessed: continuing is unjustified only when an equally effective, safer non-reserve alternative exists
+   * (beyond the de-escalation window) — not by the hygiene label (MRGN/MRSA/VRE).
    */
   const unjustifiedReserveDays = (o: TherapyOrder): number => {
     const d = drug(o);
     if (!d || !isReserve(d, lib)) return 0;
     const stop = o.stoppedH ?? end;
     if (!o.indication && !o.absApproval) return days(stop - Math.max(0, o.startedH));
-    if (provenResistance || !Number.isFinite(astH)) return 0;
+    if (!Number.isFinite(astH) || !nonReserveAlternative) return 0;
     const from = Math.max(o.startedH, astH + w.deescalationWindowH);
     return stop > from ? days(stop - from) : 0;
   };
@@ -459,11 +528,47 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
 
   // ── Antibiotic indication and timing ──
   const severityTarget = lib.guidelines.timeToAntibioticH[config.severity];
+  // An appropriate empirical choice that an occult resistance made inactive is judged on the information available
+  // then: the empirical start on time, then the response to the result (effective therapy ≤ 12 h after it).
+  const empiricalAppropriate =
+    firstAntibioticH !== null &&
+    firstDoseH !== null &&
+    firstDoseH <= severityTarget &&
+    learnerOrders.some(
+      (o) => o.startedH === firstAntibioticH && (config.empiricalOptions ?? []).includes(o.drugId),
+    );
+  const resultH = Math.min(
+    astH,
+    ...micro
+      .filter(
+        (m) =>
+          m.report.stage === 'identification' &&
+          (m.report.rapid ?? []).some((r) => r.positive && r.test !== 'mecA'),
+      )
+      .map((m) => m.atH),
+    Infinity,
+  );
   if (config.infectionPresent || config.empiricalIndicated) {
-    if (timeToActiveH === null) add('stw.noActive', -w.noActiveTherapy);
-    else if (timeToActiveH <= severityTarget)
+    if (timeToActiveH === null && !empiricalAppropriate) add('stw.noActive', -w.noActiveTherapy);
+    else if (timeToActiveH !== null && timeToActiveH <= severityTarget)
       add('stw.timely', 0, { h: timeToActiveH, target: severityTarget });
-    else
+    else if (empiricalAppropriate) {
+      add('stw.empiricalReasonable', 0, { target: severityTarget });
+      if (Number.isFinite(resultH)) {
+        const after = timeToActiveH === null ? null : Math.max(0, timeToActiveH - resultH);
+        if (after !== null && after <= 12) add('stw.switchedOnResult', 0, { h: Math.round(after) });
+        else if (after !== null)
+          add(
+            'stw.switchLate',
+            -Math.min(w.lateAntibioticMax, (w.lateAntibioticPerH * (after - 12)) / 2),
+            {
+              h: Math.round(after),
+            },
+          );
+        else if (end - resultH > 12)
+          add('stw.switchLate', -w.lateAntibioticMax, { h: Math.round(end - resultH) });
+      }
+    } else if (timeToActiveH !== null)
       add(
         'stw.late',
         -Math.min(w.lateAntibioticMax, w.lateAntibioticPerH * (timeToActiveH - severityTarget)),
@@ -478,8 +583,11 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     firstAntibioticH !== null &&
     learnerOrders.every((o) => o.stoppedH !== null && o.stoppedH - firstAntibioticH <= 72)
   ) {
-    // Empirical start on the information available, stopped at reassessment: a smaller deduction than continuing.
-    add('stw.treatedThenStopped', -w.treatedThenStopped, { days: view.antibioticDays });
+    // Empirical start on the information available, stopped at reassessment: no deduction where the start was a
+    // reasonable choice, a small one otherwise.
+    if (config.empiricalStartReasonable)
+      add('stw.empiricalStoppedOk', 0, { days: view.antibioticDays });
+    else add('stw.treatedThenStopped', -w.treatedThenStopped, { days: view.antibioticDays });
   } else {
     add(
       'stw.treatedNoInfection',
@@ -499,8 +607,17 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     firstAntibioticH === null || config.bloodCulturesExpected === false
       ? null
       : bcBefore.length > 0;
+  // Shock: the dose must not wait — cultures taken as soon as feasible (≤ 1 h after the first dose) earn full credit.
+  const culturesSoonAfter =
+    firstAntibioticH !== null &&
+    urgentAt(firstAntibioticH) &&
+    specimens.some(
+      (s) =>
+        s.order.kind === 'blood-culture' && s.t >= firstAntibioticH && s.t <= firstAntibioticH + 1,
+    );
   if (culturesBeforeAntibiotics !== null) {
     if (culturesBeforeAntibiotics) add('stw.culturesBefore', 0);
+    else if (culturesSoonAfter) add('stw.culturesSoonAfter', 0);
     else
       add(
         'stw.noCulturesBefore',
@@ -572,8 +689,10 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     for (const { iso, focus } of cause) {
       let best = Infinity;
       for (const d of lib.drugs.values()) {
-        if (d.labOnly) continue;
-        if (activity(probe(d, d.routes.includes('iv') ? 'iv' : 'po'), iso, focus, lib, 0) >= 0.9)
+        if (d.labOnly || allergic(d)) continue;
+        // syndrome-appropriate regimen eligibility before ranking (e.g. no doxycycline for S. aureus bacteraemia)
+        if (config.definitiveOptions && !config.definitiveOptions.includes(d.id)) continue;
+        if (activity(probe(d, d.routes.includes('iv') ? 'iv' : 'po'), iso, focus, lib, 24) >= 0.9)
           best = Math.min(best, spectrumRank[d.drugClass] ?? 3);
       }
       minRank = Math.max(minRank, Number.isFinite(best) ? best : 5);
@@ -634,15 +753,25 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     Number.isFinite(astH)
   ) {
     const vit = view.vitals;
-    const eligibleAt = vit.find((p) => {
-      if (p.t < astH) return false;
-      const window = vit.filter((q) => q.t > p.t - 24 && q.t <= p.t);
-      return window.length >= 20 && window.every((q) => q.temperatureC < 38 && q.map >= 65);
-    })?.t;
+    // IVOS-like criteria: improving (afebrile 24 h), MAP ≥ 65 without vasopressor, usable enteral route (no ileus,
+    // vomiting or malabsorption), an oral regimen fully active at the site. Otherwise no late-i.v. penalty.
+    const enteralOk =
+      !input.caseDef.patient.enteralImpaired && !(truth.cdi.active && truth.cdi.severity >= 0.75);
+    const eligibleAt = enteralOk
+      ? vit.find((p) => {
+          if (p.t < astH) return false;
+          const window = vit.filter((q) => q.t > p.t - 24 && q.t <= p.t);
+          return (
+            window.length >= 20 &&
+            window.every((q) => q.temperatureC < 38 && q.map >= 65 && !q.vasopressor)
+          );
+        })?.t
+      : undefined;
     const oralOption = cause.every(({ iso, focus }) =>
       [...lib.drugs.values()].some((d) => {
-        if (!d.routes.includes('po') || (d.bioavailability ?? 0) < 0.7 || d.labOnly) return false;
-        return activity(probe(d, 'po'), iso, focus, lib, 0) >= 0.9;
+        if (!d.routes.includes('po') || (d.oralExposure ?? 1) < 0.8 || d.labOnly || allergic(d))
+          return false;
+        return activity(probe(d, 'po'), iso, focus, lib, 24) >= 0.9;
       }),
     );
     if (eligibleAt !== undefined && oralOption) {
@@ -674,7 +803,8 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     if (firstEffectiveH === null) return null;
     const negative = new Set(
       micro
-        .filter((m) => m.report.stage === 'no-growth' && m.report.final)
+        // documented clearance: a negative follow-up culture (the preliminary 48-h report suffices)
+        .filter((m) => m.report.stage === 'no-growth')
         .map((m) => m.report.specimenId),
     );
     return (
@@ -696,12 +826,40 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       )?.t ?? null
     );
   })();
+  const firstPositiveBcH = (() => {
+    const positive = new Set(
+      micro.filter((m) => m.report.stage === 'positive-signal').map((m) => m.report.specimenId),
+    );
+    return specimens.find((s) => s.order.kind === 'blood-culture' && positive.has(s.specimenId))?.t;
+  })();
+  /** sample time of the first follow-up blood culture ≥ 48 h after the first positive one that grew again */
+  const persistentBcH = (() => {
+    if (firstPositiveBcH === undefined) return undefined;
+    const positive = new Set(
+      micro.filter((m) => m.report.stage === 'positive-signal').map((m) => m.report.specimenId),
+    );
+    return specimens.find(
+      (s) =>
+        s.order.kind === 'blood-culture' &&
+        s.t >= firstPositiveBcH + 48 &&
+        positive.has(s.specimenId),
+    )?.t;
+  })();
+  const imagingDone = (kinds: readonly ImagingKind[]) =>
+    log.some((e) => e.kind === 'imaging' && kinds.includes(e.imaging));
+  /** the work-up a course needs before it can be judged adequate (e.g. echo; TEE when bacteraemia persists) */
+  const workupComplete = (() => {
+    const p = config.durationPrerequisite;
+    if (!p) return true;
+    if (!imagingDone(p.imaging)) return false;
+    return !(p.teeIfPersistent && persistentBcH !== undefined && !imagingDone(['tee']));
+  })();
   const effectiveAnchor = firstEffectiveH ?? firstAntibioticH;
   const anchorH =
     config.durationFrom === 'source-control'
       ? sourceControlH
       : config.durationFrom === 'first-negative-blood-culture'
-        ? (firstNegativeH ?? effectiveAnchor)
+        ? firstNegativeH
         : config.durationFrom === 'defervescence'
           ? defervescenceH
           : config.durationFrom === 'first-dose'
@@ -711,6 +869,16 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     learnerOrders.length && anchorH !== null
       ? Math.round(((lastStop - anchorH) / 24) * 10) / 10
       : 0;
+  if (
+    (config.infectionPresent || config.empiricalIndicated) &&
+    config.targetDays !== null &&
+    learnerOrders.length &&
+    anchorH === null &&
+    config.durationFrom === 'first-negative-blood-culture'
+  ) {
+    // No documented clearance (negative follow-up culture): the stop date cannot be set — no adequate course awarded.
+    add('stw.durationNotAssessable', -w.durationNotAssessable);
+  }
   if (
     (config.infectionPresent || config.empiricalIndicated) &&
     config.targetDays !== null &&
@@ -729,7 +897,8 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     } else if (running.length === 0 && totalDays < config.targetDays - below) {
       add('stw.tooShort', -w.tooShort, vars);
     } else if (running.length === 0) {
-      add('stw.durationOk', 0, vars);
+      if (workupComplete) add('stw.durationOk', 0, vars);
+      else add('stw.durationWorkupIncomplete', -w.durationNotAssessable, vars);
     } else if (running.some((o) => o.plannedDays === null)) {
       // Still running when the case ends: the plan (stop or review date) is what can be judged.
       add('stw.noStopPlan', -w.noStopPlan);
@@ -744,7 +913,8 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
           -Math.min(w.tooLongMax, w.tooLongPerDay * (planned - config.targetDays - above)),
           pvars,
         );
-      else add('stw.plannedOk', 0, pvars);
+      else if (workupComplete) add('stw.plannedOk', 0, pvars);
+      else add('stw.durationWorkupIncomplete', -w.durationNotAssessable, pvars);
     }
   }
 
@@ -754,12 +924,6 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     else if (doneAt !== null) add(c.key, -c.penalty / 2);
     else if (end - from > withinH) add(c.key, -c.penalty);
   };
-  const firstPositiveBcH = (() => {
-    const positive = new Set(
-      micro.filter((m) => m.report.stage === 'positive-signal').map((m) => m.report.specimenId),
-    );
-    return specimens.find((s) => s.order.kind === 'blood-culture' && positive.has(s.specimenId))?.t;
-  })();
   /** h the check starts counting (undefined: its anchor event never happened — not judged) */
   const anchorOf = (c: CaseCheck): number | undefined => {
     if (!c.from) return 0;
@@ -804,9 +968,24 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         const fits = (o: TherapyOrder) =>
           (!c.minDose || DOSE_RANK[o.dose] >= DOSE_RANK[c.minDose]) &&
           (!c.route || o.route === c.route);
-        const ok = c.groups.every((g) =>
-          learnerOrders.some((o) => g.includes(o.drugId) && fits(o)),
-        );
+        let ok = c.groups.every((g) => learnerOrders.some((o) => g.includes(o.drugId) && fits(o)));
+        if (ok && c.concurrentDays !== undefined) {
+          // every group running together (an adequate regimen, not one order of each)
+          const runs = (g: string[], t: number) =>
+            learnerOrders.some(
+              (o) => g.includes(o.drugId) && fits(o) && o.startedH <= t && (o.stoppedH ?? end) > t,
+            );
+          let together = 0;
+          let first: number | null = null;
+          for (let t = 0; t < end; t++) {
+            if (c.groups.every((g) => runs(g, t))) {
+              together++;
+              first ??= t;
+            }
+          }
+          const needed = first === null ? 1 : Math.min(c.concurrentDays * 24, end - first);
+          ok = together > 0 && together >= needed;
+        }
         add(ok ? c.okKey : c.key, ok ? 0 : -c.penalty);
         break;
       }
@@ -814,6 +993,13 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         if (!Number.isFinite(astH)) break;
         const at = astH + c.withinH;
         if (end < at) break;
+        // only once stable: shock or a vasopressor in the preceding 24 h calls for reassessment, not a stop rule
+        const unstable =
+          log.some((e) => e.kind === 'shock' && e.t > at - 24 && e.t <= at) ||
+          view.vitals.some(
+            (p) => p.t > at - 24 && p.t <= at && (p.vasopressor === true || p.map < 65),
+          );
+        if (unstable) break;
         // antibacterials only (antifungals and adjuncts do not count)
         const n = runningAt(at).filter((o) => {
           const cls = drug(o)?.drugClass;
@@ -843,9 +1029,14 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       }
       case 'test': {
         const kinds = Array.isArray(c.specimen) ? c.specimen : [c.specimen];
-        const at = specimens.find((e) => e.t >= from && kinds.includes(e.order.kind))?.t;
+        const at = specimens.find(
+          (e) =>
+            e.t >= from && kinds.includes(e.order.kind) && (!c.site || e.order.site === c.site),
+        )?.t;
         if (c.beforeAntibiotic && firstAntibioticH !== null && at !== undefined) {
-          if (at <= firstAntibioticH) add(c.okKey, 0);
+          // urgent antibiotics in shock: a sample as soon as feasible (≤ 2 h) is not an avoidable omission
+          if (at <= firstAntibioticH || (urgentAt(firstAntibioticH) && at <= firstAntibioticH + 2))
+            add(c.okKey, 0);
           else add(c.key, -c.penalty / 2);
         } else timed(c, at ?? null, c.withinH, from);
         break;
@@ -902,7 +1093,10 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       case 'empiricalDrugs': {
         if (firstAntibioticH === null) break;
         const empirical = learnerOrders.filter((o) => o.startedH <= firstAntibioticH + 1);
+        const ids = new Set(empirical.map((o) => o.drugId));
         if (empirical.some((o) => c.drugIds.includes(o.drugId))) add(c.okKey, 0);
+        else if ((c.alternatives ?? []).some((g) => g.every((id) => ids.has(id))))
+          add(c.altKey ?? c.okKey, -(c.altPenalty ?? 0));
         else add(c.key, -c.penalty);
         break;
       }
@@ -912,6 +1106,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
           return g !== undefined && (c.unlessCausativeGroups ?? []).includes(g);
         });
         if (indicated) break;
+        if (c.unlessShock && log.some((e) => e.kind === 'shock')) break;
         const used = learnerOrders.find((o) => {
           const cls = drug(o)?.drugClass;
           return (
@@ -976,14 +1171,18 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     )
       add('stw.statusRight', 0);
   }
-  // TDM: the first level within 24 h of the start (target exposure within 24–48 h in serious infection).
+  // TDM, drug-specific: the level must be ordered within the drug's window (vancomycin and aminoglycosides 24 h, so that
+  // target exposure is reached within 24–48 h; others 48 h). The order stands for the TDM-guided dosing service.
   const tdmOrderedAt = (o: TherapyOrder) =>
     commands.find((e) => e.command.type === 'ORDER_TDM' && e.command.orderId === o.id)?.t;
-  const tdmDrugs = orders.filter((o) => drug(o)?.tdm && (o.stoppedH ?? end) - o.startedH >= 24);
+  const tdmWindow = (o: TherapyOrder) => drug(o)?.tdmOrderWithinH ?? 48;
+  const tdmDrugs = orders.filter(
+    (o) => drug(o)?.tdm && (o.stoppedH ?? end) - o.startedH >= tdmWindow(o),
+  );
   const untested = tdmDrugs.filter((o) => !o.tdm);
   const lateTdm = tdmDrugs.filter((o) => {
     const at = tdmOrderedAt(o);
-    return o.tdm && at !== undefined && at - o.startedH > 24;
+    return o.tdm && at !== undefined && at - o.startedH > tdmWindow(o);
   });
   if (untested.length)
     add('stw.missingTdm', -w.missingTdm, {

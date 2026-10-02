@@ -67,7 +67,9 @@ describe('susceptibility (EUCAST categories from spectrum + mechanisms)', () => 
     expect(s('e-coli', [], 'vancomycin')).toBe('R');
     expect(s('k-pneumoniae', [], 'ampicillin')).toBe('R');
     expect(s('p-aeruginosa', [], 'ceftriaxone')).toBe('R');
-    expect(s('p-aeruginosa', [], 'piperacillin-tazobactam')).toBe('S');
+    // EUCAST: wild-type P. aeruginosa is "I" (increased exposure) for piperacillin-tazobactam, meropenem per isolate
+    expect(s('p-aeruginosa', [], 'piperacillin-tazobactam')).toBe('I');
+    expect(s('p-aeruginosa', [], 'meropenem')).toBe('S');
     expect(s('e-faecalis', [], 'ceftriaxone')).toBe('R');
     expect(s('e-faecalis', [], 'ampicillin')).toBe('S');
     // E. faecium ampicillin resistance is isolate-dependent (PBP5), not a species rule
@@ -197,10 +199,22 @@ describe('activity: exposure, penetration, biofilm', () => {
 
   it('a reduced (renally adjusted) dose with normal kidneys under-doses; with impaired kidneys it is right', () => {
     const ec = iso('e-coli');
-    expect(orderActivity(order('meropenem', { dose: 'reduced' }), ec, ctx, lib)).toBeLessThan(0.6);
+    const later = { ...ctx, timeH: 24 };
+    expect(orderActivity(order('meropenem', { dose: 'reduced' }), ec, later, lib)).toBeLessThan(
+      0.6,
+    );
     expect(
-      orderActivity(order('meropenem', { dose: 'reduced' }), ec, { ...ctx, gfrRelative: 0.3 }, lib),
+      orderActivity(
+        order('meropenem', { dose: 'reduced' }),
+        ec,
+        { ...later, gfrRelative: 0.3 },
+        lib,
+      ),
     ).toBeGreaterThan(0.9);
+    // the first 12 h are a full loading dose
+    expect(orderActivity(order('meropenem', { dose: 'reduced' }), ec, ctx, lib)).toBeGreaterThan(
+      0.9,
+    );
   });
 
   it('oral cefuroxime reaches far less than levofloxacin (bioavailability)', () => {

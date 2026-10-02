@@ -62,6 +62,8 @@ const IMAGING: ImagingKind[] = [
   'ct-head',
   'ct-pa',
   'duplex-legs',
+  'sono-chest',
+  'duplex-catheter-vein',
   'line-inspection',
 ];
 
