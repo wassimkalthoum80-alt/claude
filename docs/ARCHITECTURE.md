@@ -369,6 +369,12 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
 - **Case variants:** `InfectionCase.variants` patches the hidden truth; `resolveInfectionVariant` draws one from the
   session seed (fresh seed per session for cases with variants). Scoring facts per variant:
   `stewardshipConfigFor(caseId, variant)`; case-specific debrief checks are data (`CaseCheck`).
+- **Hospital campaign:** pure model in `src/game/campaign.ts` (versioned JSON state, metric update from the case's
+  exposure by drug class with recovery scaled by the case score, case modifiers, deterministic next patient), config
+  in `src/content/campaign/hospital.ts`, storage in `src/ui/campaignStore.ts`. `useSession.startCampaignCase` puts the
+  hospital's `CaseModifiers` into `session.campaign`; `WardStoreContext` builds the case with `applyModifiers`;
+  `finishWardSession` advances the campaign. Screens: `src/ui/screens/campaign/CampaignScreen.tsx` (dashboard with
+  sparklines), the impact section of the ward debrief and the local-antibiogram drawer on the ward.
 - **Case files (phase 5):** `src/content/infection/cases.ts` (MVP cases, aggregates `INFECTION_CASES`),
   `casesNoInfection.ts` (N1–N3, A2, A3, B2) and `casesAdvanced.ts` (C2, C3, D2, E1, E3, B4, B5); the working-diagnosis
   list is shared (`workingDiagnoses.ts`). New check kinds: `requireDrugs`, `antibioticBeforeImaging`,

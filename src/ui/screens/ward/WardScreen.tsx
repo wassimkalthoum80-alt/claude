@@ -15,6 +15,7 @@ import { useSession } from '../../hooks/useSession';
 import { useUi, WORKSPACE_CLOSED } from '../../hooks/UiContext';
 import { localProgressStore } from '../../progressStore';
 import { localCampaignStore } from '../../campaignStore';
+import { CAMPAIGN_CONFIG } from '../../../content/campaign/hospital';
 import { finishWardSession, MIN_WARD_DEBRIEF_H } from '../../adapters/wardDebrief';
 import { wardNurse, wardPatientVisual } from '../../adapters/wardPatient';
 import { BedsideView } from './BedsideView';
@@ -75,7 +76,12 @@ export function WardScreen({ session }: { session: SessionConfig }) {
   const [ackSeq, setAckSeq] = useState(0);
   const [reserveDraft, setReserveDraft] = useState<StartCommand | null>(null);
   const [sampling, setSampling] = useState<SamplingProcedure | null>(null);
-  const [drawer, setDrawer] = useState<'consult' | 'failure' | null>(null);
+  const [drawer, setDrawer] = useState<'consult' | 'failure' | 'antibiogram' | null>(null);
+  // Hospital campaign: this hospital's antibiogram as it stood when the patient arrived.
+  const hospital = useMemo(
+    () => (session.campaign ? (localCampaignStore.load()?.hospital ?? null) : null),
+    [session.campaign],
+  );
   const [timeoutDone, setTimeoutDone] = useState(false);
 
   const dispatch = useCallback(
@@ -226,6 +232,16 @@ export function WardScreen({ session }: { session: SessionConfig }) {
           >
             {tk('failure.button')}
           </button>
+          {hospital && (
+            <button
+              type="button"
+              onClick={() => setDrawer(drawer === 'antibiogram' ? null : 'antibiogram')}
+              aria-pressed={drawer === 'antibiogram'}
+              data-testid="open-antibiogram"
+            >
+              {tk('cmp.antibiogramShort')}
+            </button>
+          )}
           <span className={styles.abDays} data-testid="ab-days">
             {tk('ward.abDays', { n: view.antibioticDays })}
           </span>
@@ -300,6 +316,27 @@ export function WardScreen({ session }: { session: SessionConfig }) {
             setDrawer(null);
           }}
         />
+      )}
+      {drawer === 'antibiogram' && hospital && (
+        <aside className={styles.drawer} data-testid="ward-antibiogram">
+          <h2>{tk('cmp.antibiogram')}</h2>
+          <p className={styles.dim}>{tk('cmp.antibiogramHint')}</p>
+          <table className={styles.labs}>
+            <tbody>
+              {CAMPAIGN_CONFIG.metrics.map((m) => (
+                <tr key={m.id}>
+                  <td>{tk(m.labelKey)}</td>
+                  <td className="num">
+                    {(hospital.values[m.id] ?? m.baseline).toFixed(1)} {m.unit === '%' ? '%' : ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <button type="button" onClick={() => setDrawer(null)}>
+            {tk('ward.close')}
+          </button>
+        </aside>
       )}
       {drawer === 'failure' && (
         <FailureWorkup onAction={onFailureAction} onClose={() => setDrawer(null)} />

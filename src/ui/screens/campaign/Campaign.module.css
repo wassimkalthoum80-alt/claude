@@ -1,0 +1,186 @@
+/* Hospital campaign dashboard. Text in text tokens; worse/better carry an arrow + label, not colour alone. */
+.inner {
+  max-width: 1040px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 12px;
+}
+
+.kicker {
+  font: 600 11px var(--font-num);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent, var(--co2));
+}
+
+.title {
+  margin: 2px 0;
+  font: 700 26px/1.1 var(--font-num);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sub,
+.dim {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.primary {
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent, var(--co2));
+  background: color-mix(in srgb, var(--accent, var(--co2)) 18%, transparent);
+  color: #fff;
+  font: 600 15px var(--font-ui);
+  cursor: pointer;
+}
+
+.mechanic {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--panel-border-strong);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.h2 {
+  margin: 18px 0 8px;
+  font: 600 12px var(--font-num);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent, var(--co2));
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.kpis div,
+.tile {
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.kpis dt {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.kpis dd {
+  margin: 2px 0 0;
+  font: 600 20px var(--font-num);
+  color: #fff;
+}
+
+.tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.tileLabel {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.tileValue {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: 600 22px var(--font-num);
+  color: #fff;
+}
+
+.worse,
+.better {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.worse {
+  color: var(--bad);
+}
+
+.better {
+  color: var(--good);
+}
+
+.tileBase {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.worseTag {
+  color: var(--text-dim);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.block {
+  margin-top: 4px;
+}
+
+.causes {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.history {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.history th,
+.history td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.history th {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 6px;
+  color: var(--text-dim);
+}
+
+.footerActions button {
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--panel-border-strong);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}

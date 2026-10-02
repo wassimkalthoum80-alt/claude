@@ -273,8 +273,9 @@ export function advanceCampaign(
         delta: m.perCdiCase * result.cdiCases,
       });
     }
-    // Stewardship pays off: every case pulls the hospital back towards its floor.
-    v -= config.recovery * (v - m.floor);
+    // Stewardship pays off: a well-managed case pulls the hospital back towards its floor. Recovery scales with the
+    // case's overall score, so withholding a needed antibiotic (or losing the patient) earns no "clean" hospital.
+    v -= config.recovery * clamp(result.overall / 100, 0, 1) * (v - m.floor);
     v = round1(clamp(v, m.floor, m.ceiling) * 10) / 10;
     values[m.id] = v;
     deltas[m.id] = round1((v - before) * 10) / 10;

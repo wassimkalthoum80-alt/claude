@@ -39,6 +39,7 @@ import { HomeScreen } from './ui/screens/HomeScreen';
 import { ModuleMenu } from './ui/screens/ModuleMenu';
 import { DebriefScreen } from './ui/screens/DebriefScreen';
 import { ProgressScreen } from './ui/screens/ProgressScreen';
+import { CampaignScreen } from './ui/screens/campaign/CampaignScreen';
 import { BridgeBar } from './ui/components/Bridge/BridgeBar';
 import { WardStoreProvider } from './ui/hooks/WardStoreContext';
 import { WardScreen } from './ui/screens/ward/WardScreen';
@@ -178,6 +179,7 @@ function Shell() {
     return <WardDebriefScreen data={ui.wardDebrief} />;
   if (ui.screen === 'debrief' && ui.debrief) return <DebriefScreen data={ui.debrief} />;
   if (ui.screen === 'progress') return <ProgressScreen />;
+  if (ui.screen === 'campaign') return <CampaignScreen />;
   if (ui.screen === 'module' && ui.menuModule) return <ModuleMenu moduleId={ui.menuModule} />;
   return <HomeScreen />;
 }

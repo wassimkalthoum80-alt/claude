@@ -712,6 +712,18 @@ lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/
 | Oral switch offer (UI) | oral form with bioavailability ≥ 0.7 offered as "→ oral" | ciprofloxacin ≈ 0.75 qualifies |
 | CO₂ | ≈ 7 kg CO₂e per i.v. dose, 0.2 kg per oral day (extrapolated from one ciprofloxacin estimate, Born et al. BMJ Qual Saf 2023) | order of magnitude only |
 
+## Hospital campaign (game mechanic — `src/game/campaign.ts`, values in `src/content/campaign/hospital.ts`)
+
+Not an epidemiological model; invented teaching values, awaiting clinical review. Shown in the app as a game mechanic.
+
+| Rule | Value | Rationale |
+|---|---|---|
+| Metrics and start | E. coli ESBL 10 %, E. coli quinolone-R 18 %, K. pneumoniae carbapenemase 1 %, P. aeruginosa carbapenem-R 12 %, MRSA 9 %, VRE 12 %, C. difficile 6 / 10 000 patient-days; each with a floor and a ceiling | a plausible German-hospital-like starting antibiogram (replaceable config) |
+| Drivers | points per day of therapy with a driving class, e.g. carbapenem → P. aeruginosa carbapenem-R +0.25, K. pneumoniae KPC +0.1; fluoroquinolone → E. coli quinolone-R +0.3; 3rd-gen. cephalosporin → ESBL +0.12; glycopeptide → VRE +0.15; clindamycin → C. difficile +0.35; each C. difficile infection caused +1.5 | selection pressure by class (qualitative direction from stewardship teaching) |
+| Recovery | each case pulls every metric 8 % × (overall score / 100) of the way back to its floor | careful, successful cases let the hospital recover; withholding needed treatment does not |
+| Feedback | variant weights × (metric / baseline), clamped 0.3–4 (e.g. B1 ESBL, B4 3MRGN, B5 KPC outbreak, D1 severe); ward-flora hazards × KPC level (0.3–8); C. difficile hazards × CDI level (0.3–5) | the hospital you shaped is the hospital you work in |
+| Next patient | drawn from all cases by the campaign seed, never one of the last 4 | |
+
 ## Stewardship scoring (milestone 7 phase 3 — `src/game/stewardship.ts`, values in `src/content/scoring/stewardshipConfig.ts`)
 
 Educational defaults chosen by the developer; **not a validated assessment instrument** — awaiting clinical review.

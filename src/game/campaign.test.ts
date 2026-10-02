@@ -79,12 +79,19 @@ describe('hospital campaign — game mechanic', () => {
 
   it('careful prescribing brings the hospital back towards its floor; careless play climbs and is capped', () => {
     const careless = play(newCampaign(CFG, 1), result({ carbapenem: 10, fluoroquinolone: 7 }), 40);
-    const recovered = play(careless, result({ ceph1: 5 }), 40);
+    const recovered = play(careless, result({ ceph1: 5 }, { overall: 100 }), 60);
     for (const m of CFG.metrics) {
       expect(careless.hospital.values[m.id]).toBeLessThanOrEqual(m.ceiling);
       expect(recovered.hospital.values[m.id]).toBeLessThan(careless.hospital.values[m.id] ?? 0);
       expect(recovered.hospital.values[m.id]).toBeLessThan(m.baseline);
     }
+  });
+
+  it('recovery scales with the case score: withholding a needed antibiotic does not clean the hospital', () => {
+    const start = play(newCampaign(CFG, 1), result({ carbapenem: 10 }), 10);
+    const good = play(start, result({}, { overall: 95 }), 5);
+    const poor = play(start, result({}, { overall: 20 }), 5);
+    expect(poor.hospital.values['pa-carba']).toBeGreaterThan(good.hospital.values['pa-carba'] ?? 0);
   });
 
   it('C. difficile cases caused on the ward add to the CDI rate', () => {

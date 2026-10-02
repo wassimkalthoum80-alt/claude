@@ -75,3 +75,39 @@
   font-size: 11px;
   color: var(--text-faint);
 }
+
+/* Hospital campaign impact (game mechanic) */
+.campaign {
+  border: 1px dashed var(--panel-border-strong);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.campaignNote {
+  margin: 4px 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.campaignDeltas {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 16px;
+}
+
+.campaignDeltas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.worse {
+  color: var(--bad);
+}
+
+.better {
+  color: var(--good);
+}

@@ -4,6 +4,8 @@ import { levelOf } from '../../../game/progression';
 import type { StewardshipItem, TimelineEvent } from '../../../game/stewardship';
 import { wardTime } from '../../adapters/ward';
 import type { WardDebriefData } from '../../adapters/wardDebrief';
+import { CAMPAIGN_CONFIG } from '../../../content/campaign/hospital';
+import { causeSourceKey } from '../../adapters/campaign';
 import { useSession } from '../../hooks/useSession';
 import { MODULE_ACCENT } from '../moduleAccent';
 import styles from '../Progress.module.css';
@@ -65,7 +67,7 @@ function Timeline({ events, start }: { events: TimelineEvent[]; start: number })
 /** Stewardship debrief (milestone 7 phase 3): outcome and stewardship axes, the truth, metrics, the course. */
 export function WardDebriefScreen({ data }: { data: WardDebriefData }) {
   const tk = useTk();
-  const { start, openModule, openProgress } = useSession();
+  const { start, openModule, openProgress, openCampaign, startCampaignCase } = useSession();
   const { session, result: r, progress } = data;
   const m = r.metrics;
   const level = levelOf(progress.xpTotal);
@@ -125,6 +127,44 @@ export function WardDebriefScreen({ data }: { data: WardDebriefData }) {
             ))}
           </div>
         </section>
+
+        {data.campaign && (
+          <section
+            className={`${styles.block} ${own.campaign}`}
+            data-testid="ward-debrief-campaign"
+          >
+            <h2 className={screen.sectionTitle}>{tk('cmp.impact.title')}</h2>
+            <p className={own.campaignNote}>{tk('cmp.impact.note')}</p>
+            <ul className={own.campaignDeltas}>
+              {CAMPAIGN_CONFIG.metrics
+                .filter((m) => Math.abs(data.campaign?.entry.deltas[m.id] ?? 0) >= 0.1)
+                .map((m) => {
+                  const d = data.campaign?.entry.deltas[m.id] ?? 0;
+                  return (
+                    <li key={m.id}>
+                      <span>{tk(m.labelKey)}</span>
+                      <span className={`num ${d > 0 ? own.worse : own.better}`}>
+                        {d > 0 ? '▲' : '▼'} {Math.abs(d).toFixed(1)}{' '}
+                        {tk(d > 0 ? 'cmp.worse' : 'cmp.better')}
+                      </span>
+                    </li>
+                  );
+                })}
+            </ul>
+            {data.campaign.entry.causes.slice(0, 3).map((c) => (
+              <p key={`${c.metric}-${c.source}`} className={own.campaignNote}>
+                {tk('cmp.cause', {
+                  source: tk(causeSourceKey(c.source)),
+                  amount: c.amount,
+                  metric: tk(
+                    CAMPAIGN_CONFIG.metrics.find((m) => m.id === c.metric)?.labelKey ?? '',
+                  ),
+                  delta: c.delta.toFixed(2),
+                })}
+              </p>
+            ))}
+          </section>
+        )}
 
         <section className={styles.block} data-testid="ward-debrief-reveal">
           <h2 className={screen.sectionTitle}>{tk('stw.reveal')}</h2>
@@ -278,14 +318,35 @@ export function WardDebriefScreen({ data }: { data: WardDebriefData }) {
         </section>
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.primary}
-            onClick={() => start(session.module, session.entryId)}
-            data-testid="ward-debrief-retry"
-          >
-            {tk('debrief.retry')}
-          </button>
+          {data.campaign ? (
+            <>
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={startCampaignCase}
+                data-testid="ward-debrief-campaign-next"
+              >
+                {tk('cmp.next')}
+              </button>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={openCampaign}
+                data-testid="ward-debrief-campaign-open"
+              >
+                {tk('cmp.toDashboard')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={styles.primary}
+              onClick={() => start(session.module, session.entryId)}
+              data-testid="ward-debrief-retry"
+            >
+              {tk('debrief.retry')}
+            </button>
+          )}
           <button
             type="button"
             className={styles.secondary}

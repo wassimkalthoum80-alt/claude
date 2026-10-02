@@ -17,7 +17,7 @@ import { Stars } from './Stars';
 export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
   const t = useT();
   const { ui, setUi } = useUi();
-  const { goHome, start } = useSession();
+  const { goHome, start, openCampaign } = useSession();
   const mod = findModule(MODULE_CATALOG, moduleId);
   const best = useMemo(() => localProgressStore.load().best, []);
   if (!mod) return null;
@@ -64,6 +64,28 @@ export function ModuleMenu({ moduleId }: { moduleId: ModuleId }) {
                 </button>
               ))}
             </div>
+          </section>
+        )}
+
+        {mod.engine === 'course' && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>{t('cmp.menu.section' as I18nKey)}</h2>
+            <ul className={styles.entries}>
+              <li>
+                <button
+                  type="button"
+                  className={styles.entry}
+                  onClick={openCampaign}
+                  data-testid="open-campaign"
+                >
+                  <span className={styles.entryText}>
+                    <span className={styles.entryTitle}>{t('cmp.title' as I18nKey)}</span>
+                    <span className={styles.entryDesc}>{t('cmp.menu.desc' as I18nKey)}</span>
+                  </span>
+                  <span className={styles.startPill}>{t('cmp.menu.open' as I18nKey)} ▸</span>
+                </button>
+              </li>
+            </ul>
           </section>
         )}
 

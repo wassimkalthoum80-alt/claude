@@ -898,3 +898,53 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:00/);
   expect(errors).toEqual([]);
 });
+
+test('infectiology: hospital campaign — next patient, hospital impact in the debrief, dashboard', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(e.message));
+  const shots = process.env.WARD_SHOTS;
+
+  await page.goto('/?lang=de');
+  await page.getByTestId('module-infectio').click();
+  await page.getByTestId('open-campaign').click();
+  await expect(page.getByTestId('campaign')).toBeVisible();
+  await expect(page.getByTestId('campaign-mechanic')).toContainText('Spielmechanik');
+  await expect(page.getByTestId('campaign-tile-pa-carba')).toContainText('12.0');
+  await page.getByTestId('campaign-next').click();
+
+  // The next patient of this hospital opens on the ward, with the local antibiogram at hand.
+  await expect(page.getByTestId('ward-briefing')).toBeVisible();
+  await page.getByTestId('ward-start').click();
+  await page.getByTestId('open-antibiogram').click();
+  await expect(page.getByTestId('ward-antibiogram')).toContainText('Lokales Antibiogramm');
+  await page.getByTestId('open-antibiogram').click();
+  for (let i = 0; i < 8; i++) {
+    if (await page.getByTestId('notices-ok').isVisible())
+      await page.getByTestId('notices-ok').click();
+    else if (
+      await page
+        .getByTestId('ward-clock')
+        .textContent()
+        .then((t) => /Tag 3/.test(t ?? ''))
+    )
+      break;
+    else await page.getByTestId('advance-round').click();
+  }
+  if (await page.getByTestId('notices-ok').isVisible())
+    await page.getByTestId('notices-ok').click();
+  await page.getByTestId('ward-exit').click();
+
+  // The debrief shows what this patient did to the hospital.
+  await expect(page.getByTestId('ward-debrief-campaign')).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/campaign-2-impact.png`, fullPage: true });
+  await page.getByTestId('ward-debrief-campaign-open').click();
+  await expect(page.getByTestId('campaign')).toContainText('1 Patienten');
+  await expect(page.getByTestId('campaign-last')).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/campaign-1-dashboard.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});

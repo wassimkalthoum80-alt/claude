@@ -892,11 +892,13 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       ...truth.sites.filter((s) => s.active).map((s) => s.diagnosisKey),
       ...((input.caseDef.patient.cdiAtAdmission ?? 0) > 0 ? ['dx.cdi'] : []),
     ],
-    organisms: cause.map(({ iso }) => ({
-      organismId: iso.organismId,
-      mechanisms: [...iso.mechanisms],
-      mrgn: mrgnClass(iso, lib),
-    })),
+    organisms: cause
+      .filter(({ iso }, i) => cause.findIndex((c) => c.iso.id === iso.id) === i)
+      .map(({ iso }) => ({
+        organismId: iso.organismId,
+        mechanisms: [...iso.mechanisms],
+        mrgn: mrgnClass(iso, lib),
+      })),
     mimics: truth.mimics.map((m) => m.diagnosisKey),
   };
 
