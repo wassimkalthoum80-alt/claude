@@ -689,6 +689,19 @@ export type InfectionCommand =
   | { type: 'DECLARE_INFECTION_STATUS'; diagnosisId: string; status: InfectionStatus }
   | { type: 'ISOLATION'; on: boolean }
   | { type: 'ABS_CONSULT'; topic?: string }
+  /**
+   * a real-time episode starts now (course → workstation): the course clock is held for the learner, and the
+   * episode's minutes are counted once at the handover
+   */
+  | { type: 'REALTIME_EPISODE_START'; kind: 'admission' | 'shock' }
+  /**
+   * min from the episode start — clinical time of the open episode passes up to this minute: the slow course processes
+   * (infection, antibiotic exposure, results) run; circulation, gas exchange and vital signs belong to the episode
+   */
+  | { type: 'REALTIME_EPISODE_ADVANCE'; minute: number }
+  /** the episode closes without clinical time (it never started) */
+  | { type: 'REALTIME_EPISODE_CANCEL' }
+  /** the episode ends: its remaining minutes pass, then the course continues from the handover state */
   | { type: 'APPLY_REALTIME_OUTCOME'; outcome: RealtimeOutcome };
 
 /** The learner's answers at the antibiotic timeout (logged for scoring; the orders themselves change therapy). */
@@ -734,9 +747,43 @@ export interface RealtimeOutcome {
   culturesAtMin: number | null;
   /** min from episode start of further case actions (e.g. dexamethasone, CT head) */
   actionsAtMin?: Record<string, number>;
+  /** the patient at handover — the course continues from this state (true values, not monitor readings) */
+  end: RealtimeEndState;
 }
 
 /** Patient preset for the real-time engine derived from the course (course → real time). */
+/** Patient and support at the end of a real-time episode (handed over to the course). */
+export interface RealtimeEndState {
+  /** mmHg */
+  map: number;
+  /** /min */
+  heartRate: number;
+  /** /min */
+  respRate: number;
+  /** % — arterial saturation */
+  spo2: number;
+  /** mmol/L */
+  lactate: number;
+  /** µg/kg/min — noradrenaline running at handover */
+  noradrenalineUgKgMin: number;
+  /** % — inspired oxygen set on the mask/ventilator */
+  fio2: number;
+  airway: 'none' | 'mask' | 'sga' | 'ett';
+}
+
+/** Support carried from a real-time episode into the course (shown on the ward; titrated by protocol). */
+export interface CourseSupport {
+  /** µg/kg/min — running noradrenaline (0 = off) */
+  noradrenalineUgKgMin: number;
+  /** the infusion is titrated to the MAP target by the ICU protocol (ends when weaned to 0) */
+  titrating: boolean;
+  airway: RealtimeEndState['airway'];
+  /** % */
+  fio2: number;
+  /** h — handover time */
+  sinceH: number;
+}
+
 export interface RealtimePreset {
   /** °C */
   temperatureC: number;
@@ -752,6 +799,8 @@ export interface RealtimePreset {
   heartRate: number;
   /** mmHg */
   map: number;
+  /** µg/kg/min — noradrenaline the course protocol is running (0 = none) */
+  noradrenalineUgKgMin: number;
 }
 
 // ─── Events and view ────────────────────────────────────────────────────────────────────────────────────────
@@ -868,8 +917,10 @@ export interface VitalsPoint {
   spo2: number;
   /** mL/h */
   urineMlH: number;
-  /** a vasopressor is needed (course circulation) */
+  /** a vasopressor is running (carried infusion) or needed (course circulation, before any real-time episode) */
   vasopressor?: boolean;
+  /** µg/kg/min — carried noradrenaline infusion, if any */
+  noradrenaline?: number;
 }
 
 export interface TherapyOrder {
@@ -911,8 +962,12 @@ export interface InfectionView {
   stoolsPer24h: number;
   /** what the bedside shows of brain function (observable sign, not a diagnosis) */
   consciousness: 'alert' | 'drowsy' | 'confused' | 'unresponsive';
-  /** needs vasopressor (from the course; real time decides the dose) */
+  /** a vasopressor is running or needed (see VitalsPoint.vasopressor) */
   vasopressor: boolean;
+  /** support carried from the last real-time episode (null before any episode) */
+  support: CourseSupport | null;
+  /** a real-time episode is open: the course clock is held until its handover */
+  episodeOpen: boolean;
   /** a shock episode is open (offered as a real-time episode until its outcome is applied) */
   shock: boolean;
   ended: false | 'cured' | 'died' | 'time-limit';

@@ -12,12 +12,16 @@ export const BRIDGE_SCENARIO_ID = 'bridge-sepsis';
  * acute deterioration with shock. Built from the septic-shock physiology with the preset the course derives from its
  * state (temperature, heart rate, vasoplegia, capillary leak). Antibiotics and cultures are timed actions; which
  * antibiotic was given is asked at the handover, so the course gets the real drug.
+ *
+ * `continuation`: a further episode of the same patient — the workstation keeps the patient as handed over (airway,
+ * ventilator, drugs, volumes), so the opening setup (mask breathing with a strong drive) is not imposed again.
  */
 export function bridgeScenario(
   preset: RealtimePreset,
   kind: BridgeKind,
   patient: { ageYears: number; sex: 'female' | 'male'; weightKg: number },
   episode: 'sepsis' | 'meningitis' = 'sepsis',
+  continuation = false,
 ): ScenarioDefinition {
   const base = septicShock;
   const textKey = episode === 'meningitis' ? 'meningitis' : kind;
@@ -76,10 +80,12 @@ export function bridgeScenario(
       },
     },
     // Septic tachypnoea: strong spontaneous drive (unsupported breaths, no backup ventilation).
-    timeline: [
-      { at: 0, command: { type: 'SET_VENT_MODE', mode: 'PSV' } },
-      { at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'strong' } },
-    ],
+    timeline: continuation
+      ? []
+      : [
+          { at: 0, command: { type: 'SET_VENT_MODE', mode: 'PSV' } },
+          { at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'strong' } },
+        ],
     actions: [
       {
         id: 'cultures',

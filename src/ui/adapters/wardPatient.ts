@@ -232,7 +232,7 @@ export type AlarmLevel = 'none' | 'medium' | 'high';
 export interface WardMonitorView {
   input: WardMonitorInput;
   nibp: { sys: number; dia: number; mean: number };
-  /** h — time of the last NIBP cycle (hourly) */
+  /** h — time of the last NIBP measurement (the latest vital-sign record: hourly, or the handover of an episode) */
   nibpAtH: number;
   /** SpO₂ readable (enough pulsatility) */
   spo2Valid: boolean;
@@ -257,7 +257,7 @@ export function wardMonitorView(view: InfectionView): WardMonitorView {
   return {
     input: { heartRate: hr, spo2, map, respRate: rr, temperatureC: temp, perfusion },
     nibp: nibpFromMap(map, hr),
-    nibpAtH: Math.floor(view.timeH),
+    nibpAtH: v?.t ?? Math.floor(view.timeH),
     spo2Valid: perfusion >= WARD_PLETH_MIN_PERFUSION,
     alarms: {
       hr: level(hr > 140, hr > 120),

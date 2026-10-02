@@ -1,7 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { INFECTION_LIBRARY as LIB } from '../../../content/infection/library';
 import type { SessionConfig } from '../../../game/types';
-import type { InfectionCommand, InfectionLogEntry } from '../../../sim';
+import type {
+  CourseSupport,
+  InfectionCommand,
+  InfectionLogEntry,
+  RealtimeOutcome,
+} from '../../../sim';
+import { handoverCommands } from '../../../game/bridge';
 import {
   consultQuestions,
   hoursUntil,
@@ -75,6 +81,8 @@ export function WardScreen({ session }: { session: SessionConfig }) {
   }, [ward, end, session, setUi]);
   const [ackSeq, setAckSeq] = useState(0);
   const [reserveDraft, setReserveDraft] = useState<StartCommand | null>(null);
+  /** handover waiting for the reserve justification of the antibiotic given in the episode */
+  const [pendingHandover, setPendingHandover] = useState<RealtimeOutcome | null>(null);
   const [sampling, setSampling] = useState<SamplingProcedure | null>(null);
   const [drawer, setDrawer] = useState<'consult' | 'failure' | 'antibiogram' | null>(null);
   // Hospital campaign: this hospital's antibiogram as it stood when the patient arrived.
@@ -127,49 +135,27 @@ export function WardScreen({ session }: { session: SessionConfig }) {
 
   const handover = ui.bridgeReturn;
   const showNotices = notices.length > 0 && !ui.briefingOpen && !handover;
+  // Real time → course: the episode's minutes pass in the course once, with its actions at their true minutes.
+  const runHandover = (o: RealtimeOutcome, drug: StartCommand | null) => {
+    acknowledge();
+    for (const cmd of handoverCommands(o, drug)) dispatch(cmd);
+    setPendingHandover(null);
+    setUi({ bridgeReturn: null });
+  };
   const confirmHandover = (drug: { drugId: string; route: 'iv' | 'po' } | null) => {
     if (!handover) return;
     const o = handover.outcome;
-    // Real time → course, in the order it happened in the episode: cultures and the antibiotic (the course clock
-    // stood still during it), then the episode's consequences.
-    const steps: { at: number; run: () => void }[] = [];
-    if (o.culturesAtMin !== null)
-      steps.push({
-        at: o.culturesAtMin,
-        run: () =>
-          dispatch({
-            type: 'ORDER_SPECIMEN',
-            specimen: { kind: 'blood-culture', site: 'blood', sets: 2, adequateVolume: true },
-          }),
-      });
-    if (drug && o.antibioticsAtMin !== null) {
-      const cmd: StartCommand = {
-        type: 'START_ANTIINFECTIVE',
-        drugId: drug.drugId,
-        dose: 'standard',
-        route: drug.route,
-      };
-      const reserve = orderableDrugs(LIB).reserve.some((d) => d.id === drug.drugId);
-      steps.push({
-        at: o.antibioticsAtMin,
-        run: () => (reserve ? setReserveDraft(cmd) : dispatch(cmd)),
-      });
+    const cmd: StartCommand | null =
+      drug && o.antibioticsAtMin !== null
+        ? { type: 'START_ANTIINFECTIVE', drugId: drug.drugId, dose: 'standard', route: drug.route }
+        : null;
+    // A reserve drug needs its justification before it enters the course at its minute.
+    if (cmd && orderableDrugs(LIB).reserve.some((d) => d.id === cmd.drugId)) {
+      setPendingHandover(o);
+      setReserveDraft(cmd);
+      return;
     }
-    const actions = o.actionsAtMin ?? {};
-    if (actions.dexamethasone !== undefined)
-      steps.push({
-        at: actions.dexamethasone,
-        run: () => dispatch({ type: 'PROCEDURE', procedure: 'dexamethasone' }),
-      });
-    if (actions['ct-head'] !== undefined)
-      steps.push({
-        at: actions['ct-head'],
-        run: () => dispatch({ type: 'ORDER_IMAGING', kind: 'ct-head' }),
-      });
-    for (const st of steps.sort((a, b) => a.at - b.at)) st.run();
-    dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: o });
-    acknowledge();
-    setUi({ bridgeReturn: null });
+    runHandover(o, cmd);
   };
   return (
     <div className={styles.ward} data-testid="ward-screen">
@@ -290,6 +276,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
             >
               <WardMonitor view={view} startHourOfDay={start} seed={session.seed} />
             </BedsideView>
+            {view.support && <SupportLine support={view.support} />}
           </section>
           <MicroInbox log={log} startHourOfDay={start} />
         </div>
@@ -373,14 +360,19 @@ export function WardScreen({ session }: { session: SessionConfig }) {
       {reserveDraft && (
         <ReserveDialog
           drugNameKey={LIB.drugs.get(reserveDraft.drugId)?.nameKey ?? reserveDraft.drugId}
-          onCancel={() => setReserveDraft(null)}
+          onCancel={() => {
+            setReserveDraft(null);
+            if (pendingHandover) runHandover(pendingHandover, null);
+          }}
           onConfirm={(indication, absApproval) => {
-            dispatch({
+            const cmd: StartCommand = {
               ...reserveDraft,
               indication,
               ...(absApproval ? { absApproval: true } : {}),
-            });
+            };
             setReserveDraft(null);
+            if (pendingHandover) runHandover(pendingHandover, cmd);
+            else dispatch(cmd);
           }}
         />
       )}
@@ -395,7 +387,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
           }}
         />
       )}
-      {handover && (
+      {handover && !pendingHandover && (
         <HandoverDialog
           kind={handover.kind}
           outcome={handover.outcome}
@@ -406,5 +398,21 @@ export function WardScreen({ session }: { session: SessionConfig }) {
         <EndDialog outcome={view.ended} onClose={finish} />
       )}
     </div>
+  );
+}
+
+/** Support carried from the real-time episode (running noradrenaline, airway and oxygen). */
+function SupportLine({ support }: { support: CourseSupport }) {
+  const tk = useTk();
+  const items: string[] = [];
+  if (support.noradrenalineUgKgMin > 0)
+    items.push(tk('ward.support.noradrenaline', { dose: support.noradrenalineUgKgMin }));
+  if (support.airway !== 'none')
+    items.push(tk(`ward.support.airway.${support.airway}`, { fio2: support.fio2 }));
+  if (items.length === 0) return null;
+  return (
+    <p className={styles.support} data-testid="ward-support">
+      <strong>{tk('ward.support.label')}:</strong> {items.join(' · ')}
+    </p>
   );
 }

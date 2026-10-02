@@ -7,6 +7,7 @@ import { combinedActivity, exposure, orderActivity } from './susceptibility';
 import { ADJUNCT_PROCEDURES } from './types';
 import type {
   ColonisationDef,
+  CourseSupport,
   CollateralKind,
   InfectionCase,
   InfectionCommand,
@@ -21,6 +22,7 @@ import type {
   MechanismId,
   MimicDef,
   ProcedureId,
+  RealtimeEndState,
   RealtimeOutcome,
   RealtimePreset,
   ResistancePotential,
@@ -172,6 +174,10 @@ export class InfectionEngine {
   private firstAntibioticH: number | null = null;
   private timeoutLogged = false;
   private shockActive = false;
+  /** open real-time episode: the learner is in the workstation; its minutes are counted once at the handover */
+  private episode: { startH: number } | null = null;
+  /** support carried from the last real-time episode (null before any episode) */
+  private support: CarriedSupport | null = null;
   private interrupt = false;
   private ended: InfectionView['ended'] = false;
   private lastAntibioticStopH = 0;
@@ -261,8 +267,30 @@ export class InfectionEngine {
   }
 
   dispatch(command: InfectionCommand, _source: 'user' | 'system' = 'user'): DispatchResult {
-    if (this.ended && command.type !== 'APPLY_REALTIME_OUTCOME')
+    const episodeCommand =
+      command.type === 'APPLY_REALTIME_OUTCOME' ||
+      command.type === 'REALTIME_EPISODE_ADVANCE' ||
+      command.type === 'REALTIME_EPISODE_CANCEL';
+    if (this.ended && !episodeCommand)
       return this.record(command, { accepted: false, reason: 'ended' });
+    // The course clock is held while the learner is in the workstation; the episode's minutes count at the handover.
+    if (this.episode && (command.type === 'ADVANCE' || command.type === 'ADVANCE_TO'))
+      return this.record(command, { accepted: false, reason: 'episode-open' });
+    if (episodeCommand && !this.episode)
+      return this.record(command, { accepted: false, reason: 'no-episode' });
+    if (command.type === 'REALTIME_EPISODE_ADVANCE' && this.episode) {
+      if (!(command.minute >= 0))
+        return this.record(command, { accepted: false, reason: 'invalid-minute' });
+      this.record(command, { accepted: true });
+      this.advanceEpisodeTo(this.episode.startH + command.minute / 60);
+      this.changed();
+      return { accepted: true };
+    }
+    if (command.type === 'APPLY_REALTIME_OUTCOME' && this.episode) {
+      // The remaining minutes of the episode pass first (once), then the handover is logged and applied.
+      this.advanceEpisodeTo(this.episode.startH + Math.max(0, command.outcome.durationMin) / 60);
+      this.episode = null;
+    }
     // Time commands are logged at the moment they are given, then executed.
     if (command.type === 'ADVANCE') {
       if (!(command.hours > 0))
@@ -293,17 +321,20 @@ export class InfectionEngine {
     return result;
   }
 
-  /** Advances up to `hours`; stops early at an interruption. Returns hours actually advanced. */
+  /**
+   * Advances up to `hours` (fractions allowed: a step never crosses the hourly grid, so routine events stay on the
+   * hour); stops early at an interruption. Returns hours actually advanced.
+   */
   advance(hours: number): number {
     this.interrupt = false;
-    let done = 0;
-    while (done < hours && !this.ended) {
-      this.step();
-      done += COURSE.stepH;
+    const start = this.t;
+    const until = snap(start + hours);
+    while (this.t < until - EPS_H && !this.ended) {
+      this.stepTo(Math.min(this.nextGridH(), until));
       if (this.interrupt) break;
     }
     this.changed();
-    return done;
+    return this.t - start;
   }
 
   getView(): InfectionView {
@@ -331,7 +362,9 @@ export class InfectionEngine {
             : this.organs.cns >= 0.12
               ? 'drowsy'
               : 'alert',
-      vasopressor: this.organs.circ > COURSE.vasopressorAbove,
+      vasopressor: this.vasopressorOn(),
+      support: this.support ? publicSupport(this.support) : null,
+      episodeOpen: this.episode !== null,
       shock: this.shockActive,
       ended: this.ended,
       pendingInterrupt: this.interrupt,
@@ -389,6 +422,7 @@ export class InfectionEngine {
       spo2: v.spo2,
       heartRate: v.heartRate,
       map: v.map,
+      noradrenalineUgKgMin: this.support?.noradrenalineUgKgMin ?? 0,
     };
   }
 
@@ -485,6 +519,15 @@ export class InfectionEngine {
         return { accepted: true };
       case 'ABS_CONSULT':
         return { accepted: true };
+      case 'REALTIME_EPISODE_START':
+        if (this.episode) return { accepted: false, reason: 'episode-open' };
+        this.episode = { startH: this.t };
+        return { accepted: true };
+      case 'REALTIME_EPISODE_CANCEL':
+        this.episode = null;
+        return { accepted: true };
+      case 'REALTIME_EPISODE_ADVANCE':
+        return { accepted: false, reason: 'handled-by-dispatch' };
       case 'APPLY_REALTIME_OUTCOME':
         this.applyRealtimeOutcome(cmd.outcome);
         return { accepted: true };
@@ -514,7 +557,7 @@ export class InfectionEngine {
     this.interrupt = false;
     const limit = 24 * 3;
     for (let i = 0; i < limit && !this.ended; i++) {
-      this.step();
+      this.stepTo(this.nextGridH());
       if (this.interrupt) break;
       if (until === 'next-round' && this.hourOfDay() === COURSE.roundHour) break;
     }
@@ -616,18 +659,19 @@ export class InfectionEngine {
     return `imaging.${kind}.normal`;
   }
 
+  /**
+   * Real time → course. The course continues from the patient as handed over: the running noradrenaline stays on
+   * (titrated by the ICU protocol until weaned), and the episode's deviations from the course's own vital signs are
+   * carried — the haemodynamic ones fading as the given volume redistributes, the lactate one as it clears, the SpO₂
+   * one held while the oxygen support continues. Nothing is reset to a preset; the time to stabilisation stays a
+   * debrief metric only.
+   */
   private applyRealtimeOutcome(o: RealtimeOutcome): void {
     this.shockActive = false;
     if (!o.survived) {
       this.end('died');
       return;
     }
-    // SIM-ASSUMPTION: the real-time episode resets circulation according to how well it was stabilised; organ
-    // injury acquired during it persists into the course.
-    this.organs.circ =
-      o.timeToStabiliseMin === null
-        ? 0.65
-        : Math.min(this.organs.circ, 0.3 + 0.002 * o.timeToStabiliseMin);
     // SIM-ASSUMPTION: the episode's renal injury index carries over as kidney dysfunction (creatinine and urine output
     // then follow in the course); lung dysfunction only after respiratory failure, not from intubation itself.
     this.organs.kidney = Math.max(
@@ -637,13 +681,116 @@ export class InfectionEngine {
     // An oxygen/support requirement carries over as moderate lung dysfunction (not labelled ARDS).
     if (o.respiratoryFailure) this.organs.lung = Math.max(this.organs.lung, 0.4);
     if (o.peakLactate > 4) this.organs.liver = Math.max(this.organs.liver, 0.2);
+    // SIM-ASSUMPTION: the course carries the handover state as support plus deviations from its own values — the
+    // haemodynamic deviation (mainly the volume given) fades with a 6-h time constant, the lactate deviation with 2 h,
+    // the SpO₂ deviation is held while the oxygen support continues (COURSE.support).
+    this.support = this.carriedSupport(o.end);
+    // The first ward value is the handover state itself.
+    const last = this.vitals[this.vitals.length - 1];
+    if (last && last.t >= this.t - EPS_H) this.vitals.pop();
+    this.recordVitals();
+  }
+
+  /** The handover state expressed as course support plus the deviations from the course's own values. */
+  private carriedSupport(e: RealtimeEndState): CarriedSupport {
+    this.support = null;
+    const base = this.rawVitals();
+    const na = Math.max(0, e.noradrenalineUgKgMin);
+    return {
+      noradrenalineUgKgMin: na,
+      titrating: na > 0,
+      maxNoradrenaline: Math.max(COURSE.support.naMax, na),
+      airway: e.airway,
+      fio2: e.fio2,
+      sinceH: this.t,
+      carry: {
+        map: e.map - (base.map + noradrenalineEffect(na)),
+        heartRate: e.heartRate - base.heartRate,
+        respRate: e.respRate - base.respRate,
+        spo2: e.spo2 - base.spo2,
+        lactate: e.lactate - this.baseLactate(),
+      },
+    };
+  }
+
+  /**
+   * ICU protocol for a carried noradrenaline infusion: titrated towards the MAP target in limited steps per hour,
+   * stopped when weaned to 0 (the nurse reports it). An ordered protocol, not an autonomous nursing decision.
+   */
+  private stepSupport(dt: number): void {
+    const sp = this.support;
+    if (!sp?.titrating) return;
+    const c = COURSE.support;
+    const without = this.mapRaw() - noradrenalineEffect(sp.noradrenalineUgKgMin);
+    const needed = c.mapTarget - without;
+    const goal = Math.min(
+      sp.maxNoradrenaline,
+      needed <= 0 ? 0 : noradrenalineForEffect(Math.min(needed, 0.95 * c.naEmaxMmHg)),
+    );
+    const d = sp.noradrenalineUgKgMin;
+    const next =
+      goal > d ? Math.min(goal, d + c.naEscalatePerH * dt) : Math.max(goal, d - c.naWeanPerH * dt);
+    sp.noradrenalineUgKgMin = Math.round(next * 1000) / 1000;
+    if (sp.noradrenalineUgKgMin <= 0) {
+      sp.noradrenalineUgKgMin = 0;
+      sp.titrating = false;
+      this.call('nurse', 'nurse.noradrenalineOff', false);
+    }
+  }
+
+  /**
+   * Shock on the ward: hypotension without vasopressor (before any episode this is circulation dysfunction above the
+   * shock threshold), or a carried infusion at its protocol maximum that no longer holds MAP ≥ 65 mmHg. Re-armed
+   * once MAP has recovered above the vasopressor threshold.
+   */
+  private checkShock(): void {
+    const sp = this.support;
+    const d = sp?.noradrenalineUgKgMin ?? 0;
+    const map = this.mapRaw();
+    const unsupported = d === 0 && map < 88 - 40 * COURSE.shockAbove;
+    const refractory = sp !== null && d > 0 && d >= sp.maxNoradrenaline - 1e-6 && map < 65;
+    if ((unsupported || refractory) && !this.shockActive) {
+      this.shockActive = true;
+      this.eventLog.append({ t: this.t, kind: 'shock', preset: this.realtimePreset() });
+      this.call('nurse', 'nurse.shock', true);
+    } else if (map > 88 - 40 * COURSE.vasopressorAbove) {
+      this.shockActive = false;
+    }
+  }
+
+  private vasopressorOn(): boolean {
+    return this.support
+      ? this.support.noradrenalineUgKgMin > 0
+      : this.organs.circ > COURSE.vasopressorAbove;
   }
 
   // ─── Course step (1 h) ──────────────────────────────────────────────────────────────────────────────────
 
-  private step(): void {
-    const dt = COURSE.stepH;
-    this.t += dt;
+  /** h — the next point of the hourly course grid */
+  private nextGridH(): number {
+    return (Math.floor(this.t / COURSE.stepH + EPS_H) + 1) * COURSE.stepH;
+  }
+
+  /** Clinical time of the open real-time episode passes up to `targetH` (interruptions do not stop it). */
+  private advanceEpisodeTo(targetH: number): void {
+    const until = snap(targetH);
+    while (this.t < until - EPS_H && !this.ended) this.stepTo(Math.min(this.nextGridH(), until));
+  }
+
+  /**
+   * One course step from the current time to `target` (h, at most one grid step). During a real-time episode the
+   * workstation owns circulation, gas exchange and the vital signs: organ dysfunction, vital-sign records, nurse
+   * observations, support titration and the course's outcome checks pause; infection, antibiotic exposure, host
+   * response, collateral effects and results continue.
+   */
+  private stepTo(target: number): void {
+    const dt = target - this.t;
+    if (dt <= EPS_H) return;
+    const prev = this.t;
+    this.t = target;
+    // SIM-ASSUMPTION: during an episode (≤ 30 min) the course organ indices are held; the episode's end state replaces
+    // the haemodynamic picture at the handover.
+    const inEpisode = this.episode !== null;
     this.cachedView = null;
     this.activateOnsets();
     this.completeSourceControl();
@@ -656,12 +803,16 @@ export class InfectionEngine {
     this.stepToxicity(dt);
     this.stepMimics(dt);
     this.stepHost(dt);
-    this.stepOrgans(dt);
-    this.recordVitals();
+    if (!inEpisode) {
+      this.stepOrgans(dt);
+      this.stepSupport(dt);
+      this.checkShock();
+      this.recordVitals();
+    }
     this.deliverReports();
-    this.nurseObservations();
-    this.scheduledEvents();
-    this.checkOutcome(dt);
+    if (!inEpisode) this.nurseObservations();
+    this.scheduledEvents(prev);
+    if (!inEpisode) this.checkOutcome(dt);
   }
 
   private hourOfDay(): number {
@@ -1144,13 +1295,6 @@ export class InfectionEngine {
       this.organs[k] += ((target[k] - this.organs[k]) * dt) / tau;
     }
     this.creatinine += ((this.creatinineTarget() - this.creatinine) * dt) / COURSE.creatinineTauH;
-    if (this.organs.circ > COURSE.shockAbove && !this.shockActive) {
-      this.shockActive = true;
-      this.eventLog.append({ t: this.t, kind: 'shock', preset: this.realtimePreset() });
-      this.call('nurse', 'nurse.shock', true);
-    } else if (this.organs.circ < COURSE.vasopressorAbove) {
-      this.shockActive = false;
-    }
   }
 
   // ─── Vitals, labs, reports, calls ───────────────────────────────────────────────────────────────────────
@@ -1201,14 +1345,54 @@ export class InfectionEngine {
     return this.cdi.active && this.cdi.severity >= COURSE.cdi.ileusAbove;
   }
 
-  private lactate(): number {
+  /** mmol/L — lactate of the course circulation alone */
+  private baseLactate(): number {
     return 1 + 6 * this.organs.circ ** 1.5;
+  }
+
+  private lactate(): number {
+    const sp = this.support;
+    if (!sp) return this.baseLactate();
+    const fade = Math.exp(-(this.t - sp.sinceH) / COURSE.support.lactateTauH);
+    return Math.max(0.5, this.baseLactate() + sp.carry.lactate * fade);
+  }
+
+  /** 0..1 — remaining share of the episode's haemodynamic effects (volume) */
+  private haemoFade(sp: CarriedSupport): number {
+    return Math.exp(-(this.t - sp.sinceH) / COURSE.support.haemoTauH);
+  }
+
+  /** mmHg — course MAP before rounding: circulation, carried noradrenaline and the episode's fading effects */
+  private mapRaw(): number {
+    return this.rawVitals().map;
+  }
+
+  /** Course vital signs before rounding. */
+  private rawVitals(): { heartRate: number; map: number; respRate: number; spo2: number } {
+    const o = this.organs;
+    const base = {
+      heartRate: 76 + 35 * this.inflam + 25 * o.circ,
+      map: 88 - 40 * o.circ,
+      respRate: 14 + 10 * this.inflam + 10 * o.lung,
+      spo2: 97 - 14 * o.lung,
+    };
+    const sp = this.support;
+    if (!sp) return base;
+    const fade = this.haemoFade(sp);
+    return {
+      heartRate: base.heartRate + sp.carry.heartRate * fade,
+      map: base.map + noradrenalineEffect(sp.noradrenalineUgKgMin) + sp.carry.map * fade,
+      respRate: base.respRate + sp.carry.respRate * fade,
+      spo2: base.spo2 + sp.carry.spo2,
+    };
   }
 
   private currentVitals(): VitalsPoint {
     const p = this.caseDef.patient;
     const o = this.organs;
+    const raw = this.rawVitals();
     const circadian = 0.2 * Math.sin(((this.hourOfDay() - 4) / 24) * 2 * Math.PI - Math.PI / 2);
+    const na = this.support?.noradrenalineUgKgMin ?? 0;
     // Fever is preserved in neutropenia (it is often the only sign); blunting is per patient (feverFactor, age).
     return {
       t: this.t,
@@ -1217,13 +1401,14 @@ export class InfectionEngine {
           COURSE.temperature.rise * this.inflam * this.feverFactor +
           circadian,
       ),
-      heartRate: Math.round(Math.min(165, 76 + 35 * this.inflam + 25 * o.circ)),
-      map: Math.round(Math.max(40, 88 - 40 * o.circ)),
-      respRate: Math.round(14 + 10 * this.inflam + 10 * o.lung),
-      spo2: Math.round(Math.max(75, 97 - 14 * o.lung)),
+      heartRate: Math.round(Math.min(165, Math.max(30, raw.heartRate))),
+      map: Math.round(Math.max(40, raw.map)),
+      respRate: Math.round(Math.max(6, raw.respRate)),
+      spo2: Math.round(Math.min(100, Math.max(75, raw.spo2))),
       // SIM-ASSUMPTION: dialysis patients keep a small residual diuresis (≈ 0.15 mL/kg/h).
       urineMlH: Math.round(p.weightKg * (p.dialysis ? 0.15 : 1.0 * (1 - o.kidney) ** 1.5)),
-      vasopressor: o.circ > COURSE.vasopressorAbove,
+      vasopressor: this.vasopressorOn(),
+      ...(na > 0 ? { noradrenaline: na } : {}),
     };
   }
 
@@ -1339,12 +1524,13 @@ export class InfectionEngine {
     once('cdi-ileus', this.cdiIleus(), 'nurse.ileus', true);
   }
 
-  private scheduledEvents(): void {
+  private scheduledEvents(prevH: number): void {
     const h = this.hourOfDay();
     if (h === COURSE.labsHour) this.drawLabs();
     if (h === COURSE.roundHour) this.eventLog.append({ t: this.t, kind: 'round' });
     for (const c of this.caseDef.scriptedCalls ?? [])
-      if (c.atH === this.t) this.call(c.source, c.messageKey, c.urgent);
+      if (c.atH > prevH + EPS_H && c.atH <= this.t + EPS_H)
+        this.call(c.source, c.messageKey, c.urgent);
     if (
       !this.timeoutLogged &&
       this.firstAntibioticH !== null &&
@@ -1410,6 +1596,41 @@ export class InfectionEngine {
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+
+/** h — tolerance of course-clock comparisons */
+const EPS_H = 1e-9;
+
+/** Snaps a course time to the whole hour when it is within rounding error of it. */
+const snap = (h: number) => (Math.abs(h - Math.round(h)) < 1e-6 ? Math.round(h) : h);
+
+interface CarriedSupport extends CourseSupport {
+  /** µg/kg/min — protocol maximum */
+  maxNoradrenaline: number;
+  /** handover state minus the course's own values (MAP also minus the noradrenaline effect) */
+  carry: { map: number; heartRate: number; respRate: number; spo2: number; lactate: number };
+}
+
+function publicSupport(sp: CarriedSupport): CourseSupport {
+  return {
+    noradrenalineUgKgMin: sp.noradrenalineUgKgMin,
+    titrating: sp.titrating,
+    airway: sp.airway,
+    fio2: sp.fio2,
+    sinceH: sp.sinceH,
+  };
+}
+
+/** mmHg — SIM-ASSUMPTION: MAP effect of noradrenaline in the course, Emax × d / (d + EC50). */
+function noradrenalineEffect(ugKgMin: number): number {
+  const c = COURSE.support;
+  return ugKgMin <= 0 ? 0 : (c.naEmaxMmHg * ugKgMin) / (ugKgMin + c.naEc50);
+}
+
+/** µg/kg/min — the dose with the given MAP effect (inverse of noradrenalineEffect, effect < Emax). */
+function noradrenalineForEffect(mmHg: number): number {
+  const c = COURSE.support;
+  return (c.naEc50 * mmHg) / (c.naEmaxMmHg - mmHg);
+}
 
 /** XOR salt of the patient-variability stream (independent of the course RNG). */
 const PATIENT_SALT = 0x9c7a11;

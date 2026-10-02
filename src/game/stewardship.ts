@@ -444,34 +444,11 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     !(config.infectionPresent && cause.length)
   )
     timeToActiveH = firstAntibioticH;
-  /** h of the first effective dose in course time (duration anchor; before the bridge adjustment) */
+  // A real-time episode advances the course clock by its minutes, and its actions are logged at their true minute:
+  // course times need no bridge adjustment.
+  /** h of the first effective dose (duration anchor) */
   const firstEffectiveH = timeToActiveH;
-  const firstDoseCourseH = firstAntibioticH;
-
-  // Real-time bridge: the episode happened at the bridge hour while course time stood still. An antibiotic given in
-  // it counts at its real minute; one ordered after the handover also waited the length of the episode.
-  const rt = commands.find((e) => e.command.type === 'APPLY_REALTIME_OUTCOME');
-  if (
-    rt?.command.type === 'APPLY_REALTIME_OUTCOME' &&
-    timeToActiveH !== null &&
-    timeToActiveH >= rt.t
-  ) {
-    const o = rt.command.outcome;
-    timeToActiveH =
-      o.antibioticsAtMin !== null && timeToActiveH === rt.t
-        ? rt.t + o.antibioticsAtMin / 60
-        : timeToActiveH + o.durationMin / 60;
-    timeToActiveH = Math.round(timeToActiveH * 100) / 100;
-  }
-  // The first dose on the same (bridge-adjusted) clock, for judging the empirical choice.
-  let firstDoseH = firstDoseCourseH;
-  if (rt?.command.type === 'APPLY_REALTIME_OUTCOME' && firstDoseH !== null && firstDoseH >= rt.t) {
-    const o = rt.command.outcome;
-    firstDoseH =
-      o.antibioticsAtMin !== null && firstDoseH === rt.t
-        ? rt.t + o.antibioticsAtMin / 60
-        : firstDoseH + o.durationMin / 60;
-  }
+  const firstDoseH = firstAntibioticH;
 
   // ── Resistogram of the causative isolates ──
   const causalIds = new Set(cause.map((c) => c.iso.id));

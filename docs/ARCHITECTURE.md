@@ -34,24 +34,24 @@ One page on how the simulator is put together. The rules behind it are in `CLAUD
 
 ## Layers (dependency rule, enforced by ESLint)
 
-| Folder | Responsibility |
-|---|---|
-| `src/sim/core` | Fixed-step clock, seeded RNG, event log, constants (no dependencies) |
-| `src/sim/engine` | `SimulationEngine`: tick orchestration, command application, snapshots, subscriptions; `ResuscitationController`: ALS commands (rhythm check, defibrillator, pushes, airway, procedures, reversible causes), called by the engine through a narrow host interface |
-| `src/sim/types` | Commands, log entries, scenario, guideline and transient-event types |
-| `src/sim/state` | State types and the initial-state factory (patient, ventilator, CPR, monitor) |
-| `src/sim/physiology` | Cardiovascular, respiratory, lung-state, blood-gas and heart–lung interaction models; obstruction (tamponade, tension pneumothorax) and airway-device effects |
-| `src/sim/rhythms` | Rhythm registry (sinus, VF, pulseless VT, asystole, PEA) and beat scheduling |
-| `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation; defibrillation physics and the seeded shock-outcome model; rhythm classification, pulse finding, airway insertion and procedure constants |
-| `src/sim/pharmacology` | Formulary, units, dosing weights, IV line delivery, PK/PD, fluids, order validation (imports core, state, physiology parameters) |
-| `src/sim/fluid` | Body-fluid compartments, capillary/lung exchange, osmotic shift, electrolytes and SID, kidney, bladder/catheter, estimated losses, the balance ledger (imports core, state, physiology, pharmacology formulary) |
-| `src/sim/brain` | Cerebral state: hypnotic/GABAergic depth from the shared PD response surface, stimulation and analgesic attenuation, cerebral O₂, patient factors → EEG band amplitudes and suppression drive (imports core, state, pharmacology) |
-| `src/sim/devices` | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms |
-| `src/sim/signals` | Ring buffers and waveform generators |
-| `src/game` | Learning logic, pure and React-free: catalog/session types, `createSession`, daily seed (later scoring, assessment rules, progression). Must not import React, `src/ui` or `src/content` (ESLint) |
-| `src/content` | Scenarios, module catalog (`modules/catalog.ts`), guideline config (ERC 2025), i18n strings, parameter tooltips, patient histories — plain data |
-| `src/ui/adapters` | Pure functions: snapshot → view models (e.g. `PatientVisualState`) |
-| `src/ui` | React components, screens (HOME, module menus), canvas renderers, audio, theme |
+| Folder                  | Responsibility                                                                                                                                                                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/sim/core`          | Fixed-step clock, seeded RNG, event log, constants (no dependencies)                                                                                                                                                                                              |
+| `src/sim/engine`        | `SimulationEngine`: tick orchestration, command application, snapshots, subscriptions; `ResuscitationController`: ALS commands (rhythm check, defibrillator, pushes, airway, procedures, reversible causes), called by the engine through a narrow host interface |
+| `src/sim/types`         | Commands, log entries, scenario, guideline and transient-event types                                                                                                                                                                                              |
+| `src/sim/state`         | State types and the initial-state factory (patient, ventilator, CPR, monitor)                                                                                                                                                                                     |
+| `src/sim/physiology`    | Cardiovascular, respiratory, lung-state, blood-gas and heart–lung interaction models; obstruction (tamponade, tension pneumothorax) and airway-device effects                                                                                                     |
+| `src/sim/rhythms`       | Rhythm registry (sinus, VF, pulseless VT, asystole, PEA) and beat scheduling                                                                                                                                                                                      |
+| `src/sim/interventions` | CPR engine, compression sources, CPR quality evaluation; defibrillation physics and the seeded shock-outcome model; rhythm classification, pulse finding, airway insertion and procedure constants                                                                |
+| `src/sim/pharmacology`  | Formulary, units, dosing weights, IV line delivery, PK/PD, fluids, order validation (imports core, state, physiology parameters)                                                                                                                                  |
+| `src/sim/fluid`         | Body-fluid compartments, capillary/lung exchange, osmotic shift, electrolytes and SID, kidney, bladder/catheter, estimated losses, the balance ledger (imports core, state, physiology, pharmacology formulary)                                                   |
+| `src/sim/brain`         | Cerebral state: hypnotic/GABAergic depth from the shared PD response surface, stimulation and analgesic attenuation, cerebral O₂, patient factors → EEG band amplitudes and suppression drive (imports core, state, pharmacology)                                 |
+| `src/sim/devices`       | Ventilator (settings, validation, cycling), monitor (measured numerics), alarms                                                                                                                                                                                   |
+| `src/sim/signals`       | Ring buffers and waveform generators                                                                                                                                                                                                                              |
+| `src/game`              | Learning logic, pure and React-free: catalog/session types, `createSession`, daily seed (later scoring, assessment rules, progression). Must not import React, `src/ui` or `src/content` (ESLint)                                                                 |
+| `src/content`           | Scenarios, module catalog (`modules/catalog.ts`), guideline config (ERC 2025), i18n strings, parameter tooltips, patient histories — plain data                                                                                                                   |
+| `src/ui/adapters`       | Pure functions: snapshot → view models (e.g. `PatientVisualState`)                                                                                                                                                                                                |
+| `src/ui`                | React components, screens (HOME, module menus), canvas renderers, audio, theme                                                                                                                                                                                    |
 
 `src/sim` has no DOM or React dependency and runs in Node (all unit tests do).
 The UI imports the simulation only through `src/sim/index.ts`.
@@ -179,14 +179,14 @@ HOME ──► module menu ──► session intro ──► workspace ──►
 
 ## Seams for later milestones
 
-| Future feature | Where it plugs in |
-|---|---|
-| Defibrillation, rhythm check, ROSC logic (M2) | new commands, `RhythmEngine` registry, `AlarmEngine` |
-| Drugs (M3) | new commands + modifiers on `CardiovascularModel` parameters (tone, contractility, HR) |
-| Airway / BVM / SGA / ETT (M4) | `patient.airway.device`, `VentilatorDevice` / `RespiratoryModel` |
-| Player-driven compressions, feedback devices, manikins | new `CompressionSource` implementations |
-| 2D art, Three.js or Unity patient | new renderer consuming `PatientVisualState` |
-| Replay viewer | scoring and debrief exist (`src/game`); a replay viewer can re-run the session from its seed and log (`SimulationEngine.replay`) |
+| Future feature                                         | Where it plugs in                                                                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Defibrillation, rhythm check, ROSC logic (M2)          | new commands, `RhythmEngine` registry, `AlarmEngine`                                                                             |
+| Drugs (M3)                                             | new commands + modifiers on `CardiovascularModel` parameters (tone, contractility, HR)                                           |
+| Airway / BVM / SGA / ETT (M4)                          | `patient.airway.device`, `VentilatorDevice` / `RespiratoryModel`                                                                 |
+| Player-driven compressions, feedback devices, manikins | new `CompressionSource` implementations                                                                                          |
+| 2D art, Three.js or Unity patient                      | new renderer consuming `PatientVisualState`                                                                                      |
+| Replay viewer                                          | scoring and debrief exist (`src/game`); a replay viewer can re-run the session from its seed and log (`SimulationEngine.replay`) |
 
 ## Heart–lung interaction
 
@@ -358,14 +358,22 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   pleth (125 Hz) into ring buffers from the current course values — signals from state, never canned arrays; NIBP
   from MAP. `src/ui/screens/ward/WardMonitor.tsx` draws them as sweep traces (`drawSweep`, 25 mm/s) in its own rAF
   loop, with HR / SpO₂ / NIBP / temperature / RR numerics and alarm colours (`wardMonitorView`).
-- **Real-time bridge (phase 4):** a case with `realtimeAdmission` (B1) can start in the emergency department, and any
-  course shock (`view.shock`) offers "take over in real time". `useSession.startBridge` builds the episode from
-  `InfectionEngine.realtimePreset()` (`src/content/scenarios/bridge.ts`), loads it into the one `SimulationEngine`
-  and opens the workstation unscored; `BridgeBar` records it (`BridgeRecorder`, `src/game/bridge.ts`) and offers the
-  handover. `end()` turns the run into a `RealtimeOutcome` (`realtimeOutcome`) and returns to the ward, where the
-  `HandoverDialog` asks which antibiotic was given and dispatches cultures, the antibiotic and
-  `APPLY_REALTIME_OUTCOME` to the course. The course engine survives the episode in `WardStoreContext` (React
-  context, keyed by the session).
+- **Real-time bridge (phase 4; continuity 2026-10-03):** a case with `realtimeAdmission` (B1) can start in the
+  emergency department, and any course shock (`view.shock`) offers "take over in real time". One patient, one clock:
+  - `useSession.startBridge` dispatches `REALTIME_EPISODE_START` to the course (its clock is held; ward time commands
+    are refused). A first episode builds the workstation patient from `InfectionEngine.realtimePreset()`
+    (`src/content/scenarios/bridge.ts`, `loadScenario`); a further episode of the same ward session continues the
+    patient the workstation still holds (`SimulationEngine.continueScenario`, checked with `loadCount` via
+    `WardStore.canContinue`). Either way `continuationCommands` applies the course-owned causes (vasoplegia, leak,
+    temperature) and the protocol's noradrenaline dose.
+  - `BridgeBar` records the episode (`BridgeRecorder`, started at `episodeStart`, so times and fluids are relative to
+    the episode). `end()` turns it into a `RealtimeOutcome` including the end state (`end`: MAP, HR, RR, SaO₂,
+    lactate, noradrenaline, FiO₂, airway); an episode that never started sends `REALTIME_EPISODE_CANCEL`.
+  - On the ward, the `HandoverDialog` asks which antibiotic was given; `handoverCommands` replays the episode into the
+    course: `REALTIME_EPISODE_ADVANCE` to each action's minute, the action, then `APPLY_REALTIME_OUTCOME`, which passes
+    the remaining minutes and continues the course from the end state (carried support; `view.support`). Every
+    minute is counted once and a second handover is refused; scoring reads the true times.
+  - The course engine survives the episode in `WardStoreContext` (React context, keyed by the session).
 - **Case variants:** `InfectionCase.variants` patches the hidden truth; `resolveInfectionVariant` draws one from the
   session seed (fresh seed per session for cases with variants). Scoring facts per variant:
   `stewardshipConfigFor(caseId, variant)`; case-specific debrief checks are data (`CaseCheck`).

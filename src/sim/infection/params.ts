@@ -55,6 +55,30 @@ export const COURSE = {
   /** circulation dysfunction above which a vasopressor is needed / shock is declared */
   vasopressorAbove: 0.45,
   shockAbove: 0.6,
+  /**
+   * Support carried from a real-time episode (handover → course). Noradrenaline raises MAP by
+   * Emax × dose / (dose + EC50); the ICU protocol titrates it towards the MAP target within its steps and stops it
+   * when weaned to 0. The episode's other haemodynamic effects (mainly the volume given) fade with `haemoTauH`, its
+   * lactate deviation with `lactateTauH`; the SpO₂ deviation is held while the carried oxygen support continues.
+   */
+  support: {
+    /** mmHg — protocol target (titrated to MAP ≥ 65) */
+    mapTarget: 67,
+    /** mmHg */
+    naEmaxMmHg: 40,
+    /** µg/kg/min */
+    naEc50: 0.3,
+    /** µg/kg/min — protocol maximum (the handover dose if higher) */
+    naMax: 0.5,
+    /** µg/kg/min per h */
+    naWeanPerH: 0.02,
+    /** µg/kg/min per h */
+    naEscalatePerH: 0.1,
+    /** h */
+    haemoTauH: 6,
+    /** h */
+    lactateTauH: 2,
+  },
   /** death hazard /h = scale × max(0, organScore − threshold)² / (1 − threshold)² */
   death: { threshold: 0.6, scalePerH: 0.02 },
 

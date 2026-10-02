@@ -890,13 +890,19 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   // Real time → course: the handover names what happened and asks for the antibiotic.
   await expect(page.getByTestId('ward-handover')).toBeVisible();
   await expect(page.getByTestId('ward-handover')).toContainText('Blutkulturen bei');
+  // The state the course continues from.
+  await expect(page.getByTestId('ward-handover')).toContainText('Bei Übergabe');
   await expect(page.getByTestId('handover-confirm')).toBeDisabled();
   await page.getByTestId('handover-drug').selectOption('ceftriaxone');
   if (shots) await page.screenshot({ path: `${shots}/ward-8-handover.png` });
   await page.getByTestId('handover-confirm').click();
   await expect(page.getByTestId('ward-handover')).toBeHidden();
   await expect(page.getByTestId('therapy-sheet')).toContainText('Ceftriaxon');
-  await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:00/);
+  // One clinical clock: the 5½ minutes of the episode have passed on the ward clock (15:00 → 15:05:30).
+  await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:0[56]/);
+  // The oxygen support of the episode is carried to the ward and shown.
+  await expect(page.getByTestId('ward-support')).toContainText('FiO₂');
+  if (shots) await page.screenshot({ path: `${shots}/ward-9-after-handover.png` });
   expect(errors).toEqual([]);
 });
 

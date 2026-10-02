@@ -29,7 +29,13 @@ import {
   STEWARDSHIP_WEIGHTS,
   stewardshipConfigFor,
 } from '../content/scoring/stewardshipConfig';
-import { InfectionEngine, type InfectionCase, type InfectionCommand } from '../sim';
+import {
+  InfectionEngine,
+  type InfectionCase,
+  type InfectionCommand,
+  type RealtimeOutcome,
+} from '../sim';
+import { handoverCommands, type HandoverDrug } from './bridge';
 import { scoreStewardship } from './stewardship';
 
 /** The case's first (classic) variant, so the lesson under test does not depend on the variant draw. */
@@ -430,7 +436,7 @@ describe('stewardship scoring — case checks (phase 4)', () => {
 });
 
 describe('stewardship scoring — real-time bridge timing', () => {
-  const outcome = (antibioticsAtMin: number | null, durationMin: number) => ({
+  const outcome = (antibioticsAtMin: number | null, durationMin: number): RealtimeOutcome => ({
     survived: true,
     durationMin,
     vasopressorMin: 0,
@@ -443,13 +449,24 @@ describe('stewardship scoring — real-time bridge timing', () => {
     timeToStabiliseMin: 0,
     antibioticsAtMin,
     culturesAtMin: 2,
+    end: {
+      map: 72,
+      heartRate: 96,
+      respRate: 20,
+      spo2: 96,
+      lactate: 1.8,
+      noradrenalineUgKgMin: 0,
+      fio2: 40,
+      airway: 'mask',
+    },
   });
 
-  it('an antibiotic given in the episode counts at its real minute', () => {
+  it('an antibiotic given in the episode counts at its real minute (the course clock advances once)', () => {
     const e = make(feverRigors);
-    e.dispatch(cultures);
-    e.dispatch(start('ceftriaxone'));
-    e.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: outcome(40, 50) });
+    e.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'admission' });
+    for (const c of handoverCommands(outcome(40, 50), start('ceftriaxone') as HandoverDrug))
+      e.dispatch(c);
+    expect(e.timeH).toBeCloseTo(50 / 60, 9);
     runTo(e, 6);
     const r = score(e);
     expect(r.metrics.timeToActiveH).toBeCloseTo(40 / 60, 2);
@@ -458,8 +475,8 @@ describe('stewardship scoring — real-time bridge timing', () => {
 
   it('no antibiotic in a 90-min episode: the first dose after the handover is late', () => {
     const e = make(feverRigors);
-    e.dispatch(cultures);
-    e.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome: outcome(null, 90) });
+    e.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'admission' });
+    for (const c of handoverCommands(outcome(null, 90), null)) e.dispatch(c);
     e.dispatch(start('ceftriaxone'));
     runTo(e, 6);
     const r = score(e);

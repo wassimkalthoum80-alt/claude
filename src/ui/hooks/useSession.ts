@@ -6,7 +6,7 @@ import { recordExplored } from '../../game/progression';
 import { createSession } from '../../game/session';
 import type { ModuleId } from '../../game/types';
 import { bridgeScenario, type BridgeKind } from '../../content/scenarios/bridge';
-import { realtimeOutcome } from '../../game/bridge';
+import { continuationCommands, episodeStart, realtimeOutcome } from '../../game/bridge';
 import { finishScoredSession, MIN_DEBRIEF_S } from '../adapters/debrief';
 import { localProgressStore } from '../progressStore';
 import { useEngine } from './EngineContext';
@@ -152,16 +152,27 @@ export function useSession(): SessionActions {
       const wardSession = ui.session;
       const course = wardStore.current();
       if (!wardSession || !course || ui.screen !== 'ward') return;
+      const preset = course.realtimePreset();
+      // The same patient: a further episode continues the workstation state as it was handed over; only a first
+      // episode (or one after something else was loaded) builds the patient from the course's preset.
+      const continuing = wardStore.canContinue(engine.loadCount);
       const scenario = bridgeScenario(
-        course.realtimePreset(),
+        preset,
         kind,
         course.caseDef.patient,
         course.caseDef.realtimeKind,
+        continuing,
       );
-      engine.loadScenario(scenario, wardSession.seed);
+      if (continuing) engine.continueScenario(scenario);
+      else engine.loadScenario(scenario, wardSession.seed);
+      // Course-owned causes (vasoplegia, leak, temperature) and the protocol's noradrenaline dose.
+      for (const c of continuationCommands(preset, engine.getSnapshot()))
+        engine.dispatch(c, 'system');
       engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: wardSession.difficulty }, 'system');
       engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
-      wardStore.startRecording();
+      wardStore.startRecording(episodeStart(engine.getSnapshot()));
+      // The course clock is held from now; the episode's minutes are counted once at the handover.
+      course.dispatch({ type: 'REALTIME_EPISODE_START', kind }, 'system');
       setUi({
         ...WORKSPACE_CLOSED,
         screen: 'session',
@@ -227,14 +238,16 @@ export function useSession(): SessionActions {
     const session = ui.session;
     if (ui.bridge) {
       // Real time → course: hand the episode back to the ward (nothing to hand over if it never started).
-      const started = engine.getSnapshot().time > 0;
+      const rec = wardStore.recorder();
+      const snap = engine.getSnapshot();
+      const start = rec?.start ?? episodeStart(snap);
+      const started = snap.time > start.timeS;
       const outcome = started
-        ? realtimeOutcome(
-            wardStore.recorder()?.samples ?? [],
-            engine.getSnapshot(),
-            engine.eventLog,
-          )
+        ? realtimeOutcome(rec?.samples ?? [], snap, engine.eventLog, start)
         : null;
+      // The workstation keeps this patient as handed over for a further episode.
+      wardStore.markEpisodeEnd(engine.loadCount);
+      if (!outcome) wardStore.current()?.dispatch({ type: 'REALTIME_EPISODE_CANCEL' }, 'system');
       setUi({
         ...WORKSPACE_CLOSED,
         screen: 'ward',

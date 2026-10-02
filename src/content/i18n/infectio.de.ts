@@ -775,7 +775,8 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'bridge.startShock': 'In Echtzeit übernehmen',
   'bridge.handover.title.admission': 'Übergabe aus der Notaufnahme',
   'bridge.handover.title.shock': 'Übergabe nach der Schockepisode',
-  'bridge.handover.text': 'Das ist in Echtzeit passiert. Es geht jetzt im Stationsverlauf weiter.',
+  'bridge.handover.text':
+    'Das ist in Echtzeit passiert. Der Stationsverlauf setzt mit dem Patienten fort, wie er übergeben wurde; die Minuten der Episode sind auf der Stationsuhr vergangen.',
   'bridge.handover.died': 'Der Patient hat die Episode nicht überlebt.',
   'bridge.handover.confirm': 'Auf Station weiter',
   'bridge.whichDrug': 'Welches Antibiotikum haben Sie gegeben?',
@@ -785,7 +786,7 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'bridge.row.fluids': 'Flüssigkeit',
   'bridge.row.vasopressor': 'Noradrenalin',
   'bridge.row.lactate': 'Laktat max.',
-  'bridge.row.stable': 'MAP ≥ 65 stabil ab',
+  'bridge.row.stable': 'MAP ≥ 65 stabil ab (nur Auswertung)',
   'bridge.notDone': 'nicht erfolgt',
   'bridge.none': 'keins',
   'bridge.notStable': 'nicht erreicht',
@@ -1322,6 +1323,24 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
     'Urosepsis bei Harnstauungsniere: früh bildgebend abklären, dringlich entlasten (DJ oder Nephrostomie) — Antibiotika allein beherrschen eine infizierte Harnstauung nicht; wiederholtes Eskalieren ist der klassische Fehler.',
   'stw.learn.pe':
     'Fieber mit neuer Luftnot unter Antibiotika: sofort Hämodynamik und Oxygenierung reevaluieren, dann wahrscheinlichkeitsbasiertes Vorgehen (CT-PA; eine proximale TVT kann die Therapie begründen). Nach Blutungsrisikoabschätzung antikoagulieren — bei verzögerter Bildgebung und hoher Wahrscheinlichkeit überbrückend.',
+  'bridge.row.end': 'Bei Übergabe',
+  'bridge.endValue':
+    'MAP {map} mmHg · HF {hr}/min · SpO₂ {spo2} % bei FiO₂ {fio2} % · Laktat {lactate} mmol/L',
+  'bridge.row.endNoradrenaline': 'Läuft bei Übergabe',
+  'bridge.endNoradrenaline':
+    'Noradrenalin {dose} µg/kg/min – läuft weiter (Intensivprotokoll titriert auf MAP ≥ 65 mmHg)',
+  'bridge.row.airway': 'Atemweg',
+  'bridge.airway.none': 'spontan, ohne Hilfsmittel',
+  'bridge.airway.mask': 'Sauerstoffmaske',
+  'bridge.airway.sga': 'Larynxmaske',
+  'bridge.airway.ett': 'intubiert, beatmet',
+  'ward.support.label': 'Unterstützung',
+  'ward.support.noradrenaline':
+    'Noradrenalin {dose} µg/kg/min – nach Intensivprotokoll auf MAP ≥ 65 mmHg titriert',
+  'ward.support.airway.ett': 'Intubiert und beatmet · FiO₂ {fio2} %',
+  'ward.support.airway.sga': 'Larynxmaske · FiO₂ {fio2} %',
+  'ward.support.airway.mask': 'Sauerstoff über Maske · eingestellte FiO₂ {fio2} %',
+  'nurse.noradrenalineOff': 'Noradrenalin ist nach Intensivprotokoll ausgeschlichen und jetzt aus.',
   'cls.penicillin': 'Penicillin',
   'cls.aminopenicillin': 'Aminopenicilline',
   'cls.aminopenicillin-bli': 'Aminopenicillin/BLI',

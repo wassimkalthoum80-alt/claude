@@ -183,6 +183,7 @@ export class SimulationEngine {
   private readonly eventListeners = new Set<(e: SimEvent) => void>();
   private version = 0;
   private snapshotVersion = -1;
+  private loads = 0;
   private snapshot: SimulationState;
 
   constructor(options: EngineOptions) {
@@ -498,6 +499,36 @@ export class SimulationEngine {
     this.bumpAndNotify();
   }
 
+  /** Increments with every (re)load of a patient — tells whether the state still holds the same patient. */
+  get loadCount(): number {
+    return this.loads;
+  }
+
+  /**
+   * Continue the same patient under a further case definition (another real-time episode of a ward case): patient,
+   * devices, drugs, fluid compartments, measurements, the clock and the event log are kept. Only the case layer
+   * changes: texts, actions (cleared, so they can be done again), Event Director rules, and the timeline and time limit,
+   * which count from now. The patient fields of `next` are not applied. Logged as SCENARIO_CONTINUED.
+   */
+  continueScenario(next: ScenarioDefinition): void {
+    const s = this.state;
+    const now = s.time;
+    this.scenarioDef = next;
+    this.active = {
+      ...next,
+      timeline: next.timeline.map((ev) => ({ ...ev, at: ev.at + now })),
+      ...(next.maxDurationS !== undefined ? { maxDurationS: now + next.maxDurationS } : {}),
+    };
+    this.timelineIndex = 0;
+    s.scenario.id = next.id;
+    s.scenario.ended = false;
+    s.director.actionsDone = [];
+    s.director.pendingActions = [];
+    this.director.setRules(mergeRules(this.directorRules, next.director ?? []));
+    this.logEvent('SCENARIO_CONTINUED', now, next.id);
+    this.bumpAndNotify();
+  }
+
   readonly subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -520,6 +551,7 @@ export class SimulationEngine {
   // ───────────────────────────── internals ─────────────────────────────
 
   private load(base: ScenarioDefinition, seed: number): void {
+    this.loads += 1;
     const { scenario, variant } = resolveVariant(base, seed);
     this.active = scenario;
     this.rng = new SeededRng(seed);

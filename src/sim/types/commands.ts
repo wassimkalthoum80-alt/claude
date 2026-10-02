@@ -203,6 +203,8 @@ export type ClinicalEventType =
   | 'CIRCULATION_RESTORED'
   | 'FIRST_COMPRESSION'
   | 'SCENARIO_END'
+  /** the same patient continues under a further case definition (another real-time episode); detail = scenario id */
+  | 'SCENARIO_CONTINUED'
   /** heart–lung model: arrest from sustained low flow or oxygen debt (detail = cause) */
   | 'PEA_ONSET'
   /** heart–lung model: ventricular fibrillation from severe ischaemia under catecholamine drive (detail = cause) */

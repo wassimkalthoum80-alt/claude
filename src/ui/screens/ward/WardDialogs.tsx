@@ -542,6 +542,28 @@ export function HandoverDialog({
       `${at} min`,
     ]),
     ['bridge.row.lactate', `${outcome.peakLactate} mmol/L`],
+    // The state the ward course continues from.
+    ...(outcome.survived
+      ? ([
+          [
+            'bridge.row.end',
+            tk('bridge.endValue', {
+              map: Math.round(outcome.end.map),
+              hr: outcome.end.heartRate,
+              spo2: Math.round(outcome.end.spo2),
+              fio2: outcome.end.fio2,
+              lactate: outcome.end.lactate,
+            }),
+          ],
+          [
+            'bridge.row.endNoradrenaline',
+            outcome.end.noradrenalineUgKgMin > 0
+              ? tk('bridge.endNoradrenaline', { dose: outcome.end.noradrenalineUgKgMin })
+              : tk('bridge.none'),
+          ],
+          ['bridge.row.airway', tk(`bridge.airway.${outcome.end.airway}`)],
+        ] as [string, string][])
+      : []),
     [
       'bridge.row.stable',
       outcome.timeToStabiliseMin === null

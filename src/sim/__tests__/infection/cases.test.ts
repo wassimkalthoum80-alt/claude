@@ -248,6 +248,7 @@ describe('bridge hooks in the course', () => {
     while (!e.getView().shock && e.timeH < 120 && !e.getView().ended) e.advance(4);
     expect(e.getView().shock).toBe(true);
     expect(e.log.some((l) => l.kind === 'shock')).toBe(true);
+    e.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'shock' });
     e.dispatch({
       type: 'APPLY_REALTIME_OUTCOME',
       outcome: {
@@ -263,6 +264,16 @@ describe('bridge hooks in the course', () => {
         timeToStabiliseMin: 12,
         antibioticsAtMin: 5,
         culturesAtMin: 2,
+        end: {
+          map: 70,
+          heartRate: 98,
+          respRate: 22,
+          spo2: 96,
+          lactate: 2.4,
+          noradrenalineUgKgMin: 0.1,
+          fio2: 40,
+          airway: 'mask',
+        },
       },
     });
     expect(e.getView().shock).toBe(false);

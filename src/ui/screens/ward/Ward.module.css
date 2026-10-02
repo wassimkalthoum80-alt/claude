@@ -651,6 +651,16 @@
   overflow: hidden;
 }
 
+/* Support carried from the real-time episode */
+.support {
+  margin: 0;
+  padding: 6px 12px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 /* Real-time bridge */
 .shockBanner {
   display: flex;

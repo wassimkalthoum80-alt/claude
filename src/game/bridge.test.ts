@@ -76,7 +76,10 @@ describe('real-time bridge (course ↔ real time)', () => {
     expect(outcome.fluidsMl).toBeGreaterThan(400);
     expect(outcome.ventilated).toBe(false);
     expect(outcome.durationMin).toBeCloseTo(11.5, 0);
+    expect(outcome.end.noradrenalineUgKgMin).toBeGreaterThan(0.05);
+    expect(outcome.end.airway).toBe('mask');
     // the course applies it (logged as a command)
+    w.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'admission' });
     expect(w.dispatch({ type: 'APPLY_REALTIME_OUTCOME', outcome }).accepted).toBe(true);
   });
 });

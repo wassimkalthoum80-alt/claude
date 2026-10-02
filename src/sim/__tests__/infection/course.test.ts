@@ -152,10 +152,14 @@ describe('the four states: burden, source control, inflammation, organs', () => 
     }
   });
 
-  it('the real-time outcome flows back into the course', () => {
+  it('the real-time outcome flows back into the course: the course continues from the handover state', () => {
     const e = make(urosepsis(['esbl']));
     runTo(e, 24 * 6);
     const before = e.getTruth().organs.circ;
+    const t0 = e.timeH;
+    expect(e.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'shock' }).accepted).toBe(true);
+    // The course clock is held while the learner is in the workstation.
+    expect(e.dispatch({ type: 'ADVANCE', hours: 4 }).accepted).toBe(false);
     e.dispatch({
       type: 'APPLY_REALTIME_OUTCOME',
       outcome: {
@@ -171,12 +175,37 @@ describe('the four states: burden, source control, inflammation, organs', () => 
         timeToStabiliseMin: 30,
         antibioticsAtMin: 10,
         culturesAtMin: 5,
+        end: {
+          map: 68,
+          heartRate: 104,
+          respRate: 24,
+          spo2: 95,
+          lactate: 3.2,
+          noradrenalineUgKgMin: 0.15,
+          fio2: 40,
+          airway: 'mask',
+        },
       },
     });
     const t = e.getTruth();
-    expect(t.organs.circ).toBeLessThan(before);
+    // The infection-driven circulation index is not reset by the episode; the running infusion carries it.
+    expect(t.organs.circ).toBeCloseTo(before, 1);
     expect(t.organs.kidney).toBeGreaterThanOrEqual(0.45);
+    const v = e.getView();
+    expect(v.timeH).toBeCloseTo(t0 + 1, 9);
+    expect(v.vitals.at(-1)?.map).toBe(68);
+    expect(v.vitals.at(-1)?.heartRate).toBe(104);
+    expect(v.vasopressor).toBe(true);
+    expect(v.support?.noradrenalineUgKgMin).toBe(0.15);
+    expect(v.episodeOpen).toBe(false);
+    // Applied once: a second handover of the same episode is rejected.
+    const applied = e.log.find(
+      (l) => l.kind === 'command' && l.command.type === 'APPLY_REALTIME_OUTCOME',
+    );
+    if (applied?.kind === 'command' && applied.command.type === 'APPLY_REALTIME_OUTCOME')
+      expect(e.dispatch(applied.command).accepted).toBe(false);
     const died = make(urosepsis(['esbl']));
+    died.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'shock' });
     died.dispatch({
       type: 'APPLY_REALTIME_OUTCOME',
       outcome: {
@@ -193,6 +222,16 @@ describe('the four states: burden, source control, inflammation, organs', () => 
           timeToStabiliseMin: null,
           antibioticsAtMin: null,
           culturesAtMin: null,
+          end: {
+            map: 0,
+            heartRate: 0,
+            respRate: 0,
+            spo2: 0,
+            lactate: 12,
+            noradrenalineUgKgMin: 1,
+            fio2: 100,
+            airway: 'ett',
+          },
         },
       },
     });

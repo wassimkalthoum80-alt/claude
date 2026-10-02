@@ -759,7 +759,7 @@ export const infectioEn = {
   'bridge.handover.title.admission': 'Handover from the emergency department',
   'bridge.handover.title.shock': 'Handover after the shock episode',
   'bridge.handover.text':
-    'This is what happened in real time. It now continues in the ward course.',
+    "This is what happened in real time. The ward course continues from the patient as handed over; the episode's minutes have passed on the ward clock.",
   'bridge.handover.died': 'The patient did not survive the episode.',
   'bridge.handover.confirm': 'Continue on the ward',
   'bridge.whichDrug': 'Which antibiotic did you give?',
@@ -769,7 +769,7 @@ export const infectioEn = {
   'bridge.row.fluids': 'Fluids',
   'bridge.row.vasopressor': 'Noradrenaline',
   'bridge.row.lactate': 'Peak lactate',
-  'bridge.row.stable': 'MAP ≥ 65 stable from',
+  'bridge.row.stable': 'MAP ≥ 65 stable from (debrief only)',
   'bridge.notDone': 'not done',
   'bridge.none': 'none',
   'bridge.notStable': 'not reached',
@@ -1294,6 +1294,25 @@ export const infectioEn = {
     'Urosepsis with an obstructed kidney: image early, decompress urgently (stent or nephrostomy) — antibiotics alone cannot control an infected obstruction; repeatedly broadening them is the classic error.',
   'stw.learn.pe':
     'Fever with new dyspnoea under antibiotics: reassess haemodynamics and oxygenation at once, then a probability-based pathway (CT-PA; a proximal DVT can establish treatment). Anticoagulate after a bleeding-risk assessment — interim treatment when imaging is delayed and probability is high.',
+  'bridge.row.end': 'At handover',
+  'bridge.endValue':
+    'MAP {map} mmHg · HR {hr}/min · SpO₂ {spo2} % at FiO₂ {fio2} % · lactate {lactate} mmol/L',
+  'bridge.row.endNoradrenaline': 'Running at handover',
+  'bridge.endNoradrenaline':
+    'Noradrenaline {dose} µg/kg/min — stays on (ICU protocol titrates it to MAP ≥ 65 mmHg)',
+  'bridge.row.airway': 'Airway',
+  'bridge.airway.none': 'spontaneous, no device',
+  'bridge.airway.mask': 'oxygen mask',
+  'bridge.airway.sga': 'supraglottic airway',
+  'bridge.airway.ett': 'intubated, ventilated',
+  'ward.support.label': 'Support',
+  'ward.support.noradrenaline':
+    'Noradrenaline {dose} µg/kg/min — titrated to MAP ≥ 65 mmHg by the ICU protocol',
+  'ward.support.airway.ett': 'Intubated and ventilated · FiO₂ {fio2} %',
+  'ward.support.airway.sga': 'Supraglottic airway · FiO₂ {fio2} %',
+  'ward.support.airway.mask': 'Oxygen by mask · set FiO₂ {fio2} %',
+  'nurse.noradrenalineOff':
+    'Noradrenaline has been weaned to zero per the ICU protocol and is now off.',
   'cls.penicillin': 'Penicillin',
   'cls.aminopenicillin': 'Aminopenicillins',
   'cls.aminopenicillin-bli': 'Aminopenicillin/BLI',
