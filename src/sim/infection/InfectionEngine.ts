@@ -1,4 +1,5 @@
 import { EventLog } from '../core/EventLog';
+import { resolveInfectionVariant } from './variants';
 import { SeededRng } from '../core/rng';
 import { takeSpecimen, type SampledSite, type ScheduledReport } from './microbiology';
 import { COURSE } from './params';
@@ -96,6 +97,8 @@ export interface InfectionTruth {
   microbiomeDamage: number;
   nephrotoxicity: number;
   cdi: { carrier: boolean; active: boolean; severity: number; episodes: number };
+  /** seeded case variant drawn for this session (null: the case has none) */
+  variant: string | null;
 }
 
 /**
@@ -105,7 +108,9 @@ export interface InfectionTruth {
  * The learner-facing view (getView) never contains the ground truth.
  */
 export class InfectionEngine {
+  /** the case with its seeded variant merged in */
   readonly caseDef: InfectionCase;
+  readonly variant: string | null;
   readonly library: InfectionLibrary;
   private readonly rng: SeededRng;
   private readonly eventLog = new EventLog<InfectionLogEntry>();
@@ -156,10 +161,13 @@ export class InfectionEngine {
   private cachedView: InfectionView | null = null;
 
   constructor(opts: InfectionEngineOptions) {
-    this.caseDef = opts.caseDef;
+    const seed = opts.seed ?? opts.caseDef.seed;
+    const resolved = resolveInfectionVariant(opts.caseDef, seed);
+    this.caseDef = resolved.caseDef;
+    this.variant = resolved.variant;
     this.library = opts.library;
-    this.rng = new SeededRng(opts.seed ?? opts.caseDef.seed);
-    const c = opts.caseDef;
+    this.rng = new SeededRng(seed);
+    const c = this.caseDef;
     for (const iso of c.isolates)
       this.isolates.set(iso.id, { ...iso, mechanisms: [...iso.mechanisms] });
     for (const [id, list] of Object.entries(c.resistance ?? {}))
@@ -177,6 +185,17 @@ export class InfectionEngine {
     this.sites = c.infections.map((def) => this.newSite(def));
     this.mimics = (c.mimics ?? []).map((def) => ({ def, active: false, drive: 0 }));
     this.cdi.carrier = c.patient.cdiffCarrier ?? false;
+    if (c.patient.cdiAtAdmission) {
+      // Present at admission: active C. difficile infection (the case's own diagnosis, not collateral).
+      this.cdi = {
+        ...this.cdi,
+        carrier: true,
+        active: true,
+        severity: c.patient.cdiAtAdmission,
+        episodes: 1,
+      };
+      this.stoolsPer24h = 3 + 12 * c.patient.cdiAtAdmission;
+    }
     this.creatinine = c.patient.baselineCreatinine;
     // Initial state: an infection present at start has been brewing — begin with its inflammation.
     this.activateOnsets();
@@ -326,6 +345,7 @@ export class InfectionEngine {
         severity: this.cdi.severity,
         episodes: this.cdi.episodes,
       },
+      variant: this.variant,
     };
   }
 
@@ -657,7 +677,8 @@ export class InfectionEngine {
     const ctx = {
       focus: s.def.focus,
       gfrRelative: this.gfrRelative(),
-      foreignBody: s.def.foreignBody ?? false,
+      // SIM-ASSUMPTION: adequate source control of a foreign-body infection means the device is out — no biofilm left.
+      foreignBody: (s.def.foreignBody ?? false) && s.control !== 'adequate',
       timeH: this.t,
     };
     let act = 1;
@@ -947,12 +968,13 @@ export class InfectionEngine {
     const thr = COURSE.organThreshold.base + COURSE.organThreshold.perReserve * p.reserve;
     const sev = Math.max(0, (this.inflam - thr) / (1 - thr));
     const w = COURSE.organWeight;
-    const mimicOrgan = Math.max(
-      0,
-      ...this.mimics
-        .filter((m) => m.active)
-        .map((m) => (m.def.organDrive ?? 0) * (m.drive / Math.max(0.01, m.def.drive))),
-    );
+    const mimicOrgan = (organ: 'lung' | 'cns' | 'kidney') =>
+      Math.max(
+        0,
+        ...this.mimics
+          .filter((m) => m.active && (m.def.organ ?? 'lung') === organ)
+          .map((m) => (m.def.organDrive ?? 0) * (m.drive / Math.max(0.01, m.def.drive))),
+      );
     const lungFocus = Math.max(
       0,
       ...this.sites.filter((s) => s.active && s.def.focus === 'lung').map((s) => 0.5 * s.burden),
@@ -960,12 +982,12 @@ export class InfectionEngine {
     const fulminantCdi = this.cdi.active ? Math.max(0, (this.cdi.severity - 0.6) * 1.5) : 0;
     return {
       circ: Math.min(1, sev * w.circ + fulminantCdi),
-      kidney: Math.min(1, sev * w.kidney + this.nephrotox),
-      lung: Math.min(1, sev * w.lung + lungFocus + mimicOrgan),
+      kidney: Math.min(1, sev * w.kidney + this.nephrotox + mimicOrgan('kidney')),
+      lung: Math.min(1, sev * w.lung + lungFocus + mimicOrgan('lung')),
       liver: Math.min(1, sev * w.liver),
       coag: Math.min(1, sev * w.coag),
       // SIM-ASSUMPTION: older brains decompensate earlier (septic encephalopathy, delirium): ×(1 + (age − 60)/40).
-      cns: Math.min(1, sev * w.cns * (1 + Math.max(0, p.ageYears - 60) / 40)),
+      cns: Math.min(1, sev * w.cns * (1 + Math.max(0, p.ageYears - 60) / 40) + mimicOrgan('cns')),
     };
   }
 
@@ -1140,7 +1162,8 @@ export class InfectionEngine {
     const allClear = this.sites.every((s) => !s.active || (s.cleared && s.relapseAtH === null));
     const noTherapy = this.running().length === 0;
     // Cases without an infection (bacteriuria, mimics) run to their time limit; there is nothing to cure.
-    const hadInfection = this.sites.some((x) => x.active);
+    const hadInfection =
+      this.sites.some((x) => x.active) || (this.caseDef.patient.cdiAtAdmission ?? 0) > 0;
     if (
       hadInfection &&
       allClear &&

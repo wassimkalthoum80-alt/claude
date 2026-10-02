@@ -52,7 +52,15 @@ describe('bedside visual state (evidence only)', () => {
     e.dispatch({ type: 'PROCEDURE', procedure: 'remove-peripheral-line' });
     runTo(e, 3);
     expect(visual(e).devices.peripheralLine).toBe(false);
-    const abu = visual(make(positiveUrine));
+    // The hip-pain-only variant (the delirium variants look confused on purpose).
+    const seed = [...Array(50).keys()].find(
+      (n) =>
+        new InfectionEngine({ caseDef: positiveUrine, library: LIB, seed: n }).variant ===
+        'hip-only',
+    );
+    const abu = visual(
+      new InfectionEngine({ caseDef: positiveUrine, library: LIB, seed: seed ?? 0 }),
+    );
     expect(abu.skin).toBe('normal');
     expect(abu.observations).toEqual(['look.comfortable']);
   });

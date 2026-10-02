@@ -678,6 +678,10 @@ lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/
 | Blood-culture yield | P(set positive) = bacteraemia × smoothstep((B − 0.15)/0.45) × 0.75 if low volume × (1 − 0.6·activity if antibiotics before, 0.3 if in the same hour) | cultures before antibiotics |
 | Time to positivity | organism TTP × (1.4 − 0.6·B) ± 1 h; peripheral set in line infection + 2.5–5 h | DTP ≥ 2 h in catheter infection |
 | Contamination | 2.5 % per set: CoNS (70 % methicillin-resistant) | contaminant vs. infection |
+| Case variants | one seeded variant per session (`resolveInfectionVariant`, salt-separated from the course RNG); same seed → same hidden truth | lessons stay, click sequences cannot be memorised |
+| Foreign body after source control | adequate source control of a foreign-body focus = device removed: the biofilm activity factor no longer applies | line or implant out |
+| C. difficile at admission | case starts with active CDI at the given severity (stools 3 + 12 × severity /24 h); it is the case diagnosis, not collateral; cured once resolved without recurrence | D1 |
+| Non-infectious delirium | mimic with organ drive on the CNS (dehydration: resolves τ 30 h with routine care; anticholinergic drug: τ 60 h) | A1 variants; antibiotics do not change it |
 | Pre-analytics: antisepsis | rushed skin/septum antisepsis (no contact time, re-palpation): contamination 10 % per set instead of 2.5 % | contamination benchmark < 3 % with good technique; rushed antisepsis is the main avoidable cause |
 | Pre-analytics: urine | sample from the drainage bag: colonising counts × 10 and +60 % chance of mixed flora; > 2 h at room temperature: counts × 10 and +30 % mixed flora (urine, sputum) | bacteria multiply in stagnant or warm urine; bag urine is not interpretable |
 | Pre-analytics: puncture fluid | sent only in a sterile tube: yield × 0.7 (vs. inoculation into blood-culture bottles at the bedside) | bedside inoculation raises the yield of ascites/pleural cultures |

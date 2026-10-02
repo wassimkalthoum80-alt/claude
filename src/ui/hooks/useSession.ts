@@ -79,7 +79,8 @@ export function useSession(): SessionActions {
         pause();
         const session = createSession(MODULE_CATALOG, m, entryId, {
           difficulty: ui.difficulty,
-          seed: infectionCase.seed,
+          // Cases with seeded variants get a fresh seed (a different hidden truth each time); kept in the session.
+          seed: infectionCase.variants ? freshSeed() : infectionCase.seed,
           now: Date.now(),
         });
         setUi({ ...WORKSPACE_CLOSED, screen: 'ward', session, briefingOpen: true });

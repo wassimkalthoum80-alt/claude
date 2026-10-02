@@ -13,11 +13,13 @@ export const infectioEn = {
   'infectio.feverRigors.desc':
     '74-year-old woman with high fever, rigors and confusion since this morning.',
   'infectio.peritonitis.title': 'Abdominal pain after surgery',
-  'infectio.peritonitis.desc': 'In preparation: source control and duration.',
+  'infectio.peritonitis.desc':
+    'Day 4 after bowel surgery: fever, turbid drain. The antibiotics are still running.',
   'infectio.sabLine.title': 'Red venous access, positive blood cultures',
-  'infectio.sabLine.desc': 'In preparation: S. aureus bacteraemia.',
+  'infectio.sabLine.desc':
+    'New fever on the medical ward, a red venous access — and the lab calls.',
   'infectio.cdi.title': 'Diarrhoea after antibiotics',
-  'infectio.cdi.desc': 'In preparation: C. difficile infection.',
+  'infectio.cdi.desc': 'Day 6 of clindamycin for cellulitis — now six watery stools a day.',
   'infectio.vapMrgn.title': 'Ventilated and not improving',
   'infectio.vapMrgn.desc': 'In preparation (advanced): resistance under therapy.',
   'case.feverRigors.title': 'Fever and rigors',
@@ -39,6 +41,8 @@ export const infectioEn = {
   'wd.abdominal': 'Abdominal focus',
   'wd.line': 'Catheter / line infection',
   'wd.skin': 'Skin / soft tissue',
+  'wd.bone': 'Bone / spine',
+  'wd.cdi': 'C. difficile colitis',
   'wd.non-infectious': 'Non-infectious cause',
   'status.suspected': 'suspected',
   'status.probable': 'probable',
@@ -627,4 +631,48 @@ export const infectioEn = {
   'stw.delayedTransport':
     'A sample waited at room temperature: bacteria multiply in the container.',
   'stw.punctureTube': 'Puncture fluid sent in a tube only: blood-culture bottles raise the yield.',
+  'case.positiveUrine.examDrug':
+    'Examination: pain on hip rotation both sides, no flank tenderness, no suprapubic pain, no dysuria reported, lungs clear, skin intact. Medication list: since last week oxybutynin for urge incontinence (started by the nursing home GP). Creatinine slightly raised (known CKD).',
+  'dx.deliriumDehydration': 'Delirium from dehydration (no infection)',
+  'dx.deliriumAnticholinergic': 'Delirium from an anticholinergic drug (no infection)',
+  'nurse.confused':
+    '"She is suddenly confused and pulling at her line — is that the urinary infection?"',
+  'case.peritonitis.title': 'Abdominal pain after surgery',
+  'case.peritonitis.presentation':
+    '66 y, day 4 after sigmoid resection: fever, abdominal pain, turbid drain.',
+  'case.peritonitis.briefing':
+    'Mr B., 66, had an elective sigmoid resection with primary anastomosis 4 days ago (recurrent diverticulitis). The perioperative cefuroxime and metronidazole "were just continued". Since the night fever up to 38.9 °C, increasing abdominal pain, heart rate rising. The surgical ward asks you to see him at 09:00. Known: type 2 diabetes, smoker. No allergies.',
+  'case.peritonitis.exam':
+    'Examination: distended abdomen, diffuse tenderness with guarding in the left lower quadrant, sparse bowel sounds; drain output turbid and brownish; wound dry. Lungs clear, peripheral access and urinary catheter unremarkable.',
+  'dx.anastomoticLeak': 'Anastomotic leak with faecal peritonitis',
+  'nurse.drainTurbid': '"The drain looks brown and cloudy now — and he says the pain is worse."',
+  'imaging.ct-abdomen.leak':
+    'Free fluid and gas around the anastomosis with contrast leak; small pelvic collection.',
+  'imaging.ct-abdomen.postop':
+    'Expected postoperative changes; no collection, no free gas beyond the expected.',
+  'imaging.sono-abdomen.fluid':
+    'Free fluid in the pelvis and between bowel loops; limited view (gas).',
+  'case.sabLine.title': 'Red venous access, positive blood cultures',
+  'case.sabLine.presentation': '63 y, medical ward day 4: new fever, red painful venous access.',
+  'case.sabLine.briefing':
+    'Mrs R., 63, was admitted 4 days ago with decompensated heart failure and is improving on diuretics. Tonight she had a fever of 39.1 °C with a rigor; the night doctor took two blood-culture sets and noted a red forearm access placed in the emergency department. No antibiotic has been started. Morning round, 08:00. Known: heart failure with reduced ejection fraction, atrial fibrillation, type 2 diabetes. No allergies.',
+  'case.sabLine.exam':
+    'Examination: venous access right forearm with redness of 3 cm, tender, pus expressible at the puncture site. Heart: irregular, no new murmur heard; lungs: basal crackles (known). No back pain, no joint swelling, no skin lesions.',
+  'dx.sabLine': 'S. aureus bacteraemia from a peripheral venous catheter',
+  'dx.spondylodiscitis': 'Haematogenous spondylodiscitis (complicated S. aureus bacteraemia)',
+  'nurse.backPain': '"She now complains of severe low back pain, worse when moving."',
+  'imaging.line-inspection.phlebitis':
+    'Thrombophlebitis along the cannulated vein with pus at the puncture site.',
+  'imaging.mri-spine.spondylodiscitis':
+    'L3/4: oedema of both vertebral end plates and the disc with contrast enhancement; small epidural phlegmon, no abscess.',
+  'case.cdi.title': 'Diarrhoea after antibiotics',
+  'case.cdi.presentation': '71 y, day 6 of clindamycin: six watery stools a day.',
+  'case.cdi.briefing':
+    'Mr H., 71, has been on the ward for 6 days with a cellulitis of the lower leg, treated with oral clindamycin; the leg looks much better. Since yesterday he has had watery diarrhoea, six times a day, with cramps. He takes pantoprazole. You see him at 11:00. Known: hypertension, osteoarthritis. Allergy: "penicillin" (rash as a child).',
+  'case.cdi.exam':
+    'Examination: soft abdomen, mild diffuse tenderness, lively bowel sounds, no guarding. Leg: residual faint redness, no warmth. Temperature 37.9 °C.',
+  'case.cdi.examSevere':
+    'Examination: distended abdomen, diffuse tenderness, sparse bowel sounds, no guarding. Leg: residual faint redness. Temperature 38.6 °C, dry mucosa.',
+  'imaging.ct-abdomen.colitis':
+    'Wall thickening of the whole colon with pericolic stranding; no perforation, colon diameter 5 cm.',
 } as const;

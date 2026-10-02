@@ -267,6 +267,8 @@ export interface MimicDef {
   causedByDrugId?: string;
   /** organ dysfunction it causes on its own (0..1) */
   organDrive?: number;
+  /** organ affected by `organDrive` (default lung) */
+  organ?: 'lung' | 'cns' | 'kidney';
   onsetH?: number;
 }
 
@@ -340,6 +342,8 @@ export interface CasePatient {
   baselinePlatelets?: number;
   /** a drug that interacts with rifampicin (e.g. a NOAC) */
   noac?: boolean;
+  /** 0..1 — C. difficile infection already active at admission (its severity) */
+  cdiAtAdmission?: number;
 }
 
 /** Working diagnosis the learner can grade (shown in the UI; truth is not). */
@@ -377,6 +381,22 @@ export interface InfectionCase {
   presentationKey?: string;
   /** antibiotics already running at start */
   initialTherapy?: { drugId: string; dose: DoseLevel; route: DrugRoute; startedH: number }[];
+  /** the case can begin with a real-time emergency-department episode (course ↔ real-time bridge) */
+  realtimeAdmission?: boolean;
+  /** seeded variants of the hidden truth (one drawn per session) */
+  variants?: InfectionCaseVariant[];
+}
+
+/** Fields a variant may change (patient merged field by field). */
+export type InfectionCasePatch = Partial<
+  Omit<InfectionCase, 'id' | 'variants' | 'patient' | 'titleKey' | 'briefingKey'>
+> & { patient?: Partial<CasePatient> };
+
+export interface InfectionCaseVariant {
+  id: string;
+  /** relative probability (default 1) */
+  weight?: number;
+  patch: InfectionCasePatch;
 }
 
 // ─── Guideline targets (src/content/guidelines/abs2026.ts) ──────────────────────────────────────────────────

@@ -16,11 +16,13 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'infectio.feverRigors.desc':
     '74-jährige Patientin mit hohem Fieber, Schüttelfrost und Verwirrtheit seit heute Morgen.',
   'infectio.peritonitis.title': 'Bauchschmerzen nach Operation',
-  'infectio.peritonitis.desc': 'In Vorbereitung: Fokussanierung und Therapiedauer.',
+  'infectio.peritonitis.desc':
+    'Tag 4 nach Darmoperation: Fieber, trübe Drainage. Die Antibiotika laufen noch.',
   'infectio.sabLine.title': 'Gerötete Viggo, positive Blutkulturen',
-  'infectio.sabLine.desc': 'In Vorbereitung: S.-aureus-Bakteriämie.',
+  'infectio.sabLine.desc':
+    'Neues Fieber auf der Inneren, ein geröteter Zugang — und das Labor ruft an.',
   'infectio.cdi.title': 'Durchfall nach Antibiotika',
-  'infectio.cdi.desc': 'In Vorbereitung: C.-difficile-Infektion.',
+  'infectio.cdi.desc': 'Tag 6 Clindamycin bei Erysipel — jetzt sechs wässrige Stühle am Tag.',
   'infectio.vapMrgn.title': 'Beatmet und keine Besserung',
   'infectio.vapMrgn.desc': 'In Vorbereitung (Fortgeschritten): Resistenz unter Therapie.',
   'case.feverRigors.title': 'Fieber und Schüttelfrost',
@@ -44,6 +46,8 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'wd.abdominal': 'Abdomineller Fokus',
   'wd.line': 'Katheter-/Zugangsinfektion',
   'wd.skin': 'Haut / Weichteile',
+  'wd.bone': 'Knochen / Wirbelsäule',
+  'wd.cdi': 'C.-difficile-Kolitis',
   'wd.non-infectious': 'Nicht-infektiöse Ursache',
   'status.suspected': 'Verdacht',
   'status.probable': 'wahrscheinlich',
@@ -641,4 +645,50 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'stw.delayedTransport': 'Eine Probe stand bei Raumtemperatur: Bakterien vermehren sich im Gefäß.',
   'stw.punctureTube':
     'Punktat nur im Röhrchen verschickt: Blutkulturflaschen erhöhen die Ausbeute.',
+  'case.positiveUrine.examDrug':
+    'Untersuchung: Rotationsschmerz beider Hüften, Nierenlager frei, kein suprapubischer Druckschmerz, keine Dysurie berichtet, Lunge frei, Haut intakt. Medikationsplan: seit letzter Woche Oxybutynin wegen Dranginkontinenz (vom Hausarzt im Heim angesetzt). Kreatinin leicht erhöht (bekannte CKD).',
+  'dx.deliriumDehydration': 'Delir bei Exsikkose (keine Infektion)',
+  'dx.deliriumAnticholinergic': 'Delir durch ein anticholinerges Medikament (keine Infektion)',
+  'nurse.confused':
+    '„Sie ist plötzlich verwirrt und zieht am Zugang — ist das der Harnwegsinfekt?“',
+  'case.peritonitis.title': 'Bauchschmerzen nach Operation',
+  'case.peritonitis.presentation':
+    '66 J., Tag 4 nach Sigmaresektion: Fieber, Bauchschmerzen, trübe Drainage.',
+  'case.peritonitis.briefing':
+    'Herr B., 66 Jahre, vor 4 Tagen elektive Sigmaresektion mit Primäranastomose (rezidivierende Divertikulitis). Das perioperative Cefuroxim plus Metronidazol „lief einfach weiter“. Seit der Nacht Fieber bis 38,9 °C, zunehmende Bauchschmerzen, steigende Herzfrequenz. Die chirurgische Station bittet Sie um 09:00 dazu. Bekannt: Diabetes mellitus Typ 2, Raucher. Keine Allergien.',
+  'case.peritonitis.exam':
+    'Untersuchung: Abdomen gebläht, diffuser Druckschmerz mit Abwehrspannung im linken Unterbauch, spärliche Darmgeräusche; Drainage trüb-bräunlich; Wunde trocken. Lunge frei, peripherer Zugang und Blasenkatheter reizlos.',
+  'dx.anastomoticLeak': 'Anastomoseninsuffizienz mit kotiger Peritonitis',
+  'nurse.drainTurbid':
+    '„Die Drainage ist jetzt bräunlich-trüb — und er sagt, die Schmerzen sind schlimmer.“',
+  'imaging.ct-abdomen.leak':
+    'Freie Flüssigkeit und Luft um die Anastomose mit Kontrastmittelaustritt; kleiner Verhalt im kleinen Becken.',
+  'imaging.ct-abdomen.postop':
+    'Postoperative Veränderungen wie erwartet; kein Verhalt, keine freie Luft über das Erwartbare hinaus.',
+  'imaging.sono-abdomen.fluid':
+    'Freie Flüssigkeit im kleinen Becken und zwischen Darmschlingen; eingeschränkte Beurteilbarkeit (Luft).',
+  'case.sabLine.title': 'Geröteter Zugang, positive Blutkulturen',
+  'case.sabLine.presentation':
+    '63 J., Innere Station Tag 4: neues Fieber, geröteter schmerzhafter Zugang.',
+  'case.sabLine.briefing':
+    'Frau R., 63 Jahre, vor 4 Tagen mit dekompensierter Herzinsuffizienz aufgenommen, unter Diuretika gebessert. Heute Nacht Fieber 39,1 °C mit Schüttelfrost; der Nachtdienst hat zwei Blutkultur-Sets abgenommen und einen geröteten Unterarmzugang aus der Notaufnahme bemerkt. Noch kein Antibiotikum begonnen. Morgenvisite, 08:00. Bekannt: Herzinsuffizienz mit reduzierter EF, Vorhofflimmern, Diabetes mellitus Typ 2. Keine Allergien.',
+  'case.sabLine.exam':
+    'Untersuchung: Zugang rechter Unterarm mit 3 cm Rötung, druckschmerzhaft, Eiter an der Einstichstelle exprimierbar. Herz: arrhythmisch, kein neues Geräusch; Lunge: basale RGs (bekannt). Keine Rückenschmerzen, keine Gelenkschwellung, keine Hautläsionen.',
+  'dx.sabLine': 'S.-aureus-Bakteriämie durch peripheren Venenkatheter',
+  'dx.spondylodiscitis': 'Hämatogene Spondylodiszitis (komplizierte S.-aureus-Bakteriämie)',
+  'nurse.backPain': '„Sie klagt jetzt über starke Kreuzschmerzen, schlimmer bei Bewegung.“',
+  'imaging.line-inspection.phlebitis':
+    'Thrombophlebitis entlang der punktierten Vene, Eiter an der Einstichstelle.',
+  'imaging.mri-spine.spondylodiscitis':
+    'LWK 3/4: Ödem beider Grund- und Deckplatten und der Bandscheibe mit Kontrastmittelaufnahme; kleine epidurale Phlegmone, kein Abszess.',
+  'case.cdi.title': 'Durchfall nach Antibiotika',
+  'case.cdi.presentation': '71 J., Tag 6 Clindamycin: sechs wässrige Stühle am Tag.',
+  'case.cdi.briefing':
+    'Herr H., 71 Jahre, liegt seit 6 Tagen mit einem Unterschenkelerysipel auf Station, behandelt mit Clindamycin p.o.; das Bein sieht deutlich besser aus. Seit gestern wässrige Durchfälle, sechsmal täglich, mit Krämpfen. Er nimmt Pantoprazol. Sie sehen ihn um 11:00. Bekannt: Hypertonie, Arthrose. Allergie: „Penicillin“ (Ausschlag als Kind).',
+  'case.cdi.exam':
+    'Untersuchung: Abdomen weich, leichter diffuser Druckschmerz, lebhafte Darmgeräusche, keine Abwehrspannung. Bein: nur noch blasse Reströtung, nicht überwärmt. Temperatur 37,9 °C.',
+  'case.cdi.examSevere':
+    'Untersuchung: Abdomen gebläht, diffuser Druckschmerz, spärliche Darmgeräusche, keine Abwehrspannung. Bein: blasse Reströtung. Temperatur 38,6 °C, trockene Schleimhäute.',
+  'imaging.ct-abdomen.colitis':
+    'Wandverdickung des gesamten Kolons mit perikolischer Imbibierung; keine Perforation, Kolondurchmesser 5 cm.',
 };
