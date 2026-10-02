@@ -397,7 +397,7 @@ export interface InfectionCase {
 
 /** Fields a variant may change (patient merged field by field). */
 export type InfectionCasePatch = Partial<
-  Omit<InfectionCase, 'id' | 'variants' | 'patient' | 'titleKey' | 'briefingKey'>
+  Omit<InfectionCase, 'id' | 'variants' | 'patient' | 'titleKey'>
 > & { patient?: Partial<CasePatient> };
 
 export interface InfectionCaseVariant {
