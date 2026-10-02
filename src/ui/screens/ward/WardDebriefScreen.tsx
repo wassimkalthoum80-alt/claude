@@ -176,6 +176,12 @@ export function WardDebriefScreen({ data }: { data: WardDebriefData }) {
                   tk('stw.reveal.none')}
               </dd>
             </div>
+            {r.reveal.complications.length > 0 && (
+              <div>
+                <dt>{tk('stw.reveal.complication')}</dt>
+                <dd>{r.reveal.complications.map((d) => tk(d)).join(' · ')}</dd>
+              </div>
+            )}
             {r.reveal.organisms.length > 0 && (
               <div>
                 <dt>{tk('stw.reveal.organism')}</dt>
@@ -262,6 +268,7 @@ export function WardDebriefScreen({ data }: { data: WardDebriefData }) {
                   {tk(`stw.collateral.${c.kind}`, {
                     mech: c.mechanism ? `mech.${c.mechanism}` : '',
                   })}
+                  {!c.preventable && ` (${tk('stw.collateral.unavoidable')})`}
                 </li>
               ))}
             </ul>

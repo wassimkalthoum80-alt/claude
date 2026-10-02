@@ -24,6 +24,7 @@ const MRSA_LINE: InfectionSiteDef = {
   needsSourceControl: true,
   sourceControl: [{ id: 'remove-cvc', labelKey: 'proc.remove-cvc', delayH: 1, result: 'adequate' }],
   minEffectiveDays: 14,
+  durationFrom: 'clearance',
 };
 
 export const mrsaBacteraemia: InfectionCase = {
@@ -39,7 +40,9 @@ export const mrsaBacteraemia: InfectionCase = {
     ageYears: 70,
     sex: 'male',
     weightKg: 74,
-    baselineCreatinine: 2.2,
+    // pre-dialysis value; drug clearance follows the dialysis schedule, not the creatinine
+    baselineCreatinine: 5.8,
+    dialysis: 'intermittent-hd',
     immunity: 0.8,
     reserve: 0.45,
     devices: ['cvc'],
@@ -76,6 +79,7 @@ export const mrsaBacteraemia: InfectionCase = {
             virulence: 0.5,
             bacteraemia: 0.9,
             minEffectiveDays: 28,
+            durationFrom: 'clearance',
           },
         ],
       },
@@ -105,7 +109,9 @@ const VALVE: InfectionSiteDef = {
       result: 'adequate',
     },
   ],
+  // ESC 2023: from the first negative blood culture
   minEffectiveDays: 28,
+  durationFrom: 'clearance',
 };
 
 export const endocarditis: InfectionCase = {
@@ -146,6 +152,8 @@ export const endocarditis: InfectionCase = {
           {
             id: 'embolic-stroke',
             diagnosisKey: 'dx.embolicStroke',
+            // an infectious complication of the endocarditis, not a mimic
+            kind: 'complication',
             drive: 0.05,
             resolveTauH: Infinity,
             organDrive: 0.3,
@@ -190,7 +198,10 @@ export const febrileNeutropenia: InfectionCase = {
     baselineCreatinine: 0.8,
     immunity: 0.25,
     reserve: 0.6,
-    baselineWbc: 300,
+    baselineWbc: 600,
+    baselineAnc: 300,
+    // standard risk: expected neutropenia < 7 days, neutrophils recover from about day 4 of the case
+    ancRecoveryH: 96,
     devices: ['cvc'],
   },
   isolates: [],
@@ -199,8 +210,9 @@ export const febrileNeutropenia: InfectionCase = {
     {
       id: 'neutropenic-fever',
       diagnosisKey: 'dx.neutropenicFever',
-      drive: 0.5,
-      // SIM-ASSUMPTION: unexplained neutropenic fever settles with neutrophil recovery over ~3 days.
+      // ≈ 38.2 °C at presentation
+      drive: 0.55,
+      // SIM-ASSUMPTION: fever without a documented focus settles over ~2–3 days under empirical therapy.
       resolveTauH: 48,
     },
   ],
@@ -212,7 +224,10 @@ export const febrileNeutropenia: InfectionCase = {
       minBurden: 0.05,
     },
   ],
-  workingDiagnoses: WORKING_DIAGNOSES,
+  workingDiagnoses: [
+    ...WORKING_DIAGNOSES,
+    { id: 'bloodstream', labelKey: 'wd.bloodstream', focus: 'blood' },
+  ],
   variants: [
     { id: 'no-focus', patch: {} },
     {
@@ -256,6 +271,7 @@ export const febrileNeutropenia: InfectionCase = {
               { id: 'remove-cvc', labelKey: 'proc.remove-cvc', delayH: 4, result: 'adequate' },
             ],
             minEffectiveDays: 7,
+            durationFrom: 'clearance',
           },
         ],
       },
@@ -278,6 +294,15 @@ const MENINGITIS: InfectionSiteDef = {
   growthPerH: 0.02,
   virulence: 1,
   bacteraemia: 0.6,
+  // otogenic focus (otitis media / mastoiditis): ENT source treatment helps, antibiotics can still cure
+  sourceControl: [
+    {
+      id: 'surgical-source-control',
+      labelKey: 'proc.surgical-source-control',
+      delayH: 6,
+      result: 'adequate',
+    },
+  ],
   minEffectiveDays: 10,
 };
 
@@ -301,6 +326,9 @@ export const meningitis: InfectionCase = {
   },
   isolates: [{ id: 'sp', organismId: 's-pneumoniae', mechanisms: [] }],
   infections: [MENINGITIS],
+  findings: [
+    { kind: 'ct-head', reportKey: 'imaging.ct-head.otomastoiditis', infectionId: 'meningitis' },
+  ],
   workingDiagnoses: [
     ...WORKING_DIAGNOSES,
     { id: 'meningitis', labelKey: 'wd.meningitis', focus: 'cns' },
@@ -313,12 +341,15 @@ export const meningitis: InfectionCase = {
       id: 'listeria',
       patch: {
         patient: { reserve: 0.5, immunity: 0.8 },
+        examKey: 'case.meningitis.examListeria',
         isolates: [{ id: 'sp', organismId: 'l-monocytogenes', mechanisms: [] }],
+        findings: [],
         infections: [
           {
             ...MENINGITIS,
             diagnosisKey: 'dx.meningitisListeria',
             growthPerH: 0.012,
+            sourceControl: [],
             minEffectiveDays: 21,
           },
         ],
@@ -377,7 +408,9 @@ export const catBite: InfectionCase = {
           {
             ...HAND,
             diagnosisKey: 'dx.pasteurellaTenosynovitis',
+            // required hand-surgical source control: antibiotics alone cannot clear it
             needsSourceControl: true,
+            minEffectiveDays: 14,
             sourceControl: [
               { id: 'debridement', labelKey: 'proc.debridement', delayH: 4, result: 'adequate' },
             ],

@@ -186,12 +186,12 @@ export class InfectionEngine {
     this.library = opts.library;
     this.rng = new SeededRng(seed);
     // Patient-level variability from a separate stream, so the course RNG sequence is unaffected.
-    // SIM-ASSUMPTION: PCT response ×0.5–1.5, fever response ×0.9–1.05 (blunted above 80 y), linezolid platelet fall
-    // from day 7–14 of exposure.
+    // SIM-ASSUMPTION: PCT response ×0.5–1.5, fever response ×0.95–1.05 (blunted ×0.85 from 80 y), linezolid platelet
+    // fall from day 7–14 of exposure.
     const patientRng = new SeededRng((seed ^ PATIENT_SALT) >>> 0);
     this.pctFactor = patientRng.uniform(0.5, 1.5);
     this.feverFactor =
-      patientRng.uniform(0.9, 1.05) * (opts.caseDef.patient.ageYears >= 80 ? 0.85 : 1);
+      patientRng.uniform(0.95, 1.05) * (opts.caseDef.patient.ageYears >= 80 ? 0.85 : 1);
     this.linezolidFromH = 24 * patientRng.uniform(7, 14);
     const c = this.caseDef;
     for (const iso of c.isolates)
@@ -1180,12 +1180,12 @@ export class InfectionEngine {
     const p = this.caseDef.patient;
     const o = this.organs;
     const circadian = 0.2 * Math.sin(((this.hourOfDay() - 4) / 24) * 2 * Math.PI - Math.PI / 2);
-    const immuneFever = this.immunityNow() > 0.4 ? 1 : 0.7;
+    // Fever is preserved in neutropenia (it is often the only sign); blunting is per patient (feverFactor, age).
     return {
       t: this.t,
       temperatureC: round1(
         COURSE.temperature.base +
-          COURSE.temperature.rise * this.inflam * immuneFever * this.feverFactor +
+          COURSE.temperature.rise * this.inflam * this.feverFactor +
           circadian,
       ),
       heartRate: Math.round(Math.min(165, 76 + 35 * this.inflam + 25 * o.circ)),

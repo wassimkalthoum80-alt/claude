@@ -68,12 +68,20 @@ describe('case variants', () => {
 });
 
 describe('A1 — positive urine culture', () => {
-  it('delirium variants: confused early, clearing without antibiotics; the truth has no infection', () => {
-    for (const v of ['delirium-dehydration', 'delirium-drug']) {
+  it('delirium variants: confused early, clearing without antibiotics once its cause is treated', () => {
+    for (const [v, remedy] of [
+      ['delirium-dehydration', 'rehydration'],
+      ['delirium-drug', 'medication-review'],
+    ] as const) {
       const e = make(positiveUrine, seedFor(positiveUrine, v));
       runTo(e, 8);
       expect(e.getView().consciousness).toBe('confused');
       const early = e.getTruth().organs.cns;
+      // recognising the label is not enough: untreated, the delirium persists
+      const untreated = make(positiveUrine, seedFor(positiveUrine, v));
+      runTo(untreated, 96);
+      expect(untreated.getTruth().organs.cns).toBeGreaterThan(early * 0.8);
+      e.dispatch({ type: 'PROCEDURE', procedure: remedy });
       runTo(e, 96);
       expect(e.getTruth().organs.cns).toBeLessThan(early * 0.6);
       expect(e.getTruth().sites).toHaveLength(0);

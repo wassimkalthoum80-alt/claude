@@ -1,5 +1,6 @@
 import { INFECTION_LIBRARY } from '../../content/infection/library';
 import {
+  SPECTRUM_BREADTH,
   SPECTRUM_RANK,
   STEWARDSHIP_WEIGHTS,
   stewardshipConfigFor,
@@ -57,6 +58,7 @@ export function finishWardSession(
     config,
     weights: STEWARDSHIP_WEIGHTS,
     spectrumRank: SPECTRUM_RANK,
+    spectrumBreadth: SPECTRUM_BREADTH,
   });
   const scores: Record<ScoreKey, number | null> = {
     recognition: null,

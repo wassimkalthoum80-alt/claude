@@ -45,7 +45,8 @@ export const postopFever: InfectionCase = {
     {
       id: 'atelectasis',
       diagnosisKey: 'dx.atelectasis',
-      drive: 0.1,
+      // SIM-ASSUMPTION: uncomplicated atelectasis is not a proven cause of fever — respiratory effect only.
+      drive: 0,
       resolveTauH: 30,
       organDrive: 0.12,
       organ: 'lung',
@@ -118,6 +119,7 @@ export const notPneumonia: InfectionCase = {
       id: 'aspiration-pneumonitis',
       patch: {
         briefingKey: 'case.notPneumonia.briefingAspiration',
+        examKey: 'case.notPneumonia.examAspiration',
         mimics: [
           {
             id: 'aspiration-pneumonitis',
@@ -175,7 +177,10 @@ export const feverOnAntibiotics: InfectionCase = {
     { kind: 'ct-pa', reportKey: 'imaging.ct-pa.embolism', mimicId: 'pulmonary-embolism' },
     { kind: 'duplex-legs', reportKey: 'imaging.duplex-legs.dvt', mimicId: 'pulmonary-embolism' },
   ],
-  workingDiagnoses: WORKING_DIAGNOSES,
+  workingDiagnoses: [
+    ...WORKING_DIAGNOSES,
+    { id: 'pulmonary-embolism', labelKey: 'wd.pulmonaryEmbolism' },
+  ],
   variants: [
     { id: 'drug-fever', patch: {} },
     {
@@ -276,7 +281,9 @@ export const consOneSet: InfectionCase = {
                 result: 'adequate',
               },
             ],
+            // uncomplicated CoNS catheter infection after removal: 5–7 days from clearance
             minEffectiveDays: 5,
+            durationFrom: 'clearance',
           },
         ],
         initialSpecimens: [
@@ -350,7 +357,8 @@ const CAP = {
   growthPerH: 0.012,
   virulence: 0.8,
   bacteraemia: 0.25,
-  minEffectiveDays: 3,
+  // ≈ 5 days, stopping after ≥ 48 h of clinical stability
+  minEffectiveDays: 5,
 };
 
 export const cap: InfectionCase = {
@@ -386,7 +394,7 @@ export const cap: InfectionCase = {
       id: 'legionella',
       patch: {
         examKey: 'case.cap.examLegionella',
-        isolates: [{ id: 'lp', organismId: 'l-pneumophila', mechanisms: [] }],
+        isolates: [{ id: 'lp', organismId: 'l-pneumophila', mechanisms: [], serogroup: 1 }],
         infections: [
           { ...CAP, diagnosisKey: 'dx.capLegionella', isolateIds: ['lp'], bacteraemia: 0 },
         ],
@@ -415,7 +423,8 @@ export const cap: InfectionCase = {
                 result: 'adequate',
               },
             ],
-            minEffectiveDays: 14,
+            // response-guided, commonly 2–6 weeks
+            minEffectiveDays: 21,
             onsetH: 30,
           },
         ],

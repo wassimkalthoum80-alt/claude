@@ -136,26 +136,47 @@ const findingRows = (code: string, f: readonly FindingRule[]) =>
     tDe(r.reportKey),
   ]);
 
+function anchorText(c: CaseCheck): string {
+  const f = c.from;
+  if (!f) return '';
+  const parts = [
+    f.call ? `call "${f.call}"` : '',
+    f.finding ? `finding ${f.finding.join('/')}` : '',
+    f.firstPositiveBloodCulture ? 'the first positive blood-culture sample' : '',
+  ].filter(Boolean);
+  return parts.length ? ` (counted from ${parts.join(' or ')})` : '';
+}
+
 function checkText(c: CaseCheck): string {
+  return checkCore(c) + anchorText(c);
+}
+
+function checkCore(c: CaseCheck): string {
   switch (c.kind) {
     case 'procedure':
-      return `procedure ${c.procedures.join(' or ')} within ${c.withinH} h${c.relativeToFirstDose ? ' of the first dose' : ''}`;
+      return `procedure ${c.procedures.join(' or ')}${c.adequateOnly ? ' (adequate source control only)' : ''} within ${c.withinH} h${c.relativeToFirstDose ? ' of the first dose' : ''}`;
     case 'imaging':
       return `imaging ${c.imaging.join(' or ')} within ${c.withinH} h`;
     case 'test':
-      return `test ${c.specimen} within ${c.withinH} h`;
+      return `test ${[c.specimen].flat().join(' or ')} within ${c.withinH} h${c.beforeAntibiotic ? ', before the first antibiotic' : ''}`;
     case 'followUpBloodCultures':
-      return `follow-up blood cultures ${c.fromH}–${c.withinH} h after effective therapy`;
+      return `follow-up blood cultures (≥ ${c.minSets ?? 1} set(s)) ${c.fromH}–${c.withinH} h after ${c.from?.firstPositiveBloodCulture ? 'the first positive sample' : 'effective therapy'}${c.untilNegative ? ', repeated every ≤ 48 h until negative' : ''}`;
+    case 'pairedCultures':
+      return `paired blood cultures (peripheral + catheter) within ${c.withinH} h`;
+    case 'consult':
+      return `infectious-diseases / ABS consultation within ${c.withinH} h`;
     case 'stopDrug':
       return `stop ${c.drugId} within ${c.withinH} h`;
     case 'preferDrugs':
       return `one of: ${c.drugIds.join(', ')}`;
+    case 'empiricalDrugs':
+      return `first (empirical) regimen contains one of: ${c.drugIds.join(', ')}`;
     case 'avoidClasses':
-      return `none of the classes: ${c.classes.join(', ')}`;
+      return `none of the classes: ${c.classes.join(', ')}${c.beforeH !== undefined ? ` before ${c.beforeH} h` : ''}${c.unlessCausativeGroups ? ` (unless a causative ${c.unlessCausativeGroups.join('/')} makes it indicated)` : ''}`;
     case 'isolation':
       return `contact isolation within ${c.withinH} h`;
     case 'requireDrugs':
-      return `each group covered: ${c.groups.map((g) => `[${g.join(' / ')}]`).join(' + ')}`;
+      return `each group covered: ${c.groups.map((g) => `[${g.join(' / ')}]`).join(' + ')}${c.minDose ? ` at ≥ ${c.minDose} dose` : ''}${c.route ? ` ${c.route}` : ''}`;
     case 'antibioticBeforeImaging':
       return `first antibiotic before ${c.imaging}`;
     case 'monotherapyAfterAst':
@@ -188,7 +209,22 @@ function scoringSection(code: string, cfg: StewardshipConfig, prefix: string): s
           cfg.focusDiagnosisId ?? 'none (no infection)',
         ],
         [`${prefix}-S4`, 'Target total duration (d)', cfg.targetDays ?? '—'],
-        [`${prefix}-S5`, 'Duration counted from', cfg.durationFrom ?? 'first dose'],
+        [`${prefix}-S5`, 'Duration counted from', cfg.durationFrom ?? 'first effective dose'],
+        ...(cfg.durationTolerance
+          ? [
+              [
+                `${prefix}-S5b`,
+                'Duration tolerance (d below / above)',
+                cfg.durationTolerance.join(' / '),
+              ],
+            ]
+          : []),
+        ...(cfg.bloodCultureSetsTarget
+          ? [[`${prefix}-S6b`, 'Blood-culture sets before therapy', cfg.bloodCultureSetsTarget]]
+          : []),
+        ...(cfg.oralSwitch === false
+          ? [[`${prefix}-S6c`, 'Generic i.v.→oral switch judged', 'no (specialist pathway)']]
+          : []),
         ...(cfg.bloodCulturesExpected === false
           ? [[`${prefix}-S6`, 'Blood cultures before antibiotics expected', 'no']]
           : []),
@@ -263,9 +299,7 @@ function patchSummary(p: InfectionCasePatch, base: InfectionCase): string[] {
         .join('; ')}`,
     );
   if (p.scriptedCalls)
-    out.push(
-      `Calls: ${p.scriptedCalls.map((c) => `${c.atH} h „${tDe(c.messageKey)}“`).join('; ')}`,
-    );
+    out.push(`Calls: ${p.scriptedCalls.map((c) => `${c.atH} h ${tDe(c.messageKey)}`).join('; ')}`);
   if (p.initialSpecimens)
     out.push(
       `Specimens at admission: ${p.initialSpecimens.map((s) => `${s.kind}@${s.site}`).join(', ')}`,

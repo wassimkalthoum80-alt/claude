@@ -47,7 +47,8 @@ export const feverRigors: InfectionCase = {
       growthPerH: 0.012,
       virulence: 0.85,
       bacteraemia: 0.65,
-      minEffectiveDays: 5,
+      // ≈ 7 days of effective therapy from the first effective dose
+      minEffectiveDays: 7,
     },
   ],
   findings: [
@@ -134,8 +135,9 @@ export const positiveUrine: InfectionCase = {
             id: 'delirium-dehydration',
             diagnosisKey: 'dx.deliriumDehydration',
             drive: 0.06,
-            // SIM-ASSUMPTION: rehydration is routine ward care; the delirium settles over ~1.5 days.
-            resolveTauH: 30,
+            // SIM-ASSUMPTION: persists until the learner rehydrates; then settles over ~1 day.
+            resolveTauH: 24,
+            resolvedBy: ['rehydration'],
             organDrive: 0.4,
             organ: 'cns',
           },
@@ -156,7 +158,9 @@ export const positiveUrine: InfectionCase = {
             id: 'delirium-anticholinergic',
             diagnosisKey: 'dx.deliriumAnticholinergic',
             drive: 0.04,
-            resolveTauH: 60,
+            // persists while oxybutynin is given; settles over ~1.5 days after a medication review stops it
+            resolveTauH: 36,
+            resolvedBy: ['medication-review'],
             organDrive: 0.45,
             organ: 'cns',
           },
@@ -200,7 +204,9 @@ const PERITONITIS_INFECTION = {
       result: 'partial' as const,
     },
   ],
+  // ≈ 4 days after adequate source control (STOP-IT)
   minEffectiveDays: 4,
+  durationFrom: 'source-control' as const,
 };
 
 export const postopPeritonitis: InfectionCase = {
@@ -296,7 +302,9 @@ const SAB_LINE = {
       result: 'adequate' as const,
     },
   ],
+  // 14 days from documented clearance (first negative blood culture)
   minEffectiveDays: 14,
+  durationFrom: 'clearance' as const,
 };
 
 export const sabLine: InfectionCase = {
@@ -355,6 +363,7 @@ export const sabLine: InfectionCase = {
             virulence: 0.6,
             bacteraemia: 0.6,
             minEffectiveDays: 42,
+            durationFrom: 'clearance',
           },
         ],
         scriptedCalls: [{ atH: 40, source: 'nurse', messageKey: 'nurse.backPain', urgent: false }],

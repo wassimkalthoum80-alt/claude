@@ -550,12 +550,12 @@ describe('stewardship scoring — phase 5 bloodstream and special cases', () => 
     });
   const keysOf = (e: InfectionEngine) => result(e).items.map((i) => i.key);
 
-  it('E1: cultures, dexamethasone, ceftriaxone + ampicillin before any CT — all credited', () => {
+  it('E1: cultures, dexamethasone, ceftriaxone + ampicillin (CNS doses) before any CT — all credited', () => {
     const e = v(meningitis, 'pneumococcal');
     e.dispatch(cultures);
     e.dispatch({ type: 'PROCEDURE', procedure: 'dexamethasone' });
-    e.dispatch(start('ceftriaxone'));
-    e.dispatch(start('ampicillin'));
+    e.dispatch(start('ceftriaxone', { dose: 'high' }));
+    e.dispatch(start('ampicillin', { dose: 'high' }));
     runTo(e, 2);
     e.dispatch({ type: 'ORDER_IMAGING', kind: 'ct-head' });
     runTo(e, 6);

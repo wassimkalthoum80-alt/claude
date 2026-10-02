@@ -2,6 +2,7 @@ import {
   mrgnClass,
   orderActivity,
   type AntiinfectiveDef,
+  type DoseLevel,
   type DrugClass,
   type Focus,
   type ImagingKind,
@@ -11,6 +12,7 @@ import {
   type InfectionTruth,
   type InfectionView,
   type Isolate,
+  type OrganismGroup,
   type ProcedureId,
   type SpecimenKind,
   type TherapyOrder,
@@ -38,42 +40,99 @@ export interface StewardshipConfig {
   targetDays: number | null;
   /** i18n key of the take-home message */
   learningKey: string;
-  /** where the target duration is counted from (default: first dose) */
-  durationFrom?: 'first-dose' | 'source-control' | 'first-negative-blood-culture';
+  /**
+   * where the target duration is counted from (default: first effective dose). 'first-negative-blood-culture' falls
+   * back to the first effective dose when no follow-up culture was taken; 'defervescence' = start of a 24-h afebrile
+   * period (febrile neutropenia without a focus).
+   */
+  durationFrom?:
+    | 'first-dose'
+    | 'first-effective-dose'
+    | 'source-control'
+    | 'first-negative-blood-culture'
+    | 'defervescence';
+  /** d — tolerance around the target duration (below, above); default: the global weights */
+  durationTolerance?: [number, number];
   /** blood cultures before antibiotics are part of the case (default true) */
   bloodCulturesExpected?: boolean;
+  /** blood-culture sets expected before therapy (default: guideline, e.g. 3 in suspected endocarditis) */
+  bloodCultureSetsTarget?: number;
+  /** the generic i.v.→oral switch is judged (false: endocarditis, CNS, complicated S. aureus bacteraemia) */
+  oralSwitch?: boolean;
   /** case-specific actions the debrief checks */
   checks?: CaseCheck[];
+}
+
+/**
+ * When a timed check starts counting: admission (default), the first antibiotic dose, a scripted call (e.g. the nurse
+ * reports new back pain), the first imaging that showed one of these findings (recognition), or the first positive
+ * blood culture sample. A check whose anchor event never happened is not judged.
+ */
+export interface CheckAnchor {
+  call?: string;
+  finding?: string[];
+  firstPositiveBloodCulture?: boolean;
 }
 
 /**
  * A case-specific check (content). Each names the i18n keys for "done" (0 points) and "missed" (−penalty); a late
  * action costs half the penalty.
  */
-export type CaseCheck = { okKey: string; key: string; penalty: number } & (
+export type CaseCheck = { okKey: string; key: string; penalty: number; from?: CheckAnchor } & (
   | {
       kind: 'procedure';
       procedures: ProcedureId[];
       withinH: number;
       /** counted from the first antibiotic dose instead of admission (adjuncts) */
       relativeToFirstDose?: boolean;
+      /** only a procedure that gives adequate source control counts (a partial drain does not) */
+      adequateOnly?: boolean;
     }
-  /** every group has at least one drug ordered (e.g. ceftriaxone AND ampicillin in meningitis > 50 y) */
-  | { kind: 'requireDrugs'; groups: string[][] }
+  /** every group has at least one drug ordered, optionally at a minimum dose and route (e.g. CNS doses i.v.) */
+  | { kind: 'requireDrugs'; groups: string[][]; minDose?: DoseLevel; route?: 'iv' | 'po' }
   /** the first antibiotic is given before this imaging (or the imaging is not needed) */
   | { kind: 'antibioticBeforeImaging'; imaging: ImagingKind }
   /** combination reduced to one antibacterial by this many hours after the causative resistogram */
   | { kind: 'monotherapyAfterAst'; withinH: number }
   | { kind: 'imaging'; imaging: ImagingKind[]; withinH: number }
-  | { kind: 'test'; specimen: SpecimenKind; withinH: number }
-  /** blood cultures repeated after effective therapy started (from/within h after it) */
-  | { kind: 'followUpBloodCultures'; fromH: number; withinH: number }
+  | {
+      kind: 'test';
+      specimen: SpecimenKind | SpecimenKind[];
+      withinH: number;
+      /** taken before the first antibiotic dose (a later sample counts as late) */
+      beforeAntibiotic?: boolean;
+    }
+  /**
+   * follow-up blood cultures from/within h after the anchor (default: effective therapy; S. aureus: the first positive
+   * sample), with a minimum number of sets; `untilNegative`: a positive follow-up needs another within 48 h
+   */
+  | {
+      kind: 'followUpBloodCultures';
+      fromH: number;
+      withinH: number;
+      minSets?: number;
+      untilNegative?: boolean;
+    }
+  /** paired blood cultures (peripheral and through the catheter) within h of the anchor */
+  | { kind: 'pairedCultures'; withinH: number }
+  /** infectious-diseases / ABS consultation within h of the anchor */
+  | { kind: 'consult'; withinH: number }
   /** a drug running at admission is stopped within h */
   | { kind: 'stopDrug'; drugId: string; withinH: number }
   /** at least one of these drugs is ordered */
   | { kind: 'preferDrugs'; drugIds: string[] }
-  /** none of these drug classes is ordered */
-  | { kind: 'avoidClasses'; classes: DrugClass[] }
+  /** the first (empirical) regimen contains one of these drugs */
+  | { kind: 'empiricalDrugs'; drugIds: string[] }
+  /**
+   * none of these drug classes is ordered (optionally only before h; not judged when a causative organism of these
+   * groups makes the class indicated)
+   */
+  | {
+      kind: 'avoidClasses';
+      classes: DrugClass[];
+      beforeH?: number;
+      unlessCausativeGroups?: OrganismGroup[];
+    }
   | { kind: 'isolation'; withinH: number }
 );
 
@@ -105,6 +164,12 @@ export interface StewardshipWeights {
   tooLongPerDay: number;
   tooLongMax: number;
   tooShort: number;
+  /** a course still running at case end without a stop/review date */
+  noStopPlan: number;
+  /** antibiotics started without infection but stopped at reassessment (≤ 72 h) */
+  treatedThenStopped: number;
+  /** TDM ordered later than 24 h after the start */
+  lateTdm: number;
   timeoutMissed: number;
   timeoutWrong: number;
   wrongStatus: number;
@@ -118,6 +183,8 @@ export interface StewardshipWeights {
     delayedTransport: number;
     punctureTube: number;
   };
+  /** fraction of the harm deduction kept when the event happened despite appropriate prescribing */
+  unavoidableHarmFactor: number;
   /** outcome-score deductions for harm caused during the course */
   harm: {
     cdi: number;
@@ -187,12 +254,21 @@ export interface StewardshipResult {
   improve: StewardshipItem[];
   metrics: StewardshipMetrics;
   timeline: TimelineEvent[];
-  collateral: { t: number; kind: string; detailKey: string; mechanism?: string }[];
+  collateral: {
+    t: number;
+    kind: string;
+    detailKey: string;
+    mechanism?: string;
+    /** linked to a prescribing error in this case (false: occurred despite appropriate care) */
+    preventable: boolean;
+  }[];
   /** the truth, revealed */
   reveal: {
     diagnoses: string[];
     organisms: { organismId: string; mechanisms: string[]; mrgn: string }[];
     mimics: string[];
+    /** non-bacterial complications of the infection (e.g. septic embolism) */
+    complications: string[];
   };
   learningKey: string;
 }
@@ -205,7 +281,10 @@ export interface StewardshipInput {
   lib: InfectionLibrary;
   config: StewardshipConfig;
   weights: StewardshipWeights;
+  /** stewardship rank (breadth + ecological pressure + reserve status) — orders de-escalation */
   spectrumRank: Partial<Record<DrugClass, number>>;
+  /** coverage breadth only — counts broad-spectrum days (default: spectrumRank) */
+  spectrumBreadth?: Partial<Record<DrugClass, number>>;
 }
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
@@ -237,8 +316,23 @@ function causative(input: StewardshipInput): { iso: Isolate; focus: Focus }[] {
 const activity = (o: TherapyOrder, iso: Isolate, focus: Focus, lib: InfectionLibrary, t: number) =>
   orderActivity(o, iso, { focus, gfrRelative: 1, foreignBody: false, timeH: t }, lib);
 
+/** A standard-dose order used to ask "would this drug work here?". */
+const probe = (d: AntiinfectiveDef, route: 'iv' | 'po'): TherapyOrder => ({
+  id: 'probe',
+  drugId: d.id,
+  dose: 'standard',
+  route,
+  extendedInfusion: false,
+  startedH: 0,
+  stoppedH: null,
+  plannedDays: null,
+  tdm: false,
+  tdmFromH: null,
+});
+
 export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   const { view, log, truth, lib, config, weights: w, spectrumRank } = input;
+  const breadth = input.spectrumBreadth ?? spectrumRank;
   const end = view.timeH;
   const orders = view.therapy;
   const drug = (o: TherapyOrder) => lib.drugs.get(o.drugId);
@@ -255,6 +349,9 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   );
   const micro = log.filter(
     (e): e is Extract<InfectionLogEntry, { kind: 'micro' }> => e.kind === 'micro',
+  );
+  const commands = log.filter(
+    (e): e is Extract<InfectionLogEntry, { kind: 'command' }> => e.kind === 'command' && e.accepted,
   );
   // Anti-infectives already running at admission are the case's starting point, not the learner's orders.
   const initial = input.caseDef.initialTherapy ?? [];
@@ -297,13 +394,12 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     !(config.infectionPresent && cause.length)
   )
     timeToActiveH = firstAntibioticH;
+  /** h of the first effective dose in course time (duration anchor; before the bridge adjustment) */
+  const firstEffectiveH = timeToActiveH;
 
   // Real-time bridge: the episode happened at the bridge hour while course time stood still. An antibiotic given in
   // it counts at its real minute; one ordered after the handover also waited the length of the episode.
-  const rt = log.find(
-    (e): e is Extract<InfectionLogEntry, { kind: 'command' }> =>
-      e.kind === 'command' && e.accepted && e.command.type === 'APPLY_REALTIME_OUTCOME',
-  );
+  const rt = commands.find((e) => e.command.type === 'APPLY_REALTIME_OUTCOME');
   if (
     rt?.command.type === 'APPLY_REALTIME_OUTCOME' &&
     timeToActiveH !== null &&
@@ -317,7 +413,16 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     timeToActiveH = Math.round(timeToActiveH * 100) / 100;
   }
 
-  // ── Dose counts, CO2, cost ──
+  // ── Resistogram of the causative isolates ──
+  const causalIds = new Set(cause.map((c) => c.iso.id));
+  const astH = Math.min(
+    ...micro
+      .filter((m) => m.report.stage === 'susceptibility' && causalIds.has(m.report.isolateId))
+      .map((m) => m.atH),
+    Infinity,
+  );
+
+  // ── Dose counts, CO2, cost, reserve ──
   let dot = 0;
   let broadDot = 0;
   let reserveDaysUnjustified = 0;
@@ -327,15 +432,29 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     const m = mrgnClass(iso, lib);
     return m === '4MRGN' || m === 'MRSA' || m === 'VRE';
   });
+  /**
+   * Reserve days without justification. A documented indication (suspected or confirmed: prior isolate, high-risk
+   * empirical use, severe allergy) or ABS approval justifies the start; without proven resistance, days beyond the
+   * de-escalation window after the resistogram are no longer justified.
+   */
+  const unjustifiedReserveDays = (o: TherapyOrder): number => {
+    const d = drug(o);
+    if (!d || !isReserve(d, lib)) return 0;
+    const stop = o.stoppedH ?? end;
+    if (!o.indication && !o.absApproval) return days(stop - Math.max(0, o.startedH));
+    if (provenResistance || !Number.isFinite(astH)) return 0;
+    const from = Math.max(o.startedH, astH + w.deescalationWindowH);
+    return stop > from ? days(stop - from) : 0;
+  };
   for (const o of orders) {
     const d = drug(o);
     if (!d) continue;
     const n = days((o.stoppedH ?? end) - Math.max(0, o.startedH));
     dot += n;
-    if (rank(o) >= 4) broadDot += n;
+    if ((breadth[d.drugClass] ?? 3) >= 4) broadDot += n;
     co2Kg += n * (d.co2KgPerDay[o.route] ?? 0);
     costEur += n * d.costPerDayEur;
-    if (isReserve(d, lib) && !(provenResistance && o.indication)) reserveDaysUnjustified += n;
+    reserveDaysUnjustified += unjustifiedReserveDays(o);
   }
 
   // ── Antibiotic indication and timing ──
@@ -355,6 +474,12 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       );
   } else if (learnerOrders.length === 0) {
     add('stw.withheld', 0);
+  } else if (
+    firstAntibioticH !== null &&
+    learnerOrders.every((o) => o.stoppedH !== null && o.stoppedH - firstAntibioticH <= 72)
+  ) {
+    // Empirical start on the information available, stopped at reassessment: a smaller deduction than continuing.
+    add('stw.treatedThenStopped', -w.treatedThenStopped, { days: view.antibioticDays });
   } else {
     add(
       'stw.treatedNoInfection',
@@ -369,6 +494,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   }
 
   // ── Cultures ──
+  const setsTarget = config.bloodCultureSetsTarget ?? lib.guidelines.bloodCultureSets;
   const culturesBeforeAntibiotics =
     firstAntibioticH === null || config.bloodCulturesExpected === false
       ? null
@@ -382,11 +508,10 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
           ? w.noCulturesBefore.septicShock
           : w.noCulturesBefore.other),
       );
-    if (bloodCultureSets > 0 && bloodCultureSets < lib.guidelines.bloodCultureSets) {
-      add('stw.fewSets', -w.fewBloodCultureSets, {
-        n: bloodCultureSets,
-        target: lib.guidelines.bloodCultureSets,
-      });
+    const setsBefore = Math.max(0, ...bcBefore.map((s) => s.order.sets ?? 1));
+    const sets = config.bloodCultureSetsTarget ? setsBefore : bloodCultureSets;
+    if (sets > 0 && sets < setsTarget) {
+      add('stw.fewSets', -w.fewBloodCultureSets, { n: sets, target: setsTarget });
     }
   }
 
@@ -437,42 +562,24 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   }
 
   // ── De-escalation after the resistogram ──
-  const causalIds = new Set(cause.map((c) => c.iso.id));
-  const astH = Math.min(
-    ...micro
-      .filter((m) => m.report.stage === 'susceptibility' && causalIds.has(m.report.isolateId))
-      .map((m) => m.atH),
-    Infinity,
-  );
   let deescalationH: number | null = null;
   let deescalationOpportunity = false;
   let deescalationPending = false;
   if (Number.isFinite(astH) && config.infectionPresent) {
-    // Narrowest active option for every causative isolate at its focus (standard dose).
+    // Narrowest active option for every causative isolate at its focus (standard dose). The activity filter first
+    // excludes drugs unsuitable for the site (penetration, route, organism); the rank then orders what remains.
     let minRank = 0;
     for (const { iso, focus } of cause) {
       let best = Infinity;
       for (const d of lib.drugs.values()) {
         if (d.labOnly) continue;
-        const probe: TherapyOrder = {
-          id: 'probe',
-          drugId: d.id,
-          dose: 'standard',
-          route: d.routes.includes('iv') ? 'iv' : 'po',
-          extendedInfusion: false,
-          startedH: 0,
-          stoppedH: null,
-          plannedDays: null,
-          tdm: false,
-          tdmFromH: null,
-        };
-        if (activity(probe, iso, focus, lib, 0) >= 0.9)
+        if (activity(probe(d, d.routes.includes('iv') ? 'iv' : 'po'), iso, focus, lib, 0) >= 0.9)
           best = Math.min(best, spectrumRank[d.drugClass] ?? 3);
       }
       minRank = Math.max(minRank, Number.isFinite(best) ? best : 5);
     }
-    // Targeted = the narrowest option or a narrow-spectrum class, whichever is broader (several narrow agents are
-    // acceptable step-downs; the formulary's focus model does not separate cystitis-only drugs from pyelonephritis).
+    // Targeted = the narrowest suitable option or a narrow-spectrum class, whichever is broader. When no narrower
+    // suitable option exists, continuing the broad agent is correct (no opportunity).
     const target = Math.max(minRank, w.narrowRank);
     const maxRankAt = (t: number) => Math.max(0, ...runningAt(t).map(rank));
     if (maxRankAt(astH) > target) {
@@ -511,8 +618,21 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   }
 
   // ── Oral switch ──
+  // Only where a generic switch applies (not endocarditis, CNS infection or complicated S. aureus bacteraemia — they
+  // need their own specialist pathway) and after source control; an oral option must be active at the site.
   let ivDaysAfterEligible: number | null = null;
-  if (config.infectionPresent && Number.isFinite(astH)) {
+  const sourceControlled = truth.sites.every(
+    (s) =>
+      !s.active ||
+      input.caseDef.infections.find((d) => d.id === s.id)?.needsSourceControl !== true ||
+      s.control === 'adequate',
+  );
+  if (
+    config.infectionPresent &&
+    config.oralSwitch !== false &&
+    sourceControlled &&
+    Number.isFinite(astH)
+  ) {
     const vit = view.vitals;
     const eligibleAt = vit.find((p) => {
       if (p.t < astH) return false;
@@ -522,19 +642,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     const oralOption = cause.every(({ iso, focus }) =>
       [...lib.drugs.values()].some((d) => {
         if (!d.routes.includes('po') || (d.bioavailability ?? 0) < 0.7 || d.labOnly) return false;
-        const probe: TherapyOrder = {
-          id: 'p',
-          drugId: d.id,
-          dose: 'standard',
-          route: 'po',
-          extendedInfusion: false,
-          startedH: 0,
-          stoppedH: null,
-          plannedDays: null,
-          tdm: false,
-          tdmFromH: null,
-        };
-        return activity(probe, iso, focus, lib, 0) >= 0.9;
+        return activity(probe(d, 'po'), iso, focus, lib, 0) >= 0.9;
       }),
     );
     if (eligibleAt !== undefined && oralOption) {
@@ -558,9 +666,12 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   const lastStop = learnerOrders.length
     ? Math.max(...learnerOrders.map((o) => o.stoppedH ?? end))
     : 0;
-  const sourceControlH = log.find((e) => e.kind === 'procedure-done' && e.effective)?.t ?? null;
+  // Source control counts only when it was adequate (a partial drain does not start the clock).
+  const sourceControlH =
+    log.find((e) => e.kind === 'procedure-done' && e.effective && e.control === 'adequate')?.t ??
+    null;
   const firstNegativeH = (() => {
-    if (timeToActiveH === null) return null;
+    if (firstEffectiveH === null) return null;
     const negative = new Set(
       micro
         .filter((m) => m.report.stage === 'no-growth' && m.report.final)
@@ -569,16 +680,33 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     return (
       specimens.find(
         (s) =>
-          s.order.kind === 'blood-culture' && s.t > timeToActiveH && negative.has(s.specimenId),
+          s.order.kind === 'blood-culture' && s.t > firstEffectiveH && negative.has(s.specimenId),
       )?.t ?? null
     );
   })();
+  const defervescenceH = (() => {
+    if (firstAntibioticH === null) return null;
+    const vit = view.vitals;
+    return (
+      vit.find(
+        (p) =>
+          p.t >= firstAntibioticH &&
+          p.t + 24 <= end &&
+          vit.filter((q) => q.t >= p.t && q.t <= p.t + 24).every((q) => q.temperatureC < 38),
+      )?.t ?? null
+    );
+  })();
+  const effectiveAnchor = firstEffectiveH ?? firstAntibioticH;
   const anchorH =
     config.durationFrom === 'source-control'
       ? sourceControlH
       : config.durationFrom === 'first-negative-blood-culture'
-        ? firstNegativeH
-        : firstAntibioticH;
+        ? (firstNegativeH ?? effectiveAnchor)
+        : config.durationFrom === 'defervescence'
+          ? defervescenceH
+          : config.durationFrom === 'first-dose'
+            ? firstAntibioticH
+            : effectiveAnchor;
   const totalDays =
     learnerOrders.length && anchorH !== null
       ? Math.round(((lastStop - anchorH) / 24) * 10) / 10
@@ -589,21 +717,34 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     learnerOrders.length &&
     anchorH !== null
   ) {
-    const [below, above] = w.durationTolerance;
-    const stillRunning = learnerOrders.some((o) => o.stoppedH === null);
+    const [below, above] = config.durationTolerance ?? w.durationTolerance;
+    const running = learnerOrders.filter((o) => o.stoppedH === null);
+    const vars = { days: totalDays, target: config.targetDays };
     if (totalDays > config.targetDays + above) {
       add(
         'stw.tooLong',
         -Math.min(w.tooLongMax, w.tooLongPerDay * (totalDays - config.targetDays - above)),
-        {
-          days: totalDays,
-          target: config.targetDays,
-        },
+        vars,
       );
-    } else if (!stillRunning && totalDays < config.targetDays - below) {
-      add('stw.tooShort', -w.tooShort, { days: totalDays, target: config.targetDays });
-    } else if (!stillRunning) {
-      add('stw.durationOk', 0, { days: totalDays, target: config.targetDays });
+    } else if (running.length === 0 && totalDays < config.targetDays - below) {
+      add('stw.tooShort', -w.tooShort, vars);
+    } else if (running.length === 0) {
+      add('stw.durationOk', 0, vars);
+    } else if (running.some((o) => o.plannedDays === null)) {
+      // Still running when the case ends: the plan (stop or review date) is what can be judged.
+      add('stw.noStopPlan', -w.noStopPlan);
+    } else {
+      const plannedEnd = Math.max(...running.map((o) => o.startedH + (o.plannedDays ?? 0) * 24));
+      const planned = Math.round(((plannedEnd - anchorH) / 24) * 10) / 10;
+      const pvars = { days: planned, target: config.targetDays };
+      if (planned < config.targetDays - below) add('stw.plannedTooShort', -w.tooShort, pvars);
+      else if (planned > config.targetDays + above)
+        add(
+          'stw.plannedTooLong',
+          -Math.min(w.tooLongMax, w.tooLongPerDay * (planned - config.targetDays - above)),
+          pvars,
+        );
+      else add('stw.plannedOk', 0, pvars);
     }
   }
 
@@ -613,23 +754,59 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     else if (doneAt !== null) add(c.key, -c.penalty / 2);
     else if (end - from > withinH) add(c.key, -c.penalty);
   };
-  const commands = log.filter(
-    (e): e is Extract<InfectionLogEntry, { kind: 'command' }> => e.kind === 'command' && e.accepted,
+  const firstPositiveBcH = (() => {
+    const positive = new Set(
+      micro.filter((m) => m.report.stage === 'positive-signal').map((m) => m.report.specimenId),
+    );
+    return specimens.find((s) => s.order.kind === 'blood-culture' && positive.has(s.specimenId))?.t;
+  })();
+  /** h the check starts counting (undefined: its anchor event never happened — not judged) */
+  const anchorOf = (c: CaseCheck): number | undefined => {
+    if (!c.from) return 0;
+    const at: number[] = [];
+    if (c.from.call) {
+      const t = log.find((e) => e.kind === 'call' && e.messageKey === c.from?.call)?.t;
+      if (t !== undefined) at.push(t);
+    }
+    if (c.from.finding) {
+      const t = log.find((e) => e.kind === 'imaging' && c.from?.finding?.includes(e.reportKey))?.t;
+      if (t !== undefined) at.push(t);
+    }
+    if (c.from.firstPositiveBloodCulture && firstPositiveBcH !== undefined)
+      at.push(firstPositiveBcH);
+    return at.length ? Math.min(...at) : undefined;
+  };
+  const adequateProcedures = new Set(
+    input.caseDef.infections.flatMap((i) =>
+      (i.sourceControl ?? []).filter((a) => a.result === 'adequate').map((a) => a.id),
+    ),
   );
+  const DOSE_RANK: Record<DoseLevel, number> = { reduced: 0, standard: 1, high: 2 };
   for (const c of config.checks ?? []) {
+    const from = anchorOf(c);
+    if (from === undefined) continue;
     switch (c.kind) {
       case 'procedure': {
         const at = commands.find(
-          (e) => e.command.type === 'PROCEDURE' && c.procedures.includes(e.command.procedure),
+          (e) =>
+            e.t >= from &&
+            e.command.type === 'PROCEDURE' &&
+            c.procedures.includes(e.command.procedure) &&
+            (!c.adequateOnly || adequateProcedures.has(e.command.procedure)),
         )?.t;
         if (c.relativeToFirstDose) {
           if (firstAntibioticH !== null) timed(c, at ?? null, c.withinH, firstAntibioticH);
-        } else timed(c, at ?? null, c.withinH);
+        } else timed(c, at ?? null, c.withinH, from);
         break;
       }
       case 'requireDrugs': {
         if (!learnerOrders.length) break;
-        const ok = c.groups.every((g) => learnerOrders.some((o) => g.includes(o.drugId)));
+        const fits = (o: TherapyOrder) =>
+          (!c.minDose || DOSE_RANK[o.dose] >= DOSE_RANK[c.minDose]) &&
+          (!c.route || o.route === c.route);
+        const ok = c.groups.every((g) =>
+          learnerOrders.some((o) => g.includes(o.drugId) && fits(o)),
+        );
         add(ok ? c.okKey : c.key, ok ? 0 : -c.penalty);
         break;
       }
@@ -637,7 +814,11 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         if (!Number.isFinite(astH)) break;
         const at = astH + c.withinH;
         if (end < at) break;
-        const n = runningAt(at).filter((o) => drug(o)?.category !== undefined).length;
+        // antibacterials only (antifungals and adjuncts do not count)
+        const n = runningAt(at).filter((o) => {
+          const cls = drug(o)?.drugClass;
+          return cls !== undefined && cls !== 'azole' && cls !== 'echinocandin';
+        }).length;
         add(n <= 1 ? c.okKey : c.key, n <= 1 ? 0 : -c.penalty, { n });
         break;
       }
@@ -654,20 +835,58 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         break;
       }
       case 'imaging': {
-        const at = log.find((e) => e.kind === 'imaging' && c.imaging.includes(e.imaging))?.t;
-        timed(c, at ?? null, c.withinH);
+        const at = log.find(
+          (e) => e.kind === 'imaging' && e.t >= from && c.imaging.includes(e.imaging),
+        )?.t;
+        timed(c, at ?? null, c.withinH, from);
         break;
       }
       case 'test': {
-        const at = specimens.find((e) => e.order.kind === c.specimen)?.t;
-        timed(c, at ?? null, c.withinH);
+        const kinds = Array.isArray(c.specimen) ? c.specimen : [c.specimen];
+        const at = specimens.find((e) => e.t >= from && kinds.includes(e.order.kind))?.t;
+        if (c.beforeAntibiotic && firstAntibioticH !== null && at !== undefined) {
+          if (at <= firstAntibioticH) add(c.okKey, 0);
+          else add(c.key, -c.penalty / 2);
+        } else timed(c, at ?? null, c.withinH, from);
         break;
       }
       case 'followUpBloodCultures': {
-        if (timeToActiveH === null) break;
-        const from = timeToActiveH + c.fromH;
-        const at = specimens.find((e) => e.order.kind === 'blood-culture' && e.t >= from)?.t;
-        timed(c, at ?? null, c.withinH - c.fromH, from);
+        const base = c.from?.firstPositiveBloodCulture ? from : timeToActiveH;
+        if (base === null) break;
+        const start = base + c.fromH;
+        const followUps = specimens.filter((e) => e.order.kind === 'blood-culture' && e.t >= start);
+        const first = followUps.find((e) => (e.order.sets ?? 1) >= (c.minSets ?? 1));
+        timed(c, first?.t ?? null, c.withinH - c.fromH, start);
+        if (c.untilNegative && first) {
+          // A positive follow-up needs another set within 48 h until the cultures are negative.
+          const positive = new Set(
+            micro
+              .filter((m) => m.report.stage === 'positive-signal')
+              .map((m) => m.report.specimenId),
+          );
+          let last = first;
+          while (positive.has(last.specimenId)) {
+            const next = followUps.find((e) => e.t > last.t);
+            if (!next || next.t - last.t > 48) {
+              if (end - last.t > 48) add('stw.chk.untilNegative.missed', -c.penalty / 2);
+              break;
+            }
+            last = next;
+          }
+        }
+        break;
+      }
+      case 'pairedCultures': {
+        const bc = specimens.filter((e) => e.order.kind === 'blood-culture' && e.t >= from);
+        const periph = bc.find((e) => e.order.site === 'blood');
+        const cath = bc.find((e) => e.order.site === 'catheter-blood');
+        const at = periph && cath ? Math.max(periph.t, cath.t) : null;
+        timed(c, at, c.withinH, from);
+        break;
+      }
+      case 'consult': {
+        const at = commands.find((e) => e.t >= from && e.command.type === 'ABS_CONSULT')?.t;
+        timed(c, at ?? null, c.withinH, from);
         break;
       }
       case 'stopDrug': {
@@ -680,10 +899,26 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         if (learnerOrders.some((o) => c.drugIds.includes(o.drugId))) add(c.okKey, 0);
         else if (learnerOrders.length) add(c.key, -c.penalty);
         break;
+      case 'empiricalDrugs': {
+        if (firstAntibioticH === null) break;
+        const empirical = learnerOrders.filter((o) => o.startedH <= firstAntibioticH + 1);
+        if (empirical.some((o) => c.drugIds.includes(o.drugId))) add(c.okKey, 0);
+        else add(c.key, -c.penalty);
+        break;
+      }
       case 'avoidClasses': {
+        const indicated = cause.some(({ iso }) => {
+          const g = lib.organisms.get(iso.organismId)?.group;
+          return g !== undefined && (c.unlessCausativeGroups ?? []).includes(g);
+        });
+        if (indicated) break;
         const used = learnerOrders.find((o) => {
           const cls = drug(o)?.drugClass;
-          return cls !== undefined && c.classes.includes(cls);
+          return (
+            cls !== undefined &&
+            c.classes.includes(cls) &&
+            (c.beforeH === undefined || o.startedH < c.beforeH)
+          );
         });
         if (used) add(c.key, -c.penalty, { drug: drug(used)?.nameKey ?? used.drugId });
         else add(c.okKey, 0);
@@ -691,7 +926,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       }
       case 'isolation': {
         const at = commands.find((e) => e.command.type === 'ISOLATION' && e.command.on)?.t;
-        timed(c, at ?? null, c.withinH);
+        timed(c, at ?? null, c.withinH, from);
         break;
       }
     }
@@ -702,10 +937,15 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   const timeoutDue = log.some((e) => e.kind === 'timeout-due');
   if (review?.kind === 'command' && review.command.type === 'TIMEOUT_REVIEW') {
     const r = review.command.review;
-    const right =
-      (config.infectionPresent ? r.infection === 'likely' : r.infection === 'unlikely') &&
-      (!config.focusDiagnosisId || r.diagnosisId === config.focusDiagnosisId);
+    const focusRight = !config.focusDiagnosisId || r.diagnosisId === config.focusDiagnosisId;
+    // Empirical treatment without a proven infection (febrile neutropenia): "likely" or "unsure" are both reasonable.
+    const right = config.infectionPresent
+      ? r.infection === 'likely' && focusRight
+      : config.empiricalIndicated
+        ? r.infection !== 'unlikely'
+        : r.infection === 'unlikely' && focusRight;
     if (right) add('stw.timeoutRight', 0);
+    else if (r.infection === 'unsure') add('stw.timeoutUnsure', 0);
     else add('stw.timeoutWrong', -w.timeoutWrong);
   } else if (timeoutDue) {
     add('stw.timeoutMissed', -w.timeoutMissed);
@@ -724,7 +964,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
   );
   if (wrongPositive.length)
     add('stw.statusWrong', -w.wrongStatus, { dx: wrongPositive[0]?.labelKey ?? '' });
-  if (!config.infectionPresent) {
+  if (!config.infectionPresent && !config.focusDiagnosisId) {
     const nonInf = view.declared['non-infectious'];
     const urinary =
       view.declared[input.caseDef.workingDiagnoses.find((d) => d.focus === 'urine')?.id ?? ''];
@@ -736,19 +976,56 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     )
       add('stw.statusRight', 0);
   }
-  const untested = orders.filter(
-    (o) => drug(o)?.tdm && !o.tdm && (o.stoppedH ?? end) - o.startedH >= 48,
-  );
+  // TDM: the first level within 24 h of the start (target exposure within 24–48 h in serious infection).
+  const tdmOrderedAt = (o: TherapyOrder) =>
+    commands.find((e) => e.command.type === 'ORDER_TDM' && e.command.orderId === o.id)?.t;
+  const tdmDrugs = orders.filter((o) => drug(o)?.tdm && (o.stoppedH ?? end) - o.startedH >= 24);
+  const untested = tdmDrugs.filter((o) => !o.tdm);
+  const lateTdm = tdmDrugs.filter((o) => {
+    const at = tdmOrderedAt(o);
+    return o.tdm && at !== undefined && at - o.startedH > 24;
+  });
   if (untested.length)
     add('stw.missingTdm', -w.missingTdm, {
       drug: drug(untested[0] as TherapyOrder)?.nameKey ?? '',
     });
+  else if (lateTdm.length)
+    add('stw.lateTdm', -w.lateTdm, { drug: drug(lateTdm[0] as TherapyOrder)?.nameKey ?? '' });
   const rejected = micro.filter(
-    (m) => m.report.stage === 'test-result' && m.report.detailKey === 'micro.cdiff.rejected',
+    (m) =>
+      m.report.stage === 'test-result' &&
+      (m.report.detailKey === 'micro.cdiff.rejected' ||
+        m.report.detailKey === 'micro.cdiff.repeat'),
   ).length;
   if (rejected) add('stw.rejectedTest', -w.rejectedTest * rejected, { n: rejected });
 
   // ── Outcome axis ──
+  // Harm is reported in full; it costs the full deduction only when this case's prescribing contributed to it
+  // (no double deduction for events that happened despite appropriate care).
+  const has = (...keys: string[]) => items.some((i) => i.delta < 0 && keys.includes(i.key));
+  const overuse =
+    has(
+      'stw.tooLong',
+      'stw.plannedTooLong',
+      'stw.noDeescalation',
+      'stw.deescalationLate',
+      'stw.reserveUnjustified',
+      'stw.treatedNoInfection',
+      'stw.treatedThenStopped',
+      'stw.ivTooLong',
+    ) || (config.checks ?? []).some((c) => c.kind === 'avoidClasses' && has(c.key));
+  const preventable = (kind: string): boolean => {
+    switch (kind) {
+      case 'aki-toxicity':
+        return has('stw.missingTdm', 'stw.lateTdm') || overuse;
+      case 'relapse':
+        return has('stw.tooShort', 'stw.plannedTooShort', 'stw.noActive', 'stw.late');
+      case 'allergy':
+        return true;
+      default:
+        return overuse;
+    }
+  };
   const collateral = log
     .filter((e): e is Extract<InfectionLogEntry, { kind: 'collateral' }> => e.kind === 'collateral')
     .map((e) => ({
@@ -756,6 +1033,7 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
       kind: e.collateral,
       detailKey: e.detailKey,
       ...(e.mechanism ? { mechanism: e.mechanism } : {}),
+      preventable: preventable(e.collateral),
     }));
   let outcome: Outcome;
   let outcomeScore: number;
@@ -781,7 +1059,9 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     superinfection: w.harm.superinfection,
     allergy: w.harm.allergy,
   };
-  if (outcome !== 'died') for (const c of collateral) outcomeScore -= harm[c.kind] ?? 0;
+  if (outcome !== 'died')
+    for (const c of collateral)
+      outcomeScore -= (harm[c.kind] ?? 0) * (c.preventable ? 1 : w.unavoidableHarmFactor);
   outcomeScore = clamp(Math.round(outcomeScore), 0, 100);
 
   const stewardshipScore = clamp(100 + items.reduce((s, i) => s + i.delta, 0), 0, 100);
@@ -792,13 +1072,9 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
 
   // ── Timeline ──
   const reserveStart = new Set(
-    orders
-      .filter((o) => {
-        const d = drug(o);
-        return d && isReserve(d, lib) && !(provenResistance && o.indication);
-      })
-      .map((o) => o.id),
+    orders.filter((o) => unjustifiedReserveDays(o) > 0).map((o) => o.id),
   );
+
   const specimenKind = new Map(specimens.map((s) => [s.specimenId, `specimen.${s.order.kind}`]));
   for (const e of log) {
     if (e.kind === 'specimen') {
@@ -899,7 +1175,8 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
         mechanisms: [...iso.mechanisms],
         mrgn: mrgnClass(iso, lib),
       })),
-    mimics: truth.mimics.map((m) => m.diagnosisKey),
+    mimics: truth.mimics.filter((m) => m.kind !== 'complication').map((m) => m.diagnosisKey),
+    complications: truth.mimics.filter((m) => m.kind === 'complication').map((m) => m.diagnosisKey),
   };
 
   return {
