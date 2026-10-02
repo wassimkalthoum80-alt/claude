@@ -1,5 +1,7 @@
+import { alsFacts, resusMarker } from './alsAssessment';
 import { assessDecisions } from './assessment';
 import type {
+  AlsFacts,
   Feedback,
   Outcome,
   ScenarioScoring,
@@ -116,6 +118,14 @@ export function concernsOf(
   return out;
 }
 
+/** Resuscitation diagnosis: correct rhythm calls and finding (treating) the cause, equally weighted. */
+function alsDiagnosis(als: AlsFacts, sc: ScenarioScoring): number | null {
+  const parts: number[] = [];
+  if (als.rhythmChecks > 0) parts.push((100 * als.rhythmCorrect) / als.rhythmChecks);
+  if (sc.causeSteps?.length) parts.push(als.causeTreatedAfterS === null ? 0 : 100);
+  return parts.length === 0 ? null : Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+}
+
 /** Seconds a channel spent beyond a threshold. */
 function secondsBeyond(values: readonly number[], test: (x: number) => boolean): number {
   let n = 0;
@@ -163,11 +173,18 @@ export function scoreSession(
 ): SessionScore {
   const r = rulesFor(defaults, sc);
   const v = input.vitals;
-  const resus = sc.resus === true;
+  // A resuscitation case is scored as one only if the arrest happened; a prevented arrest is a stabilisation.
+  const resus = sc.resus === true && input.cpr !== null;
   const decisions = assessDecisions(input.log, v, input.end, r, {
     keyActions: sc.keyActions,
     resus,
+    resusMark: resusMarker(sc),
   });
+  const arrestEvent = input.log.find((e) => e.kind === 'event' && e.event === 'ARREST_START');
+  const als =
+    resus && arrestEvent && (sc.causeSteps || sc.adrenalineAsap)
+      ? alsFacts(input.log, sc, r, arrestEvent.t)
+      : null;
   // The first response to a problem started by a scenario event (e.g. a disconnection) that keeps the patient in
   // target prevented the deterioration. Not for problems present from the start: there the measured effect decides
   // (e.g. noradrenaline in hypovolaemia keeps the MAP but does not treat the cause).
@@ -254,7 +271,12 @@ export function scoreSession(
         s.arrest * arrests -
         s.override * overrides -
         s.unsafeShock * unsafeShocks -
-        s.handsOff * handsOff,
+        s.handsOff * handsOff -
+        (als
+          ? r.alsSafety.inappropriateShock * als.inappropriateShocks +
+            r.alsSafety.wrongSide * als.wrongSide +
+            r.alsSafety.oesophageal * als.oesophagealUnrecognised
+          : 0),
     ),
   );
   const redundant = redundantTests(input, r.efficiency.redundantS);
@@ -272,10 +294,27 @@ export function scoreSession(
       cpr.timeToFirstCompression === null
         ? 0
         : Math.round(band(cpr.timeToFirstCompression, r.arrestResponse));
-    treatment =
+    const ccfScore =
       cpr.ccf === null
         ? 0
-        : Math.round(clamp((100 * (cpr.ccf - (cpr.ccfTarget - r.ccfZeroBelow))) / r.ccfZeroBelow));
+        : clamp((100 * (cpr.ccf - (cpr.ccfTarget - r.ccfZeroBelow))) / r.ccfZeroBelow);
+    if (als) {
+      // ALS treatment: compressions, the cause and (non-shockable) early adrenaline.
+      const w = r.alsTreatment;
+      const parts: [number, number][] = [[ccfScore, w.ccf]];
+      if (sc.causeSteps?.length)
+        parts.push([
+          als.causeTreatedAfterS === null ? 0 : band(Math.max(0, als.causeTreatedAfterS), r.cause),
+          w.cause,
+        ]);
+      if (sc.adrenalineAsap)
+        parts.push([
+          als.adrenalineAfterS === null ? 0 : band(als.adrenalineAfterS, r.adrenaline),
+          w.adrenaline,
+        ]);
+      const total = parts.reduce((a, [, x]) => a + x, 0);
+      treatment = Math.round(parts.reduce((a, [v2, x]) => a + v2 * x, 0) / total);
+    } else treatment = Math.round(ccfScore);
     time = Math.round(band(cpr.noFlowTime, r.noFlow));
   } else {
     recognition =
@@ -303,8 +342,8 @@ export function scoreSession(
     stabilisation,
     treatment,
     safety,
-    // No diagnosis panel yet (milestone 6 phase 6).
-    diagnosis: null,
+    // Resuscitation: rhythm assessments and finding the cause; otherwise no diagnosis panel yet (phase 6).
+    diagnosis: als ? alsDiagnosis(als, sc) : null,
     efficiency,
     time,
   };
@@ -325,7 +364,9 @@ export function scoreSession(
   const one =
     (outcome !== 'arrest' || objectiveMet === true) &&
     (stabilisation === null || stabilisation >= 50);
-  const two = one && overall >= 70 && dangerous === 0 && keyActionMissed !== true;
+  const causeMissed =
+    als !== null && (sc.causeSteps?.length ?? 0) > 0 && als.causeTreatedAfterS === null;
+  const two = one && overall >= 70 && dangerous === 0 && keyActionMissed !== true && !causeMissed;
   // ★★★ = excellent in every dimension (milestone 6 § 11), not only on average.
   const allSolid = SCORE_KEYS.every((k) => scores[k] === null || (scores[k] ?? 0) >= 60);
   const three =
@@ -349,6 +390,36 @@ export function scoreSession(
       well.push({ key: 'fb.well.cprFast', vars: { s: Math.round(ttfc) } });
     else if (ttfc === null) improve.push({ key: 'fb.improve.noCpr' });
     else improve.push({ key: 'fb.improve.cprSlow', vars: { s: Math.round(ttfc) } });
+    if (als) {
+      const c = als.causeTreatedAfterS;
+      if (causeMissed) improve.unshift({ key: 'fb.improve.causeMissed' });
+      else if (c !== null && c > r.cause.fullS)
+        improve.push({ key: 'fb.improve.causeSlow', vars: { s: Math.round(c) } });
+      else if (c !== null)
+        well.unshift({
+          key: c < 0 ? 'fb.well.causeEarly' : 'fb.well.causeFast',
+          vars: { s: Math.round(Math.max(0, c)) },
+        });
+      if (sc.adrenalineAsap) {
+        const a = als.adrenalineAfterS;
+        if (a === null) improve.push({ key: 'fb.improve.noAdrenaline' });
+        else if (a > r.adrenaline.fullS)
+          improve.push({ key: 'fb.improve.adrenalineLate', vars: { s: Math.round(a) } });
+        else well.push({ key: 'fb.well.adrenalineEarly', vars: { s: Math.round(a) } });
+      }
+      if (als.inappropriateShocks > 0)
+        improve.unshift({
+          key: 'fb.improve.inappropriateShock',
+          vars: { n: als.inappropriateShocks },
+        });
+      if (als.oesophagealUnrecognised > 0) improve.unshift({ key: 'fb.improve.oesophageal' });
+      if (als.wrongSide > 0) improve.push({ key: 'fb.improve.wrongSide' });
+      if (als.rhythmChecks > 0 && als.rhythmCorrect < als.rhythmChecks)
+        improve.push({
+          key: 'fb.improve.rhythm',
+          vars: { n: als.rhythmChecks - als.rhythmCorrect },
+        });
+    }
     if (cpr.ccf !== null && cpr.ccf >= cpr.ccfTarget)
       well.push({ key: 'fb.well.ccf', vars: { pct: Math.round(cpr.ccf) } });
     else if (cpr.ccf !== null)
@@ -377,7 +448,8 @@ export function scoreSession(
   }
   if (keyActionMissed === true) improve.unshift({ key: 'fb.improve.keyAction' });
   else if (keyActionMissed === false && (time ?? 0) >= 70) well.push({ key: 'fb.well.keyAction' });
-  if (dangerous > 0) improve.unshift({ key: 'fb.improve.dangerous', vars: { n: dangerous } });
+  if (dangerous > 0 && !als)
+    improve.unshift({ key: 'fb.improve.dangerous', vars: { n: dangerous } });
   if (arrests > 0) improve.unshift({ key: 'fb.improve.arrest' });
   if (hypotensionS >= 30)
     improve.push({ key: 'fb.improve.hypotension', vars: { s: hypotensionS, v: r.mapDanger } });
@@ -411,6 +483,7 @@ export function scoreSession(
       redundantTests: redundant,
       hintsUsed,
       keyActionMissed,
+      als,
     },
   };
 }

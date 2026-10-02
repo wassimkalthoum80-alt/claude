@@ -1466,4 +1466,38 @@ export const de: Record<I18nKey, string> = {
     'Blut um das Herz verhindert die Füllung: obstruktive PEA. Kompressionen allein bewegen fast nichts.',
   'hint.arrestTamponade.4':
     'Sofort Perikardpunktion (bei Nachlaufen wiederholen) und den Herzchirurgen zur Resternotomie rufen.',
+  'fb.well.causeFast': 'Sie haben die Ursache {s} s nach dem Stillstand behandelt.',
+  'fb.well.causeEarly': 'Sie haben die Ursache behandelt, bevor das Herz stehen blieb.',
+  'fb.improve.causeMissed':
+    'Die Ursache wurde nie behandelt — ohne sie verschaffen Reanimation und Adrenalin nur Zeit.',
+  'fb.improve.causeSlow':
+    'Die Ursache wurde erst {s} s nach dem Stillstand behandelt. Denken Sie ab dem ersten Zyklus an die 4 H und HITS.',
+  'fb.well.adrenalineEarly':
+    'Adrenalin {s} s nach dem Stillstand — früh, wie beim nicht defibrillierbaren Rhythmus empfohlen.',
+  'fb.improve.adrenalineLate':
+    'Adrenalin erst {s} s nach dem Stillstand: beim nicht defibrillierbaren Rhythmus so früh wie möglich geben.',
+  'fb.improve.noAdrenaline':
+    'Beim nicht defibrillierbaren Stillstand wurde kein Adrenalin gegeben.',
+  'fb.improve.inappropriateShock':
+    '{n} Schock(s) in einen nicht defibrillierbaren Rhythmus — Defibrillation behandelt keine PEA und keine Asystolie.',
+  'fb.improve.oesophageal':
+    'Der Tubus lag im Ösophagus und blieb dort: jeden Tubus mit Kapnografie-Kurve kontrollieren.',
+  'fb.improve.wrongSide': 'Eine Dekompression erfolgte auf der Seite ohne Pneumothorax.',
+  'fb.improve.rhythm': '{n} Rhythmuskontrolle(n) wurden falsch beurteilt.',
+  'dec.reason.cause': 'Behandelt die Ursache des Stillstands.',
+  'dec.reason.shockNonShockable': 'Schock in einen nicht defibrillierbaren Rhythmus.',
+  'dec.reason.oesophageal': 'Der Tubus liegt im Ösophagus — keine Beatmung.',
+  'dec.reason.wrongSide':
+    'Keine Luft auf dieser Seite — der Pneumothorax ist auf der anderen Seite.',
+  'dec.reason.shock': 'Defibrillation eines defibrillierbaren Rhythmus.',
+  'dec.reason.adrenaline': 'Adrenalin erhöht den durch Kompressionen erzeugten Druck.',
+  'learn.arrestHypoxia':
+    'Ein hypoxischer Stillstand braucht Sauerstoff, nicht nur Kompressionen: Atemweg sichern, mit 100 % Sauerstoff beatmen und mit Kapnografie bestätigen, während die Reanimation weiterläuft. Vor dem Stillstand kann Maskenbeatmung allein ihn verhindern.',
+  'learn.arrestBleeding':
+    'Ein leeres Herz lässt sich nicht pumpen: beim hämorrhagischen Stillstand die Blutung stoppen und unter Reanimation schnell auffüllen (zwei Zugänge, Druckbeutel, Blut). Adrenalin ersetzt kein Volumen.',
+  'learn.arrestTension':
+    'Steigende Beatmungsdrücke und fallender Blutdruck nach ZVK-Anlage sind ein Spannungspneumothorax, bis das Gegenteil bewiesen ist. Die betroffene Seite dekomprimieren — Adrenalin hilft einem obstruierten Herzen nicht.',
+  'learn.arrestTamponade':
+    'Nach Herzoperation sprechen Drainagen, die nicht mehr fördern, bei fallendem Blutdruck für eine Tamponade. Der Ultraschall zeigt sie; Perikardpunktion oder Resternotomie behandeln sie.',
+  'dec.reason.resus': 'Während des Stillstands nicht an den Messwerten beurteilt.',
 };

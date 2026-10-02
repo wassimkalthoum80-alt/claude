@@ -45,6 +45,12 @@ export const SCORING_DEFAULTS: ScoringRules = {
   ccfZeroBelow: 40,
   // No-flow time: up to 10 s full marks, nothing after 2 min.
   noFlow: { fullS: 10, zeroS: 120 },
+  // Cause treated within 2 min of the arrest full marks, nothing after 8 min (4 Hs and 4 Ts during CPR).
+  cause: { fullS: 120, zeroS: 480 },
+  // Non-shockable rhythm: adrenaline "as soon as possible" (ERC 2025) — within 3 min full marks, none after 7 min.
+  adrenaline: { fullS: 180, zeroS: 420 },
+  alsTreatment: { ccf: 0.4, cause: 0.4, adrenaline: 0.2 },
+  alsSafety: { inappropriateShock: 20, wrongSide: 10, oesophageal: 25, oesophagealS: 60 },
 };
 
 export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
@@ -61,6 +67,68 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
     learningKey: 'learn.vf',
     resus: true,
     weights: { recognition: 2, treatment: 2, time: 1.5, safety: 1, efficiency: 0.5 },
+  },
+  {
+    scenarioId: 'arrest-hypoxia',
+    topics: ['resuscitation', 'airway'],
+    learningKey: 'learn.arrestHypoxia',
+    resus: true,
+    adrenalineAsap: true,
+    // Prevented arrest: the low saturation is the problem from the start.
+    problemAtStart: true,
+    rules: { spo2Min: 90 },
+    causeSteps: [{ id: 'airway', any: [{ event: 'AIRWAY_PLACED', detailIncludes: '|correct' }] }],
+  },
+  {
+    scenarioId: 'arrest-hypovolaemia',
+    topics: ['resuscitation', 'shock', 'haemodynamics'],
+    learningKey: 'learn.arrestBleeding',
+    resus: true,
+    adrenalineAsap: true,
+    problemAtStart: true,
+    keyActions: ['surgical-control'],
+    causeSteps: [
+      { id: 'stop', any: [{ command: 'SCENARIO_ACTION', detailIncludes: 'surgical-control' }] },
+      { id: 'volume', any: [{ event: 'BOLUS_GIVEN', detailExcludes: 'push|' }] },
+    ],
+  },
+  {
+    scenarioId: 'arrest-tension',
+    topics: ['resuscitation', 'ventilation'],
+    learningKey: 'learn.arrestTension',
+    resus: true,
+    adrenalineAsap: true,
+    problemAtStart: true,
+    causeSteps: [
+      {
+        id: 'decompress',
+        any: [
+          { event: 'PROCEDURE_DONE', detailIncludes: 'air-released' },
+          { event: 'PROCEDURE_DONE', detailIncludes: 'drain-placed' },
+        ],
+      },
+    ],
+  },
+  {
+    scenarioId: 'arrest-tamponade',
+    topics: ['resuscitation', 'haemodynamics'],
+    learningKey: 'learn.arrestTamponade',
+    resus: true,
+    adrenalineAsap: true,
+    problemAtStart: true,
+    causeSteps: [
+      {
+        id: 'relieve',
+        any: [
+          {
+            event: 'PROCEDURE_DONE',
+            detailIncludes: 'pericardiocentesis',
+            detailExcludes: 'dry-tap',
+          },
+          { event: 'SCENARIO_ACTION_DONE', detailIncludes: 'resternotomy' },
+        ],
+      },
+    ],
   },
   {
     scenarioId: 'asthma-hyperinflation',

@@ -4,13 +4,19 @@ import { commandDetail, INTERVENTION_COMMANDS, INTERVENTION_EVENTS } from './tim
 import { vitalsAt, type Vitals, type VitalSeries } from './vitals';
 
 /** One learner intervention found in the log. */
-interface Intervention {
+export interface Intervention {
   t: number;
   kind: string;
+  /** formatted for display ("sga · correct") */
   detail: string;
+  /** as logged ("sga|correct"; command: its main parameter) */
+  raw: string;
   /** a case action the scenario names as decisive treatment */
   key: boolean;
 }
+
+/** s — an airway placement completing this long after the learner's insert command is the learner's */
+const AIRWAY_ATTRIBUTION_S = 20;
 
 /**
  * The learner's interventions in the log: their commands that change the patient, and the clinical events those
@@ -24,24 +30,39 @@ export function learnerInterventions(
   const userTicks = new Set<number>();
   for (const e of log) if (e.kind === 'command' && e.source === 'user') userTicks.add(e.tick);
   const out: Intervention[] = [];
+  let lastAirwayInsert = -Infinity;
+  const pretty = (raw: string) => raw.split('|').filter(Boolean).join(' · ');
   for (const e of log) {
     if (e.kind === 'command') {
       if (e.source !== 'user') continue;
-      if (e.command.type === 'SCENARIO_ACTION') {
-        out.push({
-          t: e.t,
-          kind: 'SCENARIO_ACTION',
-          detail: e.command.id,
-          key: keyActions.includes(e.command.id),
-        });
-      } else if (INTERVENTION_COMMANDS.has(e.command.type)) {
-        out.push({ t: e.t, kind: e.command.type, detail: commandDetail(e.command), key: false });
+      const c = e.command;
+      if (c.type === 'SCENARIO_ACTION') {
+        out.push({ t: e.t, kind: c.type, detail: c.id, raw: c.id, key: keyActions.includes(c.id) });
+      } else if (c.type === 'AIRWAY_INSERT') {
+        lastAirwayInsert = e.t;
+        out.push({ t: e.t, kind: c.type, detail: c.device, raw: c.device, key: false });
+      } else if (INTERVENTION_COMMANDS.has(c.type)) {
+        const d = commandDetail(c);
+        out.push({ t: e.t, kind: c.type, detail: d, raw: d, key: false });
       }
+    } else if (
+      e.event === 'AIRWAY_PLACED' &&
+      e.t - lastAirwayInsert <= AIRWAY_ATTRIBUTION_S + 1e-9
+    ) {
+      // The device the learner inserted is in place (and where it lies).
+      out.push({
+        t: e.t,
+        kind: e.event,
+        detail: pretty(e.detail ?? ''),
+        raw: e.detail ?? '',
+        key: false,
+      });
     } else if (INTERVENTION_EVENTS.has(e.event) && userTicks.has(e.tick)) {
       out.push({
         t: e.t,
         kind: e.event,
-        detail: (e.detail ?? '').split('|').filter(Boolean).join(' · '),
+        detail: pretty(e.detail ?? ''),
+        raw: e.detail ?? '',
         key: false,
       });
     }
@@ -100,7 +121,12 @@ export function assessDecisions(
   vitals: VitalSeries,
   end: number,
   r: ScoringRules,
-  options: { keyActions?: readonly string[]; resus?: boolean } = {},
+  options: {
+    keyActions?: readonly string[];
+    resus?: boolean;
+    /** resuscitation cases: marks a decision from what was done (cause, shock, airway) */
+    resusMark?: (items: readonly Intervention[]) => { mark: DecisionMark; reason: string } | null;
+  } = {},
 ): Decision[] {
   const items = learnerInterventions(log, options.keyActions);
   const groups: Intervention[][] = [];
@@ -119,10 +145,13 @@ export function assessDecisions(
     let verdict: { mark: DecisionMark; reason: string };
     if (g.some((x) => x.key)) verdict = { mark: 'effective', reason: 'keyAction' };
     else if (options.resus)
-      // During CPR the arterial values follow the compressions, not the decision: only compressions are marked.
-      verdict = g.some((x) => x.kind === 'CPR_START')
-        ? { mark: 'effective', reason: 'cpr' }
-        : { mark: 'unrated', reason: 'resus' };
+      // During CPR the arterial values follow the compressions, not the decision: decisions are marked by what
+      // they were (compressions, treatment of the cause, a shock into a non-shockable rhythm).
+      verdict =
+        options.resusMark?.(g) ??
+        (g.some((x) => x.kind === 'CPR_START')
+          ? { mark: 'effective', reason: 'cpr' }
+          : { mark: 'unrated', reason: 'resus' });
     else if (!before || !after) verdict = { mark: 'unrated', reason: 'tooLate' };
     else verdict = classify(before, after, r);
     return {

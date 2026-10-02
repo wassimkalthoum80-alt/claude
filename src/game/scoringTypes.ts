@@ -127,6 +127,41 @@ export interface ScoringRules {
   ccfZeroBelow: number;
   /** resuscitation cases: no-flow time band */
   noFlow: TimeBand;
+  /** resuscitation cases: arrest → treatment of the cause */
+  cause: TimeBand;
+  /** resuscitation cases (non-shockable): arrest → first adrenaline */
+  adrenaline: TimeBand;
+  /** resuscitation cases: weights inside the treatment score */
+  alsTreatment: { ccf: number; cause: number; adrenaline: number };
+  /** resuscitation safety penalties (points) */
+  alsSafety: {
+    /** per shock into PEA, asystole or a perfusing rhythm */
+    inappropriateShock: number;
+    /** per decompression on a side without a pneumothorax */
+    wrongSide: number;
+    /** per oesophageal tube left in place longer than `oesophagealS` */
+    oesophageal: number;
+    /** s */
+    oesophagealS: number;
+  };
+}
+
+/** One entry of the event log a rule looks for (all given fields must match). */
+export interface LogMatch {
+  /** clinical event name */
+  event?: string;
+  /** learner command type (commands from other sources never match) */
+  command?: string;
+  /** text the event detail / main command parameter must contain */
+  detailIncludes?: string;
+  /** text it must not contain */
+  detailExcludes?: string;
+}
+
+/** A step of the treatment of the cause; done when any of its matches occurs. */
+export interface CauseStep {
+  id: string;
+  any: readonly LogMatch[];
 }
 
 /** How one scenario is scored (data, clinician-reviewed). */
@@ -153,6 +188,10 @@ export interface ScenarioScoring {
   problemAtStart?: boolean;
   /** scenario commands that start a new problem the learner must recognise (e.g. a disconnection) */
   onsetCommands?: readonly string[];
+  /** resuscitation case: the treatment of the cause (all steps; e.g. stop the bleeding + give volume) */
+  causeSteps?: readonly CauseStep[];
+  /** resuscitation case with a non-shockable rhythm: adrenaline is expected as soon as possible */
+  adrenalineAsap?: boolean;
 }
 
 /** CPR performance of a resuscitation case (from the engine's arrest timers). */
@@ -240,5 +279,24 @@ export interface SessionScore {
     hintsUsed: number;
     /** a required key action was missed (null = the case has none) */
     keyActionMissed: boolean | null;
+    /** resuscitation cases with an arrest: ALS facts (null otherwise) */
+    als: AlsFacts | null;
   };
+}
+
+/** What happened in a resuscitation (all times in s after the arrest; negative = before it). */
+export interface AlsFacts {
+  /** s — sim time of the arrest */
+  arrestAt: number;
+  /** all cause steps done (time of the last one), null if not */
+  causeTreatedAfterS: number | null;
+  /** ids of the cause steps done */
+  causeStepsDone: string[];
+  /** first adrenaline after the arrest, null if none */
+  adrenalineAfterS: number | null;
+  rhythmChecks: number;
+  rhythmCorrect: number;
+  inappropriateShocks: number;
+  wrongSide: number;
+  oesophagealUnrecognised: number;
 }
