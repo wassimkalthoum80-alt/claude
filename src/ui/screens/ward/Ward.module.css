@@ -113,7 +113,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(300px, 1.05fr) minmax(300px, 1fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(280px, 0.9fr) minmax(380px, 1.35fr) minmax(300px, 0.95fr);
   gap: 10px;
   padding: 10px 14px;
   overflow: auto;
@@ -617,9 +617,19 @@
   .grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  /* The patient stays first and full width. */
+  .center {
+    grid-column: 1 / -1;
+    order: -1;
+  }
 }
 
 @media (max-width: 720px) {
+  .center {
+    grid-column: auto;
+  }
+
   .grid {
     grid-template-columns: 1fr;
     padding: 8px 16px;
@@ -628,4 +638,9 @@
   .tools {
     margin-left: 0;
   }
+}
+
+.bedsideCard {
+  padding: 0;
+  overflow: hidden;
 }

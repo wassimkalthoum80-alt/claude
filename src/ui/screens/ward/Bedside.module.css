@@ -1,18 +1,16 @@
 /* Bedside view: slow, calm motion (breathing, shivering); disabled for reduced-motion users. */
 
 .bedside {
-  margin: 0 0 8px;
-  border-radius: var(--radius);
+  margin: 0;
   overflow: hidden;
-  border: 1px solid var(--panel-border);
   background: #0b1117;
 }
 
-.bedside svg {
+.scene {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 210px;
+  max-height: 360px;
 }
 
 .caption {
@@ -83,6 +81,51 @@
   .breath,
   .rigors,
   .sweat {
+    animation: none;
+  }
+}
+
+.nurseLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--divider);
+  background: rgba(47, 127, 143, 0.12);
+}
+
+.nurseLine p {
+  margin: 0;
+  font: 400 13px/1.35 var(--font-ui);
+  color: var(--text);
+}
+
+.nurseUrgent {
+  background: rgba(255, 196, 0, 0.14);
+  box-shadow: inset 3px 0 0 var(--alarm-medium);
+}
+
+.nurseIdle {
+  animation: sway 6s ease-in-out infinite;
+  transform-box: fill-box;
+}
+
+.nurseAlert {
+  animation: none;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: translate(-75px, 0);
+  }
+  50% {
+    transform: translate(-75px, -1.5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nurseIdle {
     animation: none;
   }
 }

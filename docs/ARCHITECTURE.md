@@ -350,3 +350,7 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   (skin colour, sweating, rigors, breathing, consciousness, posture, oxygen, devices, isolation, observation texts)
   — evidence only. `src/ui/screens/ward/BedsideView.tsx` is a stylised 2D SVG renderer; `visualKey()` gives a stable
   key (e.g. `female-elderly-flushed-rigors-drowsy`) so realistic images or a 3D model can replace it later.
+- **Ward nurse (phase 2b):** `wardNurse()` derives what the nurse at the bedside says and does — an urgent call
+  (alert pose), carrying out a fresh order (busy pose: samples, antibiotic, procedure), a recent observation, or her
+  routine handover of the visible values. She reports; she never diagnoses or acts alone. The bedside scene sits in
+  the centre column (patient + nurse), with the patient card, chart and labs on the left and orders on the right.

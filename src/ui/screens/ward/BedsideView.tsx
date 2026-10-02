@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
-import type { WardPatientVisual } from '../../adapters/wardPatient';
+import type { WardNurse, WardPatientVisual } from '../../adapters/wardPatient';
 import { visualKey } from '../../adapters/wardPatient';
 import { useTk } from './useWard';
+import { NursePortrait } from '../../components/Notifications/NursePortrait';
 import styles from './Bedside.module.css';
 
 const SKIN: Record<WardPatientVisual['skin'], string> = {
@@ -15,7 +16,7 @@ const SKIN: Record<WardPatientVisual['skin'], string> = {
  * Stylised 2D bedside view of the ward patient. It reads only `WardPatientVisual`; realistic images or a 3D model
  * can replace this component (keyed by `visualKey`) without any change to the simulation.
  */
-export function BedsideView({ visual }: { visual: WardPatientVisual }) {
+export function BedsideView({ visual, nurse }: { visual: WardPatientVisual; nurse: WardNurse }) {
   const tk = useTk();
   const v = visual;
   let skin = SKIN[v.skin];
@@ -39,7 +40,8 @@ export function BedsideView({ visual }: { visual: WardPatientVisual }) {
       data-visual={visualKey(v)}
     >
       <svg
-        viewBox="0 0 400 230"
+        viewBox="-120 26 500 194"
+        className={styles.scene}
         role="img"
         aria-label={v.observations.map((o) => tk(o)).join(', ')}
       >
@@ -58,10 +60,12 @@ export function BedsideView({ visual }: { visual: WardPatientVisual }) {
             <stop offset="1" stopColor="#0b1117" />
           </linearGradient>
         </defs>
-        <rect width="400" height="230" fill="url(#wall)" />
+        <rect x="-140" width="540" height="230" fill="url(#wall)" />
+        <rect x="-140" y="214" width="540" height="16" fill="#0a0f14" />
+        <NurseFigure pose={nurse.pose} />
 
         {v.isolation && (
-          <g transform="translate(16 14)">
+          <g transform="translate(-128 14)">
             <rect width="58" height="26" rx="3" fill="#ffd23a" />
             <text x="29" y="17" textAnchor="middle" className={styles.sign}>
               {tk('look.isolationSign')}
@@ -291,9 +295,94 @@ export function BedsideView({ visual }: { visual: WardPatientVisual }) {
           </g>
         )}
       </svg>
+      <div
+        className={`${styles.nurseLine} ${nurse.urgent ? styles.nurseUrgent : ''}`}
+        data-testid="ward-nurse"
+      >
+        <NursePortrait />
+        <p>{tk(nurse.messageKey, nurse.vars)}</p>
+      </div>
       <figcaption className={styles.caption} data-testid="bedside-observations">
         {v.observations.map((o) => tk(o)).join(' · ')}
       </figcaption>
     </figure>
+  );
+}
+
+/** The ward nurse standing at the bedside (stylised; replaceable like the patient). */
+function NurseFigure({ pose }: { pose: WardNurse['pose'] }) {
+  const scrub = '#2f7f8f';
+  const skin = '#d9a988';
+  return (
+    <g
+      className={pose === 'alert' ? styles.nurseAlert : styles.nurseIdle}
+      transform="translate(-75 0)"
+    >
+      {/* legs */}
+      <path
+        d="M-14 160 L-16 214 M10 160 L12 214"
+        stroke="#1d5560"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
+      {/* tunic */}
+      <path d="M-26 92 C -24 82, 24 82, 26 92 L 30 166 L -30 166 Z" fill={scrub} />
+      <path d="M-8 86 L0 100 L8 86" fill="none" stroke="#1d5560" strokeWidth="2" />
+      <rect x="10" y="112" width="12" height="9" rx="2" fill="#eaf2f6" opacity="0.85" />
+      {/* head and cap */}
+      <rect x="-5" y="70" width="10" height="12" fill={skin} />
+      <ellipse cx="0" cy="58" rx="15" ry="17" fill={skin} />
+      <path d="M-16 54 C -16 34, 16 34, 16 54 C 10 48, -10 48, -16 54 Z" fill="#3a9aab" />
+      <circle cx="6" cy="58" r="1.8" fill="#2b2b2b" />
+      <circle cx="-4" cy="58" r="1.8" fill="#2b2b2b" />
+      <path
+        d={pose === 'alert' ? 'M-4 67 q5 -2 10 0' : 'M-4 66 q5 3 10 0'}
+        fill="none"
+        stroke="#a5605a"
+        strokeWidth="1.6"
+      />
+      {/* arms by pose */}
+      {pose === 'alert' && (
+        <>
+          <path d="M-24 98 L-30 140" stroke={scrub} strokeWidth="10" strokeLinecap="round" />
+          <path
+            d="M24 96 L44 70 L50 52"
+            stroke={scrub}
+            strokeWidth="10"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <circle cx="51" cy="48" r="5" fill={skin} />
+        </>
+      )}
+      {pose === 'busy' && (
+        <>
+          <path d="M-24 98 L-30 140" stroke={scrub} strokeWidth="10" strokeLinecap="round" />
+          <path
+            d="M24 98 L56 126 L84 128"
+            stroke={scrub}
+            strokeWidth="10"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <circle cx="88" cy="128" r="5" fill={skin} />
+          <rect x="92" y="122" width="16" height="5" rx="2" fill="#ffffff" stroke="#9fb7c9" />
+        </>
+      )}
+      {pose === 'idle' && (
+        <>
+          <path d="M-24 98 L-30 142" stroke={scrub} strokeWidth="10" strokeLinecap="round" />
+          <path
+            d="M24 98 L30 122 L14 132"
+            stroke={scrub}
+            strokeWidth="10"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <rect x="-6" y="118" width="20" height="26" rx="2" fill="#e8edf1" stroke="#9fb7c9" />
+          <path d="M-2 126 h12 M-2 131 h12 M-2 136 h8" stroke="#8392a1" strokeWidth="1.2" />
+        </>
+      )}
+    </g>
   );
 }

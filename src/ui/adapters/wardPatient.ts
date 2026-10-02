@@ -149,3 +149,71 @@ export function visualKey(v: WardPatientVisual): string {
     .filter(Boolean)
     .join('-');
 }
+
+/** The ward nurse at the bedside: what she is doing and saying. She reports, never diagnoses or acts alone. */
+export interface WardNurse {
+  pose: 'idle' | 'alert' | 'busy';
+  /** i18n key of what she says */
+  messageKey: string;
+  vars?: Record<string, string | number>;
+  urgent: boolean;
+}
+
+/**
+ * Nurse state from the log and the view: an urgent call in the last 2 h wins, then an order she is carrying out
+ * (last hour), then a recent observation call (6 h), otherwise her routine handover of the visible values.
+ */
+export function wardNurse(view: InfectionView, log: readonly InfectionLogEntry[]): WardNurse {
+  const now = view.timeH;
+  let urgent: WardNurse | null = null;
+  let observation: WardNurse | null = null;
+  let busy: WardNurse | null = null;
+  for (const e of log) {
+    if (e.kind === 'call' && e.source === 'nurse') {
+      if (e.urgent && now - e.t <= 2)
+        urgent = { pose: 'alert', messageKey: e.messageKey, urgent: true };
+      else if (now - e.t <= 6)
+        observation = { pose: 'idle', messageKey: e.messageKey, urgent: false };
+    } else if (now - e.t <= 1) {
+      if (e.kind === 'specimen') {
+        busy = {
+          pose: 'busy',
+          messageKey: 'nurse.doing.specimen',
+          vars: { what: `specimen.${e.order.kind}` },
+          urgent: false,
+        };
+      } else if (e.kind === 'command' && e.accepted && e.command.type === 'START_ANTIINFECTIVE') {
+        busy = {
+          pose: 'busy',
+          messageKey: 'nurse.doing.antibiotic',
+          vars: { drug: `abx.${e.command.drugId}` },
+          urgent: false,
+        };
+      } else if (e.kind === 'command' && e.accepted && e.command.type === 'PROCEDURE') {
+        busy = {
+          pose: 'busy',
+          messageKey: 'nurse.doing.procedure',
+          vars: { what: `proc.${e.command.procedure}` },
+          urgent: false,
+        };
+      }
+    }
+  }
+  if (view.ended) return { pose: 'idle', messageKey: `nurse.ended.${view.ended}`, urgent: false };
+  if (urgent) return urgent;
+  if (busy) return busy;
+  if (observation) return observation;
+  const v = view.vitals[view.vitals.length - 1];
+  return {
+    pose: 'idle',
+    messageKey: 'nurse.report',
+    vars: {
+      temp: (v?.temperatureC ?? 37).toFixed(1),
+      hr: v?.heartRate ?? 0,
+      map: v?.map ?? 0,
+      urine: v?.urineMlH ?? 0,
+      conscious: `nurse.conscious.${view.consciousness}`,
+    },
+    urgent: false,
+  };
+}

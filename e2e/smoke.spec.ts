@@ -749,10 +749,12 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:00/);
   // The bedside view shows what can be seen — drowsy and flushed — not the diagnosis.
   await expect(page.getByTestId('bedside-observations')).toContainText('Somnolent');
+  await expect(page.getByTestId('ward-nurse')).toContainText('Temp.');
 
   // Cultures first, then the antibiotic.
   await page.getByTestId('tab-diagnostics').click();
   await page.getByTestId('order-bc').click();
+  await expect(page.getByTestId('ward-nurse')).toContainText('Blutkulturen');
   await page.getByTestId('order-specimen.urine-culture').click();
   await page.getByTestId('tab-therapy').click();
   await page.getByTestId('order-drug').selectOption('ceftriaxone');

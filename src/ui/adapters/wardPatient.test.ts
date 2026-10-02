@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { feverRigors, positiveUrine } from '../../content/infection/cases';
 import { INFECTION_LIBRARY as LIB } from '../../content/infection/library';
 import { InfectionEngine, type InfectionCase } from '../../sim';
-import { visualKey, wardPatientVisual } from './wardPatient';
+import { visualKey, wardNurse, wardPatientVisual } from './wardPatient';
 
 const make = (c: InfectionCase) => new InfectionEngine({ caseDef: c, library: LIB });
 const runTo = (e: InfectionEngine, h: number) => {
@@ -61,5 +61,39 @@ describe('bedside visual state (evidence only)', () => {
     const json = JSON.stringify(visual(make(feverRigors)));
     for (const w of ['pyelonephritis', 'e-coli', 'burden', 'diagnosisKey'])
       expect(json).not.toContain(w);
+  });
+});
+
+describe('ward nurse (reports, never diagnoses)', () => {
+  it('routine handover of visible values, busy with a new order, alert on an urgent call', () => {
+    const e = make(feverRigors);
+    expect(wardNurse(e.getView(), e.log)).toMatchObject({
+      pose: 'idle',
+      messageKey: 'nurse.report',
+    });
+    e.dispatch({
+      type: 'ORDER_SPECIMEN',
+      specimen: { kind: 'blood-culture', site: 'blood', sets: 2 },
+    });
+    expect(wardNurse(e.getView(), e.log)).toMatchObject({
+      pose: 'busy',
+      messageKey: 'nurse.doing.specimen',
+      vars: { what: 'specimen.blood-culture' },
+    });
+    // Untreated: an urgent hypotension call turns her to "alert".
+    let alert = false;
+    while (e.timeH < 24 * 5 && !alert) {
+      e.advance(1);
+      alert = wardNurse(e.getView(), e.log).pose === 'alert';
+    }
+    expect(alert).toBe(true);
+    expect(wardNurse(e.getView(), e.log).urgent).toBe(true);
+  });
+
+  it('never names a diagnosis or an organism', () => {
+    const e = make(feverRigors);
+    runTo(e, 30);
+    const json = JSON.stringify(wardNurse(e.getView(), e.log));
+    for (const w of ['pyelonephritis', 'e-coli', 'dx.']) expect(json).not.toContain(w);
   });
 });
