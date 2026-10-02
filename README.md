@@ -398,4 +398,5 @@ docs/                  architecture, assumptions, reviews, reference image, scre
 | **M4** | Airway: mask, SGA, intubation with misplacement and capnography confirmation done. Next: bag-valve-mask, oesophageal pressure (Pes) monitoring and ARDS scenarios from the owner's references |
 | **M5** | Tension pneumothorax, tamponade and POCUS done. Next: other 4 H / HITS causes, VT with pulse, bradycardia/AV block |
 | **M6** | Anaesthesia crises, richer lung mechanics |
+| **M7 (Infectiology / ABS)** | Phase 1 done: infection course engine (`src/sim/infection`) — four-state course model, microbiology with timed reports and resistograms (EUCAST S/I/R, KRINKO 3MRGN/4MRGN), anti-infective formulary, resistance mechanisms (selection / de novo / transmission / superinfection), C. difficile, toxicity, real-time bridge. Next: ward-round UI (2), stewardship scoring and debrief (3), MVP cases (4). Plan: `docs/prompts/milestone-07-infectiology.md` |
 | **M6 (learning)** | Phase 1 done: HOME, module menus, session model. Next: Physiology Lab (phase 2), scoring/debrief/progression (3), Resuscitation module (4), Skills (5), Clinical Challenges (6), daily challenge (7) |

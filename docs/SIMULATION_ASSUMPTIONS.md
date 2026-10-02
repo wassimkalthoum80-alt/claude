@@ -648,6 +648,47 @@ needed before trainees rely on scores.
 | XP and levels | 20 per session + overall/2 × difficulty (1 / 1.3 / 1.6) + 15 per star + 10 first completion; levels at 0, 150, 400, 800, 1400, 2200, 3200 XP | game levels only |
 | Mastery | moving average per topic, α = 0.4 (overall score; patient safety from the safety score) | recent sessions count most |
 
+## Infection course model (milestone 7 phase 1 — `src/sim/infection`, values in `infection/params.ts`)
+
+Educational, semi-quantitative model for the Infectiology / antibiotic-stewardship module. It is not a
+pharmacodynamic or epidemiological prediction; it is calibrated so that courses look clinically plausible. Every
+value awaits the owner's clinical review. Reference data (formulary, organisms, mechanisms, guideline targets)
+lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/guidelines/abs2026.ts`.
+
+| Assumption | Value | Rationale |
+| --- | --- | --- |
+| Time step | 1 h; ADVANCE stops early at lab/nurse calls, shock, timeout | multi-day course, decisions at rounds and events |
+| Four states | pathogen burden (0..1, log-scaled) per site; source control (none/partial/adequate); host inflammation; organ dysfunction (circ, kidney, lung, liver, coag, CNS) | no single "bacteria HP bar" (milestone-07 § 2.3) |
+| Burden dynamics | dB/dt = growth·(1−B) − 0.022·activity − 0.0015·immunity·B | untreated infection grows towards a plateau; full activity clears B 0.6 in ≈ 1.5–2 d |
+| Uncontrolled focus | activity × 0.5 (partial × 0.75); burden floor 0.25 rising 0.003/h to 0.75 (partial 0.1 + 0.0015/h, max 0.5) | improvement → plateau → deterioration despite an active drug |
+| Duration | after clearance, effective therapy accrues; stopping before `minEffectiveDays` (× seeded 0.7–1.1) gives relapse with probability 0.85 × shortfall after 2–5 d | teaches stop dates both ways; prolonging beyond adds only exposure |
+| Susceptibility | wild-type class spectrum → mechanisms (drug-specific entry replaces the class effect) → isolate overrides | EUCAST expected phenotypes, simplified |
+| Exposure | dose (reduced 0.5 / standard 1 / high 1.6) × (1/relGFR)^0.6 for renally cleared drugs × 1.3 extended β-lactam infusion × oral bioavailability/0.8 (not for luminal action); TDM fixes exposure at 1.15 | renal dosing, EUCAST "I" = increased exposure |
+| Activity | S needs exposure ≥ 0.8, I ≥ 1.3 (smooth from half); × penetration into the focus × biofilm factor on foreign material (default 0.4); capped by mechanism (ESBL: piperacillin-tazobactam 0.35, amoxicillin-clavulanate 0.3) | unreliable "S" in ESBL BSI; daptomycin 0 in lung; tigecycline low in blood/urine |
+| Polymicrobial site | activity against the least-covered isolate decides | coverage gaps matter |
+| Relative GFR | 0.9 / creatinine (mg/dL), capped 1.3 | crude; no age/sex |
+| Inflammation | drive = 1 − Π(1 − Bᵢ·virulenceᵢ) combined with mimics and C. difficile severity; rise τ 8 h, fall τ 20 h | |
+| CRP | 3 + 320·I^1.3 mg/L; rise τ 24 h, fall τ 30 h; starts at 65 % of its target | CRP peaks ≈ 1 day after effective therapy and stays high after defervescence |
+| PCT | 0.05 + 25·Ibact² ng/mL (bacterial drive only); rise τ 8 h, fall τ 24 h | low in non-bacterial inflammation |
+| Temperature / HR / WBC | 36.8 + 2.6·I °C (×0.7 if immunity < 0.4) ± 0.2 circadian; 76 + 35·I + 25·circ /min; WBC × (1 + 1.6·I) | |
+| Organ dysfunction | severity = (I − (0.25 + 0.25·reserve)) / (1 − threshold); targets circ 1.3, kidney 0.9 (+ nephrotoxicity), lung 0.7 (+ 0.5·lung burden), liver 0.4, coag 0.6, CNS 0.6; rise τ 8 h, recovery τ 48 h; creatinine τ 18 h | untreated urosepsis reaches shock in ≈ 3–4 days |
+| Vitals from organs | MAP 88 − 40·circ; vasopressor above circ 0.45; shock (real-time bridge) above 0.6; lactate 1 + 6·circ^1.5 | |
+| Death | hazard 0.02/h × ((organ score − 0.6)/0.4)², organ score = max(circ, Σ/3.5) | probabilistic, seeded |
+| Real-time bridge | preset: vasoplegia 0.75·circ (≤ 0.7), capillary leak 0.8·I (≤ 0.8); outcome back: circ ← 0.3 + 0.002·min to stabilise (0.65 if never), kidney ≥ 0.25/0.45/0.65 for AKI 1/2/3, lung ≥ 0.5 if ventilated | bidirectional (milestone-07 § 2.1) |
+| Blood-culture yield | P(set positive) = bacteraemia × smoothstep((B − 0.15)/0.45) × 0.75 if low volume × (1 − 0.6·activity if antibiotics before, 0.3 if in the same hour) | cultures before antibiotics |
+| Time to positivity | organism TTP × (1.4 − 0.6·B) ± 1 h; peripheral set in line infection + 2.5–5 h | DTP ≥ 2 h in catheter infection |
+| Contamination | 2.5 % per set: CoNS (70 % methicillin-resistant) | contaminant vs. infection |
+| Report timeline | positive signal + Gram (phone call) → rapid PCR + 2 h → species + 18 h → resistogram + 40 h; negative: preliminary 48 h, final 120 h; other cultures ID 24 h, AST 48 h; antigen 2 h, C. difficile 4 h, MRE screen 24 h | as taught in the course (day 0 / 1 / 2) |
+| Superficial swab | finds the true pathogen with 60 % (deep material 95 %) | |
+| C. difficile test | rejected without diarrhoea (< 3 stools/24 h); GDH+/toxin− in carriers; toxin+ in active disease | diagnostic stewardship |
+| MRGN class | KRINKO groups by marker drugs (piperacillin, cefotaxime/ceftazidime/cefepime, imipenem/meropenem, ciprofloxacin); only R counts; carbapenemase → 4MRGN in Enterobacterales | piperacillin is a lab-only marker, not orderable |
+| Microbiome damage | Σ drug weight (clindamycin 1.0 … fidaxomicin 0.1) per day; recovers with τ 240 h after antibiotics stop | |
+| C. difficile | carriers: onset hazard 0.00015/h per damage-day (× 1.5 age ≥ 65, × 1.3 PPI); acquisition of carriage 0.00002/h per damage-day; severity grows 0.008/h × (1 − gut activity) × (1 + 0.3·ongoing damage), recovers 0.012/h × gut activity; stools 3 + 12·severity; fulminant above 0.6 adds circulatory failure; recurrence vancomycin 25 %, fidaxomicin 13 %, metronidazole 30 % (× 1.5 with ongoing antibiotics) | risk shown only as consequences, never as numbers |
+| Resistance — four mechanisms | selection (e.g. AmpC derepression under 3rd-gen cephalosporins) hazard × burden; de novo (e.g. porin loss under carbapenem) hazard × burden × (1 + 3·4a(1−a)) × 2 if uncontrolled — partial activity favours mutants; transmission = ward flora acquisition hazard × (1 + 2·damage) × 1.5 with devices; colonisation → superinfection hazard | never "x days of meropenem → 4MRGN"; the debrief names the mechanism |
+| Nephrotoxicity | +0.003/h × (exposure − 1) for nephrotoxic drugs, added to kidney dysfunction, recovers τ 120 h; vancomycin trough ≈ 15 × exposure mg/L | TDM protects |
+| Linezolid | platelets − 4 %/day from day 10 | |
+| CO₂ | ≈ 7 kg CO₂e per i.v. dose, 0.2 kg per oral day (extrapolated from one ciprofloxacin estimate, Born et al. BMJ Qual Saf 2023) | order of magnitude only |
+
 ## Presentation-only assumptions (UI)
 
 | Assumption          | Value                                                          |

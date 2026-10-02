@@ -307,3 +307,27 @@ HOME ──► module menu ──► session intro ──► workspace ──►
   `patient.fluidFactors`.
 - `src/ui/adapters/balanceViewModel.ts` computes interval views (1 h/6 h/24 h/whole case, incomplete periods marked),
   mL/kg/h with a named weight basis, the KDIGO rolling-window hint and the teaching view; unit-tested.
+
+## Infection course model (milestone 7)
+
+The Infectiology / antibiotic-stewardship module runs on a second engine with a coarse time scale; the 100 ms
+physiology engine is unchanged.
+
+```
+UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) ──► getView() (evidence only) ──► UI
+                    │ EventLog: commands, labs, micro reports, calls, collateral events, shock, timeout
+                    └─► shock event + realtimePreset() ──► SimulationEngine (real time) ──► APPLY_REALTIME_OUTCOME
+```
+
+- `src/sim/infection/types.ts` — domain shapes (anti-infectives, organisms, mechanisms, cases, commands, log, view).
+- `susceptibility.ts` — EUCAST category, mechanism caps, resistogram, KRINKO MRGN class, exposure and activity.
+- `microbiology.ts` — specimens with pre-analytics and timed reports (positive signal → species → resistogram).
+- `InfectionEngine.ts` — hourly course step: burden per site, source control, resistance (selection / de novo /
+  ward acquisition / superinfection), microbiome damage and C. difficile, toxicity, mimics, host response, organs,
+  vitals, labs, nurse calls, rounds, antibiotic timeout, outcome.
+- `params.ts` — all coefficients (SIM-ASSUMPTION, listed in `SIMULATION_ASSUMPTIONS.md`).
+- Reference data comes from `src/content` via `INFECTION_LIBRARY` (`src/content/infection/library.ts`); `src/sim`
+  never imports content.
+- **Ground truth vs. evidence:** cases define the hidden truth (infections, mimics, colonisers, latent resistance).
+  `getView()` exposes only what a clinician could see; `getTruth()` is for the debrief, tests and the instructor.
+- Deterministic: one seeded RNG; same seed + same commands → identical log and view.

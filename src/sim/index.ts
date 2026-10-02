@@ -233,3 +233,20 @@ export {
   type MonitorTrendChannel,
   type ReadonlyMonitorTrends,
 } from './devices/MonitorTrends';
+// Infectiology / antibiotic stewardship (milestone 7)
+export {
+  InfectionEngine,
+  type InfectionEngineOptions,
+  type InfectionTruth,
+  type DispatchResult,
+} from './infection/InfectionEngine';
+export {
+  susceptibility,
+  resistogram,
+  mrgnClass,
+  exposure,
+  orderActivity,
+  combinedActivity,
+} from './infection/susceptibility';
+export { COURSE as INFECTION_COURSE } from './infection/params';
+export type * from './infection/types';
