@@ -51,7 +51,7 @@ export interface UiState {
   drawer: SessionDrawer | null;
 }
 
-export type SessionDrawer = 'timeline' | 'trends' | 'hint' | 'experiments';
+export type SessionDrawer = 'timeline' | 'trends' | 'hint' | 'experiments' | 'diagnosis';
 
 export type Screen = 'home' | 'module' | 'session' | 'debrief' | 'progress';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';

@@ -228,6 +228,14 @@
   color: var(--text);
 }
 
+.facts dd.right {
+  color: var(--good);
+}
+
+.facts dd.wrong {
+  color: var(--bad);
+}
+
 .decisions {
   list-style: none;
   margin: 0;

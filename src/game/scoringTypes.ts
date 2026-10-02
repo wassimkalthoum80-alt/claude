@@ -129,6 +129,10 @@ export interface ScoringRules {
   noFlow: TimeBand;
   /** resuscitation cases: arrest → treatment of the cause */
   cause: TimeBand;
+  /** skills: onset of the problem → its fix */
+  fix: TimeBand;
+  /** onset of the problem → first (correct) declared diagnosis */
+  diagnosisTime: TimeBand;
   /** resuscitation cases (non-shockable): arrest → first adrenaline */
   adrenaline: TimeBand;
   /** resuscitation cases: weights inside the treatment score */
@@ -192,6 +196,19 @@ export interface ScenarioScoring {
   causeSteps?: readonly CauseStep[];
   /** resuscitation case with a non-shockable rhythm: adrenaline is expected as soon as possible */
   adrenalineAsap?: boolean;
+  /** the learner commits to a diagnosis from this set (src/content/diagnoses) */
+  diagnosisSet?: string;
+  /** correct diagnosis (option id of the set) */
+  diagnosis?: string;
+  /** per variant: its own diagnosis, fix (cause steps) and resuscitation rules, merged over the case's */
+  variants?: Readonly<
+    Record<
+      string,
+      Partial<
+        Pick<ScenarioScoring, 'diagnosis' | 'causeSteps' | 'adrenalineAsap' | 'resus' | 'rules'>
+      >
+    >
+  >;
 }
 
 /** CPR performance of a resuscitation case (from the engine's arrest timers). */
@@ -219,6 +236,8 @@ export interface ScoringInput {
   /** the patient has a spontaneous circulation at the end */
   circulation: boolean;
   cpr: CprInput | null;
+  /** patient variant of the case (selects per-variant scoring) */
+  variant?: string | null;
 }
 
 export type DecisionMark = 'effective' | 'questionable' | 'dangerous' | 'neutral' | 'unrated';
@@ -281,6 +300,18 @@ export interface SessionScore {
     keyActionMissed: boolean | null;
     /** resuscitation cases with an arrest: ALS facts (null otherwise) */
     als: AlsFacts | null;
+    /** declared vs correct diagnosis (null when the case has no diagnosis set) */
+    diagnosis: {
+      expected: string;
+      /** declared ids in order */
+      declared: string[];
+      /** the first declaration was correct */
+      firstCorrect: boolean;
+      /** s from the onset to the first declaration */
+      afterS: number | null;
+    } | null;
+    /** fix of the problem (skills cases with cause steps): s from the onset, null if never */
+    fixedAfterS: number | null | undefined;
   };
 }
 

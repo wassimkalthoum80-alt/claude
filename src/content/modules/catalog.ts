@@ -91,18 +91,25 @@ export const MODULE_CATALOG: ModuleCatalog = [
       {
         id: 'ventilation',
         titleKey: 'skills.section.ventilation',
+        // Each exercise is a presentation; the cause is drawn per session and never named before the debrief.
         entries: [
           scenarioEntry('disconnection', 'disconnect', 'unnoticed-disconnection'),
-          preparing('auto-peep', 'skills.autoPeep'),
-          preparing('tension-ptx', 'skills.tensionPtx'),
-          preparing('tube-position', 'skills.tubePosition'),
-          preparing('leak', 'skills.leak'),
+          available('high-pressure', 'skills.highPressure', 'vent-high-pressure'),
+          available('after-intubation', 'skills.afterIntubation', 'vent-after-intubation'),
+          available('low-volume', 'skills.lowVolume', 'vent-low-volume'),
+          available('desaturation', 'skills.desaturation', 'vent-desaturation'),
+          // Need new physiology first (milestone 6 § 13).
+          preparing('tube-obstruction', 'skills.tubeObstruction'),
+          preparing('dyssynchrony', 'skills.dyssynchrony'),
         ],
       },
       {
         id: 'arrhythmia',
         titleKey: 'skills.section.arrhythmia',
-        entries: [preparing('rhythm-trainer', 'skills.rhythmTrainer')],
+        entries: [
+          available('rhythm-trainer', 'skills.rhythmTrainer', 'rhythm-trainer'),
+          preparing('rhythm-advanced', 'skills.rhythmAdvanced'),
+        ],
       },
     ],
   },
@@ -204,6 +211,11 @@ export const MODULE_CATALOG: ModuleCatalog = [
           scenarioEntry('arrest-hypovolaemia', 'arrestBleeding', 'arrest-hypovolaemia'),
           scenarioEntry('arrest-tension', 'arrestTension', 'arrest-tension'),
           scenarioEntry('arrest-tamponade', 'arrestTamponade', 'arrest-tamponade'),
+          scenarioEntry('vent-high-pressure', 'ventHighPressure', 'vent-high-pressure'),
+          scenarioEntry('vent-after-intubation', 'ventAfterIntubation', 'vent-after-intubation'),
+          scenarioEntry('vent-low-volume', 'ventLowVolume', 'vent-low-volume'),
+          scenarioEntry('vent-desaturation', 'ventDesaturation', 'vent-desaturation'),
+          scenarioEntry('rhythm-trainer', 'rhythmTrainer', 'rhythm-trainer'),
           ...FLUID_PRESETS.map(([id, key]) => scenarioEntry(id, key, id)),
         ],
       },

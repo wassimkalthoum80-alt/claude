@@ -152,10 +152,14 @@ export function effectiveVolumeStatus(patient: PatientState): number {
  * All thresholds are heuristic calibration (state.model.calibration), not human physiology.
  */
 export class HeartLungModel {
+  /** /min — the patient's normal heart rate (reference for filling time) */
   private baselineHeartRate = 80;
+  /** /min — intrinsic sinus-node rate (normally the baseline; SET_SINUS_RATE changes it) */
+  private sinusRate = 80;
 
   reset(patient: PatientState, baselineHeartRate: number): void {
     this.baselineHeartRate = baselineHeartRate;
+    this.sinusRate = baselineHeartRate;
     const hl = patient.heartLung;
     hl.pleuralPressure = hl.pleuralReference;
     hl.preloadFactor = patient.reserves.preloadReserve;
@@ -308,7 +312,7 @@ export class HeartLungModel {
     // SIM-ASSUMPTION: chronic β-blockade removes up to 70 % of the sympathetic heart-rate response.
     const betaHr = 1 - 0.7 * clamp(patient.factors.betaBlockade, 0, 1);
     hl.sympatheticStress = stress;
-    hl.hrDirect = this.baselineHeartRate * drugs.chronotropy;
+    hl.hrDirect = this.sinusRate * drugs.chronotropy;
     // The vagal (high-pressure) slowing is blocked by atropine.
     hl.hrReflex =
       55 * stress * reserves.sympatheticResponse * betaHr -
@@ -454,6 +458,15 @@ export class HeartLungModel {
     if (hl.lowFlowTime >= k.lowFlowBeforePeaS) return { rhythm: 'pea', cause: 'lowFlow' };
     if (hl.oxygenDebt >= k.arrestDebtS) return { rhythm: 'pea', cause: 'oxygenDebt' };
     return null;
+  }
+
+  /**
+   * Sinus-node dysfunction or drive (instructor/scenario). SIM-ASSUMPTION: the reflexes and drugs still act on top
+   * of the new intrinsic rate; the filling-time effect stays relative to the patient's normal rate, so a slow node
+   * fills the ventricle more but lowers cardiac output, a fast one shortens filling.
+   */
+  setSinusRate(bpm: number): void {
+    this.sinusRate = bpm;
   }
 
   /** The heart was restarted externally (instructor/scenario): injury persists, re-arrest remains possible. */

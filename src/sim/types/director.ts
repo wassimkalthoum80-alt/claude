@@ -214,6 +214,8 @@ export interface DirectorState {
   orders: TestOrder[];
   /** hints revealed so far (scoring may lower the educational score slightly) */
   hints: HintUse[];
+  /** working diagnoses the learner declared (DECLARE_DIAGNOSIS), oldest first — never judged by the engine */
+  diagnoses: { id: string; t: number }[];
   /** case actions requested and not yet complete */
   pendingActions: { id: string; dueAt: number }[];
   /** case actions completed */

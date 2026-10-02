@@ -72,7 +72,9 @@ type ResusCommand = Extract<
       | 'PROCEDURE'
       | 'SET_PNEUMOTHORAX'
       | 'SET_TAMPONADE'
-      | 'SET_IV_ACCESS';
+      | 'SET_IV_ACCESS'
+      | 'SET_AIRWAY_POSITION'
+      | 'SET_CUFF_LEAK';
   }
 >;
 
@@ -97,6 +99,8 @@ const RESUS_TYPES = new Set<Command['type']>([
   'SET_PNEUMOTHORAX',
   'SET_TAMPONADE',
   'SET_IV_ACCESS',
+  'SET_AIRWAY_POSITION',
+  'SET_CUFF_LEAK',
 ]);
 
 export function isResusCommand(c: Command): c is ResusCommand {
@@ -285,6 +289,13 @@ export class ResuscitationController {
         return;
       case 'SET_IV_ACCESS':
         s.patient.conditions.ivAccess = c.access;
+        return;
+      case 'SET_AIRWAY_POSITION':
+        // Tube migration (e.g. into the right main bronchus after repositioning); tracheal tubes only.
+        if (s.patient.airway.device === 'ett') s.patient.airway.position = c.position;
+        return;
+      case 'SET_CUFF_LEAK':
+        if (Number.isFinite(c.fraction)) s.patient.airway.cuffLeak = clamp(c.fraction, 0, 0.8);
         return;
     }
   }
@@ -590,6 +601,13 @@ export class ResuscitationController {
         result = `${Math.round(s.patient.airway.gastricAirMl)} mL`;
         s.patient.airway.gastricAirMl = 0;
         break;
+      case 'cuffCheck': {
+        // SIM-ASSUMPTION: re-inflating the cuff to 25 cmH2O ends a cuff leak at once.
+        const air = s.patient.airway;
+        result = air.device !== 'ett' ? 'no-cuff' : air.cuffLeak > 0.02 ? 'cuff-low' : 'cuff-ok';
+        if (air.device === 'ett') air.cuffLeak = 0;
+        break;
+      }
     }
     h.logEvent('PROCEDURE_DONE', t, `${kind}|${side ?? '-'}|${result}`);
   }

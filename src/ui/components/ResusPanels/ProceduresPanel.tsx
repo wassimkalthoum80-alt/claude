@@ -28,11 +28,17 @@ export function ProceduresPanel() {
           ? t('proc.drainPlaced')
           : r === 'dry-tap'
             ? t('proc.dryTap')
-            : r === 'io'
-              ? t('drugs.io')
-              : r === 'iv'
-                ? t('proc.ivWorks')
-                : r;
+            : r === 'cuff-low'
+              ? t('proc.cuffLow')
+              : r === 'cuff-ok'
+                ? t('proc.cuffOk')
+                : r === 'no-cuff'
+                  ? t('proc.noCuff')
+                  : r === 'io'
+                    ? t('drugs.io')
+                    : r === 'iv'
+                      ? t('proc.ivWorks')
+                      : r;
 
   return (
     <div>
@@ -83,6 +89,14 @@ export function ProceduresPanel() {
           </button>
           <button type="button" className={styles.btn} onClick={() => run('gastricTube')}>
             {t('proc.gastricTube')}
+          </button>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={() => run('cuffCheck')}
+            data-testid="cuff-check"
+          >
+            {t('proc.cuffCheck')}
           </button>
         </div>
       </div>

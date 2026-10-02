@@ -2,6 +2,8 @@ import type { SimulationState } from '../../../sim';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi, type SessionDrawer } from '../../hooks/UiContext';
 import { useEngineSelector } from '../../hooks/useEngineSelector';
+import { DiagnosisView } from './DiagnosisView';
+import { diagnosisOptions } from './diagnosis';
 import { HintView } from './HintView';
 import { hintsAvailable } from './hints';
 import { TimelineView } from './TimelineView';
@@ -40,6 +42,7 @@ export function SessionTools() {
       <div className={styles.row}>
         {tool('timeline', t('tools.timeline'))}
         {tool('trends', t('tools.trends'))}
+        {diagnosisOptions(engine.scenario.id) && tool('diagnosis', t('dx.button'))}
         {showHints && tool('hint', t('hint.button'))}
         {(engine.scenario.experiments?.length ?? 0) > 0 && tool('experiments', t('exp.button'))}
       </div>
@@ -53,6 +56,7 @@ export function SessionTools() {
                   trends: t('trend.title'),
                   hint: t('hint.title'),
                   experiments: t('exp.title'),
+                  diagnosis: t('dx.title'),
                 }[ui.drawer]
               }
             </span>
@@ -70,6 +74,7 @@ export function SessionTools() {
             {ui.drawer === 'trends' && <TrendView />}
             {ui.drawer === 'hint' && <HintView />}
             {ui.drawer === 'experiments' && <ExperimentView />}
+            {ui.drawer === 'diagnosis' && <DiagnosisView />}
           </div>
         </aside>
       )}

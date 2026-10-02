@@ -1,4 +1,4 @@
-import type { ScenarioScoring, ScoringRules } from '../../game/scoringTypes';
+import type { CauseStep, ScenarioScoring, ScoringRules } from '../../game/scoringTypes';
 
 /**
  * Scoring thresholds and per-case configuration (milestone 6 § 11). Data, not logic: the pure functions in
@@ -47,11 +47,49 @@ export const SCORING_DEFAULTS: ScoringRules = {
   noFlow: { fullS: 10, zeroS: 120 },
   // Cause treated within 2 min of the arrest full marks, nothing after 8 min (4 Hs and 4 Ts during CPR).
   cause: { fullS: 120, zeroS: 480 },
+  // Skills: the problem fixed within 1 min of its onset full marks, nothing after 5 min.
+  fix: { fullS: 60, zeroS: 300 },
+  // Working diagnosis declared within 90 s of the onset full marks, nothing after 8 min.
+  diagnosisTime: { fullS: 90, zeroS: 480 },
   // Non-shockable rhythm: adrenaline "as soon as possible" (ERC 2025) — within 3 min full marks, none after 7 min.
   adrenaline: { fullS: 180, zeroS: 420 },
   alsTreatment: { ccf: 0.4, cause: 0.4, adrenaline: 0.2 },
   alsSafety: { inappropriateShock: 20, wrongSide: 10, oesophageal: 25, oesophagealS: 60 },
 };
+
+// ── Fixes used by several Skills exercises (log matches) ──
+const DECOMPRESS: CauseStep = {
+  id: 'decompress',
+  any: [
+    { event: 'PROCEDURE_DONE', detailIncludes: 'air-released' },
+    { event: 'PROCEDURE_DONE', detailIncludes: 'drain-placed' },
+  ],
+};
+const TUBE_BACK: CauseStep = {
+  id: 'tube-back',
+  any: [{ event: 'PROCEDURE_DONE', detailIncludes: 'cm|correct' }],
+};
+const BRONCHOSPASM_FIX: CauseStep = {
+  id: 'expiration',
+  any: [
+    { command: 'SET_VENT_SETTING', detailIncludes: 'RR' },
+    { command: 'SET_VENT_SETTING', detailIncludes: 'I:E' },
+    { event: 'BOLUS_GIVEN', detailIncludes: 'Salbutamol' },
+    { event: 'INFUSION_CHANGED', detailIncludes: 'Salbutamol' },
+  ],
+};
+const RELAX: CauseStep = {
+  id: 'relaxant',
+  any: [{ event: 'BOLUS_GIVEN', detailIncludes: 'Rocuronium' }],
+};
+const CUFF: CauseStep = {
+  id: 'cuff',
+  any: [{ event: 'PROCEDURE_DONE', detailIncludes: 'cuffCheck|-|cuff-low' }],
+};
+const shock = (from: string): CauseStep => ({
+  id: 'shock',
+  any: [{ event: 'SHOCK_DELIVERED', detailIncludes: from }],
+});
 
 export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
   {
@@ -130,6 +168,105 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
       },
     ],
   },
+  // ── Skills Training: ventilation troubleshooting (diagnosis + fix per variant) ──
+  {
+    scenarioId: 'vent-high-pressure',
+    topics: ['ventilation', 'patientSafety'],
+    learningKey: 'learn.ventHighPressure',
+    diagnosisSet: 'ventilation',
+    onsetCommands: ['SET_LUNG', 'SET_PNEUMOTHORAX', 'SET_AIRWAY_POSITION', 'PUMP_BOLUS'],
+    // A peak pressure above 25 cmH2O is the problem to fix in these exercises.
+    rules: { ppeakHigh: 25 },
+    variants: {
+      bronchospasm: { diagnosis: 'bronchospasm', causeSteps: [BRONCHOSPASM_FIX] },
+      pneumothorax: { diagnosis: 'pneumothorax', causeSteps: [DECOMPRESS] },
+      'pneumothorax-left': { diagnosis: 'pneumothorax', causeSteps: [DECOMPRESS] },
+      endobronchial: { diagnosis: 'tube-endobronchial', causeSteps: [TUBE_BACK] },
+      rigidity: { diagnosis: 'opioid-rigidity', causeSteps: [RELAX] },
+    },
+  },
+  {
+    scenarioId: 'vent-after-intubation',
+    topics: ['airway', 'ventilation', 'patientSafety'],
+    learningKey: 'learn.ventAfterIntubation',
+    diagnosisSet: 'ventilation',
+    onsetCommands: ['AIRWAY_INSERT'],
+    rules: { ppeakHigh: 25 },
+    variants: {
+      oesophageal: {
+        diagnosis: 'tube-oesophageal',
+        causeSteps: [{ id: 'remove', any: [{ command: 'AIRWAY_REMOVE' }] }],
+      },
+      endobronchial: { diagnosis: 'tube-endobronchial', causeSteps: [TUBE_BACK] },
+      // Nothing to fix: recognising a correctly placed tube is the task.
+      correct: { diagnosis: 'tube-correct' },
+    },
+  },
+  {
+    scenarioId: 'vent-low-volume',
+    topics: ['ventilation', 'airway'],
+    learningKey: 'learn.ventLowVolume',
+    diagnosisSet: 'ventilation',
+    onsetCommands: ['SET_CUFF_LEAK', 'SET_CIRCUIT'],
+    variants: {
+      'cuff-leak': { diagnosis: 'cuff-leak', causeSteps: [CUFF] },
+      'cuff-leak-large': { diagnosis: 'cuff-leak', causeSteps: [CUFF] },
+      disconnection: {
+        diagnosis: 'disconnection',
+        causeSteps: [
+          {
+            id: 'reconnect',
+            any: [{ command: 'SET_CIRCUIT', detailIncludes: 'connected', detailExcludes: 'dis' }],
+          },
+        ],
+      },
+    },
+  },
+  {
+    scenarioId: 'vent-desaturation',
+    topics: ['ventilation', 'patientSafety'],
+    learningKey: 'learn.ventDesaturation',
+    diagnosisSet: 'ventilation',
+    onsetCommands: ['SET_LUNG', 'SET_AIRWAY_POSITION', 'SET_PNEUMOTHORAX'],
+    variants: {
+      derecruitment: {
+        diagnosis: 'derecruitment',
+        causeSteps: [
+          { id: 'peep', any: [{ command: 'SET_VENT_SETTING', detailIncludes: 'PEEP' }] },
+        ],
+      },
+      endobronchial: { diagnosis: 'tube-endobronchial', causeSteps: [TUBE_BACK] },
+      pneumothorax: { diagnosis: 'pneumothorax', causeSteps: [DECOMPRESS] },
+    },
+  },
+  // ── Skills Training: arrhythmia trainer (one rhythm per session) ──
+  {
+    scenarioId: 'rhythm-trainer',
+    topics: ['arrhythmias', 'resuscitation'],
+    learningKey: 'learn.rhythmTrainer',
+    diagnosisSet: 'rhythm',
+    resus: true,
+    variants: {
+      vf: { diagnosis: 'vf', causeSteps: [shock('vf→')] },
+      pvt: { diagnosis: 'pvt', causeSteps: [shock('vt→')] },
+      pea: { diagnosis: 'pea', adrenalineAsap: true },
+      asystole: { diagnosis: 'asystole', adrenalineAsap: true },
+      brady: {
+        diagnosis: 'sinus-brady',
+        causeSteps: [
+          {
+            id: 'rate',
+            any: [
+              { event: 'BOLUS_GIVEN', detailIncludes: 'Atropin' },
+              { event: 'INFUSION_CHANGED', detailIncludes: 'Adrenalin' },
+            ],
+          },
+        ],
+      },
+      // Sinus tachycardia: recognise it (no shock, no cardioversion); the cause is treated, not the rhythm.
+      tachy: { diagnosis: 'sinus-tachy' },
+    },
+  },
   {
     scenarioId: 'asthma-hyperinflation',
     topics: ['ventilation', 'haemodynamics'],
@@ -151,7 +288,7 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
   },
 ];
 
-/** Scoring of a case (a generic default for cases without their own entry). */
+/** Scoring of a case (a generic default for cases without their own entry); variants are merged by the scoring. */
 export function scoringFor(scenarioId: string): ScenarioScoring {
   return (
     SCENARIO_SCORING.find((s) => s.scenarioId === scenarioId) ?? {

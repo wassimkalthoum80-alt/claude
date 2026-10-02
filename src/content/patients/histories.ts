@@ -378,6 +378,137 @@ export const HISTORIES: Record<string, PatientHistory> = {
       'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
     ),
   },
+  'vent-high-pressure': {
+    caseId: 'SIM-5001',
+    diagnosis: t('Elective open hemicolectomy', 'Elektive offene Hemikolektomie'),
+    procedure: t(
+      'General anaesthesia, TIVA, volume-controlled ventilation; no muscle relaxant infusion',
+      'Allgemeinanästhesie, TIVA, volumenkontrollierte Beatmung; keine Relaxans-Infusion',
+    ),
+    asa: 'II',
+    allergies: [NKDA],
+    conditions: [
+      t('Mild asthma (childhood)', 'Leichtes Asthma (Kindheit)'),
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+    ],
+    medications: [t('Ramipril 5 mg (paused)', 'Ramipril 5 mg (pausiert)')],
+    findings: [
+      t(
+        'Central venous catheter placed after induction (right subclavian)',
+        'Nach Einleitung ZVK über die V. subclavia rechts gelegt',
+      ),
+      t('Peak pressure after induction 19 cmH₂O', 'Spitzendruck nach Einleitung 19 cmH₂O'),
+    ],
+    fasting: t('Fasting since midnight', 'Nüchtern seit Mitternacht'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'vent-after-intubation': {
+    caseId: 'SIM-5002',
+    diagnosis: t('Laparoscopic cholecystectomy', 'Laparoskopische Cholezystektomie'),
+    procedure: t(
+      'Induction just completed (propofol, sufentanil, rocuronium); you have just intubated',
+      'Einleitung gerade abgeschlossen (Propofol, Sufentanil, Rocuronium); Sie haben soeben intubiert',
+    ),
+    asa: 'II',
+    allergies: [NKDA],
+    conditions: [
+      t('Obesity BMI 31', 'Adipositas BMI 31'),
+      t('Gastro-oesophageal reflux', 'Gastroösophagealer Reflux'),
+    ],
+    medications: [t('Pantoprazole 40 mg 1-0-0', 'Pantoprazol 40 mg 1-0-0')],
+    findings: [
+      t(
+        'Mallampati III, intubation: Cormack–Lehane 2b, one attempt',
+        'Mallampati III, Intubation: Cormack–Lehane 2b, ein Versuch',
+      ),
+      t('Pre-oxygenated with FiO₂ 1.0', 'Präoxygeniert mit FiO₂ 1,0'),
+    ],
+    fasting: t('Fasting since midnight', 'Nüchtern seit Mitternacht'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'vent-low-volume': {
+    caseId: 'SIM-5003',
+    diagnosis: t(
+      'Elective knee arthroplasty under general anaesthesia',
+      'Elektive Knie-TEP in Allgemeinanästhesie',
+    ),
+    procedure: t(
+      'TIVA, volume-controlled ventilation via tracheal tube',
+      'TIVA, volumenkontrollierte Beatmung über Endotrachealtubus',
+    ),
+    asa: 'II',
+    allergies: [NKDA],
+    conditions: [t('Arterial hypertension', 'Arterielle Hypertonie')],
+    medications: [t('Amlodipine 5 mg 1-0-0', 'Amlodipin 5 mg 1-0-0')],
+    findings: [
+      t(
+        'Tube 7.5, 22 cm; cuff pressure checked at induction',
+        'Tubus 7,5, 22 cm; Cuffdruck bei Einleitung kontrolliert',
+      ),
+      t('Patient repositioned for surgery', 'Patient für die Operation umgelagert'),
+    ],
+    fasting: t('Fasting since midnight', 'Nüchtern seit Mitternacht'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'vent-desaturation': {
+    caseId: 'SIM-5004',
+    diagnosis: t('Emergency laparotomy for bowel obstruction', 'Notfall-Laparotomie bei Ileus'),
+    procedure: t(
+      'General anaesthesia, TIVA, volume-controlled ventilation',
+      'Allgemeinanästhesie, TIVA, volumenkontrollierte Beatmung',
+    ),
+    asa: 'III E',
+    allergies: [NKDA],
+    conditions: [t('COPD GOLD 1', 'COPD GOLD 1'), t('Type 2 diabetes', 'Diabetes mellitus Typ 2')],
+    medications: [
+      t('Metformin (paused)', 'Metformin (pausiert)'),
+      t('Tiotropium inhaler', 'Tiotropium inhalativ'),
+    ],
+    findings: [
+      t(
+        'Rapid sequence induction; aspiration not observed',
+        'Ileuseinleitung; keine Aspiration beobachtet',
+      ),
+      t('Patient moved to head-down position', 'Patient in Kopftieflage gebracht'),
+    ],
+    fasting: t('Not fasting (ileus)', 'Nicht nüchtern (Ileus)'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
+  'rhythm-trainer': {
+    caseId: 'SIM-5005',
+    diagnosis: t('Monitored patient (rhythm trainer)', 'Überwachter Patient (Rhythmustrainer)'),
+    procedure: t(
+      'Anaesthetised and ventilated, defibrillator pads attached',
+      'Narkotisiert und beatmet, Defibrillator-Pads angelegt',
+    ),
+    asa: 'III',
+    allergies: [NKDA],
+    conditions: [t('Coronary artery disease', 'Koronare Herzkrankheit')],
+    medications: [t('Bisoprolol 5 mg 1-0-0', 'Bisoprolol 5 mg 1-0-0')],
+    findings: [
+      t(
+        'Each session shows one rhythm: identify it, assess the patient, treat',
+        'Jede Sitzung zeigt einen Rhythmus: erkennen, Patienten beurteilen, behandeln',
+      ),
+    ],
+    fasting: t('Fasting', 'Nüchtern'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
   'fluid-maintenance': {
     ...SANDBOX,
     caseId: 'SIM-2001',

@@ -267,3 +267,39 @@
 .expWhy strong {
   color: var(--alarm-low);
 }
+
+/* Working diagnosis */
+.dxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dxOption {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius);
+  background: var(--tile-bg);
+  font: 500 13px/1.25 var(--font-ui);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dxOption:hover {
+  border-color: var(--panel-border-strong);
+}
+
+.dxActive {
+  border-color: var(--spo2);
+  background: color-mix(in srgb, var(--spo2) 14%, transparent);
+  color: #fff;
+}
+
+.dxCurrent {
+  margin: 10px 0 0;
+  font: 500 13px/1.4 var(--font-ui);
+  color: var(--spo2);
+}

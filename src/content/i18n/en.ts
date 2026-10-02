@@ -972,7 +972,8 @@ export const en = {
   'skills.leak.title': 'Cuff or mask leak',
   'skills.leak.desc': 'Missing volume and gastric insufflation.',
   'skills.rhythmTrainer.title': 'Recognise and treat rhythms',
-  'skills.rhythmTrainer.desc': 'VF, pulseless VT, PEA, asystole, brady- and tachycardia.',
+  'skills.rhythmTrainer.desc':
+    'VF, pulseless VT, PEA, asystole, sinus brady- and tachycardia — one rhythm per session.',
   'resus.section.arrests': 'Cardiac arrests',
   'resus.hypoxia.title': 'Blue patient on the ICU',
   'resus.hypoxia.desc': 'Found after turning — the monitor alarms.',
@@ -1490,6 +1491,84 @@ export const en = {
     'After cardiac surgery, drains that stop draining while the pressure falls suggest tamponade. Ultrasound shows it; pericardiocentesis or re-sternotomy treats it.',
   'dec.reason.resus': 'Not judged by the measured values during the arrest.',
   'tl.k.AIRWAY_INSERT': 'Airway inserted',
+  'proc.cuffCheck': 'Check / re-inflate cuff',
+  'proc.cuffLow': 'cuff pressure low — re-inflated to 25 cmH₂O',
+  'proc.cuffOk': 'cuff pressure normal',
+  'proc.noCuff': 'no tracheal tube in place',
+  'dx.button': 'Diagnosis',
+  'dx.title': 'Working diagnosis',
+  'dx.intro':
+    'Commit to what you think the problem is. You can change it; it is judged only in the debrief.',
+  'dx.current': 'Your working diagnosis: {dx}',
+  'dx.disconnection': 'Circuit disconnection',
+  'dx.cuff-leak': 'Cuff leak',
+  'dx.tube-oesophageal': 'Oesophageal intubation',
+  'dx.tube-endobronchial': 'Endobronchial (one-lung) intubation',
+  'dx.tube-correct': 'Tube correctly placed',
+  'dx.pneumothorax': 'Pneumothorax',
+  'dx.bronchospasm': 'Bronchospasm / auto-PEEP',
+  'dx.opioid-rigidity': 'Opioid chest-wall rigidity',
+  'dx.derecruitment': 'Derecruitment / atelectasis',
+  'dx.vf': 'Ventricular fibrillation',
+  'dx.pvt': 'Pulseless ventricular tachycardia',
+  'dx.pea': 'Pulseless electrical activity',
+  'dx.asystole': 'Asystole',
+  'dx.sinus': 'Sinus rhythm',
+  'dx.sinus-brady': 'Sinus bradycardia',
+  'dx.sinus-tachy': 'Sinus tachycardia',
+  'debrief.diagnosis': 'Diagnosis',
+  'debrief.yourDiagnosis': 'Your working diagnosis',
+  'debrief.cause': 'Actual cause',
+  'debrief.noDiagnosis': 'none declared',
+  'fb.well.diagnosis': 'Correct working diagnosis {s} s after the problem began.',
+  'fb.improve.noDiagnosis':
+    'You did not commit to a diagnosis — name the problem before treating it.',
+  'fb.improve.diagnosisWrong':
+    'The working diagnosis was not correct. Which finding would have told the causes apart?',
+  'fb.improve.diagnosisLate': 'You reached the correct diagnosis only after a wrong first one.',
+  'fb.well.fixed': 'You fixed the cause {s} s after it began.',
+  'fb.improve.notFixed': 'The cause was not fixed.',
+  'learn.ventHighPressure':
+    'High airway pressure: look at the patient and the ventilator together. Compare peak and plateau pressure, listen to both lungs, check the tube depth, and remember drugs (opioid rigidity) — each cause has its own fix.',
+  'learn.ventAfterIntubation':
+    'After every intubation confirm the tube with waveform capnography and listen to both lungs. No CO₂ means the oesophagus until proven otherwise: "if in doubt, take it out".',
+  'learn.ventLowVolume':
+    'A low exhaled volume with a normal inspiratory volume means gas is escaping: follow the circuit from the ventilator to the patient — connections, cuff, tube position.',
+  'learn.ventDesaturation':
+    'Falling saturation under ventilation: check FiO₂, tube position and both lungs first; then think of derecruitment (PEEP) and pneumothorax.',
+  'learn.rhythmTrainer':
+    'Identify the rhythm and check for a pulse before treating: shock VF and pulseless VT, give CPR and adrenaline for PEA and asystole, treat an unstable bradycardia (atropine, then adrenaline or pacing) — and never shock a rhythm with a pulse.',
+  'scenario.ventHighPressure.title': 'High airway pressure alarm',
+  'scenario.ventHighPressure.briefing':
+    'Theatre, during an open abdominal operation. The patient is anaesthetised and ventilated. Watch the monitor and the ventilator: when an alarm comes, find the cause, name it (Diagnosis) and fix it.',
+  'scenario.ventAfterIntubation.title': 'Check the tube after intubation',
+  'scenario.ventAfterIntubation.briefing':
+    'You have just intubated after induction; your colleague connects the ventilator. Is the tube where it should be? Decide (Diagnosis) and act.',
+  'scenario.ventLowVolume.title': 'Low tidal volume alarm',
+  'scenario.ventLowVolume.briefing':
+    'Theatre, after repositioning for knee surgery. The patient is anaesthetised and ventilated. When the ventilator alarms, find the cause, name it (Diagnosis) and fix it.',
+  'scenario.ventDesaturation.title': 'Falling saturation',
+  'scenario.ventDesaturation.briefing':
+    'Emergency laparotomy, the patient has just been positioned. When the saturation falls, find the cause, name it (Diagnosis) and fix it.',
+  'scenario.rhythmTrainer.title': 'Rhythm trainer',
+  'scenario.rhythmTrainer.briefing':
+    'A monitored, anaesthetised patient; defibrillator pads are on. In a few seconds the rhythm changes. Identify it (Diagnosis, rhythm check, pulse), decide whether the patient is stable, and treat. "Try again" brings the next rhythm.',
+  'skills.highPressure.title': 'High airway pressure alarm',
+  'skills.highPressure.desc': 'The cause changes every time — find it, name it, fix it.',
+  'skills.afterIntubation.title': 'Check the tube after intubation',
+  'skills.afterIntubation.desc':
+    'Capnography, auscultation, ultrasound: is the tube in the right place?',
+  'skills.lowVolume.title': 'Low tidal volume alarm',
+  'skills.lowVolume.desc': 'Where is the gas going?',
+  'skills.desaturation.title': 'Falling saturation',
+  'skills.desaturation.desc': 'Ventilated patient desaturates — work through the causes.',
+  'skills.tubeObstruction.title': 'Tube obstruction and mucus plug',
+  'skills.tubeObstruction.desc': 'Needs a tube-obstruction model first.',
+  'skills.dyssynchrony.title': 'Patient–ventilator dyssynchrony',
+  'skills.dyssynchrony.desc': 'Needs a dyssynchrony model first.',
+  'skills.rhythmAdvanced.title': 'AV blocks, SVT, atrial fibrillation, pacing',
+  'skills.rhythmAdvanced.desc': 'Need new rhythm and drug models first.',
+  'dir.onset': '',
 } as const;
 
 export type I18nKey = keyof typeof en;

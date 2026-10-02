@@ -156,6 +156,7 @@ export function createInitialState(
         gastricAirMl: 0,
         leakFraction: 0,
         exhaledCo2Fraction: 1,
+        cuffLeak: 0,
       },
       conditions: {
         pericardialMl: 0,
@@ -264,6 +265,7 @@ export function createInitialState(
       messages: [],
       orders: [],
       hints: [],
+      diagnoses: [],
       pendingActions: [],
       actionsDone: [],
       experiments: [],

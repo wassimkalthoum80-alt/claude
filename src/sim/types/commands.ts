@@ -23,7 +23,13 @@ export type AssessmentKind = 'auscultation' | 'pocusCardiac' | 'pocusLung' | 'ep
 
 /** Bedside procedures. */
 export type ProcedureKind =
-  'needleDecompression' | 'chestDrain' | 'pericardiocentesis' | 'ioAccess' | 'gastricTube';
+  | 'needleDecompression'
+  | 'chestDrain'
+  | 'pericardiocentesis'
+  | 'ioAccess'
+  | 'gastricTube'
+  /** check the cuff pressure and re-inflate (ends a cuff leak) */
+  | 'cuffCheck';
 
 export type VentSettingKey =
   | 'vt'
@@ -159,6 +165,14 @@ export type Command =
   | { type: 'VIEW_RESULT'; orderId: number }
   /** reveal the next level of a scenario hint (levels are revealed in order) */
   | { type: 'REQUEST_HINT'; topic: string }
+  /** the learner commits to a working diagnosis (option id of the case's diagnosis set); logged for the debrief */
+  | { type: 'DECLARE_DIAGNOSIS'; id: string }
+  /** instructor/scenario: /min — intrinsic sinus-node rate (sinus brady-/tachycardia) */
+  | { type: 'SET_SINUS_RATE'; bpm: number }
+  /** instructor/scenario: the tracheal tube migrates (endobronchial, oesophageal) or is corrected */
+  | { type: 'SET_AIRWAY_POSITION'; position: AirwayPosition }
+  /** instructor/scenario: 0..1 — fraction of the tidal volume lost around the tube cuff */
+  | { type: 'SET_CUFF_LEAK'; fraction: number }
   /** request a case action (takes effect after its delay) */
   | { type: 'SCENARIO_ACTION'; id: string }
   /** start a guided experiment card */

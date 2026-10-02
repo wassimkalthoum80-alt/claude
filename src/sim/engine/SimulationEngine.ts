@@ -620,6 +620,13 @@ export class SimulationEngine {
         // Mechanics, shunt and recruitability follow from the preset in the lung-state model.
         s.patient.resp.lungPreset = command.preset;
         break;
+      case 'SET_SINUS_RATE':
+        if (Number.isFinite(command.bpm)) {
+          const bpm = clamp(command.bpm, 20, 200);
+          this.baselineHeartRate = bpm;
+          this.heartLung.setSinusRate(bpm);
+        }
+        break;
       case 'SET_RESERVES':
         s.patient.reserves = { ...s.patient.reserves, ...validReserves(command.reserves) };
         break;
@@ -800,6 +807,15 @@ export class SimulationEngine {
         });
         break;
       }
+      case 'DECLARE_DIAGNOSIS':
+        // Recorded as declared; the engine never judges it (scoring does, after the session).
+        if (
+          typeof command.id === 'string' &&
+          command.id.length > 0 &&
+          s.director.diagnoses.length < 50
+        )
+          s.director.diagnoses.push({ id: command.id.slice(0, 64), t: s.time });
+        break;
       case 'REQUEST_HINT': {
         const topic = this.active.hints?.find((h) => h.id === command.topic);
         if (!topic) break;

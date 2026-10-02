@@ -96,7 +96,7 @@ describe('sessions', () => {
   });
 
   it('entries in preparation, unknown entries and screen modules can never start a session', () => {
-    expect(() => createSession(MODULE_CATALOG, 'skills', 'auto-peep', opts)).toThrow();
+    expect(() => createSession(MODULE_CATALOG, 'skills', 'tube-obstruction', opts)).toThrow();
     expect(() => createSession(MODULE_CATALOG, 'lab', 'nope', opts)).toThrow();
     expect(() => createSession(MODULE_CATALOG, 'progress', 'x', opts)).toThrow();
     expect(() => createSession(MODULE_CATALOG, 'daily', 'x', opts)).toThrow();

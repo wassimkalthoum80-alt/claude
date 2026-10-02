@@ -94,6 +94,8 @@ export interface AirwayState {
   leakFraction: number;
   /** 0..1 — fraction of alveolar CO2 that reaches the capnograph (0: oesophageal tube; derived) */
   exhaledCo2Fraction: number;
+  /** 0..1 — fraction of each tidal volume lost around an under-inflated tracheal tube cuff (instructor/scenario) */
+  cuffLeak: number;
 }
 
 export type Side = 'left' | 'right';

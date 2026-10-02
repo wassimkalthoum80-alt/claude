@@ -141,6 +141,34 @@ export function DebriefScreen({ data }: { data: DebriefData }) {
           </div>
         </section>
 
+        {score.facts.diagnosis && (
+          <section className={styles.block} data-testid="debrief-diagnosis">
+            <h2 className={screen.sectionTitle}>{t('debrief.diagnosis')}</h2>
+            <dl className={styles.facts}>
+              <div>
+                <dt>{t('debrief.yourDiagnosis')}</dt>
+                <dd
+                  className={
+                    score.facts.diagnosis.declared.includes(score.facts.diagnosis.expected)
+                      ? styles.right
+                      : styles.wrong
+                  }
+                >
+                  {score.facts.diagnosis.declared.length === 0
+                    ? t('debrief.noDiagnosis')
+                    : score.facts.diagnosis.declared
+                        .map((d) => t(`dx.${d}` as I18nKey))
+                        .join(' → ')}
+                </dd>
+              </div>
+              <div>
+                <dt>{t('debrief.cause')}</dt>
+                <dd>{t(`dx.${score.facts.diagnosis.expected}` as I18nKey)}</dd>
+              </div>
+            </dl>
+          </section>
+        )}
+
         <div className={styles.columns}>
           <section className={styles.block}>
             <h2 className={screen.sectionTitle}>{t('debrief.well')}</h2>

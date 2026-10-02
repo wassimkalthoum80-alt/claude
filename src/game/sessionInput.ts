@@ -28,6 +28,7 @@ export function scoringInputFrom(
     end: s.time,
     difficulty,
     circulation: s.patient.cardio.spontaneousCirculation,
+    variant: s.scenario.variant,
     cpr: arrested
       ? {
           timeToFirstCompression: ttfc,

@@ -2,6 +2,7 @@ import type { LogEntry } from '../sim';
 import type { Intervention } from './assessment';
 import type {
   AlsFacts,
+  CauseStep,
   DecisionMark,
   LogMatch,
   ScenarioScoring,
@@ -52,6 +53,18 @@ const NON_SHOCKABLE_BEFORE = ['pea→', 'asystole→', 'sinus→'];
 function inappropriate(detail: string): boolean {
   const transition = detail.split('|')[2] ?? '';
   return NON_SHOCKABLE_BEFORE.some((p) => transition.startsWith(p));
+}
+
+/** s — time at which every cause step had happened (first match of each), null if one is missing. */
+export function causeDoneAt(log: readonly LogEntry[], steps: readonly CauseStep[]): number | null {
+  if (steps.length === 0) return null;
+  let last = -Infinity;
+  for (const step of steps) {
+    const hit = log.find((e) => step.any.some((m) => logMatches(e, m)));
+    if (!hit) return null;
+    last = Math.max(last, hit.t);
+  }
+  return last;
 }
 
 export function alsFacts(
@@ -142,7 +155,8 @@ export function resusMarker(
       items.some(
         (i) =>
           (i.kind === 'DRUG_PUSH' || i.kind === 'BOLUS_GIVEN') &&
-          i.raw.toLowerCase().includes('adrenalin'),
+          // "Adrenalin" — not "Noradrenalin"
+          i.raw.includes('Adrenalin'),
       )
     )
       return { mark: 'effective', reason: 'adrenaline' };

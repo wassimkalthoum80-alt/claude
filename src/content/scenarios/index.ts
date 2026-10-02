@@ -8,6 +8,7 @@ import { healthyLungsLab } from './healthyLungsLab';
 import { asthmaHyperinflation } from './asthmaHyperinflation';
 import { postopBleeding } from './postopBleeding';
 import { ARREST_CASES } from './arrestCases';
+import { SKILLS_CASES } from './skillsCases';
 
 export {
   asthmaBreathStacking,
@@ -20,6 +21,7 @@ export {
 };
 export * from './fluidScenarios';
 export * from './arrestCases';
+export * from './skillsCases';
 
 export const SCENARIOS: readonly ScenarioDefinition[] = [
   baselinePatient,
@@ -31,4 +33,5 @@ export const SCENARIOS: readonly ScenarioDefinition[] = [
   postopBleeding,
   ...FLUID_SCENARIOS,
   ...ARREST_CASES,
+  ...SKILLS_CASES,
 ];

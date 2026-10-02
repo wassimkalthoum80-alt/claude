@@ -54,6 +54,9 @@ export function airwayLeak(airway: AirwayState, peakPressure: number): number {
       return clamp(0.15 + 0.015 * Math.max(0, peakPressure - 20), 0, 0.6);
     case 'sga':
       return clamp(0.025 * Math.max(0, peakPressure - 25), 0, 0.5);
+    case 'ett':
+      // SIM-ASSUMPTION: an under-inflated cuff loses a fixed fraction of each tidal volume (set by the scenario).
+      return clamp(airway.cuffLeak, 0, 0.8);
     default:
       return 0;
   }

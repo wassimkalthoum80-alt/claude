@@ -1,4 +1,4 @@
-import { alsFacts, resusMarker } from './alsAssessment';
+import { alsFacts, causeDoneAt, resusMarker } from './alsAssessment';
 import { assessDecisions } from './assessment';
 import type {
   AlsFacts,
@@ -118,6 +118,12 @@ export function concernsOf(
   return out;
 }
 
+/** Mean of the rhythm/cause diagnosis (resuscitation) and the declared working diagnosis, where present. */
+function diagnosisScore(als: number | null, declared: number | null): number | null {
+  const parts = [als, declared].filter((x): x is number => x !== null);
+  return parts.length === 0 ? null : Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+}
+
 /** Resuscitation diagnosis: correct rhythm calls and finding (treating) the cause, equally weighted. */
 function alsDiagnosis(als: AlsFacts, sc: ScenarioScoring): number | null {
   const parts: number[] = [];
@@ -166,11 +172,30 @@ function overallOf(
   return w === 0 ? 0 : Math.round(sum / w);
 }
 
+/** The case's scoring with its variant's diagnosis, fix and rules merged in. */
+export function withVariant(
+  sc: ScenarioScoring,
+  variant: string | null | undefined,
+): ScenarioScoring {
+  const v = variant ? sc.variants?.[variant] : undefined;
+  return v ? { ...sc, ...v, rules: { ...sc.rules, ...v.rules } } : sc;
+}
+
+/** Declared diagnoses (learner commands, in order). */
+function declarations(input: ScoringInput): { id: string; t: number }[] {
+  const out: { id: string; t: number }[] = [];
+  for (const e of input.log)
+    if (e.kind === 'command' && e.source === 'user' && e.command.type === 'DECLARE_DIAGNOSIS')
+      out.push({ id: e.command.id, t: e.t });
+  return out;
+}
+
 export function scoreSession(
   input: ScoringInput,
-  sc: ScenarioScoring,
+  caseScoring: ScenarioScoring,
   defaults: ScoringRules,
 ): SessionScore {
+  const sc = withVariant(caseScoring, input.variant);
   const r = rulesFor(defaults, sc);
   const v = input.vitals;
   // A resuscitation case is scored as one only if the arrest happened; a prevented arrest is a stabilisation.
@@ -233,6 +258,40 @@ export function scoreSession(
       ? (decisions.find((d) => d.reason === 'keyAction')?.t ?? null)
       : undefined;
   const keyActionMissed = keyActionAt === undefined ? null : keyActionAt === null;
+
+  // --- the problem's onset, its fix and the declared diagnosis (skills, trainers) ---
+  const onsetAt = Math.min(
+    ...[...announcedProblems(input, sc), starts[0] ?? Infinity, arrestEvent?.t ?? Infinity].filter(
+      Number.isFinite,
+    ),
+    Infinity,
+  );
+  const onset = Number.isFinite(onsetAt) ? onsetAt : v.t0;
+  const fixSteps = !resus && sc.causeSteps?.length ? sc.causeSteps : null;
+  const fixedAt = fixSteps ? causeDoneAt(input.log, fixSteps) : null;
+  const fixScore =
+    fixSteps === null ? null : fixedAt === null ? 0 : band(Math.max(0, fixedAt - onset), r.fix);
+  let diagnosisFacts: SessionScore['facts']['diagnosis'] = null;
+  let declaredScore: number | null = null;
+  if (sc.diagnosisSet && sc.diagnosis) {
+    const decl = declarations(input);
+    const first = decl[0];
+    const correct = decl.find((d) => d.id === sc.diagnosis);
+    diagnosisFacts = {
+      expected: sc.diagnosis,
+      declared: decl.map((d) => d.id),
+      firstCorrect: first?.id === sc.diagnosis,
+      afterS: first ? Math.round(Math.max(0, first.t - onset)) : null,
+    };
+    declaredScore =
+      first === undefined
+        ? 0
+        : first.id === sc.diagnosis
+          ? band(Math.max(0, first.t - onset), r.diagnosisTime)
+          : correct
+            ? 0.4 * band(Math.max(0, correct.t - onset), r.diagnosisTime)
+            : 0;
+  }
 
   // --- vital-sign facts ---
   const hypotensionS = resus ? 0 : secondsBeyond(v.map, (x) => x < r.mapDanger);
@@ -321,14 +380,20 @@ export function scoreSession(
       responseScores.length === 0
         ? null
         : Math.round(responseScores.reduce((a, b) => a + b, 0) / responseScores.length);
+    const measured = rated === 0 ? null : (100 * (effective.length + 0.3 * questionable)) / rated;
     treatment =
       keyActionMissed === true
         ? 0
-        : rated === 0
-          ? null
-          : Math.round((100 * (effective.length + 0.3 * questionable)) / rated);
+        : fixScore !== null
+          ? // Skills: fixing the cause counts most; the measured effect of all decisions the rest.
+            Math.round(0.6 * fixScore + 0.4 * (measured ?? 100))
+          : measured === null
+            ? null
+            : Math.round(measured);
     const first = starts[0];
-    if (keyActionAt !== undefined && sc.keyActionBand)
+    if (fixSteps !== null)
+      time = fixedAt === null ? 0 : Math.round(band(Math.max(0, fixedAt - onset), r.time));
+    else if (keyActionAt !== undefined && sc.keyActionBand)
       time = keyActionAt === null ? 0 : Math.round(band(keyActionAt - v.t0, sc.keyActionBand));
     else if (first === undefined) time = null;
     else {
@@ -343,7 +408,7 @@ export function scoreSession(
     treatment,
     safety,
     // Resuscitation: rhythm assessments and finding the cause; otherwise no diagnosis panel yet (phase 6).
-    diagnosis: als ? alsDiagnosis(als, sc) : null,
+    diagnosis: diagnosisScore(als ? alsDiagnosis(als, sc) : null, declaredScore),
     efficiency,
     time,
   };
@@ -366,7 +431,17 @@ export function scoreSession(
     (stabilisation === null || stabilisation >= 50);
   const causeMissed =
     als !== null && (sc.causeSteps?.length ?? 0) > 0 && als.causeTreatedAfterS === null;
-  const two = one && overall >= 70 && dangerous === 0 && keyActionMissed !== true && !causeMissed;
+  const diagnosisMissed =
+    diagnosisFacts !== null && !diagnosisFacts.declared.includes(diagnosisFacts.expected);
+  const notFixed = fixSteps !== null && fixedAt === null;
+  const two =
+    one &&
+    overall >= 70 &&
+    dangerous === 0 &&
+    keyActionMissed !== true &&
+    !causeMissed &&
+    !diagnosisMissed &&
+    !notFixed;
   // ★★★ = excellent in every dimension (milestone 6 § 11), not only on average.
   const allSolid = SCORE_KEYS.every((k) => scores[k] === null || (scores[k] ?? 0) >= 60);
   const three =
@@ -459,6 +534,18 @@ export function scoreSession(
     improve.push({ key: 'fb.improve.pressure', vars: { s: highPressureS, v: r.ppeakDanger } });
   if (redundant > 0) improve.push({ key: 'fb.improve.redundantTests', vars: { n: redundant } });
   if (safety >= 95 && dangerous === 0 && arrests === 0) well.push({ key: 'fb.well.safe' });
+  if (diagnosisFacts) {
+    if (diagnosisFacts.firstCorrect)
+      well.unshift({ key: 'fb.well.diagnosis', vars: { s: diagnosisFacts.afterS ?? 0 } });
+    else if (diagnosisFacts.declared.length === 0)
+      improve.unshift({ key: 'fb.improve.noDiagnosis' });
+    else if (diagnosisMissed) improve.unshift({ key: 'fb.improve.diagnosisWrong' });
+    else improve.push({ key: 'fb.improve.diagnosisLate' });
+  }
+  if (fixSteps !== null) {
+    if (fixedAt === null) improve.unshift({ key: 'fb.improve.notFixed' });
+    else well.push({ key: 'fb.well.fixed', vars: { s: Math.round(Math.max(0, fixedAt - onset)) } });
+  }
   if (well.length === 0 && outcome !== 'arrest') well.push({ key: 'fb.well.completed' });
 
   return {
@@ -484,6 +571,9 @@ export function scoreSession(
       hintsUsed,
       keyActionMissed,
       als,
+      diagnosis: diagnosisFacts,
+      fixedAfterS:
+        fixSteps === null ? undefined : fixedAt === null ? null : Math.round(fixedAt - onset),
     },
   };
 }
