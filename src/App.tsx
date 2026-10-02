@@ -40,6 +40,7 @@ import { ModuleMenu } from './ui/screens/ModuleMenu';
 import { DebriefScreen } from './ui/screens/DebriefScreen';
 import { ProgressScreen } from './ui/screens/ProgressScreen';
 import { WardScreen } from './ui/screens/ward/WardScreen';
+import { WardDebriefScreen } from './ui/screens/ward/WardDebriefScreen';
 import styles from './App.module.css';
 
 /** Panels and overlays shared by both layouts (sheets on the phone, floating panels on the desktop). */
@@ -170,6 +171,8 @@ function Shell() {
   if (inSession) return <Workstation />;
   if (ui.screen === 'ward' && ui.session)
     return <WardScreen key={ui.session.startedAt} session={ui.session} />;
+  if (ui.screen === 'ward-debrief' && ui.wardDebrief)
+    return <WardDebriefScreen data={ui.wardDebrief} />;
   if (ui.screen === 'debrief' && ui.debrief) return <DebriefScreen data={ui.debrief} />;
   if (ui.screen === 'progress') return <ProgressScreen />;
   if (ui.screen === 'module' && ui.menuModule) return <ModuleMenu moduleId={ui.menuModule} />;

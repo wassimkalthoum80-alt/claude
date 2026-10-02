@@ -699,6 +699,27 @@ lives in `src/content/antiinfectives`, `src/content/infection` and `src/content/
 | Oral switch offer (UI) | oral form with bioavailability ≥ 0.7 offered as "→ oral" | ciprofloxacin ≈ 0.75 qualifies |
 | CO₂ | ≈ 7 kg CO₂e per i.v. dose, 0.2 kg per oral day (extrapolated from one ciprofloxacin estimate, Born et al. BMJ Qual Saf 2023) | order of magnitude only |
 
+## Stewardship scoring (milestone 7 phase 3 — `src/game/stewardship.ts`, values in `src/content/scoring/stewardshipConfig.ts`)
+
+Educational defaults chosen by the developer; **not a validated assessment instrument** — awaiting clinical review.
+Two independent axes; the debrief may use the hidden truth because the case is over.
+
+| Assumption | Value | Rationale |
+|---|---|---|
+| Axes | patient outcome and stewardship, each 0–100; overall = mean; stars from the weaker axis (≥ 80 ★★★, ≥ 60 ★★, ≥ 40 ★; died → 0) | a good outcome with poor stewardship (or vice versa) is not a top result |
+| Outcome | died 0; cured / infection controlled with inflammation < 0.25 → 100; otherwise 80 × (1 − organ score) × (0.7 if uncontrolled) | |
+| Harm (outcome deductions) | C. difficile 15, resistance (selection / de novo) 10, relapse 15, superinfection 15, nephrotoxicity 10, allergy 5 | collateral damage of the antibiotic course |
+| Time to effective therapy | first moment all causative isolates are covered (activity ≥ 0.5); target from `abs2026.ts` by severity (shock 1 h, sepsis 1 h, suspected 3 h); −5 per hour late (max −25); never effective −30 | context-sensitive: urgency only where sepsis makes it matter |
+| Cultures | blood cultures before the first dose; missing −12 (−5 in septic shock, where the dose must not wait); fewer sets than the guideline −4 | |
+| No infection (bacteriuria, mimics) | any antibiotic −25 − 5 per therapy day (max −60); withholding is the best answer | "don't treat the culture" |
+| Reserve agents | days without proven 4MRGN / MRSA / VRE **and** a documented indication: −15 − 3 per day | never blocked, but judged |
+| De-escalation | opportunity when therapy running at the causative resistogram is broader than max(narrowest active option, spectrum rank 2); timely ≤ 24 h, then −4 per 12 h (max −20); not done −20 (judged only after the 24 h window) | the focus model does not separate cystitis-only agents from pyelonephritis, so any narrow class counts |
+| Spectrum ranks | 1 narrow (penicillin, cefazolin, fosfomycin, nitrofurantoin) … 5 reserve (carbapenems, new β-lactam/BLI, cefiderocol, colistin, tigecycline); broad DOT = rank ≥ 4 | ordinal teaching scale |
+| Oral switch | eligible after the resistogram once 24 h of hourly vitals are afebrile (< 38 °C) with MAP ≥ 65 and an oral agent (bioavailability ≥ 0.7) is fully active; i.v. > 24 h beyond eligibility −4 per day (max −12) | IVOS criteria, simplified |
+| Duration | total days vs. the case target (fever and rigors: 7 d); tolerance −1 / +2 d; longer −4 per extra day (max −20); shorter −10 | short-course evidence for pyelonephritis |
+| Timeout and status | timeout missed (due at 48–72 h) −8, wrong judgement −5; a non-focus diagnosis declared probable/confirmed −8 | |
+| TDM / diagnostic stewardship | a TDM drug ≥ 48 h without levels −6; each rejected C. difficile test −4 | |
+
 ## Presentation-only assumptions (UI)
 
 | Assumption          | Value                                                          |

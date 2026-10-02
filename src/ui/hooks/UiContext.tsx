@@ -6,6 +6,7 @@ import { baselinePatient } from '../../content/scenarios';
 import { createSession } from '../../game/session';
 import type { Difficulty, ModuleId, SessionConfig } from '../../game/types';
 import type { DebriefData } from '../adapters/debrief';
+import type { WardDebriefData } from '../adapters/wardDebrief';
 
 export type Language = 'en' | 'de';
 export type ElectrodeStandard = 'IEC' | 'AHA';
@@ -20,6 +21,8 @@ export interface UiState {
   session: SessionConfig | null;
   /** result of the last scored session (screen 'debrief') — plain data, computed once at the end */
   debrief: DebriefData | null;
+  /** stewardship debrief of the last Infectiology case (screen 'ward-debrief') */
+  wardDebrief: WardDebriefData | null;
   /** difficulty chosen for scored modules (kept as a preference) */
   difficulty: Difficulty;
   language: Language;
@@ -53,7 +56,8 @@ export interface UiState {
 
 export type SessionDrawer = 'timeline' | 'trends' | 'hint' | 'experiments' | 'diagnosis';
 
-export type Screen = 'home' | 'module' | 'session' | 'ward' | 'debrief' | 'progress';
+export type Screen =
+  'home' | 'module' | 'session' | 'ward' | 'ward-debrief' | 'debrief' | 'progress';
 export type LayoutPref = 'auto' | 'desktop' | 'mobile';
 export type MobileTab = 'monitor' | 'patient' | 'vent' | 'pumps' | 'actions';
 
@@ -160,6 +164,7 @@ function initialState(): UiState {
         })
       : null,
     debrief: null,
+    wardDebrief: null,
     difficulty: 'beginner',
     language: 'en',
     audio: false,

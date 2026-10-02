@@ -17,6 +17,7 @@ export type SkillTopic =
   | 'shock'
   | 'pharmacology'
   | 'diagnostics'
+  | 'infectiology'
   | 'patientSafety';
 
 export const SKILL_TOPICS: readonly SkillTopic[] = [
@@ -28,6 +29,7 @@ export const SKILL_TOPICS: readonly SkillTopic[] = [
   'shock',
   'pharmacology',
   'diagnostics',
+  'infectiology',
   'patientSafety',
 ];
 
@@ -258,7 +260,8 @@ export interface Decision {
   reason: string;
 }
 
-export type Outcome = 'stable' | 'unstable' | 'arrest' | 'rosc';
+/** `cured` and `died` are outcomes of the multi-day Infectiology cases. */
+export type Outcome = 'stable' | 'unstable' | 'arrest' | 'rosc' | 'cured' | 'died';
 
 export type Stars = 0 | 1 | 2 | 3;
 

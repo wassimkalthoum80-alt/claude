@@ -11,7 +11,9 @@ import {
   type FailureAction,
 } from '../../adapters/ward';
 import { useSession } from '../../hooks/useSession';
-import { useUi } from '../../hooks/UiContext';
+import { useUi, WORKSPACE_CLOSED } from '../../hooks/UiContext';
+import { localProgressStore } from '../../progressStore';
+import { finishWardSession, MIN_WARD_DEBRIEF_H } from '../../adapters/wardDebrief';
 import { wardNurse, wardPatientVisual } from '../../adapters/wardPatient';
 import { BedsideView } from './BedsideView';
 import { OrderPanel } from './OrderPanel';
@@ -45,6 +47,20 @@ export function WardScreen({ session }: { session: SessionConfig }) {
   const ward = useWard(session);
   const { ui, setUi } = useUi();
   const { end } = useSession();
+  const finish = useCallback(() => {
+    if (!ward) return end();
+    const v = ward.engine.getView();
+    if (!v.ended && v.timeH < MIN_WARD_DEBRIEF_H) return end();
+    // The case is over: score it (the truth may now be revealed) and open the stewardship debrief.
+    const wardDebrief = finishWardSession(ward.engine, session, localProgressStore, Date.now());
+    setUi({
+      ...WORKSPACE_CLOSED,
+      screen: 'ward-debrief',
+      wardDebrief,
+      session: null,
+      menuModule: session.module,
+    });
+  }, [ward, end, session, setUi]);
   const [ackSeq, setAckSeq] = useState(0);
   const [reserveDraft, setReserveDraft] = useState<StartCommand | null>(null);
   const [drawer, setDrawer] = useState<'consult' | 'failure' | null>(null);
@@ -95,7 +111,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
   return (
     <div className={styles.ward} data-testid="ward-screen">
       <header className={styles.topbar}>
-        <button type="button" className={styles.back} onClick={end} data-testid="ward-exit">
+        <button type="button" className={styles.back} onClick={finish} data-testid="ward-exit">
           ‹ {tk('ward.exit')}
         </button>
         <div className={styles.title}>
@@ -247,7 +263,7 @@ export function WardScreen({ session }: { session: SessionConfig }) {
           }}
         />
       )}
-      {view.ended && !showNotices && <EndDialog outcome={view.ended} onClose={end} />}
+      {view.ended && !showNotices && <EndDialog outcome={view.ended} onClose={finish} />}
     </div>
   );
 }

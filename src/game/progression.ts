@@ -58,7 +58,7 @@ export function levelOf(xp: number): LevelInfo {
 export const entryKey = (module: ModuleId, entryId: string): string => `${module}:${entryId}`;
 
 export function xpFor(
-  score: SessionScore,
+  score: Pick<SessionScore, 'overall' | 'stars'>,
   difficulty: Difficulty,
   firstCompletion: boolean,
 ): number {
@@ -127,7 +127,7 @@ export function recordSession(
   profile: ProgressProfile,
   session: SessionConfig,
   meta: { variant: string | null; durationS: number; topics: readonly SkillTopic[] },
-  score: SessionScore,
+  score: Pick<SessionScore, 'overall' | 'stars' | 'outcome' | 'scores'>,
   now: number,
 ): SessionResult {
   const id = `${session.startedAt}-${session.seed}`;

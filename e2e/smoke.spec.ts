@@ -802,7 +802,16 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   await expect(page.getByTestId('abs-consult')).toContainText(/Reservesubstanz/);
   if (shots) await page.screenshot({ path: `${shots}/ward-5-consult.png` });
 
+  // Leaving after the timeout opens the stewardship debrief (truth revealed, two axes, day-by-day timeline).
   await page.getByTestId('ward-exit').click();
+  await expect(page.getByTestId('ward-debrief')).toBeVisible();
+  await expect(page.getByTestId('ward-score-outcome')).toBeVisible();
+  await expect(page.getByTestId('ward-score-stewardship')).toBeVisible();
+  await expect(page.getByTestId('ward-debrief-reveal')).toContainText('E. coli');
+  await expect(page.getByTestId('ward-debrief-improve')).toContainText(/Reserve/);
+  await expect(page.getByTestId('ward-debrief-timeline')).toContainText('Cefiderocol');
+  if (shots) await page.screenshot({ path: `${shots}/ward-6-debrief.png`, fullPage: true });
+  await page.getByTestId('ward-debrief-menu').click();
   await expect(page.getByTestId('module-menu')).toBeVisible();
   expect(errors).toEqual([]);
 });

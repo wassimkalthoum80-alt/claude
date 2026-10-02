@@ -41,7 +41,8 @@
 }
 
 .outcome_stable,
-.outcome_rosc {
+.outcome_rosc,
+.outcome_cured {
   border-color: var(--cpr-green-border);
   color: var(--good);
 }
@@ -51,7 +52,8 @@
   color: var(--warn);
 }
 
-.outcome_arrest {
+.outcome_arrest,
+.outcome_died {
   border-color: var(--stop-red-border);
   color: var(--bad);
 }

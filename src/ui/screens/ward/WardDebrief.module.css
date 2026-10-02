@@ -1,0 +1,77 @@
+/* Stewardship debrief: day-by-day review in the monitor palette. */
+
+.delta {
+  color: var(--bad);
+  font-family: var(--font-num);
+  font-size: 12px;
+}
+
+.metrics {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day h3 {
+  margin: 0 0 4px;
+  font: 600 12px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--co2);
+}
+
+.day ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--divider);
+}
+
+.day li {
+  display: grid;
+  grid-template-columns: 46px 16px 1fr;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.clock {
+  font: 600 12px var(--font-num);
+  color: var(--text-faint);
+}
+
+.icon {
+  text-align: center;
+  font-weight: 700;
+}
+
+.mark_good .icon {
+  color: var(--good);
+}
+
+.mark_warn .icon {
+  color: var(--warn);
+}
+
+.mark_bad {
+  color: #ffb3b3;
+}
+
+.mark_bad .icon {
+  color: var(--bad);
+}
+
+.mark_info .icon {
+  color: var(--text-faint);
+}
+
+.footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-faint);
+}

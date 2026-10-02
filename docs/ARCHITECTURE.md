@@ -352,9 +352,15 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   key (e.g. `female-elderly-flushed-rigors-drowsy`) so realistic images or a 3D model can replace it later.
 - **Ward nurse (phase 2b):** `wardNurse()` derives what the nurse at the bedside says and does — an urgent call
   (alert pose), carrying out a fresh order (busy pose: samples, antibiotic, procedure), a recent observation, or her
-  routine handover of the visible values. She reports; she never diagnoses or acts alone. The bedside scene sits in
+  routine handover of the visible values. The nurse reports and never diagnoses or acts alone. The bedside scene sits in
   the centre column (patient + nurse), with the patient card, chart and labs on the left and orders on the right.
 - **Ward bedside monitor:** `src/sim/infection/wardMonitor.ts` (`WardMonitorSignals`) generates ECG (250 Hz) and
   pleth (125 Hz) into ring buffers from the current course values — signals from state, never canned arrays; NIBP
   from MAP. `src/ui/screens/ward/WardMonitor.tsx` draws them as sweep traces (`drawSweep`, 25 mm/s) in its own rAF
   loop, with HR / SpO₂ / NIBP / temperature / RR numerics and alarm colours (`wardMonitorView`).
+- **Stewardship debrief (phase 3):** when the case ends (or the learner leaves after ≥ 12 h), `finishWardSession`
+  (`src/ui/adapters/wardDebrief.ts`) calls the pure `scoreStewardship` (`src/game/stewardship.ts`) with the case,
+  the final view, the EventLog and — now that the case is over — `getTruth()`. Weights, spectrum ranks and per-case
+  targets are data in `src/content/scoring/stewardshipConfig.ts`. The result (outcome and stewardship axes, items,
+  metrics, reveal, day-by-day timeline) is recorded in the progress profile under the topic `infectiology` and shown
+  by `src/ui/screens/ward/WardDebriefScreen.tsx`.
