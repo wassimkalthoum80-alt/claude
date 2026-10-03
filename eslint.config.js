@@ -71,7 +71,7 @@ export default tseslint.config(
     // Learning logic (sessions, later scoring and progression) is pure and React-free like the simulation; it
     // receives catalog and scenario data as arguments.
     files: ['src/game/**/*.ts'],
-    ignores: ['src/game/**/*.test.ts'],
+    ignores: ['src/game/**/*.test.ts', 'src/game/**/*.node.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

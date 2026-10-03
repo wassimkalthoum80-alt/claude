@@ -31,6 +31,7 @@ export const mentorEn = {
   'mentor.topic.airway': 'Airway / ventilation',
   'mentor.topic.infection': 'Infection / antibiotics',
   'mentor.topic.drugs': 'Drugs / dose',
+  'mentor.topic.diagnosis': 'Diagnosis — what does the patient have?',
   'mentor.topic.stuck': 'I’m stuck',
   'mentor.debrief.title': 'Independence',
   'mentor.debrief.weight': 'Counts 15 % towards the overall score (intermediate).',
@@ -83,6 +84,23 @@ export const mentorEn = {
     'Give ketamine ~1 mg/kg, then rocuronium 1.2 mg/kg. Wait 45–60 s for the relaxant, watch MAP and start the laryngoscopy.',
   'mentor.si-induction.why':
     'A full propofol dose collapses a sympathetically driven circulation. Ketamine keeps the tone; a high-dose relaxant gives intubating conditions quickly so the apnoea stays short.',
+  'mentor.si-retry.title': 'Second attempt',
+  'mentor.si-retry.1': 'The tube didn’t go in. Look at the saturation first.',
+  'mentor.si-retry.2': 'What comes before a second attempt?',
+  'mentor.si-retry.3': 'Reoxygenate with the face mask, then a second, optimised attempt.',
+  'mentor.si-retry.4':
+    'Airway → face mask, ventilate until SpO₂ recovers. Then video laryngoscope, BURP, pass the tube. At most three attempts.',
+  'mentor.si-retry.why':
+    'Oxygen before ego: every attempt costs saturation. Reoxygenate, change something (device, position, BURP), then try again.',
+  'mentor.si-ventilate.title': 'Set up the ventilation',
+  'mentor.si-ventilate.1': 'The tube is in. Look at the saturation and the ventilator settings.',
+  'mentor.si-ventilate.2': 'Is FiO₂ 40 % and PEEP 5 enough for this lung?',
+  'mentor.si-ventilate.3':
+    'Raise FiO₂ (about 80 %) and PEEP (about 10 cmH₂O), then titrate to SpO₂ ≥ 92 %.',
+  'mentor.si-ventilate.4':
+    'On the ventilator: FiO₂ 80 %, PEEP 10. Watch SpO₂ and blood pressure; reduce FiO₂ once the saturation is stable.',
+  'mentor.si-ventilate.why':
+    'Pneumonia means shunt: more oxygen and more PEEP recruit the lung. Too much PEEP can lower the blood pressure — watch both.',
   'mentor.si-confirm.title': 'Confirm the tube',
   'mentor.si-confirm.1': 'Look at the capnography and listen.',
   'mentor.si-confirm.2': 'How do you know the tube is in the trachea — and in both lungs?',
@@ -174,4 +192,22 @@ export const mentorEn = {
   'mentor.ss-source.4': 'Request "source control" — the antibiotic alone won’t clear an abscess.',
   'mentor.ss-source.why':
     'An undrained focus keeps the shock going despite antibiotics. Source control as soon as feasible (within hours).',
+
+  // --- shared extra steps ---
+  'mentor.ss-diagnosis.title': 'Working diagnosis',
+  'mentor.ss-diagnosis.1': 'Put together what you see: temperature, pressure, the drain.',
+  'mentor.ss-diagnosis.2': 'What is your working diagnosis — and have you said it?',
+  'mentor.ss-diagnosis.3': 'Declare the working diagnosis: septic shock.',
+  'mentor.ss-diagnosis.4': 'Open Diagnosis beneath the scene and choose septic shock.',
+  'mentor.ss-diagnosis.why':
+    'Naming the working diagnosis aligns the team and the treatment; you can change it if the picture changes.',
+  'mentor.da-attempt.title': 'First laryngoscopy',
+  'mentor.da-attempt.1': 'The airway is yours. Start with your best first attempt.',
+  'mentor.da-attempt.2': 'How do you make the first attempt the best one?',
+  'mentor.da-attempt.3':
+    'Video laryngoscope, external laryngeal pressure (BURP), then try to pass the tube.',
+  'mentor.da-attempt.4':
+    'Airway → video laryngoscope. Look, apply BURP, try to pass the tube. If you can’t see the cords: stop and reoxygenate.',
+  'mentor.da-attempt.why':
+    'The first attempt has the best chance; an optimised first look (video, position, BURP) avoids repeated attempts.',
 };

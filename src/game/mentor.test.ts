@@ -112,8 +112,27 @@ describe('Oberarzt: checkpoints', () => {
     const tube = [...failed, evt(60, 'AIRWAY_PLACED', 'ett|correct')];
     expect(currentCheckpoint(AIRWAY, mentorStatus(AIRWAY, tube, 65))).toBeNull();
     const r = independenceReport(AIRWAY, tube, 70);
-    expect(r.decisions).toEqual([]);
+    // only the first attempt (made) counts; the rescue steps closed without being decisions
+    expect(r.decisions.map((d) => d.id)).toEqual(['da-attempt']);
     expect(r.open).toEqual([]);
+  });
+
+  it('a step opened by an event exists only after it; actions before the event do not complete it', () => {
+    const plan = mentorPlanFor('septic-intubation');
+    if (!plan) throw new Error('plan');
+    // tube at the first attempt: the "second attempt" step never existed
+    const first = [evt(287, 'AIRWAY_PLACED', 'ett|correct')];
+    const retry = mentorStatus(plan, first, 300).find((s) => s.id === 'si-retry');
+    expect(retry?.openedAt).toBeNull();
+    expect(retry?.doneAt).toBeNull();
+    // auscultation before the tube is in does not confirm it
+    const early = [
+      cmd(100, { type: 'ASSESS', kind: 'auscultation' }),
+      evt(287, 'AIRWAY_PLACED', 'ett|correct'),
+    ];
+    const confirm = mentorStatus(plan, early, 300).find((s) => s.id === 'si-confirm');
+    expect(confirm?.openedAt).toBe(287);
+    expect(confirm?.doneAt).toBeNull();
   });
 
   it('records the highest help level before the decision; help afterwards does not count', () => {
@@ -160,7 +179,8 @@ describe('Oberarzt: guided training (beginner)', () => {
   });
 
   it('an urgent step is shown at once; nothing open before the first failure (intro)', () => {
-    expect(guidedStep(AIRWAY, [], 30)).toBeNull();
+    // before the first failure the guide is on the first laryngoscopy
+    expect(guidedStep(AIRWAY, [], 30)?.checkpoint.id).toBe('da-attempt');
     const log = [evt(90, 'OXYGENATION_FAILED', 'mask|optimised')];
     const st = guidedStep(AIRWAY, log, 90);
     expect(st?.checkpoint.id).toBe('da-cico');
@@ -195,7 +215,8 @@ describe('Oberarzt: on call (intermediate)', () => {
     ];
     const r = independenceReport(AIRWAY, log, 60);
     expect(r.decisions.find((d) => d.id === 'da-limit')?.callIndicated).toBe(true);
-    expect(r.score).toBe(Math.round((100 * (1 + HELP_FACTOR[3])) / 2));
+    // first attempt (alone) 1, failed intubation declared with help but indicated 1, rescue with concrete help 0.4
+    expect(r.score).toBe(Math.round((100 * (1 + 1 + HELP_FACTOR[3])) / 3));
     expect(r.assisted).toBe(1);
     expect(r.calls).toBe(1);
   });

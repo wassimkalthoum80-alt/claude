@@ -58,7 +58,9 @@ export const septicShock: ScenarioDefinition = {
     {
       id: 'leaky',
       patient: { ageYears: 54, weightKg: 92, heightCm: 182 },
-      fluid: { interstitialChangeMl: 1500, factors: { capillaryLeak: 0.7, vasoplegia: 0.4 } },
+      // Tutorial audit B-01: a leak of 0.7 arrested even on the ideal path (the model cannot replace it); 0.6 stays the
+      // hardest variant but is salvageable with fluid, titrated noradrenaline, antibiotics and source control.
+      fluid: { interstitialChangeMl: 1500, factors: { capillaryLeak: 0.6, vasoplegia: 0.4 } },
     },
   ],
   actions: [

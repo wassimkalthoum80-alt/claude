@@ -1,4 +1,4 @@
-import type { LogEntry } from '../sim';
+import type { Command, LogEntry } from '../sim';
 import { logMatches } from './alsAssessment';
 import type { LogMatch } from './scoringTypes';
 import type { Difficulty } from './types';
@@ -34,12 +34,67 @@ export const INDEPENDENCE_WEIGHT = 0.15;
 export const GUIDE_SHOW_S = 10;
 
 /** What a call to the Oberarzt is about (the learner's short report). */
-export const CALL_TOPICS = ['circulation', 'airway', 'infection', 'drugs', 'stuck'] as const;
+export const CALL_TOPICS = [
+  'circulation',
+  'airway',
+  'infection',
+  'drugs',
+  'diagnosis',
+  'stuck',
+] as const;
 export type CallTopic = (typeof CALL_TOPICS)[number];
+
+/** One action of the ideal way through a step (the automatic playthrough dispatches it as the learner would). */
+export interface SolutionAction {
+  command: Command;
+  /** s (sim time) — wait after the action before the next one (e.g. three minutes of pre-oxygenation) */
+  waitS?: number;
+}
+
+/**
+ * An ongoing target the ideal player keeps after a step is done (e.g. titrate noradrenaline to MAP ≥ 65 mmHg): every
+ * `everyS` seconds while the measured value is outside the target, it applies the adjustment. Played by the tutorial
+ * audit; the guided window names it as the step's follow-up.
+ */
+export interface UpkeepRule {
+  id: string;
+  /** active once this checkpoint is done */
+  after: string;
+  /** measured monitor value: mean arterial pressure (mmHg) or SpO₂ (%) */
+  metric: 'artMean' | 'spo2';
+  /** apply while the value is below this */
+  below: number;
+  /** s (sim time) — between two adjustments (time for the effect to show) */
+  everyS: number;
+  adjust:
+    | {
+        kind: 'rate';
+        pumpId: string;
+        /** mL/h per adjustment */ stepMlH: number;
+        /** mL/h */ maxMlH: number;
+      }
+    | {
+        kind: 'bolus';
+        pumpId: string;
+        /** mL */
+        volumeMl: number;
+        /** s */
+        durationS: number;
+        /** mL — no more boluses beyond this total */
+        maxTotalMl: number;
+      }
+    | { kind: 'setting'; key: 'fio2' | 'peep'; /** per adjustment */ step: number; max: number };
+}
 
 /** One decision of a case the Oberarzt can guide or advise on. */
 export interface MentorCheckpoint {
   id: string;
+  /** only for these patient variants (undefined = all) */
+  variants?: readonly string[];
+  /** the ideal actions for this step — what "Zeig mir, wie" describes; played by the tutorial audit */
+  solution?: readonly SolutionAction[];
+  /** the solution may be played again this many times while the step is still not done (e.g. further attempts) */
+  repeat?: number;
   /** i18n key: the decision in a few words (window title, debrief list) */
   titleKey: string;
   /** what a call about this decision is about */
@@ -75,6 +130,28 @@ export interface MentorPlan {
   /** UI controls (data-testid) the intro points at */
   introHighlight?: readonly string[];
   checkpoints: readonly MentorCheckpoint[];
+  /** ongoing targets the ideal player keeps (titration) */
+  upkeep?: readonly UpkeepRule[];
+  /** what the ideal playthrough must reach (tutorial audit) */
+  expect?: {
+    /** how the case ends on the ideal path: an automatic end reason, or "open" (no automatic end; the learner ends it) */
+    end?: 'rosc' | 'time-limit' | 'arrest-limit' | 'open';
+    /** fewest stars the ideal path must earn (default 2) */
+    minStars?: number;
+    /** s — open-ended cases: how long the playthrough watches after the last step (default 120) */
+    observeS?: number;
+  };
+}
+
+/** The plan as it applies to one patient variant (checkpoints of other variants left out). */
+export function planForVariant(plan: MentorPlan, variant: string | null): MentorPlan {
+  if (!plan.checkpoints.some((c) => c.variants)) return plan;
+  return {
+    ...plan,
+    checkpoints: plan.checkpoints.filter(
+      (c) => !c.variants || (variant !== null && c.variants.includes(variant)),
+    ),
+  };
 }
 
 /** The Oberarzt's role by difficulty: guide (beginner), on call (intermediate), none (expert — the learner is it). */
@@ -130,20 +207,26 @@ export function mentorStatus(
   const doneAt = new Map<string, number | null>();
   const out: CheckpointStatus[] = [];
   for (const cp of plan.checkpoints) {
-    const done = firstMatch(past, cp.done);
+    // A step that opens on an event (a failed attempt, a failed rescue) does not exist until the event happened —
+    // its "done" action alone (e.g. a tube placed at the first attempt) does not make it a decision.
+    const trigger = cp.opensOn ? firstMatch(past, cp.opensOn) : 0;
+    const done =
+      trigger === null
+        ? null
+        : firstMatch(
+            past.filter((e) => e.t >= trigger),
+            cp.done,
+          );
     const mootFirst = cp.moot ? firstMatch(past, cp.moot) : null;
     const moot = mootFirst !== null && (done === null || mootFirst < done) ? mootFirst : null;
     doneAt.set(cp.id, done);
-    let opened: number | null = 0;
+    let opened: number | null = trigger;
     for (const dep of cp.after ?? []) {
       const d = doneAt.get(dep) ?? null;
       opened = d === null || opened === null ? null : Math.max(opened, d);
     }
-    if (opened !== null && cp.opensOn) {
-      const o = firstMatch(past, cp.opensOn);
-      opened = o === null ? null : Math.max(opened, o);
-    }
-    // A decision made before its checkpoint formally opened still counts (it opened when it was made).
+    // A decision made before its checkpoint formally opened (its predecessors not yet done) still counts: it opened
+    // when it was made.
     if (opened === null && done !== null) opened = done;
     let helpLevel: 0 | MentorLevel = 0;
     let requestedLevel: 0 | MentorLevel = 0;

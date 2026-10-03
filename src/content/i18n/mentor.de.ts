@@ -29,6 +29,7 @@ export const mentorDe: Record<keyof typeof mentorEn, string> = {
   'mentor.topic.airway': 'Atemweg / Beatmung',
   'mentor.topic.infection': 'Infektion / Antibiotika',
   'mentor.topic.drugs': 'Medikamente / Dosis',
+  'mentor.topic.diagnosis': 'Diagnose — was hat der Patient?',
   'mentor.topic.stuck': 'Ich komme nicht weiter',
   'mentor.debrief.title': 'Selbstständigkeit',
   'mentor.debrief.weight': 'Zählt 15 % zur Gesamtwertung (Fortgeschritten).',
@@ -82,6 +83,23 @@ export const mentorDe: Record<keyof typeof mentorEn, string> = {
     'Gib Ketamin ~1 mg/kg, dann Rocuronium 1,2 mg/kg. Warte 45–60 s auf das Relaxans, beobachte den MAP und beginne die Laryngoskopie.',
   'mentor.si-induction.why':
     'Eine volle Propofol-Dosis bringt einen sympathikusgetragenen Kreislauf zum Einbruch. Ketamin erhält den Tonus; eine hohe Relaxansdosis schafft schnell Intubationsbedingungen und hält die Apnoe kurz.',
+  'mentor.si-retry.title': 'Zweiter Versuch',
+  'mentor.si-retry.1': 'Der Tubus ist nicht drin. Schau zuerst auf die Sättigung.',
+  'mentor.si-retry.2': 'Was kommt vor einem zweiten Versuch?',
+  'mentor.si-retry.3': 'Mit der Maske reoxygenieren, dann ein zweiter, optimierter Versuch.',
+  'mentor.si-retry.4':
+    'Atemweg → Gesichtsmaske, beatmen, bis die SpO₂ sich erholt. Dann Videolaryngoskop, BURP, Tubus vorschieben. Höchstens drei Versuche.',
+  'mentor.si-retry.why':
+    'Sauerstoff vor Ehrgeiz: Jeder Versuch kostet Sättigung. Reoxygenieren, etwas ändern (Gerät, Lagerung, BURP), dann erneut.',
+  'mentor.si-ventilate.title': 'Beatmung einstellen',
+  'mentor.si-ventilate.1': 'Der Tubus liegt. Schau auf die Sättigung und die Beatmungseinstellung.',
+  'mentor.si-ventilate.2': 'Reichen FiO₂ 40 % und PEEP 5 für diese Lunge?',
+  'mentor.si-ventilate.3':
+    'Erhöhe FiO₂ (etwa 80 %) und PEEP (etwa 10 cmH₂O), dann auf SpO₂ ≥ 92 % titrieren.',
+  'mentor.si-ventilate.4':
+    'Am Beatmungsgerät: FiO₂ 80 %, PEEP 10. Beobachte SpO₂ und Blutdruck; reduziere die FiO₂, sobald die Sättigung stabil ist.',
+  'mentor.si-ventilate.why':
+    'Pneumonie heißt Shunt: Mehr Sauerstoff und mehr PEEP rekrutieren die Lunge. Zu viel PEEP kann den Blutdruck senken — achte auf beides.',
   'mentor.si-confirm.title': 'Tubuslage bestätigen',
   'mentor.si-confirm.1': 'Schau auf die Kapnografie und hör hin.',
   'mentor.si-confirm.2':
@@ -178,4 +196,22 @@ export const mentorDe: Record<keyof typeof mentorEn, string> = {
     'Ordne „Chirurgen rufen (Fokussanierung)“ an — ein Abszess heilt nicht durch das Antibiotikum allein.',
   'mentor.ss-source.why':
     'Ein nicht drainierter Fokus unterhält den Schock trotz Antibiotika. Fokussanierung, sobald machbar (innerhalb von Stunden).',
+
+  // --- gemeinsame Zusatzschritte ---
+  'mentor.ss-diagnosis.title': 'Arbeitsdiagnose',
+  'mentor.ss-diagnosis.1': 'Fass zusammen, was du siehst: Temperatur, Druck, die Drainage.',
+  'mentor.ss-diagnosis.2': 'Was ist deine Arbeitsdiagnose — und hast du sie ausgesprochen?',
+  'mentor.ss-diagnosis.3': 'Leg die Arbeitsdiagnose fest: septischer Schock.',
+  'mentor.ss-diagnosis.4': 'Öffne „Diagnose“ unter der Szene und wähle septischer Schock.',
+  'mentor.ss-diagnosis.why':
+    'Die ausgesprochene Arbeitsdiagnose richtet Team und Therapie aus; du kannst sie ändern, wenn sich das Bild ändert.',
+  'mentor.da-attempt.title': 'Erste Laryngoskopie',
+  'mentor.da-attempt.1': 'Der Atemweg gehört dir. Fang mit deinem besten ersten Versuch an.',
+  'mentor.da-attempt.2': 'Wie machst du den ersten Versuch zum besten?',
+  'mentor.da-attempt.3':
+    'Videolaryngoskop, äußerer Kehlkopfdruck (BURP), dann den Tubus vorschieben.',
+  'mentor.da-attempt.4':
+    'Atemweg → Videolaryngoskop. Einstellen, BURP, Tubus vorschieben. Siehst du die Stimmbänder nicht: abbrechen und reoxygenieren.',
+  'mentor.da-attempt.why':
+    'Der erste Versuch hat die besten Chancen; ein optimierter erster Blick (Video, Lagerung, BURP) erspart wiederholte Versuche.',
 };

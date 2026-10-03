@@ -1,6 +1,6 @@
 import { mentorPlanFor } from '../../content/mentor/plans';
 import { SCORING_DEFAULTS, scoringFor } from '../../content/scoring/scoringConfig';
-import { isGuided, mentorMode } from '../../game/mentor';
+import { isGuided, mentorMode, planForVariant } from '../../game/mentor';
 import type { AchievementId, ProgressStore } from '../../game/profile';
 import { levelOf, recordSession } from '../../game/progression';
 import { scoreSession } from '../../game/scoring';
@@ -52,10 +52,11 @@ export function finishScoredSession(
     engine.guidelines.compressionFraction.targetPct,
   );
   // Expert sessions have no Oberarzt; unknown cases no plan (the steps would give the diagnosis away).
-  const mentor =
+  const base =
     mentorMode(session.difficulty, session.scored) === 'off' || session.unknown
       ? null
       : mentorPlanFor(session.scenarioId);
+  const mentor = base ? planForVariant(base, s.scenario.variant) : null;
   const score = scoreSession(input, sc, SCORING_DEFAULTS, mentor);
   // Beginner + a case with a plan = "Geführtes Training": full score and XP, labelled as such.
   const guided = isGuided(session.difficulty, session.scored, mentor);

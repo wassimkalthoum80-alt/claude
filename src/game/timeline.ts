@@ -118,6 +118,8 @@ export function commandDetail(c: Command): string {
       return c.checkpoint;
     case 'MENTOR_CALL':
       return c.topic;
+    case 'DECLARE_DIAGNOSIS':
+      return c.id;
     case 'SET_RESP_SUPPORT':
       return c.support;
     case 'AIRWAY_CHECKLIST':

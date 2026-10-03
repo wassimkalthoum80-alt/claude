@@ -3,6 +3,7 @@ import { mentorPlanFor } from '../../../content/mentor/plans';
 import {
   mentorMode,
   mentorStatus,
+  planForVariant,
   type CallTopic,
   type CheckpointStatus,
   type MentorLevel,
@@ -48,7 +49,8 @@ export function useMentor(): MentorContext {
   const s = engine.getSnapshot();
   const mode = mentorMode(ui.session?.difficulty ?? null, ui.session?.scored ?? false);
   // An unknown case gets no plan: the steps would give the diagnosis away (it keeps its hint ladder).
-  const plan = mode === 'off' || ui.session?.unknown ? null : mentorPlanFor(engine.scenario.id);
+  const base = mode === 'off' || ui.session?.unknown ? null : mentorPlanFor(engine.scenario.id);
+  const plan = base ? planForVariant(base, s.scenario.variant) : null;
   const log = engine.eventLog;
   return {
     mode,

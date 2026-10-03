@@ -435,6 +435,9 @@ export function scoreSession(
     time,
   };
   const weights = sc.weights ?? {};
+  // Tutorial audit B-02: a sub-score the case does not weight (e.g. recognition in a planned intubation) is not
+  // applicable — shown as such and never blocking the ★★★ rule that every scored dimension be solid.
+  for (const k of SCORE_KEYS) if (weights[k] === 0) scores[k] = null;
   const competence = overallOf(scores, weights);
   const independence = mentor ? independenceReport(mentor, input.log, input.end) : null;
   const overall = withIndependence(competence, independence?.score ?? null, input.difficulty);
