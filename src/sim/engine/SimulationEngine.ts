@@ -138,6 +138,9 @@ const MAX_MESSAGES = 50;
  * - React reads immutable snapshots via `subscribe`/`getSnapshot` (useSyncExternalStore);
  *   canvases read `signals` directly.
  */
+/** Upper-airway patency of an unconscious patient without a device, by mask-ventilation class. */
+const UPPER_AIRWAY_PATENCY = { easy: 1, difficult: 0.3, impossible: 0 } as const;
+
 /** Oxygen devices worn over the mouth (off during laryngoscopy). */
 const FACE_MASKS: ReadonlySet<string> = new Set(['simple-mask', 'reservoir-mask', 'venturi']);
 
@@ -1654,6 +1657,23 @@ export class SimulationEngine {
     const l = p.airway.laryngoscopy;
     const maskOff =
       l !== null && l.technique === 'asleep' && FACE_MASKS.has(this.state.devices.oxygen.support);
+    // SIM-ASSUMPTION (airway stage C): an obstructed face mask or failed supraglottic airway (leak beyond 50 %, see
+    // airwayLeak) also stops the oxygen inflow during apnoea — at a 95 % "leak" the alveoli see room air.
+    const upper = p.airway.device === 'mask' || p.airway.device === 'sga';
+    const patent = upper ? 1 - Math.min(1, Math.max(0, p.airway.leakFraction - 0.5) / 0.45) : 1;
+    const ventFio2 = 0.21 + (vent.active.fio2 / 100 - 0.21) * patent;
+    // SIM-ASSUMPTION (airway stage C): an unconscious or paralysed patient without an airway device (and no blade in
+    // the mouth) has a collapsed upper airway in proportion to the mask-ventilation class — apnoeic inflow from an
+    // oxygen device reaches the alveoli fully (easy), to 30 % (difficult) or not at all (impossible).
+    const unconscious =
+      p.brain.hypnoticDepth >= 1 ||
+      p.pharmacology.effects.neuromuscularBlock >= 0.8 ||
+      !p.cardio.spontaneousCirculation;
+    const open =
+      p.airway.device !== 'none' || l !== null || !unconscious
+        ? 1
+        : UPPER_AIRWAY_PATENCY[p.airway.maskVentilation];
+    const standbyFio2 = 0.21 + (this.state.devices.oxygen.inspiredO2 / 100 - 0.21) * open;
     return {
       cardiacOutput: p.cardio.cardiacOutput,
       alveolarVentilation: p.gas.alveolarVentilation,
@@ -1663,10 +1683,10 @@ export class SimulationEngine {
       fio2: vent.standby
         ? maskOff
           ? 0.21
-          : this.state.devices.oxygen.inspiredO2 / 100
+          : standbyFio2
         : vent.circuitConnected &&
             !(p.airway.device === 'ett' && p.airway.position === 'oesophageal')
-          ? vent.active.fio2 / 100
+          ? ventFio2
           : 0.21,
       shunt: p.gas.shunt,
       lungGasVolume: p.gas.lungGasVolume,
@@ -1792,6 +1812,24 @@ export class SimulationEngine {
         3,
       );
     }
+    // Difficult airway (stage C): the second and third failed attempt, aspiration, can't oxygenate.
+    const failed = s.patient.airway.lastAttempt;
+    if (failed && failed.outcome !== 'placed' && !l && t - failed.at < 2) {
+      if (air.attempts === 2) say('second', 'airway.prompt.second', 'important', {}, 3);
+      if (air.attempts >= 3) say('third', 'airway.prompt.third', 'critical', {}, 4);
+    }
+    if (air.aspirated) say('aspiration', 'airway.prompt.aspiration', 'critical', {}, 4);
+    const spo2Now = s.devices.monitor.numerics.spo2;
+    const tracheal = air.device === 'ett' && air.position !== 'oesophageal';
+    const notVentilated =
+      !tracheal &&
+      !air.insertion &&
+      (air.device === 'none' || air.leakFraction > 0.6 || !s.devices.ventilator.circuitConnected);
+    if (spo2Now !== null && spo2Now < 80 && notVentilated && air.attempts > 0) {
+      this.cicoSince ??= t;
+      if (t - this.cicoSince >= 20)
+        say('cico', 'airway.prompt.cico', 'critical', { spo2: spo2Now }, 4);
+    } else this.cicoSince = null;
     const placed = air.tubePlacedAt;
     if (placed !== null && air.device === 'ett' && !s.devices.ventilator.circuitConnected) {
       if (t - placed >= 20)
@@ -1813,6 +1851,9 @@ export class SimulationEngine {
     }
     return out;
   }
+
+  /** s — since when the SpO₂ is below 80 % without ventilation after an intubation attempt (CICO prompt) */
+  private cicoSince: number | null = null;
 
   /** A hypnotic/sedative infusion is running (maintenance after induction). */
   private hypnoticInfusionRunning(): boolean {

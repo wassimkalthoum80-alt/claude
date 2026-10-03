@@ -253,8 +253,82 @@ export const septicIntubation: ScenarioDefinition = {
   ],
 };
 
+/**
+ * Unexpected difficult airway after induction (airway stage C, DAS algorithm): an obese patient, pre-oxygenated
+ * and induced by a colleague (propofol + rocuronium), grade 4 at laryngoscopy and difficult face-mask ventilation.
+ * Each variant has its own way out: the supraglottic airway seals (plan B), only optimised mask ventilation works
+ * and the patient is woken with sugammadex (plan C), or nothing oxygenates and only a scalpel cricothyroidotomy
+ * saves the patient (plan D, CICO).
+ */
+export const difficultAirway: ScenarioDefinition = {
+  ...baselinePatient,
+  id: 'difficult-airway',
+  titleKey: 'scenario.difficultAirway.title',
+  briefingKey: 'scenario.difficultAirway.briefing',
+  presentationKey: 'scenario.difficultAirway.presentation',
+  seed: 7404,
+  patient: {
+    ...baselinePatient.patient,
+    sex: 'female',
+    ageYears: 46,
+    weightKg: 108,
+    heightCm: 165,
+    heartRate: 84,
+    lungPreset: 'obese',
+    // pre-oxygenated for three minutes before the induction (alveolar O₂ ≈ 0.85)
+    initialSpo2: 100,
+    airway: 'none',
+    airwayGrade: 4,
+    maskVentilation: 'difficult',
+    sgaSeal: 'good',
+  },
+  oxygen: { support: 'reservoir-mask', flowLMin: { 'reservoir-mask': 15 } },
+  pumps: [
+    { id: 'P1', kind: 'syringe', productId: 'propofol-2', protocolId: 'maintenance' },
+    { id: 'P2', kind: 'syringe', productId: 'sufentanil-5', protocolId: 'maintenance' },
+    { id: 'P3', kind: 'syringe', productId: 'noradrenaline-100', protocolId: 'infusion' },
+    { id: 'P4', kind: 'syringe', productId: 'noradrenaline-10', protocolId: 'bolus' },
+    { id: 'P5', kind: 'syringe', productId: null },
+    {
+      id: 'INF1',
+      kind: 'volumetric',
+      productId: 'sterofundin-iso',
+      protocolId: 'maintenance',
+      rateMlH: 100,
+      running: true,
+    },
+  ],
+  timeline: [
+    { at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'normal' } },
+    // The colleague's induction after three minutes of pre-oxygenation (before the learner takes over).
+    { at: 2, command: { type: 'DRUG_PUSH', productId: 'propofol-1', dose: 2, unit: 'mg/kg' } },
+    { at: 3, command: { type: 'DRUG_PUSH', productId: 'rocuronium-10', dose: 1, unit: 'mg/kg' } },
+  ],
+  objectives: [],
+  maxDurationS: 1200,
+  endAfterArrestS: 180,
+  variants: [
+    { id: 'sga', patient: { maskVentilation: 'difficult', sgaSeal: 'good' } },
+    { id: 'mask', patient: { maskVentilation: 'difficult', sgaSeal: 'poor' } },
+    { id: 'cico', patient: { maskVentilation: 'impossible', sgaSeal: 'fails' } },
+  ],
+  hints: [
+    {
+      id: 'difficult-airway',
+      titleKey: 'hint.difficultAirway.title',
+      levels: [
+        'hint.difficultAirway.1',
+        'hint.difficultAirway.2',
+        'hint.difficultAirway.3',
+        'hint.difficultAirway.4',
+      ],
+    },
+  ],
+};
+
 export const CHALLENGE_CASES: readonly ScenarioDefinition[] = [
   septicShock,
   inductionHypotension,
   septicIntubation,
+  difficultAirway,
 ];

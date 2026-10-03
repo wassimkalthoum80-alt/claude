@@ -190,6 +190,7 @@ export const MODULE_CATALOG: ModuleCatalog = [
         entries: [
           review(available('induction', 'challenges.induction', 'induction-hypotension')),
           review(available('intubation', 'challenges.intubation', 'septic-intubation')),
+          review(available('difficult-airway', 'challenges.difficultAirway', 'difficult-airway')),
         ],
       },
       {
@@ -323,6 +324,7 @@ export const MODULE_CATALOG: ModuleCatalog = [
           scenarioEntry('septic-shock', 'septicShock', 'septic-shock'),
           scenarioEntry('induction-hypotension', 'inductionHypotension', 'induction-hypotension'),
           scenarioEntry('septic-intubation', 'septicIntubation', 'septic-intubation'),
+          scenarioEntry('difficult-airway', 'difficultAirway', 'difficult-airway'),
           ...FLUID_PRESETS.map(([id, key]) => scenarioEntry(id, key, id)),
         ],
       },

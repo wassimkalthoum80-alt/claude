@@ -131,10 +131,19 @@ export const TUBE = {
   blockedMl: 7,
 } as const;
 
-/** The view the learner sees: BURP improves grades 2 and 3 by one. */
-export function effectiveGrade(grade: CormackLehane, burp: boolean): CormackLehane {
-  if (!burp || grade === 1 || grade === 4) return grade;
-  return (grade - 1) as CormackLehane;
+/**
+ * The view the learner sees: a video laryngoscope improves the view by one grade (indirect view around the
+ * tongue), then BURP improves a grade 2 or 3 by one more.
+ * SIM-ASSUMPTION (airway stage C): one grade for the video laryngoscope (educational; real gains vary by blade).
+ */
+export function effectiveGrade(
+  grade: CormackLehane,
+  burp: boolean,
+  video = false,
+): CormackLehane {
+  const g = video && grade > 1 ? ((grade - 1) as CormackLehane) : grade;
+  if (!burp || g === 1 || g === 4) return g;
+  return (g - 1) as CormackLehane;
 }
 
 /** cm — ideal tube depth at the teeth. */

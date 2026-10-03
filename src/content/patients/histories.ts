@@ -579,6 +579,33 @@ export const HISTORIES: Record<string, PatientHistory> = {
       'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
     ),
   },
+  'difficult-airway': {
+    caseId: 'SIM-6004',
+    diagnosis: t('Symptomatic cholecystolithiasis', 'Symptomatische Cholezystolithiasis'),
+    procedure: t(
+      'Elective laparoscopic cholecystectomy; general anaesthesia — pre-oxygenated, induced with propofol and rocuronium',
+      'Elektive laparoskopische Cholezystektomie; Allgemeinanästhesie — präoxygeniert, eingeleitet mit Propofol und Rocuronium',
+    ),
+    asa: 'II',
+    allergies: [NKDA],
+    conditions: [
+      t('Obesity BMI 40', 'Adipositas BMI 40'),
+      t('Obstructive sleep apnoea (no CPAP)', 'Obstruktive Schlafapnoe (kein CPAP)'),
+    ],
+    medications: [t('Pantoprazole 20 mg daily', 'Pantoprazol 20 mg täglich')],
+    findings: [
+      t(
+        'Airway assessment: Mallampati III, short thick neck, limited neck extension',
+        'Atemwegsbeurteilung: Mallampati III, kurzer dicker Hals, eingeschränkte Reklination',
+      ),
+      t('No previous anaesthetic records available', 'Keine Vornarkoseprotokolle verfügbar'),
+    ],
+    fasting: t('Fasted since midnight', 'Nüchtern seit Mitternacht'),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
   'induction-hypotension': {
     caseId: 'SIM-6002',
     diagnosis: t('Femoral neck fracture', 'Schenkelhalsfraktur'),

@@ -18,6 +18,7 @@ import type {
 } from '../state/MonitorState';
 import type { VentMode } from '../state/VentilatorState';
 import type {
+  AirwayCall,
   AirwayChecklistItem,
   AirwayPosition,
   DefibMode,
@@ -41,7 +42,11 @@ export type ProcedureKind =
   | 'ioAccess'
   | 'gastricTube'
   /** check the cuff pressure and re-inflate (ends a cuff leak) */
-  | 'cuffCheck';
+  | 'cuffCheck'
+  /** scalpel–bougie–tube cricothyroidotomy (front-of-neck access in CICO) */
+  | 'cricothyroidotomy'
+  /** suction of the pharynx (regurgitated gastric contents) */
+  | 'suction';
 
 export type VentSettingKey =
   | 'vt'
@@ -189,7 +194,7 @@ export type Command =
       device: Exclude<AirwayDevice, 'none'>;
       position?: AirwayPosition;
       /** tracheal tube by the learner: asleep laryngoscopy (default) or awake topical intubation */
-      technique?: 'asleep' | 'awake';
+      technique?: 'asleep' | 'awake' | 'video';
     }
   /** stop the laryngoscopy attempt in progress (reoxygenate) */
   | { type: 'AIRWAY_ABORT' }
@@ -207,6 +212,10 @@ export type Command =
   | { type: 'AIRWAY_CONNECT' }
   /** confirm (or un-confirm) an item of the pre-intubation checklist */
   | { type: 'AIRWAY_CHECKLIST'; item: AirwayChecklistItem; done: boolean }
+  /** difficult-airway team call: help, declare a failed intubation, declare CICO */
+  | { type: 'AIRWAY_CALL'; call: AirwayCall }
+  /** oropharyngeal airway and two-handed face-mask technique on/off */
+  | { type: 'AIRWAY_MASK_ADJUNCT'; on: boolean }
   /** remove the airway device; `then` = the support connected next (extubation names it; default room air) */
   | { type: 'AIRWAY_REMOVE'; then?: RespSupport }
   /** cm — pull the tracheal tube back (corrects an endobronchial position) */
@@ -332,6 +341,8 @@ export type ClinicalEventType =
   | 'AIRWAY_REMOVED'
   /** the ventilation was connected to the airway device by the learner */
   | 'AIRWAY_CONNECTED'
+  /** gastric contents regurgitated and aspirated (unprotected airway, full stomach) */
+  | 'ASPIRATION'
   /** a tube step: cuff, depth or fixation (detail: "cuff|22 cmH2O", "depth|23 cm|correct", "fixed|23 cm") */
   | 'TUBE_STEP'
   /** laryngoscopy started (detail: "attempt n|technique") */

@@ -93,11 +93,25 @@ export const AIRWAY_CHECKLIST = [
 ] as const;
 export type AirwayChecklistItem = (typeof AIRWAY_CHECKLIST)[number];
 
+/** Team calls of the difficult-airway algorithm (DAS): help, failed intubation, can't intubate can't oxygenate. */
+export const AIRWAY_CALLS = ['help', 'failedIntubation', 'cico'] as const;
+export type AirwayCall = (typeof AIRWAY_CALLS)[number];
+/** Face-mask ventilation of a patient (anatomy). */
+export type MaskVentilation = 'easy' | 'difficult' | 'impossible';
+/** Seal of a supraglottic airway in a patient. */
+export type SgaSeal = 'good' | 'poor' | 'fails';
+
 export interface AirwayState {
   device: AirwayDevice;
   position: AirwayPosition;
   /** insertion in progress (no ventilation through it until complete) */
-  insertion: { device: AirwayDevice; position: AirwayPosition; completesAt: number } | null;
+  insertion: {
+    device: AirwayDevice;
+    position: AirwayPosition;
+    completesAt: number;
+    /** scalpel cricothyroidotomy (tube through the neck) */
+    frontOfNeck?: boolean;
+  } | null;
   /** mL — air insufflated into the stomach (mask/SGA leak above the oesophageal opening pressure, oesophageal tube) */
   gastricAirMl: number;
   /** 0..1 — fraction of the delivered tidal volume lost through the leak of the last breath (derived) */
@@ -124,6 +138,8 @@ export interface AirwayState {
     phase: 'blade' | 'passing';
     /** external laryngeal pressure (BURP) applied */
     burp: boolean;
+    /** video laryngoscope (indirect view: one grade better) */
+    video: boolean;
   } | null;
   /** cm — tube depth at the teeth (tracheal tube) */
   tubeDepthCm: number;
@@ -150,6 +166,20 @@ export interface AirwayState {
   prompts: string[];
   /** pre-intubation checklist items confirmed so far */
   checklist: AirwayChecklistItem[];
+  /** face-mask ventilation of this patient: easy, difficult (needs an oral airway and two hands) or impossible */
+  maskVentilation: MaskVentilation;
+  /** seal of a supraglottic airway in this patient */
+  sgaSeal: SgaSeal;
+  /** oropharyngeal airway and two-handed mask technique in use */
+  maskAdjunct: boolean;
+  /** supraglottic airway insertions by the learner */
+  sgaAttempts: number;
+  /** the tracheal tube went in through the neck (scalpel cricothyroidotomy) */
+  frontOfNeck: boolean;
+  /** team calls made so far */
+  calls: AirwayCall[];
+  /** gastric contents were aspirated (once per session) */
+  aspirated: boolean;
 }
 
 export type Side = 'left' | 'right';
@@ -176,6 +206,8 @@ export interface PatientConditions {
    * injury): not opened by PEEP and barely improved by oxygen
    */
   consolidationShunt: number;
+  /** not fasted: regurgitation and aspiration while unconscious and unprotected */
+  fullStomach: boolean;
 }
 
 export type ShockOutcome =

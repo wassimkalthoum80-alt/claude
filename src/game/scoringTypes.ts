@@ -180,6 +180,15 @@ export interface ScoringRules {
     cuffCmH2O: readonly [number, number];
     /** s — sedation after the tube is assessed only when the tube stayed this long */
     sedationCheckS: number;
+    /** difficult airway (DAS): laryngoscopy attempts at most */
+    maxAttempts: number;
+    /** s — supraglottic airway or face mask after the first failed attempt within */
+    planBMaxS: number;
+    /** % and s — SpO₂ below this for this long without a tracheal tube = can't intubate, can't oxygenate */
+    cicoSpo2: number;
+    cicoSustainS: number;
+    /** s — CICO → tracheal tube (front of neck) within */
+    cicoMaxS: number;
     /** share of the airway score in the treatment score of an airway case (0..1) */
     treatmentWeight: number;
     /** safety points: possible awareness, unrecognised oesophageal tube, each attempt beyond the second */

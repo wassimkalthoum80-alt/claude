@@ -6,7 +6,7 @@ import type { EcgLeadSet, TempProbe } from '../state/MonitorState';
 import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
 import type { FluidInit } from '../fluid/init';
-import type { PatientConditions } from '../state/ResuscitationState';
+import type { MaskVentilation, PatientConditions, SgaSeal } from '../state/ResuscitationState';
 import type { DirectorRule, Experiment, HintTopic, ScenarioAction } from './director';
 import type { ObservationOverrides } from './observation';
 
@@ -46,6 +46,10 @@ export interface PatientInit {
    * unselected adult distribution); default 1
    */
   airwayGrade?: 1 | 2 | 3 | 4 | 'random';
+  /** face-mask ventilation (default easy) */
+  maskVentilation?: MaskVentilation;
+  /** supraglottic airway seal (default good) */
+  sgaSeal?: SgaSeal;
   /** frailty, drug sensitivity, temperature, organ function, EEG amplitude; defaults from age */
   factors?: Partial<PatientFactors>;
 }

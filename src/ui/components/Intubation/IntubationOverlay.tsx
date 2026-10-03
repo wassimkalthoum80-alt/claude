@@ -151,6 +151,7 @@ function IntubationCard({
             mode={v.phase}
             passProgress={v.passProgress}
             burp={v.burp}
+            video={v.video}
           />
           <div className={styles.side}>
             {v.phase === 'resisted' && <div className={styles.alert}>{t('intub.resisted')}</div>}

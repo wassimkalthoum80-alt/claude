@@ -575,7 +575,18 @@ export function scoreSession(
       improve.unshift({ key: 'fb.improve.airway.etomidateSepsis' });
     const missed = airway.items.filter((i) => i.ok === false);
     // Most consequential first: the order of AIRWAY_ITEMS follows the procedure; safety items lead.
-    const lead = ['oesophageal', 'awareness', 'spo2', 'map', 'dose', 'preoxygenation'];
+    const lead = [
+      'cico',
+      'oesophageal',
+      'planB',
+      'declare',
+      'awareness',
+      'spo2',
+      'map',
+      'attemptLimit',
+      'dose',
+      'preoxygenation',
+    ];
     missed.sort((a, b) => {
       const ia = lead.indexOf(a.id);
       const ib = lead.indexOf(b.id);

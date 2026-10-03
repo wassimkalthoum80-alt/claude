@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
 import {
+  AIRWAY_CALLS,
   AIRWAY_CHECKLIST,
   RESP_SUPPORTS,
   type RespSupport,
@@ -59,6 +60,21 @@ export function AirwayPanel() {
     useCallback((s: Readonly<SimulationState>) => s.patient.airway.checklist, []),
     deepEqual,
   );
+  const das = useEngineSelector(
+    useCallback(
+      (s: Readonly<SimulationState>) => ({
+        calls: s.patient.airway.calls,
+        adjunct: s.patient.airway.maskAdjunct,
+        fona: s.patient.airway.frontOfNeck,
+        fonaLeftS: s.patient.airway.insertion?.frontOfNeck
+          ? Math.max(0, Math.ceil(s.patient.airway.insertion.completesAt - s.time))
+          : null,
+      }),
+      [],
+    ),
+    deepEqual,
+  );
+  const [suction, setSuction] = useState<'clear' | 'gastric' | null>(null);
   const [lungs, setLungs] = useState<Auscultation | null>(null);
   const [epi, setEpi] = useState<Auscultation['epigastric'] | null>(null);
   /** the support after removal — extubation names it; there is no implied return to room air */
@@ -81,9 +97,13 @@ export function AirwayPanel() {
       <div className={styles.row}>
         <span className={styles.dim}>{t('air.current')}</span>
         <b data-testid="airway-device">
-          {v.inserting !== null
-            ? `${t(DEVICE_KEY[v.inserting] ?? 'air.none')} … ${v.insertLeftS} s`
-            : t(DEVICE_KEY[v.device] ?? 'air.none')}
+          {das.fonaLeftS !== null
+            ? t('air.das.fonaRunning', { s: das.fonaLeftS })
+            : v.inserting !== null
+              ? `${t(DEVICE_KEY[v.inserting] ?? 'air.none')} … ${v.insertLeftS} s`
+              : das.fona && v.device === 'ett'
+                ? t('air.fona')
+                : t(DEVICE_KEY[v.device] ?? 'air.none')}
         </b>
       </div>
       <div className={styles.row}>
@@ -154,16 +174,30 @@ export function AirwayPanel() {
             {t('air.intubate')}
           </button>
         </div>
-        <button
-          type="button"
-          className={styles.btn}
-          style={{ marginTop: 6, width: '100%' }}
-          disabled={busy || v.device === 'ett'}
-          onClick={() => user({ type: 'AIRWAY_INSERT', device: 'ett', technique: 'awake' })}
-          data-testid="airway-ett-awake"
-        >
-          {t('air.intubateAwake')}
-        </button>
+        <div className={styles.grid2} style={{ marginTop: 6 }}>
+          <button
+            type="button"
+            className={styles.btn}
+            disabled={busy}
+            onClick={() => {
+              setLungs(null);
+              setEpi(null);
+              user({ type: 'AIRWAY_INSERT', device: 'ett', technique: 'video' });
+            }}
+            data-testid="airway-ett-video"
+          >
+            {t('air.video')}
+          </button>
+          <button
+            type="button"
+            className={styles.btn}
+            disabled={busy || v.device === 'ett'}
+            onClick={() => user({ type: 'AIRWAY_INSERT', device: 'ett', technique: 'awake' })}
+            data-testid="airway-ett-awake"
+          >
+            {t('air.intubateAwake')}
+          </button>
+        </div>
         {lar && (
           <div className={`${styles.finding} ${styles.warn}`} data-testid="laryngoscopy">
             <b>{t('air.attempt', { n: lar.attempt })}</b> ·{' '}
@@ -245,6 +279,62 @@ export function AirwayPanel() {
         <div className={styles.faint} style={{ marginTop: 4 }}>
           {t('air.hint')}
         </div>
+      </div>
+
+      <div className={styles.section} data-testid="airway-das">
+        <div className={styles.sectionTitle}>{t('air.das.title')}</div>
+        <div className={styles.grid3}>
+          {AIRWAY_CALLS.map((call) => (
+            <button
+              key={call}
+              type="button"
+              className={`${styles.btn} ${das.calls.includes(call) ? styles.btnOn : ''}`}
+              onClick={() => user({ type: 'AIRWAY_CALL', call })}
+              data-testid={`das-${call}`}
+            >
+              {t(`air.das.${call}`)}
+              {das.calls.includes(call) && ' ✓'}
+            </button>
+          ))}
+        </div>
+        <div className={styles.grid2} style={{ marginTop: 6 }}>
+          <button
+            type="button"
+            className={`${styles.btn} ${das.adjunct ? styles.btnOn : ''}`}
+            disabled={v.device !== 'mask'}
+            onClick={() => user({ type: 'AIRWAY_MASK_ADJUNCT', on: !das.adjunct })}
+            data-testid="das-adjunct"
+            aria-pressed={das.adjunct}
+          >
+            {t('air.das.adjunct')}
+          </button>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={() => {
+              user({ type: 'PROCEDURE', kind: 'suction' });
+              setSuction(engine.getSnapshot().patient.airway.aspirated ? 'gastric' : 'clear');
+            }}
+            data-testid="das-suction"
+          >
+            {t('air.das.suction')}
+          </button>
+        </div>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnDanger}`}
+          style={{ marginTop: 6, width: '100%' }}
+          disabled={das.fonaLeftS !== null || das.fona}
+          onClick={() => user({ type: 'PROCEDURE', kind: 'cricothyroidotomy' })}
+          data-testid="das-fona"
+        >
+          {t('air.das.fona')}
+        </button>
+        {suction && (
+          <div className={`${styles.finding} ${suction === 'gastric' ? styles.warn : ''}`}>
+            {t(suction === 'gastric' ? 'air.das.suctionGastric' : 'air.das.suctionClear')}
+          </div>
+        )}
       </div>
 
       <div className={styles.section}>

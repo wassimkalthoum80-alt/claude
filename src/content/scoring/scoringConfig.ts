@@ -73,6 +73,13 @@ export const SCORING_DEFAULTS: ScoringRules = {
     connectMaxS: 60,
     cuffCmH2O: [20, 30],
     sedationCheckS: 240,
+    // DAS 2015: at most three laryngoscopy attempts (+ one by an expert); declare the failure, oxygenate through
+    // a supraglottic airway (plan B) or face mask (plan C); CICO → front-of-neck access without delay (plan D).
+    maxAttempts: 3,
+    planBMaxS: 180,
+    cicoSpo2: 80,
+    cicoSustainS: 20,
+    cicoMaxS: 120,
     treatmentWeight: 0.5,
     safetyAwareness: 15,
     safetyOesophageal: 25,
@@ -227,6 +234,14 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
       safety: 1.5,
       efficiency: 0.5,
     },
+  },
+  {
+    scenarioId: 'difficult-airway',
+    topics: ['airway', 'patientSafety'],
+    learningKey: 'learn.difficultAirway',
+    problemAtStart: true,
+    airway: {},
+    weights: { recognition: 0, time: 0, treatment: 2.5, stabilisation: 1.5, safety: 1.5, efficiency: 0.5 },
   },
   // ── Skills Training: ventilation troubleshooting (diagnosis + fix per variant) ──
   {

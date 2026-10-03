@@ -25,6 +25,8 @@ export interface IntubationView {
   /** the view the learner sees (BURP applied), null while there is none */
   view: 1 | 2 | 3 | 4 | null;
   burp: boolean;
+  /** video laryngoscope (indirect view) */
+  video: boolean;
   /** 0..1 — the tube's way to the glottis while it is passed */
   passProgress: number;
   /** outcome of the last attempt (shown after a failure) */
@@ -94,8 +96,12 @@ export function intubationView(s: Readonly<SimulationState>): IntubationView {
     phase,
     attempt: a.attempts,
     attemptS: l ? Math.max(0, Math.floor(s.time - l.startedAt)) : 0,
-    view: l && !l.resisted && l.technique === 'asleep' ? effectiveGrade(a.grade, l.burp) : null,
+    view:
+      l && !l.resisted && l.technique === 'asleep'
+        ? effectiveGrade(a.grade, l.burp, l.video)
+        : null,
     burp: l?.burp ?? false,
+    video: l?.video ?? false,
     passProgress:
       l && l.phase === 'passing' && l.endsAt !== null
         ? Math.min(1, Math.max(0, 1 - (l.endsAt - s.time) / TUBE.passS))

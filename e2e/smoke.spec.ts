@@ -1206,3 +1206,46 @@ test('airway stage B: septic intubation — checklist, RSI, steps, airway debrie
   await page.screenshot({ path: 'test-results/airway-debrief.png', fullPage: true });
   expect(errors).toEqual([]);
 });
+
+test('airway stage C: cannot see the cords — DAS calls, rescue, scalpel cricothyroidotomy', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?lang=de&debug&seed=3');
+  await page.getByTestId('module-challenges').click();
+  await page.getByTestId('difficulty-beginner').click();
+  await page.getByTestId('entry-difficult-airway').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
+    e?.runFor(60);
+  });
+  await page.getByTestId('action-airway').click();
+  // Plan A with the video laryngoscope: the view on its screen.
+  await page.getByTestId('airway-ett-video').click();
+  await expect(page.getByTestId('video-frame')).toBeVisible();
+  await page.getByTestId('intubation-abort').click();
+  await page.getByTestId('intubation-close').click();
+  // Declare and call; the front-of-neck access goes in through the neck.
+  await page.getByTestId('das-help').click();
+  await page.getByTestId('das-failedIntubation').click();
+  await page.getByTestId('das-cico').click();
+  await expect(page.getByTestId('das-cico')).toContainText('✓');
+  await page.getByTestId('das-fona').click();
+  await expect(page.getByTestId('airway-device')).toContainText('Koniotomie');
+  await page.evaluate(() => window.__resusEngine?.runFor(50));
+  await expect(page.getByTestId('airway-device')).toContainText('Hals');
+  const placed = await page.evaluate(() =>
+    window.__resusEngine?.eventLog.some(
+      (l) =>
+        l.kind === 'event' &&
+        l.event === 'AIRWAY_PLACED' &&
+        /fona/.test(String((l as { detail?: string }).detail)),
+    ),
+  );
+  expect(placed).toBe(true);
+  await page.screenshot({ path: 'test-results/airway-das.png' });
+  expect(errors).toEqual([]);
+});

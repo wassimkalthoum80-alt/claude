@@ -178,12 +178,20 @@ export function createInitialState(
         paralysedAwakeS: 0,
         prompts: [],
         checklist: [],
+        maskVentilation: p.maskVentilation ?? 'easy',
+        sgaSeal: p.sgaSeal ?? 'good',
+        maskAdjunct: false,
+        sgaAttempts: 0,
+        frontOfNeck: false,
+        calls: [],
+        aspirated: false,
       },
       conditions: {
         pericardialMl: 0,
         pericardialRateMlMin: 0,
         ivAccess: 'iv',
         consolidationShunt: 0,
+        fullStomach: false,
         ...scenario.conditions,
         // A copy: the engine changes the pneumothorax in place (tension, decompression) and must never write into
         // the scenario definition shared by every session.

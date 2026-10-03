@@ -5,7 +5,7 @@ import { erc2025 } from '../content/guidelines/erc2025';
 import { de } from '../content/i18n/de';
 import { en } from '../content/i18n/en';
 import { SCORING_DEFAULTS, scoringFor } from '../content/scoring/scoringConfig';
-import { septicIntubation } from '../content/scenarios/challengeCases';
+import { difficultAirway, septicIntubation } from '../content/scenarios/challengeCases';
 import { AIRWAY_CHECKLIST, SimulationEngine, type ScenarioDefinition } from '../sim';
 import { AIRWAY_ITEMS, type AirwayFacts, type AirwayItemId } from './airwayAssessment';
 import { scoreSession } from './scoring';
@@ -145,5 +145,66 @@ describe('airway assessment (stage B)', () => {
     }
     for (const k of ['fb.improve.airway.etomidateSepsis', 'fb.well.airway.steps'])
       expect(has(k), k).toBe(true);
+  });
+});
+
+describe('difficult airway (DAS) assessment', () => {
+  const daCase = (id: string): ScenarioDefinition => ({
+    ...difficultAirway,
+    variants: difficultAirway.variants?.filter((v) => v.id === id),
+  });
+  const run = (id: string, steps: (e: Engine) => void) => {
+    const e = new SimulationEngine({
+      scenario: daCase(id),
+      guidelines: erc2025,
+      directorRules: GENERAL_DIRECTOR_RULES,
+      observation: OBSERVATION_DEFAULTS,
+      seed: 5,
+    });
+    e.runFor(60);
+    steps(e);
+    const sc = scoringFor('difficult-airway');
+    if (!sc) throw new Error('no scoring');
+    return scoreSession(scoringInputFrom(e, 'beginner', 60), sc, SCORING_DEFAULTS).facts.airway;
+  };
+  const attempt = (e: Engine) => {
+    user(e, { type: 'AIRWAY_INSERT', device: 'ett', technique: 'asleep' });
+    e.runFor(20);
+    user(e, { type: 'TUBE_PASS' });
+    e.runFor(6);
+  };
+
+  it('CICO handled by the algorithm: declared, rescue tried, front of neck in time', () => {
+    const a = run('cico', (e) => {
+      attempt(e);
+      user(e, { type: 'AIRWAY_CALL', call: 'help' });
+      user(e, { type: 'AIRWAY_CALL', call: 'failedIntubation' });
+      user(e, { type: 'AIRWAY_INSERT', device: 'sga' });
+      user(e, { type: 'SET_VENT_SETTING', key: 'fio2', value: 100 });
+      for (let i = 0; i < 400 && e.getSnapshot().patient.gas.spo2 > 78; i++) e.runFor(1);
+      e.runFor(25);
+      user(e, { type: 'AIRWAY_CALL', call: 'cico' });
+      user(e, { type: 'PROCEDURE', kind: 'cricothyroidotomy' });
+      e.runFor(180);
+    });
+    expect(item(a, 'attemptLimit')).toBe(true);
+    expect(item(a, 'declare')).toBe(true);
+    expect(item(a, 'planB')).toBe(true);
+    expect(item(a, 'cico')).toBe(true);
+    // the colleague induced: preparation and pre-oxygenation are not the learner's
+    expect(item(a, 'checklist')).toBeNull();
+    expect(item(a, 'preoxygenation')).toBeNull();
+    expect(item(a, 'drugs')).toBe(true);
+  });
+
+  it('fixation on the tube: four attempts, no rescue, no front of neck', () => {
+    const a = run('cico', (e) => {
+      for (let i = 0; i < 4; i++) attempt(e);
+      e.runFor(240);
+    });
+    expect(item(a, 'attemptLimit')).toBe(false);
+    expect(item(a, 'declare')).toBe(false);
+    expect(item(a, 'planB')).toBe(false);
+    expect(item(a, 'cico')).toBe(false);
   });
 });

@@ -43,17 +43,35 @@ export function lungCollapse(conditions: PatientConditions): number {
   return 0.5 + 0.5 * clamp(p.tension, 0, 1);
 }
 
+/** Extra face-mask leak by mask-ventilation class: [plain, with oral airway + two-handed technique]. */
+const MASK_EXTRA_LEAK = {
+  easy: [0, 0],
+  difficult: [0.45, 0.1],
+  impossible: [0.8, 0.75],
+} as const;
+
 /**
  * Leak of the airway device at a given peak airway pressure (fraction of the delivered tidal volume lost).
  * SIM-ASSUMPTION: face mask 15 % (+1.5 %/cmH2O above 20 cmH2O); supraglottic airway sealed up to 25 cmH2O,
  * then +2.5 %/cmH2O (2nd-generation seal pressures ≈ 25–30 cmH2O); a cuffed tracheal tube seals.
+ * SIM-ASSUMPTION (airway stage C): failure to ventilate through an obstructed upper airway or a poorly seated device
+ * is represented as loss of the delivered volume (no chest rise, little or no capnography) — difficult mask
+ * ventilation +45 % (+10 % with an oral airway and two hands), impossible 95 % (90 % with them); airway trauma from
+ * failed laryngoscopies (swelling, blood) adds up to 25 %; a supraglottic airway with a poor seal +50 %, a failed
+ * one 95 %.
  */
 export function airwayLeak(airway: AirwayState, peakPressure: number): number {
+  const swelling = 0.25 * airway.trauma;
   switch (airway.device) {
-    case 'mask':
-      return clamp(0.15 + 0.015 * Math.max(0, peakPressure - 20), 0, 0.6);
-    case 'sga':
-      return clamp(0.025 * Math.max(0, peakPressure - 25), 0, 0.5);
+    case 'mask': {
+      const anatomy = MASK_EXTRA_LEAK[airway.maskVentilation][airway.maskAdjunct ? 1 : 0];
+      return clamp(0.15 + 0.015 * Math.max(0, peakPressure - 20) + anatomy + swelling, 0, 0.95);
+    }
+    case 'sga': {
+      if (airway.sgaSeal === 'fails') return 0.95;
+      const seal = airway.sgaSeal === 'poor' ? 0.5 : 0;
+      return clamp(0.025 * Math.max(0, peakPressure - 25) + seal + swelling, 0, 0.95);
+    }
     case 'ett':
       // An under-inflated cuff loses part of each tidal volume: the cuff pressure (learner) or a fixed fraction
       // set by the scenario (fault), whichever is larger.

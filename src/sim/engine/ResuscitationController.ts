@@ -26,13 +26,11 @@ import {
 } from '../physiology/obstruction';
 import { clamp } from '../physiology/shapes';
 import { OXYGEN } from '../physiology/parameters';
-
-/** s — paralysis without adequate hypnosis before possible awareness is logged */
-const AWARENESS_S = 30;
 import { applyStimulus } from '../brain/CerebralModel';
 import {
   attemptDurationS,
   attemptSuccess,
+  CUFF,
   cuffPressure,
   drawTubePosition,
   effectiveGrade,
@@ -49,6 +47,23 @@ import type { Side } from '../state/ResuscitationState';
 import type { SimulationState } from '../state/SimulationState';
 import type { ClinicalEventType, Command, CommandSource } from '../types/commands';
 import type { GuidelineSet } from '../types/guidelines';
+
+
+/**
+ * SIM-ASSUMPTION (airway stage C): aspiration with a full stomach while airway reflexes are lost (hypnotic depth
+ * ≥ 1 or neuromuscular block ≥ 80 %, with a circulation) and the airway is not protected by a blocked tracheal tube
+ * (cuff ≥ 20 cmH₂O): hazard 1/2400 per s (≈ 2.5 % per unprotected minute), × (1 + insufflated gastric air / 300 mL);
+ * an aspiration adds 0.1 consolidation shunt (chemical pneumonitis), once per session.
+ */
+const ASPIRATION_PER_S = 1 / 2400;
+const ASPIRATION_GAS_ML = 300;
+const ASPIRATION_SHUNT = 0.1;
+
+/** s — scalpel cricothyroidotomy until the tube is in */
+const FONA_S = 45;
+
+/** s — paralysis without adequate hypnosis before possible awareness is logged */
+const AWARENESS_S = 30;
 
 /** What the controller needs from the engine (the engine stays the only owner of the state). */
 export interface ResuscitationHost {
@@ -90,6 +105,8 @@ type ResusCommand = Extract<
       | 'TUBE_FIX'
       | 'AIRWAY_CONNECT'
       | 'AIRWAY_CHECKLIST'
+      | 'AIRWAY_CALL'
+      | 'AIRWAY_MASK_ADJUNCT'
       | 'DRUG_PUSH'
       | 'AIRWAY_INSERT'
       | 'AIRWAY_REMOVE'
@@ -126,6 +143,8 @@ const RESUS_TYPES = new Set<Command['type']>([
   'TUBE_FIX',
   'AIRWAY_CONNECT',
   'AIRWAY_CHECKLIST',
+  'AIRWAY_CALL',
+  'AIRWAY_MASK_ADJUNCT',
   'AIRWAY_REMOVE',
   'TUBE_WITHDRAW',
   'ASSESS',
@@ -268,9 +287,11 @@ export class ResuscitationController {
         if (air.insertion || air.laryngoscopy) return;
         // The learner's tracheal tube is a real attempt (airway stage A); instructor/scenario placements stay direct.
         if (c.device === 'ett' && source !== 'instructor' && source !== 'scenario') {
-          this.startLaryngoscopy(c.technique ?? 'asleep');
+          const video = c.technique === 'video';
+          this.startLaryngoscopy(c.technique === 'awake' ? 'awake' : 'asleep', video);
           return;
         }
+        if (c.device === 'sga' && source === 'user') air.sgaAttempts += 1;
         const forced = source === 'instructor' || source === 'scenario' ? c.position : undefined;
         const position = forced ?? drawAirwayPosition(c.device, h.rng);
         air.device = 'none';
@@ -298,6 +319,8 @@ export class ResuscitationController {
         air.device = 'none';
         air.position = 'correct';
         air.insertion = null;
+        air.frontOfNeck = false;
+        air.maskAdjunct = false;
         h.setCircuit(false);
         return;
       }
@@ -393,6 +416,14 @@ export class ResuscitationController {
         h.logEvent('AIRWAY_CONNECTED', t, air.device);
         return;
       }
+      case 'AIRWAY_CALL': {
+        const calls = s.patient.airway.calls;
+        if (!calls.includes(c.call)) calls.push(c.call);
+        return;
+      }
+      case 'AIRWAY_MASK_ADJUNCT':
+        s.patient.airway.maskAdjunct = c.on;
+        return;
       case 'AIRWAY_CHECKLIST': {
         const list = s.patient.airway.checklist;
         const has = list.includes(c.item);
@@ -472,9 +503,11 @@ export class ResuscitationController {
     if (air.laryngoscopy?.endsAt != null && t >= air.laryngoscopy.endsAt) this.finishLaryngoscopy();
     this.trackAwareness(dt);
     if (air.insertion && t >= air.insertion.completesAt) {
+      const fona = air.insertion.frontOfNeck === true;
       air.device = air.insertion.device;
       air.position = air.insertion.position;
       air.insertion = null;
+      air.frontOfNeck = fona;
       // Instructor/scenario placements: blocked, fixed, at a depth that matches the position.
       if (air.device === 'ett') {
         const ideal = idealTubeDepth(s.patient.demographics.sex);
@@ -484,7 +517,7 @@ export class ResuscitationController {
           ideal + (air.position === 'endobronchial' ? TUBE.tooFarCm : TUBE.wellPlacedCm);
       }
       h.setCircuit(true);
-      h.logEvent('AIRWAY_PLACED', t, `${air.device}|${air.position}`);
+      h.logEvent('AIRWAY_PLACED', t, `${air.device}|${air.position}${fona ? '|fona' : ''}`);
     }
     const connected = vent.circuitConnected && air.device !== 'none';
     air.leakFraction = connected ? airwayLeak(air, vent.measured.ppeak) : 0;
@@ -501,6 +534,7 @@ export class ResuscitationController {
         }
       }
     }
+    this.aspirationRisk(dt);
 
     // Reversible causes.
     if (updateConditions(p.conditions, connected, t, dt)) h.logEvent('NEEDLE_FAILED', t);
@@ -672,7 +706,28 @@ export class ResuscitationController {
    * nasal cannula or high-flow oxygen stays on, a face mask comes off for the blade), the blade is a strong noxious stimulus, and the outcome is
    * decided at the end from the conditions then (drugs keep acting during the attempt).
    */
-  private startLaryngoscopy(technique: IntubationTechnique): void {
+  /** Regurgitation and aspiration of gastric contents (full stomach, unprotected airway, reflexes lost). */
+  private aspirationRisk(dt: number): void {
+    const h = this.host;
+    const p = h.state.patient;
+    const air = p.airway;
+    if (!p.conditions.fullStomach || air.aspirated || !p.cardio.spontaneousCirculation) return;
+    const reflexesLost =
+      p.brain.hypnoticDepth >= 1 || p.pharmacology.effects.neuromuscularBlock >= 0.8;
+    const protectedAirway =
+      air.device === 'ett' &&
+      air.position !== 'oesophageal' &&
+      !air.insertion &&
+      cuffPressure(air.cuffMl) >= CUFF.target[0];
+    if (!reflexesLost || protectedAirway) return;
+    const hazard = ASPIRATION_PER_S * (1 + air.gastricAirMl / ASPIRATION_GAS_ML) * dt;
+    if (h.rng.next() >= hazard) return;
+    air.aspirated = true;
+    p.conditions.consolidationShunt = Math.min(0.4, p.conditions.consolidationShunt + ASPIRATION_SHUNT);
+    h.logEvent('ASPIRATION', h.state.time, `${Math.round(air.gastricAirMl)} mL gas`);
+  }
+
+  private startLaryngoscopy(technique: IntubationTechnique, video = false): void {
     const h = this.host;
     const s = h.state;
     const t = s.time;
@@ -699,10 +754,12 @@ export class ResuscitationController {
       resisted,
       phase: 'blade',
       burp: false,
+      video: video && technique === 'asleep',
     };
     // Alveolar O2 fraction at the start (≈ end-tidal O2): how well the lungs were denitrogenated (pre-oxygenation).
     const fao2 = s.patient.gas.pao2Alveolar / OXYGEN.dryBarometric;
-    h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}|fao2 ${fao2.toFixed(2)}`);
+    const blade = air.laryngoscopy.video ? '|video' : '';
+    h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}${blade}|fao2 ${fao2.toFixed(2)}`);
   }
 
   private finishLaryngoscopy(): void {
@@ -719,7 +776,7 @@ export class ResuscitationController {
       h.logEvent('INTUBATION_FAILED', t, 'resisted');
       return;
     }
-    const view = effectiveGrade(air.grade, l.burp);
+    const view = effectiveGrade(air.grade, l.burp, l.video);
     const cond = intubatingConditions(s.patient, l.technique);
     const p = attemptSuccess(view, cond, air.trauma, l.technique);
     if (!cond.tolerated || h.rng.next() >= p) {
@@ -813,6 +870,21 @@ export class ResuscitationController {
       case 'gastricTube':
         result = `${Math.round(s.patient.airway.gastricAirMl)} mL`;
         s.patient.airway.gastricAirMl = 0;
+        break;
+      case 'cricothyroidotomy': {
+        // SIM-ASSUMPTION (DAS plan D): scalpel–bougie–cuffed 6.0 tube through the cricothyroid membrane in 45 s,
+        // always tracheal; cuff inflated and the ventilation connected as part of the procedure (no laryngoscopy,
+        // bypasses the upper airway). No ventilation through it until it is in.
+        const air = s.patient.airway;
+        air.laryngoscopy = null;
+        air.device = 'none';
+        air.insertion = { device: 'ett', position: 'correct', completesAt: t + FONA_S, frontOfNeck: true };
+        h.setCircuit(false);
+        result = 'started';
+        break;
+      }
+      case 'suction':
+        result = s.patient.airway.aspirated ? 'gastric-contents' : 'clear';
         break;
       case 'cuffCheck': {
         // SIM-ASSUMPTION: re-inflating the cuff to 25 cmH2O ends a cuff leak at once.

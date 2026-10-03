@@ -7,6 +7,8 @@ export interface LaryngoscopeViewProps {
   /** 0..1 — tube on its way to the glottis */
   passProgress: number;
   burp: boolean;
+  /** video laryngoscope: the view on its screen */
+  video?: boolean;
 }
 
 /** y (viewBox units) of the epiglottis' free edge per grade: the lower it hangs, the more glottis it hides. */
@@ -17,7 +19,13 @@ const EPIGLOTTIS_TIP: Record<1 | 2 | 3 | 4, number> = { 1: 40, 2: 86, 3: 132, 4:
  * top, arytenoids at the bottom). The tube's end stops over the laryngeal inlet whatever the outcome, so the picture
  * never tells a tracheal from an oesophageal tube.
  */
-export function LaryngoscopeView({ grade, mode, passProgress, burp }: LaryngoscopeViewProps) {
+export function LaryngoscopeView({
+  grade,
+  mode,
+  passProgress,
+  burp,
+  video = false,
+}: LaryngoscopeViewProps) {
   const fibre = mode === 'awake';
   const closed = mode === 'resisted';
   const g = grade ?? 1;
@@ -163,6 +171,24 @@ export function LaryngoscopeView({ grade, mode, passProgress, burp }: Laryngosco
         {fibre && <rect width="200" height="170" fill="url(#lv-vignette)" />}
       </g>
       {fibre && <circle cx="100" cy="85" r="72" fill="none" stroke="#111" strokeWidth="4" />}
+      {video && !fibre && (
+        <g data-testid="video-frame">
+          <rect
+            x="2"
+            y="2"
+            width="196"
+            height="166"
+            rx="8"
+            fill="none"
+            stroke="#1f2a33"
+            strokeWidth="5"
+          />
+          <rect width="200" height="170" fill="rgba(80,140,200,0.08)" />
+          <text x="10" y="16" fontSize="9" fill="#9fd8ff" fontFamily="monospace">
+            VL ● REC
+          </text>
+        </g>
+      )}
     </svg>
   );
 }

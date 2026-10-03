@@ -24,7 +24,11 @@ export type AirwayItemId =
   | 'cuff'
   | 'position'
   | 'fixed'
-  | 'sedation';
+  | 'sedation'
+  | 'attemptLimit'
+  | 'declare'
+  | 'planB'
+  | 'cico';
 
 export const AIRWAY_ITEMS: readonly AirwayItemId[] = [
   'checklist',
@@ -43,6 +47,10 @@ export const AIRWAY_ITEMS: readonly AirwayItemId[] = [
   'position',
   'fixed',
   'sedation',
+  'attemptLimit',
+  'declare',
+  'planB',
+  'cico',
 ];
 
 /** One step of the intubation: met, missed, or not applicable (null), with the measured value. */
@@ -86,7 +94,9 @@ const userCmd = (e: LogEntry, type: string): e is Cmd =>
 function pushMoiety(
   e: LogEntry,
 ): { moiety: string; name: string; dose: number; unit: string } | null {
-  if (!userCmd(e, 'DRUG_PUSH') || e.command.type !== 'DRUG_PUSH') return null;
+  // The learner's pushes, and an induction already given in the case (a colleague's, source 'scenario').
+  if (e.kind !== 'command' || e.command.type !== 'DRUG_PUSH') return null;
+  if (e.source !== 'user' && e.source !== 'scenario') return null;
   const p = getProduct(e.command.productId);
   if (!p?.moiety) return null;
   return { moiety: p.moiety, name: p.genericName, dose: e.command.dose, unit: e.command.unit };
@@ -124,6 +134,8 @@ export function airwayFacts(
   const hyp = pushes.find((x) => x.p && HYPNOTICS.has(x.p.moiety));
   const relaxed = pushes.some((x) => x.p && RELAXANTS.has(x.p.moiety));
   const inductionAt = hyp ? hyp.e.t : first.t;
+  /** the learner induced (preparation and pre-oxygenation are theirs); a case may start after a colleague's induction */
+  const learnerInduction = !hyp || (hyp.e.kind === 'command' && hyp.e.source === 'user');
   let mgPerKg: number | null = null;
   if (hyp?.p) {
     if (hyp.p.unit === 'mg/kg') mgPerKg = hyp.p.dose;
@@ -221,12 +233,55 @@ export function airwayFacts(
   const minMap = arrested ? null : lowest(vitals, 'map', inductionAt, inductionAt + A.mapWindowS);
   const minSpo2 = lowest(vitals, 'spo2', inductionAt, (placedAt ?? lastEnd) + 120);
 
+  // --- difficult airway (DAS): failed attempts, rescue oxygenation, CICO ---
+  const failures = outcomes.filter((e) => e.event === 'INTUBATION_FAILED' && e.t >= first.t);
+  const firstFailure = failures[0]?.t ?? null;
+  const fona = log.find((e) => isEvent(e, 'AIRWAY_PLACED') && detailOf(e).endsWith('|fona'));
+  const oral = outcomes.find((e) => e.event === 'AIRWAY_PLACED' && !detailOf(e).endsWith('|fona'));
+  const failedIntubation =
+    firstFailure !== null && (oral === undefined || failures.length >= A.maxAttempts);
+  const declared = log.some(
+    (e) =>
+      userCmd(e, 'AIRWAY_CALL') &&
+      e.command.type === 'AIRWAY_CALL' &&
+      (e.command.call === 'failedIntubation' || e.command.call === 'cico'),
+  );
+  const rescue =
+    firstFailure === null
+      ? undefined
+      : log.find(
+          (e) =>
+            e.t > firstFailure && isEvent(e, 'AIRWAY_PLACED') && /^(sga|mask)\|/.test(detailOf(e)),
+        );
+  const securedAt = Math.min(oral?.t ?? Infinity, fona?.t ?? Infinity);
+  let cicoAt: number | null = null;
+  if (firstFailure !== null && seriesLength(vitals) > 0) {
+    let run = 0;
+    for (let i = indexAt(vitals, firstFailure); i < seriesLength(vitals); i++) {
+      const t = vitals.t0 + i;
+      if (t >= securedAt) break;
+      const x = vitals.spo2[i];
+      run = x !== undefined && Number.isFinite(x) && x < A.cicoSpo2 ? run + 1 : 0;
+      if (run >= A.cicoSustainS) {
+        cicoAt = t - A.cicoSustainS;
+        break;
+      }
+    }
+  }
+
   const na = arrested;
   const items: AirwayItem[] = [
-    { id: 'checklist', ok: na ? null : checked.size >= A.checklistItems, value: checked.size },
+    {
+      id: 'checklist',
+      ok: na || !learnerInduction ? null : checked.size >= A.checklistItems,
+      value: checked.size,
+    },
     {
       id: 'preoxygenation',
-      ok: na || fao2 === null || !Number.isFinite(fao2) ? null : fao2 >= A.fao2Min,
+      ok:
+        na || !learnerInduction || fao2 === null || !Number.isFinite(fao2)
+          ? null
+          : fao2 >= A.fao2Min,
       value: fao2 === null || !Number.isFinite(fao2) ? null : Math.round(fao2 * 100),
     },
     {
@@ -289,6 +344,27 @@ export function airwayFacts(
       value: null,
     },
   ];
+  items.push(
+    {
+      id: 'attemptLimit',
+      ok: firstFailure === null ? null : starts.length <= A.maxAttempts,
+      value: starts.length,
+    },
+    { id: 'declare', ok: failedIntubation ? declared : null, value: null },
+    {
+      id: 'planB',
+      ok:
+        !failedIntubation || firstFailure === null
+          ? null
+          : rescue !== undefined && rescue.t - firstFailure <= A.planBMaxS,
+      value: rescue && firstFailure !== null ? Math.round(rescue.t - firstFailure) : null,
+    },
+    {
+      id: 'cico',
+      ok: cicoAt === null ? null : Number.isFinite(securedAt) && securedAt - cicoAt <= A.cicoMaxS,
+      value: cicoAt !== null && Number.isFinite(securedAt) ? Math.round(securedAt - cicoAt) : null,
+    },
+  );
   const applicable = items.filter((i) => i.ok !== null);
   const met = applicable.filter((i) => i.ok === true).length;
   return {
