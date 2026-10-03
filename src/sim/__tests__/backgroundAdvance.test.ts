@@ -77,4 +77,30 @@ describe('background advance (ward hours)', () => {
     expect(beats).toBeLessThan(200);
     expect(e.getSnapshot().devices.ventilator.measured.rrTotal).toBeLessThan(30);
   });
+
+  it("ward hours with the ward's care: body water is held, the balance stays exact, the circulation survives", () => {
+    const e = createEngine();
+    e.runFor(60);
+    const before = e.getSnapshot().patient.fluid;
+    e.backgroundAdvance(24 * 3600, { holdVolumes: true });
+    const s = e.getSnapshot();
+    expect(s.patient.fluid.plasmaMl).toBeCloseTo(before.plasmaMl, 6);
+    expect(s.patient.fluid.interstitialMl).toBeCloseTo(before.interstitialMl, 6);
+    expect(Math.abs(e.fluidConservationError)).toBeLessThan(1);
+    expect(s.devices.balance.urineDrainedMl).toBeGreaterThan(100);
+    // haemoglobin and the gas contents stay physical (no concentration during the held hours)
+    e.runFor(30);
+    const g = e.getSnapshot().patient.gas;
+    expect(g.cao2).toBeLessThan(24);
+    expect(g.pao2).toBeLessThan(700);
+    expect(e.getSnapshot().patient.cardio.spontaneousCirculation).toBe(true);
+    expect(
+      e.eventLog.some(
+        (l) =>
+          l.kind === 'event' &&
+          l.event === 'BACKGROUND_ADVANCE' &&
+          /ward fluid balance/.test(l.detail ?? ''),
+      ),
+    ).toBe(true);
+  });
 });

@@ -6,6 +6,7 @@ import { recordExplored } from '../../game/progression';
 import { createSession } from '../../game/session';
 import type { ModuleId } from '../../game/types';
 import { bridgeScenario, type BridgeKind } from '../../content/scenarios/bridge';
+import { ALIGN_WINDOW_S } from '../../sim';
 import {
   arrivalSupport,
   continuationCommands,
@@ -176,10 +177,14 @@ export function useSession(): SessionActions {
       for (const c of continuationCommands(preset, engine.getSnapshot()))
         engine.dispatch(c, 'system');
       if (continuing) {
-        // The ward hours since the handover pass for the held patient (drugs, bags, fluid, urine); then the case
-        // layer of the new episode starts from now.
+        // The ward hours since the handover pass for the held patient (drugs, bags, urine; body water held by the
+        // ward's care); then the case layer of the new episode starts from now.
         const since = wardStore.heldSinceH();
-        if (since !== null) engine.backgroundAdvance(Math.max(0, course.timeH - since) * 3600);
+        const gapS = since !== null ? Math.max(0, course.timeH - since) * 3600 : 0;
+        engine.backgroundAdvance(Math.max(0, gapS - ALIGN_WINDOW_S), { holdVolumes: true });
+        // The last minutes of the ward period run in full physiology: the held patient arrives with the ward's
+        // measured values (second transfer), keeping the drugs, airway and fluids given so far.
+        engine.alignToWard(handoverTargets(preset));
         engine.continueScenario(scenario);
       }
       engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: wardSession.difficulty }, 'system');

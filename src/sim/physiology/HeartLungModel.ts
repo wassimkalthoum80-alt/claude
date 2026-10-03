@@ -471,6 +471,11 @@ export class HeartLungModel {
     this.sinusRate = bpm;
   }
 
+  /** /min — the current intrinsic sinus-node rate */
+  currentSinusRate(): number {
+    return this.sinusRate;
+  }
+
   /** The heart was restarted externally (instructor/scenario): injury persists, re-arrest remains possible. */
   onCirculationRestored(patient: PatientState, k: HeartLungCalibration): void {
     const hl: HeartLungState = patient.heartLung;

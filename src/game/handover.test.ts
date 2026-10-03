@@ -4,13 +4,15 @@ import { erc2025 } from '../content/guidelines/erc2025';
 import { feverRigors } from '../content/infection/cases';
 import { INFECTION_LIBRARY } from '../content/infection/library';
 import { bridgeScenario } from '../content/scenarios/bridge';
-import { InfectionEngine, SimulationEngine, type RealtimePreset } from '../sim';
+import { ALIGN_WINDOW_S, InfectionEngine, SimulationEngine, type RealtimePreset } from '../sim';
 import {
   arrivalSupport,
   BridgeRecorder,
   continuationCommands,
   episodeStart,
+  handoverCommands,
   handoverTargets,
+  realtimeOutcome,
   wardReady,
 } from './bridge';
 
@@ -241,5 +243,88 @@ describe('resuscitation of the transferred septic patient', () => {
     e.dispatch({ type: 'CPR_START' }, 'user');
     e.runFor(600);
     expect(e.getSnapshot().scenario.ended).toBe(false);
+  });
+});
+
+describe('second transfer of the same patient (held workstation patient)', () => {
+  /**
+   * First transfer, a partly treated episode, back to the ward until it deteriorates again (≤ 48 h), then the
+   * session flow of a further episode: course causes, ward hours with body water held, alignment, new case layer.
+   */
+  function secondTransfer(noradrenalineMlH: number) {
+    const ward = new InfectionEngine({ caseDef: feverRigors, library: INFECTION_LIBRARY });
+    const bad = () => ward.realtimePreset().map < 65 || ward.realtimePreset().spo2 < 90;
+    for (let h = 0; h < 200 && !bad(); h++) ward.dispatch({ type: 'ADVANCE', hours: 1 }, 'user');
+    const { e } = transfer(ward.realtimePreset(), ward);
+    ward.dispatch({ type: 'REALTIME_EPISODE_START', kind: 'shock' }, 'system');
+    const rec = new BridgeRecorder(episodeStart(e.getSnapshot()));
+    e.dispatch({ type: 'SET_RESP_SUPPORT', support: 'simple-mask' }, 'user');
+    e.dispatch(
+      {
+        type: 'HANG_BAG',
+        productId: 'sterofundin-iso',
+        volumeMl: 1000,
+        rateMlH: 3000,
+        speed: 'fast',
+      },
+      'user',
+    );
+    if (noradrenalineMlH > 0) {
+      e.dispatch(
+        { type: 'PUMP_SET_RATE', pumpId: 'P3', rateMlH: noradrenalineMlH, confirm: true },
+        'user',
+      );
+      e.dispatch({ type: 'PUMP_START', pumpId: 'P3' }, 'user');
+    }
+    for (let i = 0; i < 900; i += 5) {
+      e.runFor(5);
+      rec.sample(e.getSnapshot());
+    }
+    const o = realtimeOutcome(rec.samples, e.getSnapshot(), e.eventLog, rec.start);
+    for (const c of handoverCommands(o, null)) ward.dispatch(c, 'system');
+    const heldAt = ward.timeH;
+    for (let h = 0; h < 48; h++) {
+      ward.dispatch({ type: 'ADVANCE', hours: 1 }, 'user');
+      if (bad()) break;
+    }
+    const preset = ward.realtimePreset();
+    for (const c of continuationCommands(preset, e.getSnapshot())) e.dispatch(c, 'system');
+    const gapS = (ward.timeH - heldAt) * 3600;
+    e.backgroundAdvance(Math.max(0, gapS - ALIGN_WINDOW_S), { holdVolumes: true });
+    e.alignToWard(handoverTargets(preset));
+    e.continueScenario(
+      bridgeScenario(
+        preset,
+        'shock',
+        ward.caseDef.patient,
+        'sepsis',
+        true,
+        arrivalSupport(ward.getView().support),
+      ),
+    );
+    return { e, preset };
+  }
+
+  it('the monitor shows the ward values again (noradrenaline-treated and untreated first episodes)', () => {
+    for (const na of [5, 0]) {
+      const { e, preset } = secondTransfer(na);
+      const s = e.getSnapshot();
+      const n = s.devices.monitor.numerics;
+      expect(s.patient.cardio.spontaneousCirculation).toBe(true);
+      expect(Math.abs((n.artMean ?? 0) - preset.map)).toBeLessThanOrEqual(3);
+      expect(Math.abs((n.hr ?? 0) - preset.heartRate)).toBeLessThanOrEqual(5);
+      expect(Math.abs(s.patient.gas.spo2 - preset.spo2)).toBeLessThanOrEqual(1.5);
+      expect(
+        e.eventLog.some(
+          (l) =>
+            l.kind === 'event' &&
+            l.event === 'HANDOVER_CALIBRATED' &&
+            /held patient/.test(l.detail ?? ''),
+        ),
+      ).toBe(true);
+      // the patient stays alive into the episode
+      e.runFor(30);
+      expect(e.getSnapshot().patient.cardio.spontaneousCirculation).toBe(true);
+    }
   });
 });

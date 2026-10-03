@@ -206,3 +206,31 @@ export function totalBodyFluid(f: BodyFluidState): number {
     f.bladderMl
   );
 }
+
+/**
+ * Move water between the interstitium and the plasma (positive = into the plasma), with albumin at the source's
+ * concentration, keeping the body's water, sodium and protein totals unchanged. Used to align a held patient's
+ * circulating volume with values measured elsewhere (ward → workstation); returns the volume actually moved (mL).
+ * SIM-ASSUMPTION: the plasma and the interstitium may each fall to 40 % of baseline at most.
+ */
+export function shiftInterstitialToPlasma(f: BodyFluidState, volumeMl: number): number {
+  const minPlasma = 0.4 * f.baseline.plasmaMl;
+  const minIsf = 0.4 * f.baseline.interstitialMl;
+  const v =
+    volumeMl >= 0
+      ? Math.min(volumeMl, Math.max(0, f.interstitialMl - minIsf))
+      : -Math.min(-volumeMl, Math.max(0, f.plasmaMl - minPlasma));
+  if (v === 0) return 0;
+  if (v > 0) {
+    const albumin = (f.interstitialAlbuminG * v) / f.interstitialMl;
+    f.interstitialAlbuminG -= albumin;
+    f.plasmaAlbuminG += albumin;
+  } else {
+    const albumin = (f.plasmaAlbuminG * -v) / f.plasmaMl;
+    f.plasmaAlbuminG -= albumin;
+    f.interstitialAlbuminG += albumin;
+  }
+  f.interstitialMl -= v;
+  f.plasmaMl += v;
+  return v;
+}
