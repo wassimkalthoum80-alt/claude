@@ -1,5 +1,6 @@
 /** English UI strings (default language). Keys are shared with de.ts. */
 import { infectioEn } from './infectio.en';
+import { mentorEn } from './mentor.en';
 
 export const en = {
   'app.title': 'ResusSim',
@@ -821,23 +822,18 @@ export const en = {
   'air.place': 'Place device',
   'air.withdraw': 'Withdraw tube 2 cm',
   'airway.prompt.connect': 'The tube is in — shall I connect the ventilation?',
-  'airway.prompt.cuff': 'I hear air escaping at the mouth — is the cuff inflated?',
-  'airway.prompt.plan': 'Suction and capnography are ready. What is our plan if intubation fails?',
-  'airway.prompt.failed':
-    'Intubation not successful — SpO₂ {spo2} %. Shall I hand you the mask to reoxygenate?',
+  'airway.prompt.cuff': 'I hear air escaping at the mouth.',
+  'airway.prompt.plan':
+    'Suction and capnography are ready; supraglottic airway and mask are at hand.',
+  'airway.prompt.failed': 'Intubation not successful. SpO₂ {spo2} %.',
   'airway.prompt.resisted':
     'The patient is coughing and fighting the blade — no intubating conditions. SpO₂ {spo2} %.',
-  'airway.prompt.noCo2':
-    'I see no sustained CO₂ curve. Please check the tube position and ventilation now.',
-  'airway.prompt.maintenance':
-    'The induction drugs have been given. Which analgesia and sedation should keep running?',
-  'airway.prompt.second':
-    'That was the second failed attempt. What is the plan — supraglottic airway, mask, call for help?',
-  'airway.prompt.third':
-    'Third failed attempt. Shall we declare a failed intubation and go to plan B?',
-  'airway.prompt.aspiration': 'Gastric contents in the pharynx — shall I suction?',
-  'airway.prompt.cico':
-    'Saturation {spo2} % and I can not ventilate — can’t intubate, can’t oxygenate? The cricothyroidotomy set is here.',
+  'airway.prompt.noCo2': 'I see no sustained CO₂ curve.',
+  'airway.prompt.maintenance': 'The induction drugs have been given. No sedation is running.',
+  'airway.prompt.second': 'Second failed attempt. SpO₂ {spo2} %.',
+  'airway.prompt.third': 'Third failed attempt. SpO₂ {spo2} %.',
+  'airway.prompt.aspiration': 'Gastric contents in the pharynx.',
+  'airway.prompt.cico': 'Saturation {spo2} %, I can’t get any air in.',
   'air.intubate': 'Intubate (laryngoscopy)',
   'air.intubateAwake': 'Awake intubation (topical)',
   'air.attempt': 'Attempt {n}',
@@ -1360,7 +1356,7 @@ export const en = {
   'hint.next': 'Next hint',
   'hint.levels': 'Hint {n} of {m}',
   'hint.none': 'No hints for this situation.',
-  'hint.cost': 'Hints are recorded and lower the learning score a little.',
+  'hint.cost': 'Hints are recorded and shown in the debrief; they do not lower the score.',
   'tools.timeline': 'TIMELINE',
   'tools.trends': 'TRENDS',
   'tl.title': 'TIMELINE',
@@ -1386,6 +1382,7 @@ export const en = {
   'tl.k.PUMP_LOAD': 'Syringe loaded',
   'tl.k.ORDER_TEST': 'Sample taken',
   'tl.k.REQUEST_HINT': 'Hint used',
+  'tl.k.MENTOR_HELP': 'Oberarzt help',
   'tl.k.RHYTHM_CHECK_START': 'Rhythm check',
   'tl.k.DEFIB_CHARGE': 'Defibrillator charged',
   'tl.k.SET_RHYTHM': 'Rhythm set',
@@ -1947,6 +1944,7 @@ export const en = {
   'dx.anaphylaxis': 'Anaphylaxis',
   'dx.pulmonary-embolism': 'Pulmonary embolism',
   ...infectioEn,
+  ...mentorEn,
 } as const;
 
 export type I18nKey = keyof typeof en;

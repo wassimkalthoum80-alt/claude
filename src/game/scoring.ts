@@ -1,6 +1,7 @@
 import { airwayFacts } from './airwayAssessment';
 import { alsFacts, causeDoneAt, resusMarker } from './alsAssessment';
 import { assessDecisions } from './assessment';
+import { independenceReport, withIndependence, type MentorPlan } from './mentor';
 import type {
   AlsFacts,
   Feedback,
@@ -195,6 +196,8 @@ export function scoreSession(
   input: ScoringInput,
   caseScoring: ScenarioScoring,
   defaults: ScoringRules,
+  /** the case's Oberarzt checkpoints (independence score); null/omitted when the case has none */
+  mentor?: MentorPlan | null,
 ): SessionScore {
   const sc = withVariant(caseScoring, input.variant);
   const r = rulesFor(defaults, sc);
@@ -354,9 +357,8 @@ export function scoreSession(
   );
   const redundant = redundantTests(input, r.efficiency.redundantS);
   const hintsUsed = input.hints.length;
-  const efficiency = Math.round(
-    clamp(100 - r.efficiency.redundantTest * redundant - r.efficiency.hint * hintsUsed),
-  );
+  // Hints and Oberarzt help are reported (facts.hintsUsed, independence), never deducted from a clinical score.
+  const efficiency = Math.round(clamp(100 - r.efficiency.redundantTest * redundant));
 
   let recognition: number | null;
   let treatment: number | null;
@@ -433,7 +435,9 @@ export function scoreSession(
     time,
   };
   const weights = sc.weights ?? {};
-  const overall = overallOf(scores, weights);
+  const competence = overallOf(scores, weights);
+  const independence = mentor ? independenceReport(mentor, input.log, input.end) : null;
+  const overall = withIndependence(competence, independence?.score ?? null, input.difficulty);
 
   // --- outcome and stars ---
   let outcome: Outcome;
@@ -607,6 +611,8 @@ export function scoreSession(
   return {
     scores,
     overall,
+    competence,
+    independence,
     outcome,
     stars,
     decisions,

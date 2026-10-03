@@ -40,7 +40,8 @@ export const SCORING_DEFAULTS: ScoringRules = {
     unsafeShock: 15,
     handsOff: 5,
   },
-  efficiency: { redundantTest: 8, redundantS: 300, hint: 4 },
+  // Oberarzt phase 1: help no longer costs efficiency points; the independence score reports it instead.
+  efficiency: { redundantTest: 8, redundantS: 300 },
   // Compression fraction: full marks at the guideline target, 0 at 40 percentage points below it.
   ccfZeroBelow: 40,
   // No-flow time: up to 10 s full marks, nothing after 2 min.

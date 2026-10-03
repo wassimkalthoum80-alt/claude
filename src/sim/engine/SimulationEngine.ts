@@ -1036,6 +1036,10 @@ export class SimulationEngine {
         )
           s.director.diagnoses.push({ id: command.id.slice(0, 64), t: s.time });
         break;
+      case 'MENTOR_HELP':
+      case 'MENTOR_WHY':
+        // Teaching layer only: recorded in the event log, no effect on the patient (src/game/mentor reads it).
+        break;
       case 'REQUEST_HINT': {
         const topic = this.active.hints?.find((h) => h.id === command.topic);
         if (!topic) break;
@@ -1755,8 +1759,10 @@ export class SimulationEngine {
     // Difficult airway (stage C): the second and third failed attempt, aspiration, can't oxygenate.
     const failed = s.patient.airway.lastAttempt;
     if (failed && failed.outcome !== 'placed' && !l && t - failed.at < 2) {
-      if (air.attempts === 2) say('second', 'airway.prompt.second', 'important', {}, 3);
-      if (air.attempts >= 3) say('third', 'airway.prompt.third', 'critical', {}, 4);
+      // Factual reports only (Oberarzt phase 1): the nurse reports observations; coaching is the mentor's job.
+      const sat = { spo2: s.devices.monitor.numerics.spo2 ?? '--' };
+      if (air.attempts === 2) say('second', 'airway.prompt.second', 'important', sat, 3);
+      if (air.attempts >= 3) say('third', 'airway.prompt.third', 'critical', sat, 4);
     }
     if (air.aspirated) say('aspiration', 'airway.prompt.aspiration', 'critical', {}, 4);
     // CICO (clinical review SA-AIR-01): failed intubation and both rescue routes failed (supraglottic airway and

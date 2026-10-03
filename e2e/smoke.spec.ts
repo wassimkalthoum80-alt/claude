@@ -1260,3 +1260,56 @@ test('airway stage C: cannot see the cords — DAS calls, rescue, scalpel cricot
   await page.screenshot({ path: 'test-results/airway-das.png' });
   expect(errors).toEqual([]);
 });
+
+test('Oberarzt: beginner card speaks up, escalates, learning pause; drawer on request; debrief independence', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?lang=de&debug&seed=4');
+  await page.getByTestId('module-challenges').click();
+  await page.getByTestId('difficulty-beginner').click();
+  await page.getByTestId('entry-sepsis').click();
+  await page.getByTestId('start-button').click();
+  // 40 quiet seconds: the Oberarzt offers level 1 unasked for the first open decision (fluid).
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
+    e?.runFor(40);
+    e?.dispatch({ type: 'SET_PAUSED', paused: false }, 'system');
+  });
+  const card = page.getByTestId('mentor-card');
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('Volumen');
+  await expect(page.getByTestId('mentor-level-1')).toContainText('Schau');
+  await page.getByTestId('mentor-more').click();
+  await expect(page.getByTestId('mentor-level-2')).toBeVisible();
+  await page.getByTestId('mentor-pause').click();
+  expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().control.paused)).toBe(true);
+  await page.screenshot({ path: 'test-results/mentor-card.png' });
+  await page.getByTestId('mentor-dismiss').click();
+  await expect(card).toHaveCount(0);
+  // On request in the drawer: concrete help (level 3) is marked as recorded.
+  await page.getByTestId('tool-hint').click();
+  await expect(page.getByTestId('mentor-checkpoint')).toContainText('Volumen');
+  await page.getByTestId('mentor-ask-3').click();
+  await expect(page.getByTestId('mentor-level-3')).toContainText('Bolus');
+  await page.getByTestId('mentor-why').click();
+  await expect(page.getByTestId('mentor-why-text')).toBeVisible();
+  await page.screenshot({ path: 'test-results/mentor-drawer.png' });
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.dispatch(
+      { type: 'PUMP_BOLUS', pumpId: 'INF2', volumeMl: 500, durationS: 600, confirm: true },
+      'user',
+    );
+    e?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
+    e?.runFor(30);
+  });
+  await expect(page.getByTestId('mentor-checkpoint')).toContainText('Blutkulturen');
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-end-session').click();
+  await expect(page.getByTestId('debrief-mentor')).toBeVisible();
+  await expect(page.getByTestId('mentor-decision-ss-volume')).toHaveAttribute('data-level', '3');
+  expect(errors).toEqual([]);
+});

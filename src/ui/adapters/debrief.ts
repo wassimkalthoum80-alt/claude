@@ -1,4 +1,6 @@
+import { mentorPlanFor } from '../../content/mentor/plans';
 import { SCORING_DEFAULTS, scoringFor } from '../../content/scoring/scoringConfig';
+import { mentorMode } from '../../game/mentor';
 import type { AchievementId, ProgressStore } from '../../game/profile';
 import { levelOf, recordSession } from '../../game/progression';
 import { scoreSession } from '../../game/scoring';
@@ -47,7 +49,12 @@ export function finishScoredSession(
     session.difficulty,
     engine.guidelines.compressionFraction.targetPct,
   );
-  const score = scoreSession(input, sc, SCORING_DEFAULTS);
+  // Expert sessions have no Oberarzt: no independence to report.
+  const mentor =
+    mentorMode(session.difficulty, session.scored) === 'off'
+      ? null
+      : mentorPlanFor(session.scenarioId);
+  const score = scoreSession(input, sc, SCORING_DEFAULTS, mentor);
   const result = recordSession(
     store.load(),
     session,

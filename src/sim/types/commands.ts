@@ -240,6 +240,14 @@ export type Command =
   | { type: 'VIEW_RESULT'; orderId: number }
   /** reveal the next level of a scenario hint (levels are revealed in order) */
   | { type: 'REQUEST_HINT'; topic: string }
+  /**
+   * Oberarzt (mentor) help shown for a decision checkpoint: level 1 hint … 4 step-by-step guidance. `requested` =
+   * the learner asked; otherwise the mentor offered it unasked (beginner sessions). Logged only; the debrief and the
+   * independence score read it.
+   */
+  | { type: 'MENTOR_HELP'; checkpoint: string; level: 1 | 2 | 3 | 4; requested: boolean }
+  /** the learner asked the Oberarzt why (explanation of the current checkpoint; logged only, never scored) */
+  | { type: 'MENTOR_WHY'; checkpoint: string }
   /** the learner commits to a working diagnosis (option id of the case's diagnosis set); logged for the debrief */
   | { type: 'DECLARE_DIAGNOSIS'; id: string }
   /** instructor/scenario: /min — intrinsic sinus-node rate (sinus brady-/tachycardia) */

@@ -1,3 +1,4 @@
+import type { IndependenceReport } from './mentor';
 import type { Difficulty } from './types';
 import type { HintUse, LogEntry } from '../sim';
 import type { Vitals, VitalSeries } from './vitals';
@@ -123,8 +124,6 @@ export interface ScoringRules {
     redundantTest: number;
     /** s */
     redundantS: number;
-    /** points per hint level revealed */
-    hint: number;
   };
   /** resuscitation cases: compression fraction this far below target scores 0 (percentage points) */
   ccfZeroBelow: number;
@@ -325,7 +324,12 @@ export interface Feedback {
 
 export interface SessionScore {
   scores: Record<ScoreKey, number | null>;
+  /** 0–100 — intermediate sessions with an Oberarzt plan: 0.85 × competence + 0.15 × independence */
   overall: number;
+  /** 0–100 — the clinical score alone (weighted sub-scores) */
+  competence: number;
+  /** Oberarzt help in this session (null when the case has no mentor plan) */
+  independence: IndependenceReport | null;
   outcome: Outcome;
   stars: Stars;
   decisions: Decision[];

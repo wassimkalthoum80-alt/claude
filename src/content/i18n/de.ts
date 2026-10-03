@@ -1,5 +1,6 @@
 import type { I18nKey } from './en';
 import { infectioDe } from './infectio.de';
+import { mentorDe } from './mentor.de';
 
 /** Deutsche Oberflächentexte. CLINICAL REVIEW: Fachbegriffe bitte durch ärztliche Reviewer prüfen lassen. */
 export const de: Record<I18nKey, string> = {
@@ -822,24 +823,18 @@ export const de: Record<I18nKey, string> = {
   'air.place': 'Atemweg einlegen',
   'air.withdraw': 'Tubus 2 cm zurückziehen',
   'airway.prompt.connect': 'Der Tubus liegt – soll ich die Beatmung anschließen?',
-  'airway.prompt.cuff': 'Ich höre ein Nebengeräusch am Mund – ist der Cuff geblockt?',
+  'airway.prompt.cuff': 'Ich höre ein Nebengeräusch am Mund.',
   'airway.prompt.plan':
-    'Absaugung und Kapnographie sind vorbereitet. Was ist unser Plan bei erfolgloser Intubation?',
-  'airway.prompt.failed':
-    'Intubation nicht erfolgreich – SpO₂ {spo2} %. Soll ich die Maske zur Reoxygenierung reichen?',
+    'Absaugung und Kapnographie sind vorbereitet, Larynxmaske und Maske liegen bereit.',
+  'airway.prompt.failed': 'Intubation nicht erfolgreich. SpO₂ {spo2} %.',
   'airway.prompt.resisted':
     'Der Patient hustet und wehrt sich gegen den Spatel – keine Intubationsbedingungen. SpO₂ {spo2} %.',
-  'airway.prompt.noCo2':
-    'Ich sehe keine anhaltende CO₂-Kurve. Bitte Tubuslage und Ventilation sofort überprüfen.',
-  'airway.prompt.maintenance':
-    'Die Einleitungsmedikation wurde gegeben. Welche Analgesie und Sedierung soll weiterlaufen?',
-  'airway.prompt.second':
-    'Das war der zweite Fehlversuch. Wie ist der Plan — Larynxmaske, Maske, Hilfe holen?',
-  'airway.prompt.third':
-    'Dritter Fehlversuch. Erklären wir die Intubation für gescheitert und gehen zu Plan B?',
-  'airway.prompt.aspiration': 'Mageninhalt im Rachen — soll ich absaugen?',
-  'airway.prompt.cico':
-    'Sättigung {spo2} % und ich bekomme ihn nicht beatmet — cannot intubate, cannot oxygenate? Das Koniotomie-Set liegt bereit.',
+  'airway.prompt.noCo2': 'Ich sehe keine anhaltende CO₂-Kurve.',
+  'airway.prompt.maintenance': 'Die Einleitungsmedikation wurde gegeben. Es läuft keine Sedierung.',
+  'airway.prompt.second': 'Zweiter Fehlversuch. SpO₂ {spo2} %.',
+  'airway.prompt.third': 'Dritter Fehlversuch. SpO₂ {spo2} %.',
+  'airway.prompt.aspiration': 'Mageninhalt im Rachen.',
+  'airway.prompt.cico': 'Sättigung {spo2} %, ich bekomme keine Luft hinein.',
   'air.intubate': 'Intubation (Laryngoskopie)',
   'air.intubateAwake': 'Wachintubation (topisch)',
   'air.attempt': 'Versuch {n}',
@@ -1367,7 +1362,8 @@ export const de: Record<I18nKey, string> = {
   'hint.next': 'Nächster Tipp',
   'hint.levels': 'Tipp {n} von {m}',
   'hint.none': 'Für diese Situation gibt es keine Tipps.',
-  'hint.cost': 'Tipps werden protokolliert und senken die Lernbewertung ein wenig.',
+  'hint.cost':
+    'Tipps werden protokolliert und im Debriefing gezeigt; sie senken die Wertung nicht.',
   'tools.timeline': 'VERLAUF',
   'tools.trends': 'TRENDS',
   'tl.title': 'VERLAUF',
@@ -1393,6 +1389,7 @@ export const de: Record<I18nKey, string> = {
   'tl.k.PUMP_LOAD': 'Spritze eingelegt',
   'tl.k.ORDER_TEST': 'Probe abgenommen',
   'tl.k.REQUEST_HINT': 'Tipp genutzt',
+  'tl.k.MENTOR_HELP': 'Oberarzt-Hilfe',
   'tl.k.RHYTHM_CHECK_START': 'Rhythmusanalyse',
   'tl.k.DEFIB_CHARGE': 'Defibrillator geladen',
   'tl.k.SET_RHYTHM': 'Rhythmus gesetzt',
@@ -1962,4 +1959,5 @@ export const de: Record<I18nKey, string> = {
   'dx.anaphylaxis': 'Anaphylaxie',
   'dx.pulmonary-embolism': 'Lungenembolie',
   ...infectioDe,
+  ...mentorDe,
 };

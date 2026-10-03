@@ -149,7 +149,7 @@ describe('session scores', () => {
     expect(s.improve[0]?.key).toBe('fb.improve.dangerous');
   });
 
-  it('does not reward ordering tests repeatedly or asking for every hint', () => {
+  it('does not reward ordering tests repeatedly; hints are recorded, not deducted', () => {
     const vs = series(600, {});
     const log = [0, 60, 120, 500].map((t) => cmd(t, { type: 'ORDER_TEST', test: 'abg' }));
     const s = scoreSession(
@@ -163,7 +163,9 @@ describe('session scores', () => {
       R,
     );
     expect(s.facts.redundantTests).toBe(2);
-    expect(s.scores.efficiency).toBe(100 - 2 * 8 - 2 * 4);
+    // Oberarzt phase 1: help is reported (hintsUsed, independence), never deducted.
+    expect(s.scores.efficiency).toBe(100 - 2 * 8);
+    expect(s.facts.hintsUsed).toBe(2);
     // Nothing went wrong: recognition, treatment and time do not apply.
     expect(s.scores.recognition).toBeNull();
     expect(s.scores.time).toBeNull();

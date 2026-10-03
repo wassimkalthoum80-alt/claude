@@ -79,7 +79,7 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   comes with the diagnostics panel), _What you did well_, _What could be improved_, the key learning point, and
   your decisions marked ✓ effective / ! questionable / ✕ dangerous with the measured change ("Ventilator RR 10 ·
   VT 450 — MAP 55 → 84 after 03:00"). Scores come from the event log and the measured values, never from button
-  presses alone; ordering tests repeatedly or opening every hint costs efficiency. Resuscitation cases are scored
+  presses alone; ordering tests repeatedly costs efficiency (hints and Oberarzt help are reported, not deducted). Resuscitation cases are scored
   from time to first compression, compression fraction and no-flow time. Thresholds and case targets are data
   (`src/content/scoring/scoringConfig.ts`), pure scoring functions in `src/game/scoring.ts`.
 - **Working diagnosis** (milestone 6 phase 5): in Skills Training the learner commits to a diagnosis from the
@@ -127,11 +127,15 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
 - **BLOOD GAS / LAB** (action bar): draw an arterial blood gas; the result (pH, PaCO₂, PaO₂, HCO₃⁻, BE, SaO₂,
   lactate, Hb, Na⁺, K⁺, Cl⁻, glucose, P/F) arrives 2–3 simulated minutes later with the values at the time of
   sampling and flags outside the reference range.
-- **TIMELINE · TRENDS · HINT** (beneath the scene): the timeline lists your actions and the clinical events,
+- **TIMELINE · TRENDS · OBERARZT** (beneath the scene): the timeline lists your actions and the clinical events,
   each intervention with the measured change ("Ventilator RR 10 — MAP 53 → 84, HR 184 → 131, after 03:00");
   the trend view shows HR, arterial pressure (mean with systolic/diastolic band), SpO₂, EtCO₂ and peak airway
-  pressure over the last 5 / 15 / 60 simulated minutes with your actions marked; hints (when the case has them,
-  not in expert sessions) open one level at a time, from where to look to what may help, and are recorded.
+  pressure over the last 5 / 15 / 60 simulated minutes with your actions marked.
+- **Oberarzt (mentor, phase 1):** a senior colleague who says "du" and helps with the case's key decisions in four
+  levels (hint, focused question, concrete action, step by step) plus "Warum?". Beginner: speaks up unasked when
+  you are stuck (with a learning pause); intermediate: only on request ("Oberarzt rufen"), and independence counts
+  15 % of the overall score; expert: no help. Every help is logged and shown in the debrief (_Independence_).
+  Pilot cases: septic intubation, difficult airway, septic shock; other cases offer their hint ladder.
 - **Three polished Physiology Lab cases** (milestone 6b): _Healthy lungs — guided ventilation experiments_
   (four experiment cards: RR doubled, PEEP 15, VT 300, FiO₂ 21 % — question, change, measured result, why);
   _Severe asthma — dynamic hyperinflation_ (five patients, a different one on every restart; nurse, ventilator

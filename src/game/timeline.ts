@@ -40,6 +40,7 @@ const COMMANDS = new Set<Command['type']>([
   'PUMP_LOAD',
   'ORDER_TEST',
   'REQUEST_HINT',
+  'MENTOR_HELP',
   'RHYTHM_CHECK_START',
   'DEFIB_CHARGE',
   'SET_RHYTHM',
@@ -110,6 +111,23 @@ export function commandDetail(c: Command): string {
       return c.test.toUpperCase();
     case 'REQUEST_HINT':
       return c.topic;
+    case 'MENTOR_HELP':
+      return `${c.checkpoint} L${c.level}`;
+    case 'MENTOR_WHY':
+      return c.checkpoint;
+    case 'SET_RESP_SUPPORT':
+      return c.support;
+    case 'AIRWAY_CHECKLIST':
+      return `${c.item} ${c.done ? 'on' : 'off'}`;
+    case 'AIRWAY_CALL':
+      return c.call;
+    case 'AIRWAY_MASK_ADJUNCT':
+      return c.on ? 'on' : 'off';
+    case 'ASSESS':
+      return c.kind;
+    case 'PUMP_SET_RATE':
+    case 'PUMP_BOLUS':
+      return c.pumpId;
     case 'ADVANCE_TIME':
       return `${Math.round(c.seconds / 60)} min`;
     case 'PUMP_START':

@@ -139,7 +139,12 @@ HOME ──► module menu ──► session intro ──► workspace ──►
 - **Timeline, trends, hints:** `MonitorTrends` (`src/sim/devices`) records the measured numerics and ventilator
   settings at 1 Hz (4 h); `buildTimeline` (`src/ui/adapters/timeline.ts`, pure) turns the event log + these trends
   into entries with before → after values (3 min window). `ScenarioDefinition.hints` holds progressive hint topics;
-  `REQUEST_HINT` reveals the next level (`state.director.hints`, read by the efficiency score). UI: `SessionTools`.
+  `REQUEST_HINT` reveals the next level (`state.director.hints`, reported in the debrief). UI: `SessionTools`.
+- **Oberarzt (mentor):** pure checkpoint logic in `src/game/mentor.ts` (status from the event log, current
+  checkpoint, beginner timing, independence report); plans and templates in `src/content/mentor/plans.ts` and
+  `src/content/i18n/mentor.{en,de}.ts`. Help is dispatched as `MENTOR_HELP` / `MENTOR_WHY` (logged, no effect on the
+  patient). UI: `src/ui/components/Mentor` (drawer view + beginner card), debrief `MentorDebrief`; scoring takes the
+  plan as an optional argument (`scoreSession(…, mentor)`).
 - **Scenario framework additions:** `variants` (drawn from the seed by `resolveVariant`, merged into the scenario;
   `state.scenario.variant`), rule `commands` (consequences with a mechanism, source `scenario`, replay-safe),
   rule `levels` (help by difficulty, set with `SET_DIFFICULTY`), a scenario rule replaces a general rule with the
