@@ -1183,6 +1183,7 @@ export const de: Record<I18nKey, string> = {
   'tl.k.CIRCULATION_RESTORED': 'Kreislauf wieder da',
   'tl.k.FIRST_COMPRESSION': 'Erste Kompression',
   'tl.k.SCENARIO_END': 'Fall beendet',
+  'tl.k.BACKGROUND_ADVANCE': 'Stationsstunden (Hintergrund)',
   'tl.k.SCENARIO_CONTINUED': 'Gleicher Patient, neue Episode',
   'tl.k.PEA_ONSET': 'PEA',
   'tl.k.VF_ONSET': 'Kammerflimmern',

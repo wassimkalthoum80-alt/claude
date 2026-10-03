@@ -146,6 +146,17 @@ export class VentilatorDevice {
     return Math.round(60 / ((last - (st[0] ?? last)) / (st.length - 1)));
   }
 
+  /** After background time (hours without breath-resolved simulation): restart the breath timers at t. */
+  resync(vent: VentilatorState, t: number): void {
+    this.expirationStart = t;
+    this.breathStarts = [];
+    this.nextMandatory = t + (vent.mode === 'PSV' ? APNEA_TIME_S : 60 / vent.settings.rr);
+    vent.breathPhase = 'expiration';
+    this.spont.inInspiration = false;
+    this.spont.starts = [];
+    this.spont.lastEnd = t;
+  }
+
   /**
    * The ventilator leaves (standby) or takes over the breathing. Standby: no breaths, no pressure, no alarms — the
    * patient breathes room air or the oxygen device's gas. Taking over starts a fresh breath cycle.

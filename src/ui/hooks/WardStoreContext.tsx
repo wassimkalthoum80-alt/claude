@@ -18,8 +18,12 @@ export interface WardStore {
   /** start recording a real-time episode (replaces a previous recorder) */
   startRecording(start: EpisodeStart): BridgeRecorder;
   recorder(): BridgeRecorder | null;
-  /** the workstation now holds this ward patient as handed over (engine load count at the handover) */
-  markEpisodeEnd(engineLoadCount: number): void;
+  /**
+   * the workstation now holds this ward patient as handed over (engine load count and course time at the handover)
+   */
+  markEpisodeEnd(engineLoadCount: number, courseTimeH: number): void;
+  /** h — course time of the last handover (for the ward hours the held patient must catch up) */
+  heldSinceH(): number | null;
   /** a further episode can continue the same workstation patient (nothing else was loaded since) */
   canContinue(engineLoadCount: number): boolean;
 }
@@ -29,7 +33,7 @@ const WardStoreContext = createContext<WardStore | null>(null);
 export function WardStoreProvider({ children }: { children: ReactNode }) {
   const slot = useRef<{ key: string; engine: InfectionEngine } | null>(null);
   const rec = useRef<BridgeRecorder | null>(null);
-  const held = useRef<{ key: string; load: number } | null>(null);
+  const held = useRef<{ key: string; load: number; atH: number } | null>(null);
   const store = useMemo<WardStore>(
     () => ({
       engineFor(session) {
@@ -53,9 +57,10 @@ export function WardStoreProvider({ children }: { children: ReactNode }) {
         return rec.current;
       },
       recorder: () => rec.current,
-      markEpisodeEnd(load) {
-        held.current = slot.current ? { key: slot.current.key, load } : null;
+      markEpisodeEnd(load, atH) {
+        held.current = slot.current ? { key: slot.current.key, load, atH } : null;
       },
+      heldSinceH: () => held.current?.atH ?? null,
       canContinue: (load) =>
         held.current !== null &&
         held.current.key === slot.current?.key &&

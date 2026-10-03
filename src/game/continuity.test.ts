@@ -299,3 +299,34 @@ describe('a further episode continues the same workstation patient', () => {
     expect(e.getSnapshot().scenario.ended).toBe(false);
   });
 });
+
+describe('ward hours between two episodes (review H5)', () => {
+  it('the held patient is not frozen: the bag runs on and the clock advances by the ward hours', () => {
+    const { w, e } = workstation();
+    e.dispatch(
+      {
+        type: 'HANG_BAG',
+        productId: 'sterofundin-iso',
+        volumeMl: 1000,
+        rateMlH: 100,
+        speed: 'slow',
+      },
+      'user',
+    );
+    e.runFor(600);
+    const handover = e.getSnapshot();
+    const given = handover.devices.pumps.find((p) => p.id === 'BAG1')?.deliveredMl ?? 0;
+    // three ward hours later the patient is taken over again (the session flow: causes, ward hours, new case layer)
+    const preset = w.realtimePreset();
+    for (const c of continuationCommands(preset, e.getSnapshot())) e.dispatch(c, 'system');
+    e.backgroundAdvance(3 * 3600);
+    e.continueScenario(bridgeScenario(preset, 'shock', w.caseDef.patient, 'sepsis', true));
+    const s = e.getSnapshot();
+    expect(s.time).toBeCloseTo(handover.time + 3 * 3600, 6);
+    expect(s.devices.pumps.find((p) => p.id === 'BAG1')?.deliveredMl).toBeCloseTo(given + 300, 3);
+    expect(s.devices.balance.urineDrainedMl).toBeGreaterThan(
+      handover.devices.balance.urineDrainedMl,
+    );
+    expect(s.scenario.ended).toBe(false);
+  });
+});

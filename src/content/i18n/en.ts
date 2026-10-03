@@ -1180,6 +1180,7 @@ export const en = {
   'tl.k.CIRCULATION_RESTORED': 'Circulation restored',
   'tl.k.FIRST_COMPRESSION': 'First compression',
   'tl.k.SCENARIO_END': 'Case ended',
+  'tl.k.BACKGROUND_ADVANCE': 'Ward hours (background)',
   'tl.k.SCENARIO_CONTINUED': 'Same patient, new episode',
   'tl.k.PEA_ONSET': 'PEA',
   'tl.k.VF_ONSET': 'Ventricular fibrillation',

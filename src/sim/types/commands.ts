@@ -237,6 +237,8 @@ export type ClinicalEventType =
   | 'SCENARIO_END'
   /** the same patient continues under a further case definition (another real-time episode); detail = scenario id */
   | 'SCENARIO_CONTINUED'
+  /** background time between two episodes (ward hours) was simulated on the slow models; detail = "s" */
+  | 'BACKGROUND_ADVANCE'
   /** heart–lung model: arrest from sustained low flow or oxygen debt (detail = cause) */
   | 'PEA_ONSET'
   /** heart–lung model: ventricular fibrillation from severe ischaemia under catecholamine drive (detail = cause) */

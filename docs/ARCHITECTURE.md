@@ -377,7 +377,8 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
     (`src/content/scenarios/bridge.ts`, `loadScenario`); a further episode of the same ward session continues the
     patient the workstation still holds (`SimulationEngine.continueScenario`, checked with `loadCount` via
     `WardStore.canContinue`). Either way `continuationCommands` applies the course-owned causes (vasoplegia, leak,
-    temperature) and the protocol's noradrenaline dose.
+    temperature) and the protocol's noradrenaline dose. A continued patient first catches up the ward hours since the handover with
+    `SimulationEngine.backgroundAdvance` (slow models only: pumps, PK, fluid, urine, gases, brain).
   - `BridgeBar` records the episode (`BridgeRecorder`, started at `episodeStart`, so times and fluids are relative to
     the episode). `end()` turns it into a `RealtimeOutcome` including the end state (`end`: MAP, HR, RR, SaO₂,
     lactate, noradrenaline, FiO₂, airway); an episode that never started sends `REALTIME_EPISODE_CANCEL`.

@@ -533,6 +533,36 @@ export class SimulationEngine {
     this.bumpAndNotify();
   }
 
+  /**
+   * Background time between two real-time episodes (the ward hours): the patient's slow processes run for `seconds`
+   * in 2-s steps — pumps and bags keep delivering, drugs distribute and wash out (RK4 PK), fluid shifts, urine and
+   * insensible losses go on, blood gases and the brain follow. Waveforms, beats, breaths and the heart–lung
+   * reflexes are not stepped (circulation and ventilation are held at their last values); afterwards the beat and
+   * breath timers restart at the new time. The clock advances, so every record keeps its true time.
+   */
+  backgroundAdvance(seconds: number): void {
+    if (!(seconds > 0)) return;
+    const s = this.state;
+    const total = Math.round(seconds / SUBSTEP_S);
+    const per = Math.round(BACKGROUND_STEP_S / SUBSTEP_S);
+    for (let done = 0; done < total;) {
+      const n = Math.min(per, total - done);
+      done += n;
+      this.substep += n;
+      s.time = this.substep * SUBSTEP_S;
+      const dt = n * SUBSTEP_S;
+      this.updatePharmacology(dt);
+      this.bloodGas.update(s.patient.gas, this.gasInputs(), dt);
+      this.cerebral.update(s.patient, this.pharmacology.exposures(s.patient), dt);
+    }
+    const c = s.patient.cardio;
+    this.rhythm.reset(c.rhythm, s.time, c, this.rng);
+    this.drive.reset();
+    this.ventilator.resync(s.devices.ventilator, s.time);
+    this.logEvent('BACKGROUND_ADVANCE', s.time, `${Math.round(seconds)} s`);
+    this.bumpAndNotify();
+  }
+
   /** Increments with every (re)load of a patient — tells whether the state still holds the same patient. */
   get loadCount(): number {
     return this.loads;
@@ -1780,6 +1810,9 @@ type PumpCommand = Extract<
       | 'LINE_FLUSH';
   }
 >;
+
+/** s — step of the background (ward-hour) simulation */
+const BACKGROUND_STEP_S = 2;
 
 /** The named preset a rate matches (otherwise a custom rate). */
 function gravitySpeedOf(rateMlH: number): GravitySpeed {

@@ -163,11 +163,17 @@ export function useSession(): SessionActions {
         course.caseDef.realtimeKind,
         continuing,
       );
-      if (continuing) engine.continueScenario(scenario);
-      else engine.loadScenario(scenario, wardSession.seed);
+      if (!continuing) engine.loadScenario(scenario, wardSession.seed);
       // Course-owned causes (vasoplegia, leak, temperature) and the protocol's noradrenaline dose.
       for (const c of continuationCommands(preset, engine.getSnapshot()))
         engine.dispatch(c, 'system');
+      if (continuing) {
+        // The ward hours since the handover pass for the held patient (drugs, bags, fluid, urine); then the case
+        // layer of the new episode starts from now.
+        const since = wardStore.heldSinceH();
+        if (since !== null) engine.backgroundAdvance(Math.max(0, course.timeH - since) * 3600);
+        engine.continueScenario(scenario);
+      }
       engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: wardSession.difficulty }, 'system');
       engine.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
       wardStore.startRecording(episodeStart(engine.getSnapshot()));
@@ -246,8 +252,11 @@ export function useSession(): SessionActions {
         ? realtimeOutcome(rec?.samples ?? [], snap, engine.eventLog, start)
         : null;
       // The workstation keeps this patient as handed over for a further episode.
-      wardStore.markEpisodeEnd(engine.loadCount);
-      if (!outcome) wardStore.current()?.dispatch({ type: 'REALTIME_EPISODE_CANCEL' }, 'system');
+      const courseEngine = wardStore.current();
+      if (!outcome) courseEngine?.dispatch({ type: 'REALTIME_EPISODE_CANCEL' }, 'system');
+      // Course time of the handover: the episode start plus its minutes (counted when the ward confirms it).
+      const atH = (courseEngine?.timeH ?? 0) + (outcome ? outcome.durationMin / 60 : 0);
+      wardStore.markEpisodeEnd(engine.loadCount, atH);
       setUi({
         ...WORKSPACE_CLOSED,
         screen: 'ward',
