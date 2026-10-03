@@ -6,12 +6,12 @@ import { recordExplored } from '../../game/progression';
 import { createSession } from '../../game/session';
 import type { ModuleId } from '../../game/types';
 import { bridgeScenario, type BridgeKind } from '../../content/scenarios/bridge';
-import { ALIGN_WINDOW_S } from '../../sim';
 import {
   arrivalSupport,
   continuationCommands,
   episodeStart,
   handoverTargets,
+  physiologyLink,
   realtimeOutcome,
 } from '../../game/bridge';
 import { finishScoredSession, MIN_DEBRIEF_S } from '../adapters/debrief';
@@ -184,14 +184,14 @@ export function useSession(): SessionActions {
       for (const c of continuationCommands(preset, engine.getSnapshot()))
         engine.dispatch(c, 'system');
       if (continuing) {
-        // The ward hours since the handover pass for the held patient (drugs, bags, urine; body water held by the
-        // ward's care); then the case layer of the new episode starts from now.
-        const since = wardStore.heldSinceH();
-        const gapS = since !== null ? Math.max(0, course.timeH - since) * 3600 : 0;
-        engine.backgroundAdvance(Math.max(0, gapS - ALIGN_WINDOW_S), { holdVolumes: true });
-        // The last minutes of the ward period run in full physiology: the held patient arrives with the ward's
-        // measured values (second transfer), keeping the drugs, airway and fluids given so far.
-        engine.alignToWard(handoverTargets(preset));
+        // One patient: the held workstation patient ran through the ward hours with the course (linked physiology),
+        // so the ward's values are this patient's own — nothing is recalibrated. Only if the link was lost does the
+        // gap pass in the background here.
+        if (!course.physiologyLinked) {
+          const since = wardStore.heldSinceH();
+          const gapS = since !== null ? Math.max(0, course.timeH - since) * 3600 : 0;
+          engine.backgroundAdvance(gapS);
+        }
         engine.continueScenario(scenario);
       }
       engine.dispatch({ type: 'SET_DIFFICULTY', difficulty: wardSession.difficulty }, 'system');
@@ -277,6 +277,9 @@ export function useSession(): SessionActions {
       // Course time of the handover: the episode start plus its minutes (counted when the ward confirms it).
       const atH = (courseEngine?.timeH ?? 0) + (outcome ? outcome.durationMin / 60 : 0);
       wardStore.markEpisodeEnd(engine.loadCount, atH);
+      // From now on the course and the workstation share this patient (continuity): the held patient runs through
+      // the ward hours and supplies the ward's vital signs.
+      if (outcome && outcome.survived) courseEngine?.linkPhysiology(physiologyLink(engine));
       setUi({
         ...WORKSPACE_CLOSED,
         screen: 'ward',

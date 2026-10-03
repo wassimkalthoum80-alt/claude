@@ -1,12 +1,15 @@
 import {
   getProduct,
   isOxygenDevice,
+  LINK_SETTLE_S,
   ventilatorInUse,
   type Command,
   type CourseSupport,
   type HandoverTargets,
   type InfectionCommand,
+  type LinkedVitals,
   type LogEntry,
+  type PhysiologyLink,
   type RealtimeOutcome,
   type RealtimePreset,
   type SimulationState,
@@ -263,9 +266,8 @@ export function continuationCommands(
   preset: RealtimePreset,
   s: Readonly<SimulationState>,
 ): Command[] {
-  // SIM-ASSUMPTION: between episodes the workstation patient is held at its handover state — the full physiology does
-  // not run for the ward hours (volumes, drug levels and measurements wait); the ward hours are treated as
-  // fluid-neutral for it. The course-owned causes and the protocol's noradrenaline dose are brought up to date.
+  // The course-owned causes and the protocol's noradrenaline dose are brought up to date (each linked ward step and
+  // at a further episode); the patient's own state — volumes, drugs, airway — is never adjusted here.
   const out: Command[] = [
     {
       type: 'FLUID_SET_FACTORS',
@@ -295,6 +297,80 @@ export function continuationCommands(
     } else if (pump.running) out.push({ type: 'PUMP_STOP', pumpId: pump.id });
   }
   return out;
+}
+
+/**
+ * The engine side of the one-patient link (continuity, clinical review SA-CONT-01..05): each course step brings the
+ * course-owned causes up to date, keeps the ward's standing basic infusion supplied, runs the held workstation patient
+ * through the same hours in the full physiology and returns its values. No compensating fluid or urine is booked —
+ * the ledger holds only what was actually given and produced.
+ */
+export interface EngineForLink {
+  readonly loadCount: number;
+  getSnapshot(): Readonly<SimulationState>;
+  dispatch(command: Command, source?: 'system'): void;
+  backgroundAdvance(seconds: number): void;
+  settle(seconds: number): void;
+}
+
+/** mL — a running maintenance bag below this is replaced by the ward's standing order before the next hour. */
+const WARD_BAG_REFILL_ML = 150;
+/** s — the ward hours run in chunks: background model, then a short full-physiology burst (circulation feedback) */
+const LINK_CHUNK_S = 300;
+/** values at which a linked ward step ends early (the ward notices the deterioration then) */
+const LINK_STOP = { map: 60, spo2: 85 } as const;
+
+export function physiologyLink(engine: EngineForLink): PhysiologyLink {
+  const load = engine.loadCount;
+  const vitals = (): LinkedVitals => {
+    const s = engine.getSnapshot();
+    return {
+      map: s.patient.cardio.meanArterialPressure,
+      heartRate: s.patient.cardio.heartRate,
+      respRate: s.devices.ventilator.measured.rrTotal,
+      spo2: s.patient.gas.spo2,
+      lactate: s.patient.gas.lactate,
+    };
+  };
+  return {
+    advance(dtH: number, drivers: RealtimePreset) {
+      if (engine.loadCount !== load) return null;
+      for (const c of continuationCommands(drivers, engine.getSnapshot()))
+        engine.dispatch(c, 'system');
+      // SIM-ASSUMPTION: the ward's standing basic infusion (the running maintenance pump) is replaced when its bag runs
+      // low — a real, documented input in the ledger, never a correction.
+      for (const p of engine.getSnapshot().devices.pumps) {
+        if (p.kind === 'syringe' || !p.running || !p.productId || p.protocolId !== 'maintenance')
+          continue;
+        if (p.remainingMl >= WARD_BAG_REFILL_ML) continue;
+        const rate = p.rateMlH;
+        engine.dispatch(
+          { type: 'PUMP_LOAD', pumpId: p.id, productId: p.productId, protocolId: 'maintenance' },
+          'system',
+        );
+        engine.dispatch({ type: 'PUMP_SET_RATE', pumpId: p.id, rateMlH: rate }, 'system');
+        engine.dispatch({ type: 'PUMP_START', pumpId: p.id }, 'system');
+      }
+      // The hours run in chunks: the background model, then a short burst of full physiology so the circulation and
+      // its reflexes respond to the volumes and drugs. A deterioration ends the step at that minute.
+      const seconds = dtH * 3600;
+      let done = 0;
+      while (done < seconds - 1e-6) {
+        const chunk = Math.min(LINK_CHUNK_S, seconds - done);
+        engine.backgroundAdvance(Math.max(0, chunk - LINK_SETTLE_S));
+        engine.settle(Math.min(chunk, LINK_SETTLE_S));
+        done += chunk;
+        const s = engine.getSnapshot();
+        if (
+          !s.patient.cardio.spontaneousCirculation ||
+          s.patient.cardio.meanArterialPressure < LINK_STOP.map ||
+          s.patient.gas.spo2 < LINK_STOP.spo2
+        )
+          break;
+      }
+      return { vitals: vitals(), elapsedH: done / 3600 };
+    },
+  };
 }
 
 /** The ward's measured values the workstation patient must arrive with (first episode of a patient). */

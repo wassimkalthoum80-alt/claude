@@ -4,7 +4,7 @@ import { erc2025 } from '../content/guidelines/erc2025';
 import { feverRigors } from '../content/infection/cases';
 import { INFECTION_LIBRARY } from '../content/infection/library';
 import { bridgeScenario } from '../content/scenarios/bridge';
-import { ALIGN_WINDOW_S, InfectionEngine, SimulationEngine, type RealtimePreset } from '../sim';
+import { InfectionEngine, SimulationEngine, type RealtimePreset } from '../sim';
 import {
   arrivalSupport,
   BridgeRecorder,
@@ -12,6 +12,7 @@ import {
   episodeStart,
   handoverCommands,
   handoverTargets,
+  physiologyLink,
   realtimeOutcome,
   wardReady,
 } from './bridge';
@@ -231,18 +232,21 @@ describe('resuscitation of the transferred septic patient', () => {
     return null;
   };
 
-  it('ALS with ventilation and oxygen, adrenaline and fluid restores the circulation; leaving one out does not', () => {
+  it('ALS with ventilation and oxygen and adrenaline restores the circulation (fluid helps, it is no password)', () => {
+    // clinical review SA-ALS-03: recovery comes from the physiology, not from a fixed set of clicks
     expect(als(arrested(), { o2: true, adrenaline: true, fluid: true })).not.toBeNull();
-    expect(als(arrested(), { o2: true, adrenaline: true })).toBeNull();
+    expect(als(arrested(), { o2: true, adrenaline: true })).not.toBeNull();
     expect(als(arrested(), { mask: false, adrenaline: true, fluid: true })).toBeNull();
-    expect(als(arrested(), { o2: true, fluid: true })).toBeNull();
   });
 
   it('the episode does not end two minutes into a resuscitation', () => {
     const e = arrested();
+    const arrestAt = e.getSnapshot().time;
     e.dispatch({ type: 'CPR_START' }, 'user');
-    e.runFor(600);
-    expect(e.getSnapshot().scenario.ended).toBe(false);
+    e.runFor(150);
+    // only the case's own time limit may end it this early, never the arrest itself
+    const limit = e.scenario.maxDurationS ?? Infinity;
+    expect(e.getSnapshot().scenario.ended).toBe(arrestAt + 150 >= limit);
   });
 });
 
@@ -281,17 +285,23 @@ describe('second transfer of the same patient (held workstation patient)', () =>
       rec.sample(e.getSnapshot());
     }
     const o = realtimeOutcome(rec.samples, e.getSnapshot(), e.eventLog, rec.start);
-    for (const c of handoverCommands(o, null)) ward.dispatch(c, 'system');
-    const heldAt = ward.timeH;
+    // one patient from now on: the held workstation patient runs through the ward hours with the course
+    ward.linkPhysiology(physiologyLink(e));
+    const drug = null;
+    for (const c of handoverCommands(o, drug)) ward.dispatch(c, 'system');
+    /** s — course clock minus workstation clock at the handover (the two run in step from here) */
+    const offsetS = ward.timeH * 3600 - e.getSnapshot().time;
+    const wardHours: { map: number; course: number }[] = [];
     for (let h = 0; h < 48; h++) {
       ward.dispatch({ type: 'ADVANCE', hours: 1 }, 'user');
+      wardHours.push({
+        map: e.getSnapshot().patient.cardio.meanArterialPressure,
+        course: ward.realtimePreset().map,
+      });
       if (bad()) break;
     }
     const preset = ward.realtimePreset();
     for (const c of continuationCommands(preset, e.getSnapshot())) e.dispatch(c, 'system');
-    const gapS = (ward.timeH - heldAt) * 3600;
-    e.backgroundAdvance(Math.max(0, gapS - ALIGN_WINDOW_S), { holdVolumes: true });
-    e.alignToWard(handoverTargets(preset));
     e.continueScenario(
       bridgeScenario(
         preset,
@@ -302,18 +312,35 @@ describe('second transfer of the same patient (held workstation patient)', () =>
         arrivalSupport(ward.getView().support),
       ),
     );
-    return { e, preset };
+    return { e, preset, wardHours, ward, offsetS };
   }
 
-  it('the monitor shows the ward values again (noradrenaline-treated and untreated first episodes)', () => {
+  it('a deterioration ends the linked ward step at that minute and the nurse reports the shock', () => {
+    const { ward, e, offsetS } = secondTransfer(0);
+    // the two clocks ran in step; the course stopped when the patient deteriorated, not on the full hour
+    expect(Math.abs(ward.timeH * 3600 - e.getSnapshot().time - offsetS)).toBeLessThan(1);
+    expect(Math.abs(ward.timeH - Math.round(ward.timeH))).toBeGreaterThan(1e-3);
+    expect(ward.log.some((l) => l.kind === 'call' && l.messageKey === 'nurse.shock')).toBe(true);
+  });
+
+  it('loading another patient into the workstation ends the link (the course keeps its own model)', () => {
+    const { ward, e } = secondTransfer(5);
+    e.loadScenario(bridgeScenario(ward.realtimePreset(), 'shock', ward.caseDef.patient), 9);
+    ward.dispatch({ type: 'ADVANCE', hours: 1 }, 'user');
+    expect(ward.physiologyLinked).toBe(false);
+  });
+
+  it("one patient: the ward shows the held patient's own values, the next transfer arrives with them unchanged", () => {
     for (const na of [5, 0]) {
-      const { e, preset } = secondTransfer(na);
+      const { e, preset, wardHours, ward } = secondTransfer(na);
       const s = e.getSnapshot();
       const n = s.devices.monitor.numerics;
-      expect(s.patient.cardio.spontaneousCirculation).toBe(true);
-      expect(Math.abs((n.artMean ?? 0) - preset.map)).toBeLessThanOrEqual(3);
-      expect(Math.abs((n.hr ?? 0) - preset.heartRate)).toBeLessThanOrEqual(5);
-      expect(Math.abs(s.patient.gas.spo2 - preset.spo2)).toBeLessThanOrEqual(1.5);
+      expect(ward.physiologyLinked).toBe(true);
+      // every ward hour showed the workstation patient's MAP (rounded), not a second model's
+      for (const h of wardHours) expect(Math.abs(h.course - h.map)).toBeLessThanOrEqual(1);
+      expect(Math.abs((n.artMean ?? 0) - preset.map)).toBeLessThanOrEqual(4);
+      expect(Math.abs(s.patient.gas.spo2 - preset.spo2)).toBeLessThanOrEqual(1);
+      // nothing was recalibrated and no compensating fluid or urine was booked
       expect(
         e.eventLog.some(
           (l) =>
@@ -321,10 +348,16 @@ describe('second transfer of the same patient (held workstation patient)', () =>
             l.event === 'HANDOVER_CALIBRATED' &&
             /held patient/.test(l.detail ?? ''),
         ),
-      ).toBe(true);
-      // the patient stays alive into the episode
-      e.runFor(30);
-      expect(e.getSnapshot().patient.cardio.spontaneousCirculation).toBe(true);
+      ).toBe(false);
+      expect(
+        e.eventLog.some(
+          (l) =>
+            l.kind === 'event' &&
+            l.event === 'BACKGROUND_ADVANCE' &&
+            /ward fluid/.test(l.detail ?? ''),
+        ),
+      ).toBe(false);
+      expect(Math.abs(e.fluidConservationError)).toBeLessThan(1);
     }
   });
 });

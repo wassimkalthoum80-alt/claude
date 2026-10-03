@@ -966,6 +966,17 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await expect(page.getByTestId('ward-clock')).toHaveText(/Tag 1 · 15:0[56]/);
   // The oxygen support of the episode is carried to the ward and shown.
   await expect(page.getByTestId('ward-support')).toContainText('FiO₂');
+  // One patient: the ward shows the workstation patient's own values (continuity), not a second model's.
+  const engineMap = await page.evaluate(() =>
+    Math.round(
+      (
+        window.__resusEngine?.getSnapshot() as unknown as {
+          patient: { cardio: { meanArterialPressure: number } };
+        }
+      ).patient.cardio.meanArterialPressure,
+    ),
+  );
+  await expect(page.getByTestId('ward-vitals')).toContainText(`MAP ${engineMap}`);
   if (shots) await page.screenshot({ path: `${shots}/ward-9-after-handover.png` });
   expect(errors).toEqual([]);
 });

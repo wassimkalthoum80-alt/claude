@@ -1,6 +1,5 @@
 import { FixedStepClock } from '../core/Clock';
 import { MAX_ADVANCE_S, SUBSTEP_S, SUBSTEPS_PER_TICK, TICK_S } from '../core/constants';
-import { shiftInterstitialToPlasma } from '../fluid/init';
 import { drawGrade } from '../interventions/laryngoscopy';
 import { EventLog } from '../core/EventLog';
 import { SeededRng } from '../core/rng';
@@ -38,7 +37,7 @@ import {
   OUTPUT_CATEGORIES,
   type ReadonlyFluidLedger,
 } from '../fluid/ledger';
-import type { BodyFluidState, FluidFactors } from '../state/BodyFluidState';
+import type { FluidFactors } from '../state/BodyFluidState';
 import { GRAVITY_PRESETS, PUMP_MAX_RATE } from '../pharmacology/delivery';
 import type { GravitySpeed } from '../state/PharmacologyState';
 import { PhysioTrends, type ReadonlyPhysioTrends } from '../devices/PhysioTrends';
@@ -609,53 +608,13 @@ export class SimulationEngine {
   }
 
   /**
-   * Align a held patient with the ward's measured values before a further episode (second transfer): the last
-   * `seconds` of the ward period run in full physiology while the unmodelled causes are adjusted every 10 s —
-   * consolidation shunt for SaO₂, circulating volume (shifted between interstitium and plasma, so body water stays
-   * the same) for MAP and the intrinsic rate for the heart rate. Drugs, airway, ventilator and fluids given so far
-   * stay as they are. The clock advances; the alignment is logged.
-   *
-   * SIM-ASSUMPTION: the course gives the ward's numbers, not their mechanism (as for the first transfer); damped
-   * proportional steps with typical sensitivities (SaO₂ −0.6 %/% shunt, MAP 0.02 mmHg/mL, HR 1/min per /min).
+   * Full physiology for `seconds` without the case layer's time limit (circulation, reflexes, ventilation, gas
+   * exchange, drugs and fluids all step): the last minute of each linked ward hour, so the circulation responds to
+   * the volumes and drugs the background hours produced. Nothing is adjusted towards a target.
    */
-  alignToWard(targets: HandoverTargets, seconds = ALIGN_WINDOW_S): void {
-    const s = this.state;
-    const p = s.patient;
-    const steps = Math.max(1, Math.round(seconds / ALIGN_STEP_S));
-    let shifted = 0;
-    for (let k = 0; k < steps; k++) {
-      for (let i = 0; i < Math.round(ALIGN_STEP_S / TICK_S); i++) this.tick();
-      if (!p.cardio.spontaneousCirculation) break;
-      const damping = 0.7;
-      const shunt = clamp(
-        p.conditions.consolidationShunt + (damping * (p.gas.spo2 - targets.spo2)) / 60,
-        0,
-        0.4,
-      );
-      p.conditions.consolidationShunt = shunt;
-      const volume = clamp(
-        (damping * (targets.map - p.cardio.meanArterialPressure)) / 0.02,
-        -300,
-        300,
-      );
-      shifted += shiftInterstitialToPlasma(p.fluid, volume);
-      const rate = clamp(
-        this.heartLung.currentSinusRate() +
-          damping * (targets.heartRate - p.heartLung.heartRateTarget),
-        40,
-        160,
-      );
-      this.baselineHeartRate = rate;
-      this.heartLung.setSinusRate(rate);
-    }
-    p.factors.lactateBaseline = clamp(Math.max(p.factors.lactateBaseline, targets.lactate), 1, 10);
-    this.logEvent(
-      'HANDOVER_CALIBRATED',
-      s.time,
-      `held patient: MAP ${Math.round(targets.map)} mmHg, HR ${Math.round(targets.heartRate)}/min, SpO2 ` +
-        `${Math.round(targets.spo2)} % → shunt ${Math.round(p.conditions.consolidationShunt * 100)} %, volume ` +
-        `${shifted >= 0 ? '+' : ''}${Math.round(shifted)} mL`,
-    );
+  settle(seconds: number): void {
+    const n = Math.round(Math.max(0, seconds) / TICK_S);
+    for (let i = 0; i < n; i++) this.tick();
     this.bumpAndNotify();
   }
 
@@ -666,13 +625,11 @@ export class SimulationEngine {
    * reflexes are not stepped (circulation and ventilation are held at their last values); afterwards the beat and
    * breath timers restart at the new time. The clock advances, so every record keeps its true time.
    */
-  backgroundAdvance(seconds: number, opts: { holdVolumes?: boolean } = {}): void {
+  backgroundAdvance(seconds: number): void {
     if (!(seconds > 0)) return;
     const s = this.state;
     const total = Math.round(seconds / SUBSTEP_S);
     const per = Math.round(BACKGROUND_STEP_S / SUBSTEP_S);
-    const held = opts.holdVolumes ? holdableFluid(s.patient.fluid) : null;
-    let wardBalance = 0;
     for (let done = 0; done < total;) {
       const n = Math.min(per, total - done);
       done += n;
@@ -680,19 +637,6 @@ export class SimulationEngine {
       s.time = this.substep * SUBSTEP_S;
       const dt = n * SUBSTEP_S;
       this.updatePharmacology(dt);
-      if (held) {
-        // SIM-ASSUMPTION: the ward keeps the held patient's body water where the workstation left it — its fluid
-        // orders (maintenance, replacement, diuresis) are not modelled by the course, and the background steps lack
-        // the circulation feedback that limits leak and diuresis over hours. Held every step (haemoglobin and gas
-        // contents stay consistent); the difference is booked: a deficit as crystalloid given on the ward, an excess
-        // as urine excreted on the ward (the balance stays exact).
-        const before = this.fluidModel.bodyFluidChange(s.patient);
-        Object.assign(s.patient.fluid, held);
-        const diff = this.fluidModel.bodyFluidChange(s.patient) - before;
-        wardBalance += diff;
-        if (diff > 0) this.ledger.add('crystalloid', diff, s.time);
-        else if (diff < 0) this.ledger.add('urine', -diff, s.time);
-      }
       this.bloodGas.update(s.patient.gas, this.gasInputs(), dt);
       this.cerebral.update(s.patient, this.pharmacology.exposures(s.patient), dt);
     }
@@ -700,11 +644,7 @@ export class SimulationEngine {
     this.rhythm.reset(c.rhythm, s.time, c, this.rng);
     this.drive.reset();
     this.ventilator.resync(s.devices.ventilator, s.time);
-    this.logEvent(
-      'BACKGROUND_ADVANCE',
-      s.time,
-      `${Math.round(seconds)} s${held ? ` · ward fluid balance ${wardBalance >= 0 ? '+' : ''}${Math.round(wardBalance)} mL` : ''}`,
-    );
+    this.logEvent('BACKGROUND_ADVANCE', s.time, `${Math.round(seconds)} s`);
     this.bumpAndNotify();
   }
 
@@ -2153,33 +2093,8 @@ const BACKGROUND_STEP_S = 2;
  */
 const AWAKE_TONE_CMH2O = 3;
 
-/** The body-water compartments and solutes a ward period holds (bladder, renal state and counters run on). */
-function holdableFluid(f: BodyFluidState): Partial<BodyFluidState> {
-  return {
-    plasmaMl: f.plasmaMl,
-    rbcMl: f.rbcMl,
-    interstitialMl: f.interstitialMl,
-    lungInterstitialMl: f.lungInterstitialMl,
-    intracellularMl: f.intracellularMl,
-    ascitesMl: f.ascitesMl,
-    pleuralMl: f.pleuralMl,
-    gutLumenMl: f.gutLumenMl,
-    internalBloodMl: f.internalBloodMl,
-    plasmaAlbuminG: f.plasmaAlbuminG,
-    interstitialAlbuminG: f.interstitialAlbuminG,
-    ecfNa: f.ecfNa,
-    ecfCl: f.ecfCl,
-    ecfK: f.ecfK,
-    kShiftedMmol: f.kShiftedMmol,
-    ecfGlucose: f.ecfGlucose,
-    ecfOrganicAnions: f.ecfOrganicAnions,
-    icfOsmoles: f.icfOsmoles,
-  };
-}
-/** s — full-physiology window at the end of the ward hours in which a held patient is aligned with the ward */
-export const ALIGN_WINDOW_S = 120;
-/** s — interval of the alignment steps */
-const ALIGN_STEP_S = 10;
+/** s — full-physiology minute at the end of each linked ward hour (the circulation responds to the hour's changes) */
+export const LINK_SETTLE_S = 20;
 
 /** The named preset a rate matches (otherwise a custom rate). */
 function gravitySpeedOf(rateMlH: number): GravitySpeed {

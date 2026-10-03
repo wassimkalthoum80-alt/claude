@@ -1,7 +1,7 @@
 /**
  * Public API of the simulation. The UI imports from here only (CLAUDE.md A2).
  */
-export { ALIGN_WINDOW_S, SimulationEngine, type EngineOptions } from './engine/SimulationEngine';
+export { LINK_SETTLE_S, SimulationEngine, type EngineOptions } from './engine/SimulationEngine';
 export {
   calibrateHandover,
   HANDOVER_SETTLE_S,
@@ -277,6 +277,8 @@ export {
 export {
   InfectionEngine,
   type InfectionEngineOptions,
+  type LinkedVitals,
+  type PhysiologyLink,
   type InfectionTruth,
   type DispatchResult,
 } from './infection/InfectionEngine';

@@ -32,6 +32,31 @@ import type {
   WardFlora,
 } from './types';
 
+/** Vital signs of the linked workstation patient (measured there, carried into the course). */
+export interface LinkedVitals {
+  /** mmHg */
+  map: number;
+  /** /min */
+  heartRate: number;
+  /** /min */
+  respRate: number;
+  /** % */
+  spo2: number;
+  /** mmol/L */
+  lactate: number;
+}
+
+/**
+ * One patient across ward and workstation (continuity, clinical review SA-CONT-01..05): once the patient has been in
+ * the workstation, the course keeps computing the disease (infection, host response, organ drivers) while the held
+ * workstation patient runs through the same hours and supplies the vital signs. `advance` returns null when the
+ * workstation no longer holds this patient (the course then uses its own model again).
+ */
+export interface PhysiologyLink {
+  /** `elapsedH` < `dtH` when the patient deteriorated and the step ended early */
+  advance(dtH: number, drivers: RealtimePreset): { vitals: LinkedVitals; elapsedH: number } | null;
+}
+
 export interface InfectionEngineOptions {
   caseDef: InfectionCase;
   library: InfectionLibrary;
@@ -171,6 +196,9 @@ export class InfectionEngine {
   private readonly feverFactor: number;
 
   private vitals: VitalsPoint[] = [];
+  /** the held workstation patient supplies the vital signs (null: the course model's own) */
+  private link: PhysiologyLink | null = null;
+  private linked: LinkedVitals | null = null;
   private labs: { t: number; labs: LabPanel }[] = [];
   private firstAntibioticH: number | null = null;
   private timeoutLogged = false;
@@ -411,6 +439,45 @@ export class InfectionEngine {
     };
   }
 
+  /**
+   * Link the held workstation patient: from now on its physiology supplies the vital signs and runs through the
+   * course's hours under the course-owned drivers (`null` unlinks). The first values are taken at once.
+   */
+  linkPhysiology(link: PhysiologyLink | null): void {
+    this.link = link;
+    // The carried deviations of the old two-model handover are not needed: the patient itself is carried.
+    if (link && this.support)
+      this.support.carry = { map: 0, heartRate: 0, respRate: 0, spo2: 0, lactate: 0 };
+    this.linked = link ? (link.advance(0, this.drivers())?.vitals ?? null) : null;
+    if (!this.linked) this.link = null;
+    this.cachedView = null;
+    if (this.linked) {
+      const last = this.vitals[this.vitals.length - 1];
+      if (last && last.t >= this.t - EPS_H) this.vitals.pop();
+      this.recordVitals();
+    }
+  }
+
+  /** the course and the workstation share one patient (vital signs from the workstation) */
+  get physiologyLinked(): boolean {
+    return this.linked !== null;
+  }
+
+  /** The course-owned causes the linked patient follows (no vital signs: those come from the patient). */
+  private drivers(): RealtimePreset {
+    const v = this.currentVitals();
+    return {
+      temperatureC: v.temperatureC,
+      vasoplegia: Math.min(0.7, 0.75 * this.organs.circ),
+      capillaryLeak: courseLeak(this.inflam),
+      lactate: this.lactate(),
+      spo2: v.spo2,
+      heartRate: v.heartRate,
+      map: v.map,
+      noradrenalineUgKgMin: this.support?.noradrenalineUgKgMin ?? 0,
+    };
+  }
+
   /** Patient preset for the real-time workstation (course → real time). */
   realtimePreset(): RealtimePreset {
     const v = this.currentVitals();
@@ -418,7 +485,7 @@ export class InfectionEngine {
       temperatureC: v.temperatureC,
       // SIM-ASSUMPTION: circulation dysfunction maps linearly to the fluid model's vasoplegia/leak factors.
       vasoplegia: Math.min(0.7, 0.75 * this.organs.circ),
-      capillaryLeak: Math.min(0.8, 0.8 * this.inflam),
+      capillaryLeak: courseLeak(this.inflam),
       lactate: this.lactate(),
       spo2: v.spo2,
       heartRate: v.heartRate,
@@ -711,13 +778,15 @@ export class InfectionEngine {
       respSupport: e.support,
       o2FlowLMin: e.o2FlowLMin,
       sinceH: this.t,
-      carry: {
-        map: e.map - (base.map + noradrenalineEffect(na)),
-        heartRate: e.heartRate - base.heartRate,
-        respRate: e.respRate - base.respRate,
-        spo2: e.spo2 - base.spo2,
-        lactate: e.lactate - this.baseLactate(),
-      },
+      carry: this.link
+        ? { map: 0, heartRate: 0, respRate: 0, spo2: 0, lactate: 0 }
+        : {
+            map: e.map - (base.map + noradrenalineEffect(na)),
+            heartRate: e.heartRate - base.heartRate,
+            respRate: e.respRate - base.respRate,
+            spo2: e.spo2 - base.spo2,
+            lactate: e.lactate - this.baseLactate(),
+          },
     };
   }
 
@@ -729,6 +798,24 @@ export class InfectionEngine {
     const sp = this.support;
     if (!sp?.titrating) return;
     const c = COURSE.support;
+    if (this.linked) {
+      // Linked patient: the protocol titrates on the measured MAP; the drug acts in the workstation physiology.
+      const map = this.linked.map;
+      const d0 = sp.noradrenalineUgKgMin;
+      const next =
+        map < c.mapTarget - 2
+          ? Math.min(sp.maxNoradrenaline, d0 + c.naEscalatePerH * dt)
+          : map > c.mapTarget + 5
+            ? Math.max(0, d0 - c.naWeanPerH * dt)
+            : d0;
+      sp.noradrenalineUgKgMin = Math.round(next * 1000) / 1000;
+      if (sp.noradrenalineUgKgMin <= 0) {
+        sp.noradrenalineUgKgMin = 0;
+        sp.titrating = false;
+        this.call('nurse', 'nurse.noradrenalineOff', false);
+      }
+      return;
+    }
     const without = this.mapRaw() - noradrenalineEffect(sp.noradrenalineUgKgMin);
     const needed = c.mapTarget - without;
     const goal = Math.min(
@@ -791,14 +878,30 @@ export class InfectionEngine {
    * observations, support titration and the course's outcome checks pause; infection, antibiotic exposure, host
    * response, collateral effects and results continue.
    */
-  private stepTo(target: number): void {
-    const dt = target - this.t;
+  private stepTo(requested: number): void {
+    let target = requested;
+    let dt = target - this.t;
     if (dt <= EPS_H) return;
     const prev = this.t;
-    this.t = target;
     // SIM-ASSUMPTION: during an episode (≤ 30 min) the course organ indices are held; the episode's end state replaces
     // the haemodynamic picture at the handover.
     const inEpisode = this.episode !== null;
+    if (this.link && !inEpisode) {
+      // The held patient runs through this step first under the course's causes; a deterioration ends the step at
+      // that minute, so the course reacts then (shock call) instead of at the next full hour.
+      const r = this.link.advance(dt, this.drivers());
+      if (!r) {
+        this.link = null;
+        this.linked = null;
+      } else {
+        this.linked = r.vitals;
+        if (r.elapsedH < dt - EPS_H) {
+          dt = Math.max(EPS_H, r.elapsedH);
+          target = prev + dt;
+        }
+      }
+    }
+    this.t = target;
     this.cachedView = null;
     this.activateOnsets();
     this.completeSourceControl();
@@ -1360,6 +1463,7 @@ export class InfectionEngine {
   }
 
   private lactate(): number {
+    if (this.linked) return this.linked.lactate;
     const sp = this.support;
     if (!sp) return this.baseLactate();
     const fade = Math.exp(-(this.t - sp.sinceH) / COURSE.support.lactateTauH);
@@ -1378,6 +1482,7 @@ export class InfectionEngine {
 
   /** Course vital signs before rounding. */
   private rawVitals(): { heartRate: number; map: number; respRate: number; spo2: number } {
+    if (this.linked) return this.linked;
     const o = this.organs;
     const base = {
       heartRate: 76 + 35 * this.inflam + 25 * o.circ,
@@ -1608,6 +1713,15 @@ const round1 = (x: number) => Math.round(x * 10) / 10;
 
 /** h — tolerance of course-clock comparisons */
 const EPS_H = 1e-9;
+
+/**
+ * SIM-ASSUMPTION (continuity rebuild): the course's inflammation maps to the fluid model's capillary-leak factor at
+ * 0.55 × inflammation, at most 0.5 — the fluid model's severe septic-shock calibration (septic-shock challenge). The
+ * former 0.8 × (up to 0.8) drained the plasma within 30 min over sustained hours, beyond any clinical picture.
+ */
+function courseLeak(inflam: number): number {
+  return Math.min(0.5, 0.55 * inflam);
+}
 
 /** Snaps a course time to the whole hour when it is within rounding error of it. */
 const snap = (h: number) => (Math.abs(h - Math.round(h)) < 1e-6 ? Math.round(h) : h);
