@@ -139,12 +139,17 @@ export class BloodGasModel {
     const tissueUptake = Math.min(demand, available);
     const dCa = (q / (60 * OXYGEN.arterialBloodVolume)) * (pulmonaryOutflow - gas.cao2);
     const dCv = (venousReturn - tissueUptake) / (60 * 10 * OXYGEN.venousBloodVolume);
-    // SIM-ASSUMPTION: fixed-pressure alveolar reservoir without full N2 bookkeeping; the unequal O2/CO2 exchange
-    // is corrected with the current alveolar O2 fraction (so FiO2 has no effect when VA = 0).
-    const fA = gas.pao2Alveolar / OXYGEN.dryBarometric;
+    // SIM-ASSUMPTION: fixed-volume alveolar reservoir without full N2 bookkeeping. The O2 taken up and not replaced
+    // by CO2 entering the alveoli is replaced by mass flow of the gas at the airway opening (patent airway) — during
+    // apnoea nearly all of it (apnoeic oxygenation: oxygen at the airway slows desaturation; room air does little;
+    // CO2 keeps rising). With breathing the alveolar CO2 entry ≈ RQ × uptake.
+    const co2Entry =
+      ((va * gas.paco2) / K_BTPS) *
+      clamp(q / (GAS.excretionFullFlow * CARDIO.referenceCardiacOutput), 0, 1);
+    const rqAlveolar = pulmonaryUptake > 1 ? clamp((co2Entry * 1000) / pulmonaryUptake, 0, 1) : RQ;
     const dPA =
       (va / (v * 60)) * (inp.fio2 * OXYGEN.dryBarometric - gas.pao2Alveolar) -
-      ((pulmonaryUptake / 1000) * K_BTPS * (1 - fA + fA * RQ)) / (v * 60);
+      ((pulmonaryUptake / 1000) * K_BTPS * (1 - inp.fio2 * (1 - rqAlveolar))) / (v * 60);
     gas.pao2Alveolar = clamp(gas.pao2Alveolar + dPA * h, 0, OXYGEN.dryBarometric);
     gas.cao2 = Math.max(0, gas.cao2 + dCa * h);
     gas.cvo2 = Math.max(0, gas.cvo2 + dCv * h);

@@ -775,7 +775,8 @@ test('infectiology: ward round — cultures, antibiotic, lab call, resistogram, 
   page.on('pageerror', (e) => errors.push(e.message));
   const shots = process.env.WARD_SHOTS;
 
-  await page.goto('/?lang=de');
+  // A pinned session seed: the case variant (and when the culture is reported) is the same in every run.
+  await page.goto('/?lang=de&debug&seed=1');
   await page.getByTestId('module-infectio').click();
   await expect(page.getByTestId('review-fever-rigors')).toBeVisible();
   await page.getByTestId('difficulty-beginner').click();
@@ -925,6 +926,9 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   // The patient arrives as on the ward (room air); breathing / oxygen therapy follows the connected device: a simple
   // mask keeps the ventilator in standby.
   await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'room-air');
+  // Septic tachypnoea: the breathing panel shows bedside signs of the work of breathing (not a number).
+  await page.evaluate(() => window.__resusEngine?.runFor(30));
+  await expect(page.getByTestId('resp-signs')).toContainText('Erhöhte Atemarbeit');
   await page.getByTestId('resp-simple-mask').click();
   await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'simple-mask');
   await expect(page.getByTestId('resp-fio2')).toContainText('geschätzt');

@@ -21,8 +21,6 @@ const PS_MAX_TI_S = 2.5;
 /** s — shortest pressure-support inspiration before flow-cycling is allowed */
 const PS_MIN_TI_S = 0.25;
 const HISTORY = 8;
-/** cmH2O — FRC-preserving muscle tone of unassisted breathing (recruitment model only) */
-const AWAKE_TONE_CMH2O = 3;
 
 type BreathKind = 'volume' | 'pressure';
 
@@ -58,6 +56,8 @@ export class VentilatorDevice {
   private completedBreaths = 0;
   private lastTidalVolume = 0;
   private endExpiratoryPressure = 5;
+  /** cmH₂O — awake muscle tone added to the end-expiratory pressure the recruitment model sees (set by the engine) */
+  awakeToneCmH2O = 0;
 
   reset(vent: VentilatorState, resp: RespState, t: number): void {
     this.leakFraction = 0;
@@ -196,9 +196,9 @@ export class VentilatorDevice {
       sp.startVolume = lung.volume - lung.flow * dt;
       sp.startTime = t;
       sp.peakFlow = 0;
-      // SIM-ASSUMPTION: an awake patient's inspiratory muscle tone keeps the FRC — the recruitment model sees the
-      // end-expiratory pressure plus 3 cmH2O (atelectasis at zero end-expiratory pressure is an anaesthesia finding).
-      this.endExpiratoryPressure = Math.max(0, (sp.startVolume * 1000) / c) + AWAKE_TONE_CMH2O;
+      // An awake patient's inspiratory muscle tone keeps the FRC — the recruitment model sees the end-expiratory
+      // pressure plus the tone (atelectasis at zero end-expiratory pressure is an anaesthesia finding).
+      this.endExpiratoryPressure = Math.max(0, (sp.startVolume * 1000) / c) + this.awakeToneCmH2O;
       started = true;
     }
     if (sp.inInspiration) {
@@ -428,7 +428,7 @@ export class VentilatorDevice {
     const endVolume = this.lung.volume;
     this.completedBreaths += 1;
     this.lastTidalVolume = Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000);
-    this.endExpiratoryPressure = (endVolume * 1000) / resp.compliance;
+    this.endExpiratoryPressure = (endVolume * 1000) / resp.compliance + this.awakeToneCmH2O;
     // A leak around a mask or supraglottic airway: the gas does not return to the expiratory sensor (VTe < VTi).
     const vte = this.connectedThroughBreath
       ? Math.max(0, (this.volumeAtEndInspiration - endVolume) * 1000) * (1 - this.leakFraction)

@@ -76,6 +76,11 @@ export interface RespState {
   drive: RespiratoryDrive;
   /** cmH2O — current inspiratory muscle pressure (patient effort) */
   pmus: number;
+  /**
+   * relative work of breathing: peak effort × spontaneous rate against an awake adult at rest (1); 0 without
+   * spontaneous breathing (hidden model value — the bedside shows signs derived from it)
+   */
+  workOfBreathing: number;
   /** L — functional residual capacity (oxygen store) */
   frc: number;
   /** mL — lung volume above the PEEP relaxation volume */

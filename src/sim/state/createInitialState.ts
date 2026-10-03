@@ -78,6 +78,7 @@ export function createInitialState(
         obstructionSeverity: severity,
         drive: 'none',
         pmus: 0,
+        workOfBreathing: 0,
         frc: lung.frc,
         volumeAboveFRC: 0,
         airwayPressure: scenario.ventilator.peep,

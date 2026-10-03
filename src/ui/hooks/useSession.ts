@@ -24,8 +24,15 @@ import { INFECTION_CASES } from '../../content/infection/cases';
 import { caseModifiers, caseSeed, newCampaign, nextCaseId } from '../../game/campaign';
 import { localCampaignStore } from '../campaignStore';
 
-/** A new 32-bit seed (wall-clock randomness is fine here: the seed itself is stored and logged). */
+/**
+ * A new 32-bit seed (wall-clock randomness is fine here: the seed itself is stored and logged). With `?debug&seed=N`
+ * in the URL every new session uses N — reproducible QA and browser tests.
+ */
 function freshSeed(): number {
+  const params = new URLSearchParams(window.location.search);
+  const pinned = Number(params.get('seed'));
+  if (params.has('debug') && params.has('seed') && Number.isInteger(pinned) && pinned >= 0)
+    return pinned >>> 0;
   const a = new Uint32Array(1);
   crypto.getRandomValues(a);
   return a[0] ?? Date.now() >>> 0;

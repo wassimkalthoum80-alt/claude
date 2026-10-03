@@ -10,6 +10,23 @@ import {
   type VenturiAdapter,
 } from '../../sim';
 
+export type RespSign = 'resp.sign.wob' | 'resp.sign.accessory' | 'resp.sign.speech';
+
+/**
+ * Bedside signs from the work of breathing (review O7). SIM-ASSUMPTION: increased work ≥ 1.5 × rest, accessory
+ * muscles ≥ 2.5 ×, speech dyspnoea ≥ 3 × in an awake patient without a tube. Signs, not a meter.
+ */
+export function breathingSigns(s: Readonly<SimulationState>): RespSign[] {
+  const wob = s.patient.resp.workOfBreathing;
+  const out: RespSign[] = [];
+  if (wob >= 1.5) out.push('resp.sign.wob');
+  if (wob >= 2.5) out.push('resp.sign.accessory');
+  const air = s.patient.airway.device;
+  const awake = s.patient.brain.hypnoticDepth < 0.5;
+  if (wob >= 3 && awake && (air === 'none' || air === 'mask')) out.push('resp.sign.speech');
+  return out;
+}
+
 /** Why a support cannot be chosen now (i18n key), or null. */
 export type SupportBlock = 'resp.needsTube' | 'resp.tubeInPlace' | null;
 
@@ -39,6 +56,8 @@ export interface RespSupportView {
   countedRate: number;
   /** % as the monitor displays it (null: no adequate pleth) */
   spo2: number | null;
+  /** bedside signs of the work of breathing (i18n keys), most severe last */
+  signs: RespSign[];
   /** NIV pressures as EPAP/IPAP (PS = IPAP − EPAP) */
   niv: { epap: number; ipap: number; ps: number } | null;
 }
@@ -85,6 +104,7 @@ export function respSupportView(s: Readonly<SimulationState>): RespSupportView {
     warnings: o.warnings,
     countedRate: o.countedRate,
     spo2: s.devices.monitor.numerics.spo2,
+    signs: breathingSigns(s),
     niv:
       o.support === 'niv' && ventilatorInUse(o.support)
         ? {

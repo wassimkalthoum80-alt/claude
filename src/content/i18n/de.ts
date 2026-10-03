@@ -854,6 +854,9 @@ export const de: Record<I18nKey, string> = {
   'resp.obs': 'Beobachtet',
   'resp.rrCounted': 'AF {rr}/min (gezählt)',
   'resp.rrNone': 'keine Atemzüge gezählt',
+  'resp.sign.wob': 'Erhöhte Atemarbeit',
+  'resp.sign.accessory': 'Einsatz der Atemhilfsmuskulatur',
+  'resp.sign.speech': 'Sprechdyspnoe',
   'resp.spo2': 'SpO₂ {spo2} %',
   'resp.spo2None': 'SpO₂ – (kein verwertbares Pleth)',
   'resp.nivInterface':

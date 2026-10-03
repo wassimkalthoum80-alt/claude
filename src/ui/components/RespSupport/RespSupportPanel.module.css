@@ -154,3 +154,11 @@
   padding: 3px 6px;
   cursor: pointer;
 }
+
+/* Bedside signs of the work of breathing (observations, not a meter). */
+.signs {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--alarm-medium);
+  letter-spacing: 0.02em;
+}

@@ -206,10 +206,10 @@ describe('resuscitation of the transferred septic patient', () => {
   };
   const als = (
     e: SimulationEngine,
-    steps: { o2?: boolean; adrenaline?: boolean; fluid?: boolean },
+    steps: { mask?: boolean; o2?: boolean; adrenaline?: boolean; fluid?: boolean },
   ) => {
     e.dispatch({ type: 'CPR_START' }, 'user');
-    e.dispatch({ type: 'AIRWAY_INSERT', device: 'mask' }, 'user');
+    if (steps.mask !== false) e.dispatch({ type: 'AIRWAY_INSERT', device: 'mask' }, 'user');
     if (steps.o2) e.dispatch({ type: 'SET_VENT_SETTING', key: 'fio2', value: 100 }, 'user');
     if (steps.fluid)
       e.dispatch(
@@ -231,10 +231,10 @@ describe('resuscitation of the transferred septic patient', () => {
     return null;
   };
 
-  it('ALS with oxygen, adrenaline and fluid restores the circulation; leaving one out does not', () => {
+  it('ALS with ventilation and oxygen, adrenaline and fluid restores the circulation; leaving one out does not', () => {
     expect(als(arrested(), { o2: true, adrenaline: true, fluid: true })).not.toBeNull();
     expect(als(arrested(), { o2: true, adrenaline: true })).toBeNull();
-    expect(als(arrested(), { adrenaline: true, fluid: true })).toBeNull();
+    expect(als(arrested(), { mask: false, adrenaline: true, fluid: true })).toBeNull();
     expect(als(arrested(), { o2: true, fluid: true })).toBeNull();
   });
 

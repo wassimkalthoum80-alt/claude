@@ -73,24 +73,78 @@ export class RespiratoryDriveModel {
 }
 
 /**
- * SIM-ASSUMPTION: effort gain of a patient breathing without the ventilator (room air, conventional oxygen, HFOT).
- * The drive patterns above are calibrated for breathing through the ventilator circuit (tube, anaesthetised
- * mechanics); breathing unassisted the awake patient's effort is ×1.8 of that, and a chemoreflex scales it with
- * PaCO₂ (×(1 + 0.08 per mmHg above 40), bounded 0.5–2) so that tidal volume and rate are the patient's own response.
- * The gain follows with a 20-s time constant; with the ventilator in use it returns to 1.
+ * SIM-ASSUMPTION: breathing response of the spontaneously breathing patient (continuity review O6/O7). The drive
+ * patterns above are calibrated for anaesthetised mechanics through a tube; an awake patient without a tube (room
+ * air, oxygen devices, HFOT and NIV alike) makes ×1.8 that effort, scaled by wakefulness — the factor follows the
+ * patient, not the device, so connecting NIV does not change the effort of an unchanged patient. A chemoreflex on
+ * arterial pH (×(1 + 10 per pH unit below 7.40), i.e. ≈ 8 % per mmHg PaCO₂; metabolic acidosis drives it too)
+ * scales the effort in every mode with spontaneous breathing, blunted by sedatives/opioids (× drive factor),
+ * bounded 0.5–2. The gains follow with a 20-s time constant. Gains and thresholds are expert-opinion calibration.
  */
-export const UNASSISTED_EFFORT = { calibration: 1.8, perMmHg: 0.08, min: 0.5, max: 2, tauS: 20 };
+export const BREATHING_RESPONSE = {
+  awakeCalibration: 1.8,
+  perPhUnit: 10,
+  min: 0.5,
+  max: 2,
+  tauS: 20,
+} as const;
 
-export function unassistedEffortTarget(paco2: number): number {
-  const u = UNASSISTED_EFFORT;
-  return u.calibration * Math.min(u.max, Math.max(u.min, 1 + u.perMmHg * (paco2 - 40)));
+/** Effort multiplier of an awake patient without a tube (1 with a tube or supraglottic airway, or when asleep). */
+export function awakeEffortFactor(wakefulness: number, tracheal: boolean): number {
+  if (tracheal) return 1;
+  return 1 + (BREATHING_RESPONSE.awakeCalibration - 1) * Math.min(1, Math.max(0, wakefulness));
+}
+
+/** Chemoreflex multiplier of the effort from arterial pH, blunted by the drug-depressed drive (0..1). */
+export function chemoreflexGain(ph: number, driveFactor: number): number {
+  const b = BREATHING_RESPONSE;
+  const stimulus = b.perPhUnit * (7.4 - ph) * Math.min(1, Math.max(0, driveFactor));
+  return Math.min(b.max, Math.max(b.min, 1 + stimulus));
 }
 
 /**
- * SIM-ASSUMPTION: rate response of unassisted breathing — peripheral chemoreceptors raise the rate by 3 % per % SaO₂
- * below 92 %, and interstitial lung oedema (J-receptors, stiffer lungs) by 60 % per unit of lung-water ratio above
- * 1.3; at most ×2. Rapid shallow breathing: the effort per breath falls with the rate rise (÷ √rate gain).
+ * SIM-ASSUMPTION: rate response — peripheral chemoreceptors raise the rate by 3 % per % SaO₂ below 92 % (blunted by
+ * the drug-depressed drive), with depth preserved; interstitial lung oedema (J-receptors, stiffer lungs) raises it by
+ * 60 % per unit of lung-water ratio above 1.3 as rapid shallow breathing (effort per breath ÷ √ of that part);
+ * the chemoreflex adds half of its gain to the rate (alkalaemia slows it); together 0.6–2×. Active with and without
+ * the ventilator whenever the patient breathes spontaneously.
  */
-export function unassistedRateTarget(sao2: number, lungWaterRatio: number): number {
-  return Math.min(2, 1 + 0.03 * Math.max(0, 92 - sao2) + 0.6 * Math.max(0, lungWaterRatio - 1.3));
+export function breathingRateResponse(
+  sao2: number,
+  lungWaterRatio: number,
+  driveFactor: number,
+  chemoreflex = 1,
+): { rate: number; shallow: number } {
+  const hypoxic = 0.03 * Math.max(0, 92 - sao2) * Math.min(1, Math.max(0, driveFactor));
+  const oedema = 0.6 * Math.max(0, lungWaterRatio - 1.3);
+  // Acidaemia/hypercapnia deepen AND quicken breathing: half of the chemoreflex gain acts on the rate.
+  const acid = 0.5 * (chemoreflex - 1);
+  const rate = Math.min(2, Math.max(0.6, 1 + hypoxic + oedema + acid));
+  return { rate, shallow: Math.min(rate, 1 + oedema) };
+}
+
+/**
+ * Relative work of breathing (1 = awake adult at rest without support): peak effort × rate of the spontaneous
+ * pattern, with the same drug, block and response factors as the effort generator. SIM-ASSUMPTION: an index for the
+ * bedside signs, not a measured work (J/L); respiratory-muscle fatigue is not modelled.
+ */
+export function workOfBreathing(
+  drive: RespiratoryDrive,
+  arrested: boolean,
+  driveFactor: number,
+  diaphragmBlock: number,
+  effortGain: number,
+  rateGain: number,
+): number {
+  const base = DRIVE_PATTERNS[arrested ? 'none' : drive];
+  const df = Math.max(0, driveFactor);
+  const rate = base.rate * df ** 0.7 * rateGain;
+  if (rate < 2) return 0;
+  const effort = base.pmus * df ** 0.3 * (1 - diaphragmBlock) * effortGain;
+  const rest = DRIVE_PATTERNS.normal;
+  return (
+    Math.round(
+      ((effort * rate) / (rest.pmus * BREATHING_RESPONSE.awakeCalibration * rest.rate)) * 100,
+    ) / 100
+  );
 }

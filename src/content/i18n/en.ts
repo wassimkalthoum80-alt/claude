@@ -853,6 +853,9 @@ export const en = {
   'resp.obs': 'Observed',
   'resp.rrCounted': 'RR {rr}/min (counted)',
   'resp.rrNone': 'no breaths counted',
+  'resp.sign.wob': 'Increased work of breathing',
+  'resp.sign.accessory': 'accessory muscle use',
+  'resp.sign.speech': 'speech dyspnoea',
   'resp.spo2': 'SpO₂ {spo2} %',
   'resp.spo2None': 'SpO₂ — (no adequate pleth)',
   'resp.nivInterface':

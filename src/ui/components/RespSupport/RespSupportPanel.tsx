@@ -203,6 +203,11 @@ export function RespSupportPanel() {
           <span className={styles.hint}>{t('resp.standby')}</span>
         </div>
       )}
+      {v.signs.length > 0 && (
+        <p className={styles.signs} data-testid="resp-signs">
+          {v.signs.map((k) => t(k)).join(' · ')}
+        </p>
+      )}
     </section>
   );
 }

@@ -120,9 +120,13 @@ export function oxygenDelivery(
   if (!isOxygenDevice(s))
     return { fio2: 0.21, airwayPressure: 0, apparatusDeadSpaceMl: 0, warnings };
   const q = Math.max(0, o.flowLMin[s]);
+  if (demand.rate <= 0) return apnoeicDelivery(o, q);
   const pif = Math.max(1, demand.peakInspiratoryFlow);
-  const mix = (deliveredLMin: number, f: number) =>
-    deliveredLMin >= pif ? f : (deliveredLMin * f + (pif - deliveredLMin) * 0.21) / pif;
+  // Volume-weighted over the breath (review O4/O5): only the part of the inspiration above the device flow is room air.
+  const mix = (deliveredLMin: number, f: number) => {
+    const e = entrainedFraction(deliveredLMin / pif);
+    return f - e * (f - 0.21);
+  };
 
   if (s === 'hfnc') {
     const f = o.hfncFio2 / 100;
@@ -155,6 +159,54 @@ export function oxygenDelivery(
     else if (qMlS * period < vt) warnings.push('reservoir-collapsing');
   }
   return { fio2, airwayPressure: 0, apparatusDeadSpaceMl: deadSpace, warnings };
+}
+
+/**
+ * Fraction of an inspiration drawn from room air when the device delivers `ratio` × the peak inspiratory flow, for a
+ * half-sine inspiratory flow: the volume above the device flow divided by the tidal volume. 0 when the device covers
+ * the peak; 1 without flow. SIM-ASSUMPTION: half-sine flow pattern of spontaneous breathing.
+ */
+export function entrainedFraction(ratio: number): number {
+  if (ratio >= 1) return 0;
+  if (ratio <= 0) return 1;
+  const theta = Math.asin(ratio);
+  return (2 * Math.cos(theta) - ratio * (Math.PI - 2 * theta)) / 2;
+}
+
+/**
+ * Gas at the airway opening during apnoea (no breaths): what the alveoli draw in by mass flow while oxygen is taken
+ * up (apnoeic oxygenation). SIM-ASSUMPTION: a patent airway; HFOT and Venturi give their set fraction; a nasal cannula,
+ * simple or reservoir mask fill the pharynx up to their cap (from 2 L/min, linear below); no flow = room air. Oxygen
+ * at the airway does not remove CO₂ — it keeps rising.
+ */
+function apnoeicDelivery(
+  o: Pick<OxygenSupportState, 'support' | 'hfncFio2' | 'venturiPercent'>,
+  q: number,
+): OxygenDelivery {
+  const s = o.support;
+  if (!isOxygenDevice(s) || q <= 0)
+    return { fio2: 0.21, airwayPressure: 0, apparatusDeadSpaceMl: 0, warnings: [] };
+  if (s === 'hfnc')
+    return {
+      fio2: o.hfncFio2 / 100,
+      airwayPressure: 0.04 * q,
+      apparatusDeadSpaceMl: 0,
+      warnings: [],
+    };
+  if (s === 'venturi')
+    return {
+      fio2: o.venturiPercent / 100,
+      airwayPressure: 0,
+      apparatusDeadSpaceMl: 0,
+      warnings: [],
+    };
+  const cap = LOW_FLOW[s].cap;
+  return {
+    fio2: 0.21 + (cap - 0.21) * Math.min(1, q / 2),
+    airwayPressure: 0,
+    apparatusDeadSpaceMl: 0,
+    warnings: [],
+  };
 }
 
 /** Initial oxygen support state. */

@@ -56,9 +56,11 @@ import { ECG } from '../physiology/parameters';
 import { approach, clamp } from '../physiology/shapes';
 import {
   RespiratoryDriveModel,
-  UNASSISTED_EFFORT,
-  unassistedEffortTarget,
-  unassistedRateTarget,
+  awakeEffortFactor,
+  BREATHING_RESPONSE,
+  breathingRateResponse,
+  chemoreflexGain,
+  workOfBreathing,
 } from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
 import { obstructiveFilling } from '../physiology/obstruction';
@@ -209,6 +211,8 @@ export class SimulationEngine {
   private effortGain = 1;
   /** multiplier of the spontaneous rate (unassisted breathing: hypoxaemia, interstitial oedema) */
   private rateGain = 1;
+  /** rapid-shallow part of the rate gain (effort per breath ÷ √) */
+  private shallowGain = 1;
   private snapshot: SimulationState;
 
   constructor(options: EngineOptions) {
@@ -399,7 +403,7 @@ export class SimulationEngine {
         this.rng,
         s.patient.pharmacology.effects.respiratoryDrive,
         s.patient.pharmacology.effects.diaphragmBlock,
-        this.effortGain / Math.sqrt(this.rateGain),
+        this.effortGain / Math.sqrt(this.shallowGain),
         this.rateGain,
       );
       if (this.ventilator.step(t, SUBSTEP_S, vent, s.patient.resp)) {
@@ -791,8 +795,9 @@ export class SimulationEngine {
     this.cardio.reset(s.patient.cardio);
     this.lungState.reset(s.patient, s.devices.ventilator);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
-    this.effortGain = s.devices.ventilator.standby ? UNASSISTED_EFFORT.calibration : 1;
+    this.effortGain = awakeEffortFactor(this.wakefulness(), this.trachealAirway());
     this.rateGain = 1;
+    this.shallowGain = 1;
     this.updateOxygenSupport();
     this.bloodGas.reset(s.patient.gas, this.gasInputs());
     // A raised lactate baseline (sepsis) is the starting lactate as well.
@@ -1556,25 +1561,61 @@ export class SimulationEngine {
   }
 
   /** 10 Hz: inspired oxygen, HFOT pressure and advisories of the connected oxygen support. */
+  /** 0..1 — awake (1) to unresponsive under hypnotics (0), from the cerebral model's hypnotic depth. */
+  private wakefulness(): number {
+    return clamp(1 - this.state.patient.brain.hypnoticDepth, 0, 1);
+  }
+
+  /** A tracheal tube or supraglottic airway is in place (the drive patterns' anaesthetised calibration). */
+  private trachealAirway(): boolean {
+    const d = this.state.patient.airway.device;
+    return d === 'ett' || d === 'sga';
+  }
+
   private updateOxygenSupport(): void {
     const s = this.state;
     const o = s.devices.oxygen;
     const vent = s.devices.ventilator;
-    // Unassisted breathing: awake effort with a chemoreflex; with the ventilator in use the gain returns to 1.
-    const gainTarget = vent.standby ? unassistedEffortTarget(s.patient.gas.paco2) : 1;
-    this.effortGain = approach(this.effortGain, gainTarget, TICK_S, UNASSISTED_EFFORT.tauS);
-    const rateTarget = vent.standby
-      ? unassistedRateTarget(s.patient.gas.spo2, s.patient.fluid.derived.lungWaterRatio)
-      : 1;
-    this.rateGain = approach(this.rateGain, rateTarget, TICK_S, UNASSISTED_EFFORT.tauS);
+    // The patient's breathing response follows the patient in every support (review O6/O7): awake effort without a
+    // tube, a pH chemoreflex and the hypoxic/oedema rate response, blunted by sedatives and opioids.
+    const p = s.patient;
+    const driveFactor = p.pharmacology.effects.respiratoryDrive;
+    const wake = this.wakefulness();
+    const chemo = chemoreflexGain(p.gas.ph, driveFactor);
+    const gainTarget = awakeEffortFactor(wake, this.trachealAirway()) * chemo;
+    this.effortGain = approach(this.effortGain, gainTarget, TICK_S, BREATHING_RESPONSE.tauS);
+    const rate = breathingRateResponse(
+      p.gas.spo2,
+      p.fluid.derived.lungWaterRatio,
+      driveFactor,
+      chemo,
+    );
+    this.rateGain = approach(this.rateGain, rate.rate, TICK_S, BREATHING_RESPONSE.tauS);
+    this.shallowGain = approach(this.shallowGain, rate.shallow, TICK_S, BREATHING_RESPONSE.tauS);
+    p.resp.workOfBreathing = workOfBreathing(
+      p.resp.drive,
+      !p.cardio.spontaneousCirculation,
+      driveFactor,
+      p.pharmacology.effects.diaphragmBlock,
+      this.effortGain / Math.sqrt(this.shallowGain),
+      this.rateGain,
+    );
+    // Awake inspiratory muscle tone keeps the FRC (recruitment only), whatever the interface; lost with sleep/block.
+    this.ventilator.awakeToneCmH2O =
+      AWAKE_TONE_CMH2O * wake * (1 - p.pharmacology.effects.diaphragmBlock);
     if (vent.standby) {
-      const demand = this.ventilator.spontaneousDemand;
+      const counted = this.ventilator.countedRate(s.time);
+      // No breath for 20 s: apnoea — the device's gas at the airway opening (apnoeic oxygenation).
+      const demand =
+        counted > 0
+          ? this.ventilator.spontaneousDemand
+          : { ...this.ventilator.spontaneousDemand, rate: 0 };
       const d = oxygenDelivery(o, demand);
       o.inspiredO2 = Math.round(d.fio2 * 1000) / 10;
       o.airwayPressure = Math.round(d.airwayPressure * 10) / 10;
       o.warnings = d.warnings;
       o.peakInspiratoryFlowLMin = Math.round(demand.peakInspiratoryFlow);
-      o.countedRate = this.ventilator.countedRate(s.time);
+      o.countedRate = counted;
       this.ventilator.standbyPressure = d.airwayPressure;
       this.ventilator.apparatusDeadSpaceMl = d.apparatusDeadSpaceMl;
     } else {
@@ -1595,9 +1636,11 @@ export class SimulationEngine {
       alveolarVentilation: p.gas.alveolarVentilation,
       // Standby (room air, conventional oxygen, HFOT): the oxygen device's inspired fraction; an open circuit
       // otherwise breathes room air.
+      // An oesophageal tube delivers the gas to the stomach: the pharynx is open to room air (apnoeic inflow).
       fio2: vent.standby
         ? this.state.devices.oxygen.inspiredO2 / 100
-        : vent.circuitConnected
+        : vent.circuitConnected &&
+            !(p.airway.device === 'ett' && p.airway.position === 'oesophageal')
           ? vent.active.fio2 / 100
           : 0.21,
       shunt: p.gas.shunt,
@@ -1950,6 +1993,12 @@ type PumpCommand = Extract<
 
 /** s — step of the background (ward-hour) simulation */
 const BACKGROUND_STEP_S = 2;
+/**
+ * cmH₂O — FRC-preserving inspiratory muscle tone of an awake patient (recruitment model only; never a measured PEEP
+ * and no intrathoracic-pressure effect on the circulation). SIM-ASSUMPTION: scaled by wakefulness and lost with
+ * neuromuscular block.
+ */
+const AWAKE_TONE_CMH2O = 3;
 
 /** The body-water compartments and solutes a ward period holds (bladder, renal state and counters run on). */
 function holdableFluid(f: BodyFluidState): Partial<BodyFluidState> {
