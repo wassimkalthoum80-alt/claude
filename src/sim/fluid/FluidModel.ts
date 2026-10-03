@@ -666,9 +666,11 @@ export class FluidModel {
     );
     // SIM-ASSUMPTION: LV filling pressure also rises with afterload (MAP above 110 mmHg: +0.12 mmHg/mmHg) and with
     // acute LV decompensation (+30 mmHg at full decompensation) — the hypertensive crisis → pulmonary oedema path.
+    // SIM-ASSUMPTION: a failing LV works on the flat part of its Starling curve — the same added volume raises its
+    // filling pressure more (gain 6 mmHg per volume-status unit ÷ LV function, LV function floored at 0.3).
     d.pulmonaryCapillaryMmHg = clamp(
       FLUID.pulmonaryCapillaryPressure +
-        6 * (veff - 1) +
+        (6 * (veff - 1)) / clamp(ff.lvFunction, 0.3, 1) +
         20 * (1 - clamp(ff.lvFunction, 0.2, 1)) +
         0.12 * Math.max(0, patient.cardio.meanArterialPressure - 110) +
         30 * patient.heartLung.lvDecompensation,

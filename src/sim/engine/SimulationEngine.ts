@@ -57,6 +57,7 @@ import {
   RespiratoryDriveModel,
   UNASSISTED_EFFORT,
   unassistedEffortTarget,
+  unassistedRateTarget,
 } from '../physiology/RespiratoryDrive';
 import { RhythmEngine } from '../rhythms/RhythmEngine';
 import { obstructiveFilling } from '../physiology/obstruction';
@@ -199,6 +200,8 @@ export class SimulationEngine {
   private loads = 0;
   /** multiplier of the spontaneous effort (unassisted breathing: awake calibration × chemoreflex) */
   private effortGain = 1;
+  /** multiplier of the spontaneous rate (unassisted breathing: hypoxaemia, interstitial oedema) */
+  private rateGain = 1;
   private snapshot: SimulationState;
 
   constructor(options: EngineOptions) {
@@ -389,7 +392,8 @@ export class SimulationEngine {
         this.rng,
         s.patient.pharmacology.effects.respiratoryDrive,
         s.patient.pharmacology.effects.diaphragmBlock,
-        this.effortGain,
+        this.effortGain / Math.sqrt(this.rateGain),
+        this.rateGain,
       );
       if (this.ventilator.step(t, SUBSTEP_S, vent, s.patient.resp)) {
         this.monitor.onBreathStart(this.bank, t, vent.circuitConnected);
@@ -626,6 +630,7 @@ export class SimulationEngine {
     this.lungState.reset(s.patient, s.devices.ventilator);
     this.ventilator.reset(s.devices.ventilator, s.patient.resp, 0);
     this.effortGain = s.devices.ventilator.standby ? UNASSISTED_EFFORT.calibration : 1;
+    this.rateGain = 1;
     this.updateOxygenSupport();
     this.bloodGas.reset(s.patient.gas, this.gasInputs());
     if (scenario.patient.initialPaco2 !== undefined)
@@ -1391,6 +1396,10 @@ export class SimulationEngine {
     // Unassisted breathing: awake effort with a chemoreflex; with the ventilator in use the gain returns to 1.
     const gainTarget = vent.standby ? unassistedEffortTarget(s.patient.gas.paco2) : 1;
     this.effortGain = approach(this.effortGain, gainTarget, TICK_S, UNASSISTED_EFFORT.tauS);
+    const rateTarget = vent.standby
+      ? unassistedRateTarget(s.patient.gas.spo2, s.patient.fluid.derived.lungWaterRatio)
+      : 1;
+    this.rateGain = approach(this.rateGain, rateTarget, TICK_S, UNASSISTED_EFFORT.tauS);
     if (vent.standby) {
       const demand = this.ventilator.spontaneousDemand;
       const d = oxygenDelivery(o, demand);

@@ -62,9 +62,9 @@ Good stewardship is often **doing less, but at the right time**:
   deterministic (one seeded RNG), every order a command stamped and recorded in the `EventLog`, runs in Node,
   no React, every simplification `// SIM-ASSUMPTION:` and listed in `docs/SIMULATION_ASSUMPTIONS.md`.
 - **Bridge to real time, both directions:**
-  - *Course → real time:* an acute deterioration (septic shock, fulminant colitis, meningitis on arrival) opens
+  - _Course → real time:_ an acute deterioration (septic shock, fulminant colitis, meningitis on arrival) opens
     the existing workstation with a patient preset derived from the course state.
-  - *Real time → course:* the episode returns structured consequences, not just survived/died: vasopressor
+  - _Real time → course:_ the episode returns structured consequences, not just survived/died: vasopressor
     duration and peak dose, lactate burden, fluids given, AKI, ventilation need, time to stabilisation,
     antibiotic and culture timing. These feed organ dysfunction and outcome in the course.
 
@@ -243,27 +243,27 @@ dedicated cases:
 
 Each case: hidden true state, 2–3 seeded variants, playable at all three difficulty levels.
 
-| # | Case | Core lesson | Complication / twist |
-|---|---|---|---|
-| A1 | Nursing-home patient, P. aeruginosa in urine, no urinary symptoms | Don't treat the culture | Delirium with another cause |
-| A2 | CoNS in 1 of 2 blood-culture sets | Contaminant vs. line infection, time-to-positivity | Variant: true CRBSI |
-| A3 | ICU patient with Enterococcus/Candida in sputum | Colonisation is not pneumonia | — |
-| N1 | Postoperative fever day 1 | Atelectasis/inflammation, not infection | — |
-| N2 | "Pneumonia" that is pulmonary oedema / aspiration pneumonitis | Mimics; stop when unlikely | — |
-| N3 | Fever under antibiotics | Drug fever / thrombosis / PE | — |
-| B1 | Urosepsis | Diagnostics, empirical therapy, ESBL on day 2 → carbapenem → oral by resistogram, 7 days | Pansensitive variant → narrow; CDI if broad therapy continued |
-| B2 | CAP | Severity, β-lactam ± macrolide, oral day 3, stop day 5 | Readmission with empyema |
-| B3 | Postoperative peritonitis (extends existing septic-shock case) | Source control, 4 days after it, no reflex Candida/VRE cover | VRE + Candida in drain while improving |
-| B4 | VAP with P. aeruginosa (advanced) | Day-3 re-evaluation, combination → mono, 7–8 days | 3MRGN → 4MRGN |
-| B5 | ICU long-stay, ESBL-K. pneumoniae (advanced) | Carbapenem-sparing where possible | Carbapenemase acquisition → reserve by mechanism |
-| C1 | S. aureus bacteraemia from a peripheral line | Remove line, cefazolin/flucloxacillin, follow-up cultures, focus search, 14 d from first negative | Persistent bacteraemia → complicated |
-| C2 | MRSA bacteraemia, persistent cultures | Focus search, ≥ 4 weeks, vancomycin TDM / daptomycin | AKI without TDM |
-| C3 | Endocarditis | Duke criteria, surgery indications, oral step-down (selected patients) | Embolic event |
-| D1 | C. difficile after clindamycin | Diagnostic stewardship, severity, fidaxomicin | Fulminant / recurrence |
-| D2 | Febrile neutropenia | < 2 h, pseudomonas-active β-lactam; persistent fever but stable → don't escalate; stop after 72 h afebrile | Hidden line infection |
-| E1 | Bacterial meningitis (real time) | Cultures → dexamethasone + antibiotics before CT; empirical cover by age | — |
-| E2 | Surgical prophylaxis in the OR scene | < 60 min before incision, single shot, redose (time / blood loss), no prolongation | — |
-| E3 | Unknown cases (e.g. bacteraemia after cat contact) | Exposure history | — |
+| #   | Case                                                              | Core lesson                                                                                                | Complication / twist                                          |
+| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| A1  | Nursing-home patient, P. aeruginosa in urine, no urinary symptoms | Don't treat the culture                                                                                    | Delirium with another cause                                   |
+| A2  | CoNS in 1 of 2 blood-culture sets                                 | Contaminant vs. line infection, time-to-positivity                                                         | Variant: true CRBSI                                           |
+| A3  | ICU patient with Enterococcus/Candida in sputum                   | Colonisation is not pneumonia                                                                              | —                                                             |
+| N1  | Postoperative fever day 1                                         | Atelectasis/inflammation, not infection                                                                    | —                                                             |
+| N2  | "Pneumonia" that is pulmonary oedema / aspiration pneumonitis     | Mimics; stop when unlikely                                                                                 | —                                                             |
+| N3  | Fever under antibiotics                                           | Drug fever / thrombosis / PE                                                                               | —                                                             |
+| B1  | Urosepsis                                                         | Diagnostics, empirical therapy, ESBL on day 2 → carbapenem → oral by resistogram, 7 days                   | Pansensitive variant → narrow; CDI if broad therapy continued |
+| B2  | CAP                                                               | Severity, β-lactam ± macrolide, oral day 3, stop day 5                                                     | Readmission with empyema                                      |
+| B3  | Postoperative peritonitis (extends existing septic-shock case)    | Source control, 4 days after it, no reflex Candida/VRE cover                                               | VRE + Candida in drain while improving                        |
+| B4  | VAP with P. aeruginosa (advanced)                                 | Day-3 re-evaluation, combination → mono, 7–8 days                                                          | 3MRGN → 4MRGN                                                 |
+| B5  | ICU long-stay, ESBL-K. pneumoniae (advanced)                      | Carbapenem-sparing where possible                                                                          | Carbapenemase acquisition → reserve by mechanism              |
+| C1  | S. aureus bacteraemia from a peripheral line                      | Remove line, cefazolin/flucloxacillin, follow-up cultures, focus search, 14 d from first negative          | Persistent bacteraemia → complicated                          |
+| C2  | MRSA bacteraemia, persistent cultures                             | Focus search, ≥ 4 weeks, vancomycin TDM / daptomycin                                                       | AKI without TDM                                               |
+| C3  | Endocarditis                                                      | Duke criteria, surgery indications, oral step-down (selected patients)                                     | Embolic event                                                 |
+| D1  | C. difficile after clindamycin                                    | Diagnostic stewardship, severity, fidaxomicin                                                              | Fulminant / recurrence                                        |
+| D2  | Febrile neutropenia                                               | < 2 h, pseudomonas-active β-lactam; persistent fever but stable → don't escalate; stop after 72 h afebrile | Hidden line infection                                         |
+| E1  | Bacterial meningitis (real time)                                  | Cultures → dexamethasone + antibiotics before CT; empirical cover by age                                   | —                                                             |
+| E2  | Surgical prophylaxis in the OR scene                              | < 60 min before incision, single shot, redose (time / blood loss), no prolongation                         | —                                                             |
+| E3  | Unknown cases (e.g. bacteraemia after cat contact)                | Exposure history                                                                                           | —                                                             |
 
 **Typical ward errors to build into variants** (owner to extend): treating colonisation; prolonged
 postoperative "prophylaxis"; continuing combination therapy; unnecessary vancomycin; ignoring renal dosing/TDM;

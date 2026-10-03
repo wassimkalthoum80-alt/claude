@@ -13,7 +13,7 @@ section by section, reviewed against the codebase. `CLAUDE.md` and the milestone
 3. **Neutral language** in EN/DE ("the patient", no "he/she" — patients vary between sessions). Combined messages
    are built from short parts so the grammar works in both languages.
 4. **One default number per threshold** (the brief gives ranges), all in one table (`src/content/director/
-   observationDefaults.ts`) for clinical review; every case can override or disable a channel.
+observationDefaults.ts`) for clinical review; every case can override or disable a channel.
 5. **No duplicate of monitor alarms.** The monitor keeps its alarms; the nurse adds trend and context.
 6. **Plateau and driving pressure** are quiet ventilator remarks (observation level), not nurse interruptions.
 7. **During a cardiac arrest** only the arrest channel speaks (low EtCO₂, low SpO₂ and MAP are expected then).
@@ -31,13 +31,13 @@ window) — a rapid change may deserve attention before an absolute limit is rea
 
 **Urgency levels and speed response (auto speed on):**
 
-| Level | Meaning | Presentation | Speed |
-|---|---|---|---|
-| 0 silent | nothing meaningful | — | — |
-| 1 observation | minor but meaningful trend | small passive nurse notice | unchanged |
-| 2 concern | persistent / clinically relevant | nurse card | ×5 → ×2; stops Advance time |
-| 3 urgent | dangerous, prompt assessment | prominent nurse card | ×1 |
-| 4 critical | immediately life-threatening (arrest, catastrophic values) | critical alert | ×1 |
+| Level         | Meaning                                                    | Presentation               | Speed                       |
+| ------------- | ---------------------------------------------------------- | -------------------------- | --------------------------- |
+| 0 silent      | nothing meaningful                                         | —                          | —                           |
+| 1 observation | minor but meaningful trend                                 | small passive nurse notice | unchanged                   |
+| 2 concern     | persistent / clinically relevant                           | nurse card                 | ×5 → ×2; stops Advance time |
+| 3 urgent      | dangerous, prompt assessment                               | prominent nurse card       | ×1                          |
+| 4 critical    | immediately life-threatening (arrest, catastrophic values) | critical alert             | ×1                          |
 
 **Episodes (state machine per channel):** normal → trending → abnormal → urgent → critical, and recovering →
 normal. **Hysteresis:** an episode resets only after meaningful recovery held for a time (e.g. MAP > 68 for 90 s,

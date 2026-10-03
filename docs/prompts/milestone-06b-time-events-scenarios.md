@@ -9,11 +9,11 @@ reviewed against the codebase and merged into the milestone-6 plan. `CLAUDE.md` 
 
 Phase 2 of `milestone-06-learning-architecture.md` § 15 becomes **"Time, events and the Physiology Lab"**:
 
-| Step | Content |
-|---|---|
-| 2a | Separate simulation time from monitor/audio time (display stream), sim clock ×1/×2/×5, auto speed, "Advance time" to the next expected event |
-| 2b | Event Director (physiology/time/action/inaction triggers), nurse/dialogue card, three notification levels, investigations with turnaround time (ABG first), progressive hints, compact timeline, 5/15/60-min trend view |
-| 2c | Three polished scenarios: **Healthy lungs — guided ventilation experiments**, **Severe asthma — dynamic hyperinflation**, **Hypovolaemia — fluid responsiveness and vasopressors** (each: free experiment + guided challenge) |
+| Step | Content                                                                                                                                                                                                                       |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2a   | Separate simulation time from monitor/audio time (display stream), sim clock ×1/×2/×5, auto speed, "Advance time" to the next expected event                                                                                  |
+| 2b   | Event Director (physiology/time/action/inaction triggers), nurse/dialogue card, three notification levels, investigations with turnaround time (ABG first), progressive hints, compact timeline, 5/15/60-min trend view       |
+| 2c   | Three polished scenarios: **Healthy lungs — guided ventilation experiments**, **Severe asthma — dynamic hyperinflation**, **Hypovolaemia — fluid responsiveness and vasopressors** (each: free experiment + guided challenge) |
 
 Scoring, stars, XP and the full debrief stay in phase 3 (they consume the timeline and event log built here).
 Estimated duration of phase 2: 4–5 weeks instead of 3.
@@ -62,11 +62,13 @@ I like the current Physiology Lab structure and want to preserve the overall vis
 Current examples include:
 
 VENTILATION LAB
+
 - Healthy lungs — free ventilation
 - Breath stacking in severe asthma (heart-lung)
 - Balance: ARDS with lung leak
 
 HAEMODYNAMICS & DRUG LAB
+
 - Normal circulation — free drug lab
 - Hypovolaemia
 - Vasoplegia / septic shock
@@ -99,6 +101,7 @@ Create two independent concepts:
 ### Simulation clock
 
 Controls:
+
 - disease progression
 - drug pharmacodynamics
 - drug pharmacokinetics
@@ -144,6 +147,7 @@ Example:
 Simulation runs at ×5.
 
 Over 60 real seconds:
+
 - 5 simulated minutes pass
 - norepinephrine begins working
 - MAP changes from 51 → 68
@@ -331,7 +335,7 @@ The user actively examines:
 - jugular veins
 - edema
 - chest movement
-etc.
+  etc.
 
 ## Ultrasound
 
@@ -344,7 +348,7 @@ If requested:
 - B-lines
 - pleural effusion
 - tamponade
-etc.
+  etc.
 
 ## Consultant / senior physician
 
@@ -445,6 +449,7 @@ IF:
 player gives excessive fluid in RV failure
 
 THEN later:
+
 - CVP rises
 - RV dilates
 - oxygenation may worsen
@@ -604,6 +609,7 @@ Nurse:
 “The patient is fighting the ventilator. What should we do?”
 
 Player can:
+
 - examine patient first
 - increase analgesia
 - increase sedation
@@ -671,7 +677,7 @@ Show:
 - CVP
 - norepinephrine dose
 - ventilator settings
-etc.
+  etc.
 
 At ×5 this becomes particularly useful because physiological evolution happens quickly.
 
@@ -1168,6 +1174,7 @@ Buttons:
 Potential future expansion:
 
 different staff characters:
+
 - ICU nurse
 - respiratory therapist / nurse depending on region
 - laboratory
@@ -1189,6 +1196,7 @@ Create a reusable scenario definition.
 Conceptually something like:
 
 Scenario
+
 - id
 - title
 - category
@@ -1209,6 +1217,7 @@ Scenario
 - debriefRules
 
 Event
+
 - id
 - trigger
 - priority
@@ -1271,6 +1280,7 @@ trigger:
 expiratoryFlowAtNextBreath > threshold
 
 duration:
+
 > 90 simulated seconds
 
 event:
@@ -1295,6 +1305,7 @@ Examples:
 Asthma scenario:
 
 Reward:
+
 - recognizing dynamic hyperinflation
 - appropriate ventilator change
 - improved blood pressure
@@ -1303,6 +1314,7 @@ Reward:
 - avoiding unnecessary repeated fluids
 
 Penalize:
+
 - further increasing respiratory rate
 - inappropriate large VT
 - repeated fluid loading despite absent responsiveness
@@ -1391,6 +1403,7 @@ keep the interface clinical.
 After the scenario:
 
 show:
+
 - score
 - mastery
 - stars

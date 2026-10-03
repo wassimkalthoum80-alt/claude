@@ -221,15 +221,15 @@ models for phenylephrine, nitroglycerin, urapidil, β-blockers.
 
 ## 14. Current codebase — preserve / refactor / remove / create
 
-| Area | Decision |
-|---|---|
-| `src/sim/**` (engine, physiology, pharmacology, fluid, brain, devices, rhythms, interventions, signals) | **Preserve.** Additions only (e.g. vital-sign snapshots for the timeline, scenario-condition evaluation hooks) |
-| `src/ui/components` workstation (monitor, ventilator, controls, pumps, action bar and ALS panels, scene, balance, BIS, patient banner/history) | **Preserve**; reused by every mode |
-| `App.tsx` | **Refactor:** app shell with screens (HOME → module menu → session workspace → debrief) |
-| Pause menu case list, instructor-panel case list, briefing overlay | **Remove** from the workspace; case choice moves to module menus; briefing becomes the session intro |
-| `ScenarioDefinition`, `src/content/scenarios` | **Refactor/extend** into the scenario framework (§ 8); existing scenarios become Physiology Lab presets or are rebuilt as validated challenges |
-| `EventLog`, `replay`, run summary | **Preserve/extend** into timeline, debrief, scoring input |
-| Scoring, progression, storage, HOME/menus, session model, debrief, "what changed and why", diagnostics panel | **Create** (new modules under `src/game` for pure logic — no React, unit-tested — and `src/ui` for screens) |
+| Area                                                                                                                                           | Decision                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/sim/**` (engine, physiology, pharmacology, fluid, brain, devices, rhythms, interventions, signals)                                        | **Preserve.** Additions only (e.g. vital-sign snapshots for the timeline, scenario-condition evaluation hooks)                                 |
+| `src/ui/components` workstation (monitor, ventilator, controls, pumps, action bar and ALS panels, scene, balance, BIS, patient banner/history) | **Preserve**; reused by every mode                                                                                                             |
+| `App.tsx`                                                                                                                                      | **Refactor:** app shell with screens (HOME → module menu → session workspace → debrief)                                                        |
+| Pause menu case list, instructor-panel case list, briefing overlay                                                                             | **Remove** from the workspace; case choice moves to module menus; briefing becomes the session intro                                           |
+| `ScenarioDefinition`, `src/content/scenarios`                                                                                                  | **Refactor/extend** into the scenario framework (§ 8); existing scenarios become Physiology Lab presets or are rebuilt as validated challenges |
+| `EventLog`, `replay`, run summary                                                                                                              | **Preserve/extend** into timeline, debrief, scoring input                                                                                      |
+| Scoring, progression, storage, HOME/menus, session model, debrief, "what changed and why", diagnostics panel                                   | **Create** (new modules under `src/game` for pure logic — no React, unit-tested — and `src/ui` for screens)                                    |
 
 ## 15. Implementation order (each phase: tests, i18n EN/DE, docs, commit, review)
 

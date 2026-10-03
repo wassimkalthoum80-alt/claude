@@ -69,17 +69,20 @@ validation of anything.
 The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these areas.
 
 **Units and dosing weight**
+
 - Worked conversions: µg/kg/min ↔ mL/h, IU/min ↔ IU/h.
 - IU → mg is refused.
 - Calcium chloride vs gluconate deliver different amounts of calcium.
 - Obesity uses the protocol weight basis.
 
 **Formulary**
+
 - All 15 categories are present; unconfigured drugs are reference-only.
 - The required separations are in place.
 - Search works.
 
 **Delivery**
+
 - An order alone delivers nothing.
 - The line washes in after a stop.
 - Rate changes, boluses, stops and flushes conserve mass exactly.
@@ -89,6 +92,7 @@ The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these 
 - Invalid orders are blocked; overrides are instructor-only.
 
 **Pharmacodynamics**
+
 - Opioid apnoea only affects spontaneous breathing, not a controlled ventilator.
 - A patient can be paralysed without hypnosis.
 - Rocuronium recovery is gradual and read from the TOF.
@@ -101,14 +105,17 @@ The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these 
 - Opioid + propofol respiratory synergy.
 
 **Fluids**
+
 - Crystalloid redistributes.
 - Albumin 20 % expands plasma by more than its own volume.
 - A fluid bolus helps more when the patient is hypovolaemic.
 
 **Reproducibility**
+
 - The same seed and commands give the same run.
 
 **Other tests**
+
 - UI adapter tests (`src/ui/adapters/pumps.test.ts`): rack view model, adding pumps, dose conversion round
   trips, instructor view and interaction warnings.
 - E2E (`e2e/smoke.spec.ts`): the TIVA shows as running. Loading rocuronium into P4 works. A 5 mg/kg bolus is
@@ -165,6 +172,7 @@ The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these 
 
   A 100 mg top-up under TIVA gives ART 125/69 → 110/60, HR 80 → 94/min and ST −0.3 mm (II) / −0.6 mm (V5),
   recovering within ≈ 10 min. It is covered by a unit test and an e2e test.
+
 - The ST test for a healthy heart in severe shock now allows this minimal change (≤ 0.2 of the ischaemia scale,
   V5 above −0.7 mm) instead of none.
 
@@ -180,13 +188,14 @@ The 27 acceptance tests in `src/sim/__tests__/pharmacology.test.ts` cover these 
 - **The critical closing pressure** now follows vascular tone.
 - **Result** for 100 mg under TIVA (fall of mean ART):
 
-  | | normovolaemic | volume status 0.6 |
-  |---|---|---|
-  | 35 y | 20 % | 34 % |
-  | 58 y | 24 % | 39 % |
-  | 80 y | 29 % | 45 % |
+  |      | normovolaemic | volume status 0.6 |
+  | ---- | ------------- | ----------------- |
+  | 35 y | 20 %          | 34 %              |
+  | 58 y | 24 %          | 39 %              |
+  | 80 y | 29 %          | 45 %              |
 
   At 80 y and volume status 0.5 the circulation collapses (PEA) if untreated.
+
 - **Tests**: a unit test checks this gradient, and another checks the age command.
 - **Tried and removed**: a sympathetic venoconstriction term (recruiting unstressed volume). It made breath
   stacking no longer end in PEA (4 older tests) without improving the gradient.

@@ -44,14 +44,14 @@ export function myocardialIschaemia(patient: PatientState): number {
   // raise demand; negative inotropes lower it).
   const demand =
     ((hr * Math.max(20, map)) / (80 * 87)) * (0.7 + 0.3 * patient.pharmacology.effects.inotropy);
-  // SIM-ASSUMPTION: a raised LV filling pressure (pulmonary capillary pressure above 12 mmHg) lowers the
-  // coronary perfusion pressure of the subendocardium (−2.5 % per mmHg, ≥ 30 % left).
+  // SIM-ASSUMPTION: a raised LV filling pressure (pulmonary capillary pressure above 15 mmHg) lowers the
+  // coronary perfusion pressure of the subendocardium (−1.5 % per mmHg, ≥ 50 % left).
   const lvedp = patient.fluid.derived.pulmonaryCapillaryMmHg;
   const supply =
     (gas.cao2 / REFERENCE_CAO2) *
     clamp((map - 10) / 77, 0, 1.5) *
     (diastolicFraction(hr) / diastolicFraction(80)) *
-    clamp(1 - 0.025 * Math.max(0, lvedp - 12), 0.3, 1);
+    clamp(1 - 0.015 * Math.max(0, lvedp - 15), 0.5, 1);
   const reserve = ECG.coronaryReserve * reserves.cardiacReserve;
   const ischaemia = clamp(1 - (reserve * supply) / demand, 0, 1);
   const strain = clamp(1 - supply / demand, 0, 1);

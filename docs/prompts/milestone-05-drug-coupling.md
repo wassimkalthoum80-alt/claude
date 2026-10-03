@@ -35,6 +35,7 @@ rocuronium, noradrenaline, adrenaline, dobutamine, vasopressin (argipressin), sa
 furosemide, plus fluids and blood products (fluid model).
 
 ### A. Exposure honesty (PK)
+
 - Give noradrenaline, adrenaline, dobutamine, vasopressin, salbutamol, naloxone and calcium one-compartment
   concentration models: volume and clearance per kg, Cp and Ce in ng/mL (vasopressin mU/L, calcium ΔmmolL).
   Convert the PD potencies so that steady-state behaviour stays calibrated. Label the half-lives as educational.
@@ -49,6 +50,7 @@ furosemide, plus fluids and blood products (fluid model).
   conserved — test it.
 
 ### B. Mechanisms (PD), each applied once
+
 - **Separate layers.** Patient baseline and disease stay in reserves, factors and fluid. Direct drug effects are
   computed absolutely against "no drug" and relative to the scenario reference. Reflexes are the heart–lung
   stress terms. The net state is in cardio/heartLung, and the monitor measures from signals.
@@ -64,6 +66,7 @@ furosemide, plus fluids and blood products (fluid model).
   - intracellular K⁺ shift.
 
   Delivery during arrest depends on generated flow (A). There is no automatic ROSC.
+
 - **Vasopressin:** V1 vasoconstriction only (no β), plus V2 antidiuresis (already in the renal model), in
   concentration units.
 - **Dexmedetomidine:**
@@ -82,11 +85,13 @@ furosemide, plus fluids and blood products (fluid model).
 - **β-blocked phenotype** (patient factor 0–1): scales down β₁/β₂ drug effects and reflex tachycardia.
 
 ### C. Signals and consistency
+
 - Pleth amplitude falls with peripheral vasoconstriction; true SaO₂ is unchanged.
 - Check and test: CO = HR × SV; DO₂ = CO × CaO₂ × 10; CaO₂ formula; MAP ≈ CO × SVR / 80 (+ RAP) for the model's
   own values.
 
 ### D. Instructor visibility
+
 - Drug-response section:
   - for HR, SVR, contractility and venous tone: baseline, direct drug contribution (against no drug), change since
     scenario start, reflex/physiological contribution, net, with units and a model-confidence label;
@@ -101,10 +106,12 @@ furosemide, plus fluids and blood products (fluid model).
   - BIS.
 
   Markers for bolus, rate change, stop and flush.
+
 - Short explanations generated from the model state. No fabricated attribution percentages.
 - Relabel "PEA → asystole" as the model-derived deficit dose (heuristic, not a timer).
 
 ### E. Tests (reproducible, seeded)
+
 1. Noradrenaline raises MAP in vasoplegia; CO depends on context.
 2. Excessive noradrenaline raises MAP while CO and pleth fall.
 3. Dobutamine raises CO while MAP may fall.
@@ -126,7 +133,9 @@ furosemide, plus fluids and blood products (fluid model).
 17. Identical seed and actions give identical results.
 
 ### F. Report
+
 Write `docs/reviews/drug-coupling-report.md`:
+
 - changed files and connections;
 - tests;
 - source and jurisdiction per drug (SmPC/Fachinformation links as given; network access is blocked, so they

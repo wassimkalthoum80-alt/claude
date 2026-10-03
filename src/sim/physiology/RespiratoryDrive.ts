@@ -32,6 +32,7 @@ export class RespiratoryDriveModel {
    * @param driveFactor 0..1 respiratory drive left after opioids/hypnotics
    * @param diaphragmBlock 0..1 neuromuscular block of the diaphragm
    * @param effortGain multiplier of the effort (unassisted breathing: awake calibration × chemoreflex)
+   * @param rateGain multiplier of the rate (unassisted breathing: hypoxaemia and interstitial oedema)
    * SIM-ASSUMPTION: drug depression slows the rate (factor^0.7) more than it weakens each effort (factor^0.3);
    * below 2 breaths/min the patient is apnoeic. Neuromuscular block weakens the effort, not the drive.
    */
@@ -43,9 +44,10 @@ export class RespiratoryDriveModel {
     driveFactor = 1,
     diaphragmBlock = 0,
     effortGain = 1,
+    rateGain = 1,
   ): number {
     const base = DRIVE_PATTERNS[arrested ? 'none' : drive];
-    const rate = base.rate * Math.max(0, driveFactor) ** 0.7;
+    const rate = base.rate * Math.max(0, driveFactor) ** 0.7 * rateGain;
     const p = {
       rate: rate < 2 ? 0 : rate,
       pmus: base.pmus * Math.max(0, driveFactor) ** 0.3 * (1 - diaphragmBlock) * effortGain,
@@ -82,4 +84,13 @@ export const UNASSISTED_EFFORT = { calibration: 1.8, perMmHg: 0.08, min: 0.5, ma
 export function unassistedEffortTarget(paco2: number): number {
   const u = UNASSISTED_EFFORT;
   return u.calibration * Math.min(u.max, Math.max(u.min, 1 + u.perMmHg * (paco2 - 40)));
+}
+
+/**
+ * SIM-ASSUMPTION: rate response of unassisted breathing — peripheral chemoreceptors raise the rate by 3 % per % SaO₂
+ * below 92 %, and interstitial lung oedema (J-receptors, stiffer lungs) by 60 % per unit of lung-water ratio above
+ * 1.3; at most ×2. Rapid shallow breathing: the effort per breath falls with the rate rise (÷ √rate gain).
+ */
+export function unassistedRateTarget(sao2: number, lungWaterRatio: number): number {
+  return Math.min(2, 1 + 0.03 * Math.max(0, 92 - sao2) + 0.6 * Math.max(0, lungWaterRatio - 1.3));
 }
