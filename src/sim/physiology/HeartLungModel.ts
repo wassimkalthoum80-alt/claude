@@ -228,7 +228,9 @@ export class HeartLungModel {
     const injuryRate = (deficit ** 1.3 + 0.6 * severeHypoxia) / reserves.cardiacReserve;
     const recovery = deficit < 0.05 ? hl.oxygenDebt / k.debtRecoveryTauS : 0;
     hl.oxygenDebt = Math.max(0, hl.oxygenDebt + dt * (injuryRate - recovery));
-    // SIM-ASSUMPTION: lactate rises with the deficit and clears slowly (τ 10 min) when delivery is adequate.
+    // SIM-ASSUMPTION: lactate rises with the deficit and clears slowly (τ 10 min) when delivery is adequate, towards
+    // the patient's baseline (1 mmol/L; a septic patient's raised aerobic lactate is held at its handover value).
+    const lactateBaseline = clamp(patient.factors.lactateBaseline, 1, 10);
     // SIM-ASSUMPTION: excessive vasoconstriction (total SVR factor above 1.8) causes regional (splanchnic/peripheral)
     // hypoperfusion lactate up to 0.0015 mmol/L/s at factor 2.8 — a production term separate from global O2 debt.
     hl.vasoconstrictionLactate =
@@ -237,7 +239,7 @@ export class HeartLungModel {
       gas.lactate +
         dt *
           (0.018 * deficit -
-            ((1 - deficit) * (gas.lactate - 1)) / 600 +
+            ((1 - deficit) * (gas.lactate - lactateBaseline)) / 600 +
             patient.pharmacology.effects.lactateProduction +
             hl.vasoconstrictionLactate),
       1,

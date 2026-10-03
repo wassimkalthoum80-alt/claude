@@ -1,5 +1,5 @@
 import type { RealtimePreset } from '../../sim';
-import type { ScenarioDefinition } from '../../sim/types/scenario';
+import type { OxygenInit, ScenarioDefinition } from '../../sim/types/scenario';
 import { septicShock } from './challengeCases';
 
 export type BridgeKind = 'admission' | 'shock';
@@ -14,7 +14,11 @@ export const BRIDGE_SCENARIO_ID = 'bridge-sepsis';
  * antibiotic was given is asked at the handover, so the course gets the real drug.
  *
  * `continuation`: a further episode of the same patient — the workstation keeps the patient as handed over (airway,
- * ventilator, drugs, volumes), so the opening setup (mask breathing with a strong drive) is not imposed again.
+ * ventilator, drugs, volumes), so the opening setup (strong spontaneous drive) is not imposed again.
+ *
+ * `arrival`: the respiratory support the patient comes with — what the ward had connected (room air unless an
+ * earlier episode left oxygen running). The patient's saturation, MAP and heart rate are then calibrated to the
+ * ward's values at load (`SimulationEngine.loadHandover`), so the monitor shows what the ward measured.
  */
 export function bridgeScenario(
   preset: RealtimePreset,
@@ -22,6 +26,7 @@ export function bridgeScenario(
   patient: { ageYears: number; sex: 'female' | 'male'; weightKg: number },
   episode: 'sepsis' | 'meningitis' = 'sepsis',
   continuation = false,
+  arrival: OxygenInit = { support: 'room-air' },
 ): ScenarioDefinition {
   const base = septicShock;
   const textKey = episode === 'meningitis' ? 'meningitis' : kind;
@@ -61,12 +66,12 @@ export function bridgeScenario(
       weightKg: patient.weightKg,
       heightCm: patient.sex === 'female' ? 163 : 176,
       heartRate: Math.round(preset.heartRate),
-      // The awake patient breathes spontaneously on a simple oxygen mask (6 L/min): no airway device, the
-      // ventilator stands by (no imposed breaths or pressure); NIV is a separate support the learner can choose.
+      // The awake patient breathes spontaneously without an airway device on the ward's support; the ventilator
+      // stands by (no imposed breaths or pressure). Oxygen, HFOT and NIV are the learner's choices.
       airway: 'none',
       factors: { temperatureC: preset.temperatureC },
     },
-    oxygen: { support: 'simple-mask', flowLMin: { 'simple-mask': 6 } },
+    oxygen: arrival,
     // No sedation in the emergency department; the noradrenaline syringe is ready but off.
     pumps: (base.pumps ?? [])
       .filter((p) => p.id !== 'P1' && p.id !== 'P2')

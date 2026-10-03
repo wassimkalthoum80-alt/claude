@@ -19,6 +19,11 @@ export interface PatientFactors {
   eegAmplitude: number;
   /** 0..1 — chronic β-blockade (removes up to 80 % of β-mediated drug effects and reflex tachycardia) */
   betaBlockade: number;
+  /**
+   * mmol/L — lactate the clearance relaxes towards without an oxygen deficit (1 = normal; higher in sepsis: aerobic
+   * glycolysis under catecholamine stress and reduced hepatic clearance)
+   */
+  lactateBaseline: number;
 }
 
 /** Noxious stimulation the patient receives (instructor/scenario). */

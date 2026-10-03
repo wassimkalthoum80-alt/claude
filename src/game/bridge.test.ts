@@ -36,9 +36,14 @@ describe('real-time bridge (course ↔ real time)', () => {
     const preset = w.realtimePreset();
     const sc = bridgeScenario(preset, 'admission', w.caseDef.patient);
     expect(sc.id).toBe(BRIDGE_SCENARIO_ID);
-    // Conventional oxygen by simple mask: no airway device, the ventilator stands by.
+    // No airway device, the ventilator stands by; the patient arrives on the ward's support (room air by default).
     expect(sc.patient.airway).toBe('none');
-    expect(sc.oxygen).toMatchObject({ support: 'simple-mask', flowLMin: { 'simple-mask': 6 } });
+    expect(sc.oxygen).toEqual({ support: 'room-air' });
+    const masked = bridgeScenario(preset, 'admission', w.caseDef.patient, 'sepsis', false, {
+      support: 'simple-mask',
+      flowLMin: { 'simple-mask': 6 },
+    });
+    expect(masked.oxygen).toMatchObject({ support: 'simple-mask', flowLMin: { 'simple-mask': 6 } });
     expect(sc.patient.factors?.temperatureC).toBe(preset.temperatureC);
     expect(sc.fluid?.factors?.vasoplegia).toBe(preset.vasoplegia);
     expect(sc.pumps?.some((p) => p.productId === 'propofol-2')).toBe(false);

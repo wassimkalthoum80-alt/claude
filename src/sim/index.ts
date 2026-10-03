@@ -2,6 +2,12 @@
  * Public API of the simulation. The UI imports from here only (CLAUDE.md A2).
  */
 export { SimulationEngine, type EngineOptions } from './engine/SimulationEngine';
+export {
+  calibrateHandover,
+  HANDOVER_SETTLE_S,
+  type HandoverCalibration,
+  type HandoverTargets,
+} from './engine/handoverCalibration';
 export { TIME_SCALES, type TimeScale } from './core/Clock';
 export { TICK_S, SUBSTEP_HZ, SLOW_SIGNAL_HZ } from './core/constants';
 export { SeededRng } from './core/rng';

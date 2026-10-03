@@ -117,6 +117,11 @@ export interface PatientConditions {
   pericardialRateMlMin: number;
   /** vascular access for drugs: peripheral IV works; an IO needle can be placed if it fails */
   ivAccess: 'iv' | 'io' | 'none';
+  /**
+   * 0..0.4 — fraction of the cardiac output through consolidated, non-recruitable lung (pneumonia, septic lung
+   * injury): not opened by PEEP and barely improved by oxygen
+   */
+  consolidationShunt: number;
 }
 
 export type ShockOutcome =

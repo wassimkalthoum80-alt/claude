@@ -21,6 +21,11 @@ export interface PatientInit {
   rhythm: RhythmId;
   /** /min */
   heartRate: number;
+  /**
+   * /min — heart rate at the start when reflexes already raise it above the intrinsic rate (a handed-over patient);
+   * default: the intrinsic rate
+   */
+  initialHeartRate?: number;
   /** mL — spontaneous stroke volume */
   strokeVolume: number;
   /** lung condition at the start (mechanics, shunt, recruitability); default 'normal' */

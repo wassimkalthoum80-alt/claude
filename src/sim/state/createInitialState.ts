@@ -34,7 +34,8 @@ export function createInitialState(
   const severity = lungPreset === 'bronchospasm' ? (p.obstructionSeverity ?? 1) : 1;
   const perfusing = p.rhythm === 'sinus';
   const tone = perfusing ? 1 : 0;
-  const co = perfusing ? (p.strokeVolume * p.heartRate) / 1000 : 0;
+  const startRate = p.initialHeartRate ?? p.heartRate;
+  const co = perfusing ? (p.strokeVolume * startRate) / 1000 : 0;
   // Start the arterial compartment near end-diastole so the first beats already look physiological.
   const startPressure = perfusing ? 72 : CARDIO.msfp;
 
@@ -51,7 +52,7 @@ export function createInitialState(
       },
       cardio: {
         rhythm: p.rhythm,
-        heartRate: perfusing ? p.heartRate : 0,
+        heartRate: perfusing ? startRate : 0,
         cardiacOutput: co,
         strokeVolume: p.strokeVolume,
         svr: Math.round(CARDIO.peripheralResistance * 1333),
@@ -115,7 +116,7 @@ export function createInitialState(
         preloadFactor: 1,
         rvFactor: 1,
         myocardialFactor: 1,
-        heartRateTarget: p.heartRate,
+        heartRateTarget: startRate,
         oxygenDeficit: 0,
         oxygenDebt: 0,
         lowFlowTime: 0,
@@ -167,6 +168,7 @@ export function createInitialState(
         pericardialMl: 0,
         pericardialRateMlMin: 0,
         ivAccess: 'iv',
+        consolidationShunt: 0,
         ...scenario.conditions,
         // A copy: the engine changes the pneumothorax in place (tension, decompression) and must never write into
         // the scenario definition shared by every session.
@@ -187,7 +189,7 @@ export function createInitialState(
     devices: {
       monitor: {
         numerics: {
-          hr: perfusing ? p.heartRate : 0,
+          hr: perfusing ? Math.round(startRate) : 0,
           artSys: perfusing ? 120 : CARDIO.msfp,
           artDia: perfusing ? 70 : CARDIO.msfp,
           artMean: perfusing ? 87 : CARDIO.msfp,

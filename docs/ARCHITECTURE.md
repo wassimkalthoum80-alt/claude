@@ -374,7 +374,10 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   emergency department, and any course shock (`view.shock`) offers "take over in real time". One patient, one clock:
   - `useSession.startBridge` dispatches `REALTIME_EPISODE_START` to the course (its clock is held; ward time commands
     are refused). A first episode builds the workstation patient from `InfectionEngine.realtimePreset()`
-    (`src/content/scenarios/bridge.ts`, `loadScenario`); a further episode of the same ward session continues the
+    (`src/content/scenarios/bridge.ts`, arriving on the ward's support via `arrivalSupport`) and loads it with
+    `SimulationEngine.loadHandover`, which calibrates it to the ward's SpO₂, MAP, heart rate and lactate
+    (`src/sim/engine/handoverCalibration.ts`: consolidation shunt, circulating volume, intrinsic rate; short trial
+    engines with the session seed; logged as `HANDOVER_CALIBRATED`); a further episode of the same ward session continues the
     patient the workstation still holds (`SimulationEngine.continueScenario`, checked with `loadCount` via
     `WardStore.canContinue`). Either way `continuationCommands` applies the course-owned causes (vasoplegia, leak,
     temperature) and the protocol's noradrenaline dose. A continued patient first catches up the ward hours since the handover with

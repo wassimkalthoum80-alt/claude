@@ -916,7 +916,10 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await expect(page.getByTestId('briefing-text')).toContainText('Notaufnahme');
   await page.getByTestId('start-button').click();
   await expect(page.getByTestId('bridge-handover')).toBeVisible();
-  // Breathing / oxygen therapy follows the connected device: a simple mask, the ventilator in standby.
+  // The patient arrives as on the ward (room air); breathing / oxygen therapy follows the connected device: a simple
+  // mask keeps the ventilator in standby.
+  await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'room-air');
+  await page.getByTestId('resp-simple-mask').click();
   await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'simple-mask');
   await expect(page.getByTestId('resp-fio2')).toContainText('geschätzt');
   await expect(page.getByTestId('mode-PSV')).toHaveCount(0);

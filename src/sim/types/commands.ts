@@ -239,6 +239,8 @@ export type ClinicalEventType =
   | 'SCENARIO_CONTINUED'
   /** background time between two episodes (ward hours) was simulated on the slow models; detail = "s" */
   | 'BACKGROUND_ADVANCE'
+  /** a ward patient was calibrated to the referring ward's vital signs at load; detail = targets → parameters */
+  | 'HANDOVER_CALIBRATED'
   /** heart–lung model: arrest from sustained low flow or oxygen debt (detail = cause) */
   | 'PEA_ONSET'
   /** heart–lung model: ventricular fibrillation from severe ischaemia under catecholamine drive (detail = cause) */

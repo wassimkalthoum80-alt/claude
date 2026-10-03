@@ -105,7 +105,8 @@ export function airwayComplianceFactor(airway: AirwayState, conditions: PatientC
  */
 export function airwayShunt(airway: AirwayState, conditions: PatientConditions): number {
   const oneLung = airway.device === 'ett' && airway.position === 'endobronchial' ? 0.25 : 0;
-  return oneLung + 0.3 * lungCollapse(conditions);
+  // SIM-ASSUMPTION: consolidated lung is a fixed shunt added to the preset's own (not recruitable, not O2-responsive).
+  return oneLung + 0.3 * lungCollapse(conditions) + clamp(conditions.consolidationShunt, 0, 0.4);
 }
 
 /**

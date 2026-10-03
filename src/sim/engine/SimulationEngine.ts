@@ -95,6 +95,12 @@ import { ABG_TURNAROUND_S, drawAbg } from '../director/labs';
 import type { ClinicalEventType, Command, CommandSource, LogEntry } from '../types/commands';
 import type { SimEvent } from '../types/events';
 import type { GuidelineSet } from '../types/guidelines';
+import {
+  calibrateHandover,
+  HANDOVER_SETTLE_S,
+  type HandoverCalibration,
+  type HandoverTargets,
+} from './handoverCalibration';
 import type { ScenarioDefinition } from '../types/scenario';
 
 export interface EngineOptions {
@@ -534,6 +540,61 @@ export class SimulationEngine {
   }
 
   /**
+   * Load a patient handed over from the ward (course → real time), calibrated so the monitor shows the values the
+   * ward measured (MAP, heart rate, saturation, lactate). Trial runs use fresh engines with this engine's options
+   * and the session seed; only the chosen patient is loaded here, and the calibration is logged.
+   */
+  loadHandover(
+    scenario: ScenarioDefinition,
+    seed: number,
+    targets: HandoverTargets,
+  ): HandoverCalibration {
+    const { scenario: calibrated, calibration } = calibrateHandover(
+      scenario,
+      targets,
+      (candidate) => {
+        const trial = new SimulationEngine({
+          scenario: candidate,
+          guidelines: this.guidelines,
+          seed,
+          calibration: this.calibration,
+          directorRules: this.directorRules,
+          observation: this.observationDefaults,
+        });
+        trial.runFor(HANDOVER_SETTLE_S);
+        const p = trial.state.patient;
+        return {
+          map: p.cardio.meanArterialPressure,
+          heartRate: p.heartLung.heartRateTarget,
+          spo2: p.gas.spo2,
+          numerics: { ...trial.state.devices.monitor.numerics },
+        };
+      },
+    );
+    this.loadScenario(calibrated, seed);
+    // The monitor shows the patient's measured values from the first moment (not the defaults of a fresh monitor
+    // that has not seen a beat yet): the numerics of the calibrated trial, replaced at the first refresh.
+    const shown = calibration.achieved.numerics;
+    if (shown) {
+      const n = this.state.devices.monitor.numerics;
+      n.hr = shown.hr;
+      n.artSys = shown.artSys;
+      n.artDia = shown.artDia;
+      n.artMean = shown.artMean;
+      if (n.spo2 !== null && shown.spo2 !== null) n.spo2 = shown.spo2;
+    }
+    this.logEvent(
+      'HANDOVER_CALIBRATED',
+      0,
+      `MAP ${Math.round(targets.map)} mmHg, HR ${Math.round(targets.heartRate)}/min, SpO2 ${Math.round(targets.spo2)} %, ` +
+        `lactate ${targets.lactate.toFixed(1)} mmol/L → shunt ${Math.round(calibration.consolidationShunt * 100)} %, ` +
+        `volume ${Math.round(calibration.bloodVolumeChangeMl)} mL`,
+    );
+    this.bumpAndNotify();
+    return calibration;
+  }
+
+  /**
    * Background time between two real-time episodes (the ward hours): the patient's slow processes run for `seconds`
    * in 2-s steps — pumps and bags keep delivering, drugs distribute and wash out (RK4 PK), fluid shifts, urine and
    * insensible losses go on, blood gases and the brain follow. Waveforms, beats, breaths and the heart–lung
@@ -663,6 +724,8 @@ export class SimulationEngine {
     this.rateGain = 1;
     this.updateOxygenSupport();
     this.bloodGas.reset(s.patient.gas, this.gasInputs());
+    // A raised lactate baseline (sepsis) is the starting lactate as well.
+    s.patient.gas.lactate = clamp(s.patient.factors.lactateBaseline, 1, 10);
     if (scenario.patient.initialPaco2 !== undefined)
       this.bloodGas.setCo2(s.patient.gas, this.gasInputs(), scenario.patient.initialPaco2);
     if (scenario.patient.initialSpo2 !== undefined)
@@ -1871,6 +1934,7 @@ function validFactors(patch: Partial<PatientFactors>): Partial<PatientFactors> {
     renalFunction: [0.2, 1],
     eegAmplitude: [0.5, 1.5],
     betaBlockade: [0, 1],
+    lactateBaseline: [1, 10],
   };
   const out: Partial<PatientFactors> = {};
   for (const key of Object.keys(ranges) as (keyof PatientFactors)[]) {

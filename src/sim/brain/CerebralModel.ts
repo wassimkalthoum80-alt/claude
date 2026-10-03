@@ -17,6 +17,7 @@ export function defaultPatientFactors(ageYears: number): PatientFactors {
     renalFunction: 1,
     eegAmplitude: clamp(1.1 - 0.006 * (ageYears - 30), 0.6, 1.2),
     betaBlockade: 0,
+    lactateBaseline: 1,
   };
 }
 

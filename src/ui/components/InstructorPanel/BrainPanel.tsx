@@ -10,7 +10,13 @@ import styles from './BrainPanel.module.css';
 
 const STIMULI: StimulusKind[] = ['laryngoscopy', 'incision', 'tetanic', 'surgeryOn', 'surgeryOff'];
 const FAULTS: BisSensorFault[] = ['none', 'poorContact', 'disconnected', 'electrocautery'];
-const FACTORS: { key: keyof PatientFactors; min: number; max: number; step: number }[] = [
+// The septic lactate baseline is a metabolic factor, not a brain factor: it is set by the ward handover.
+const FACTORS: {
+  key: Exclude<keyof PatientFactors, 'lactateBaseline'>;
+  min: number;
+  max: number;
+  step: number;
+}[] = [
   { key: 'frailty', min: 0, max: 1, step: 0.05 },
   { key: 'hypnoticSensitivity', min: 0.5, max: 2, step: 0.05 },
   { key: 'temperatureC', min: 32, max: 40, step: 0.1 },

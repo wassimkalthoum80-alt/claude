@@ -3,12 +3,15 @@ import {
   isOxygenDevice,
   ventilatorInUse,
   type Command,
+  type CourseSupport,
+  type HandoverTargets,
   type InfectionCommand,
   type LogEntry,
   type RealtimeOutcome,
   type RealtimePreset,
   type SimulationState,
 } from '../sim';
+import type { OxygenInit } from '../sim/types/scenario';
 
 /**
  * Real time ↔ course (milestone 7 § 2.1): records a real-time episode opened from a ward case and turns it into the
@@ -292,4 +295,29 @@ export function continuationCommands(
     } else if (pump.running) out.push({ type: 'PUMP_STOP', pumpId: pump.id });
   }
   return out;
+}
+
+/** The ward's measured values the workstation patient must arrive with (first episode of a patient). */
+export function handoverTargets(preset: RealtimePreset): HandoverTargets {
+  return {
+    map: preset.map,
+    heartRate: preset.heartRate,
+    spo2: preset.spo2,
+    lactate: preset.lactate,
+  };
+}
+
+/**
+ * The respiratory support the patient arrives with: the oxygen device the course carries (with its flow), otherwise
+ * room air. NIV or a tube cannot be re-created on a freshly built patient; such a patient arrives on room air and
+ * the learner connects the support again.
+ */
+export function arrivalSupport(support: CourseSupport | null | undefined): OxygenInit {
+  if (!support || !isOxygenDevice(support.respSupport)) return { support: 'room-air' };
+  const device = support.respSupport;
+  return {
+    support: device,
+    ...(support.o2FlowLMin !== null ? { flowLMin: { [device]: support.o2FlowLMin } } : {}),
+    ...(device === 'hfnc' ? { hfncFio2: support.fio2 } : {}),
+  };
 }

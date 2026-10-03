@@ -86,7 +86,12 @@ export class LungStateModel {
       1000;
     this.vaTarget = patient.gas.alveolarVentilation;
     this.applyMechanics(patient, l);
-    patient.gas.shunt = this.shunt(l, hl.recruitment, patient.fluid.derived.lungWaterRatio);
+    patient.gas.shunt = clamp(
+      this.shunt(l, hl.recruitment, patient.fluid.derived.lungWaterRatio) +
+        airwayShunt(patient.airway, patient.conditions),
+      0,
+      0.9,
+    );
     patient.gas.alveolarDeadSpace = l.alveolarDeadSpace;
     patient.gas.lungGasVolume = this.gasVolume(patient, l, vent.settings.peep);
   }
