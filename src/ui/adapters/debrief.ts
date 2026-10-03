@@ -1,6 +1,6 @@
 import { mentorPlanFor } from '../../content/mentor/plans';
 import { SCORING_DEFAULTS, scoringFor } from '../../content/scoring/scoringConfig';
-import { mentorMode } from '../../game/mentor';
+import { isGuided, mentorMode } from '../../game/mentor';
 import type { AchievementId, ProgressStore } from '../../game/profile';
 import { levelOf, recordSession } from '../../game/progression';
 import { scoreSession } from '../../game/scoring';
@@ -21,6 +21,8 @@ export interface DebriefData {
   /** s — simulated duration */
   durationS: number;
   score: SessionScore;
+  /** "Geführtes Training": the Oberarzt guided the session step by step */
+  guided: boolean;
   /** CPR figures of a resuscitation case */
   cpr: RunSummary | null;
   progress: {
@@ -49,16 +51,18 @@ export function finishScoredSession(
     session.difficulty,
     engine.guidelines.compressionFraction.targetPct,
   );
-  // Expert sessions have no Oberarzt: no independence to report.
+  // Expert sessions have no Oberarzt; unknown cases no plan (the steps would give the diagnosis away).
   const mentor =
-    mentorMode(session.difficulty, session.scored) === 'off'
+    mentorMode(session.difficulty, session.scored) === 'off' || session.unknown
       ? null
       : mentorPlanFor(session.scenarioId);
   const score = scoreSession(input, sc, SCORING_DEFAULTS, mentor);
+  // Beginner + a case with a plan = "Geführtes Training": full score and XP, labelled as such.
+  const guided = isGuided(session.difficulty, session.scored, mentor);
   const result = recordSession(
     store.load(),
     session,
-    { variant: s.scenario.variant, durationS: s.time, topics: sc.topics },
+    { variant: s.scenario.variant, durationS: s.time, topics: sc.topics, guided },
     score,
     now,
   );
@@ -68,6 +72,7 @@ export function finishScoredSession(
     variant: s.scenario.variant,
     durationS: s.time,
     score,
+    guided,
     cpr: sc.resus ? buildRunSummary(s, engine.scenario, engine.guidelines) : null,
     progress: {
       xpGained: result.xpGained,

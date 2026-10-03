@@ -246,6 +246,8 @@ export type Command =
    * independence score read it.
    */
   | { type: 'MENTOR_HELP'; checkpoint: string; level: 1 | 2 | 3 | 4; requested: boolean }
+  /** the learner phoned the Oberarzt about `topic` (circulation, airway, infection, drugs, stuck); logged only */
+  | { type: 'MENTOR_CALL'; topic: string }
   /** the learner asked the Oberarzt why (explanation of the current checkpoint; logged only, never scored) */
   | { type: 'MENTOR_WHY'; checkpoint: string }
   /** the learner commits to a working diagnosis (option id of the case's diagnosis set); logged for the debrief */

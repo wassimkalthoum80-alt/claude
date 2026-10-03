@@ -1261,7 +1261,7 @@ test('airway stage C: cannot see the cords — DAS calls, rescue, scalpel cricot
   expect(errors).toEqual([]);
 });
 
-test('Oberarzt: beginner card speaks up, escalates, learning pause; drawer on request; debrief independence', async ({
+test('Oberarzt beginner: guided training — ask, show with highlight, next step, labelled debrief', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -1271,45 +1271,91 @@ test('Oberarzt: beginner card speaks up, escalates, learning pause; drawer on re
   await page.getByTestId('difficulty-beginner').click();
   await page.getByTestId('entry-sepsis').click();
   await page.getByTestId('start-button').click();
-  // 40 quiet seconds: the Oberarzt offers level 1 unasked for the first open decision (fluid).
+  const win = page.getByTestId('mentor-window');
+  await expect(win).toBeVisible();
+  await expect(page.getByTestId('mentor-step')).toContainText('Volumen');
+  await expect(page.getByTestId('mentor-question')).toContainText('Volumen');
+  await expect(page.getByTestId('mentor-instruction')).toHaveCount(0);
+  // After a few seconds (or "Zeig mir, wie") the step is shown and its control lights up.
   await page.evaluate(() => {
     const e = window.__resusEngine;
     e?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
-    e?.runFor(40);
+    e?.runFor(12);
     e?.dispatch({ type: 'SET_PAUSED', paused: false }, 'system');
   });
-  const card = page.getByTestId('mentor-card');
-  await expect(card).toBeVisible();
-  await expect(card).toContainText('Volumen');
-  await expect(page.getByTestId('mentor-level-1')).toContainText('Schau');
-  await page.getByTestId('mentor-more').click();
-  await expect(page.getByTestId('mentor-level-2')).toBeVisible();
-  await page.getByTestId('mentor-pause').click();
-  expect(await page.evaluate(() => window.__resusEngine?.getSnapshot().control.paused)).toBe(true);
-  await page.screenshot({ path: 'test-results/mentor-card.png' });
-  await page.getByTestId('mentor-dismiss').click();
-  await expect(card).toHaveCount(0);
-  // On request in the drawer: concrete help (level 3) is marked as recorded.
-  await page.getByTestId('tool-hint').click();
-  await expect(page.getByTestId('mentor-checkpoint')).toContainText('Volumen');
-  await page.getByTestId('mentor-ask-3').click();
-  await expect(page.getByTestId('mentor-level-3')).toContainText('Bolus');
-  await page.getByTestId('mentor-why').click();
-  await expect(page.getByTestId('mentor-why-text')).toBeVisible();
-  await page.screenshot({ path: 'test-results/mentor-drawer.png' });
-  await page.evaluate(() => {
-    const e = window.__resusEngine;
-    e?.dispatch(
+  await expect(page.getByTestId('mentor-instruction')).toContainText('INF2');
+  await expect(page.locator('[data-testid="pump-INF2"][data-mentor-highlight]')).toHaveCount(1);
+  await page.screenshot({ path: 'test-results/mentor-guided.png' });
+  await page.evaluate(() =>
+    window.__resusEngine?.dispatch(
       { type: 'PUMP_BOLUS', pumpId: 'INF2', volumeMl: 500, durationS: 600, confirm: true },
       'user',
-    );
+    ),
+  );
+  await expect(page.getByTestId('mentor-step')).toContainText('Blutkulturen');
+  await expect(page.getByTestId('mentor-done')).toContainText('Volumen');
+  await expect(page.locator('[data-testid="pump-INF2"][data-mentor-highlight]')).toHaveCount(0);
+  await page.getByTestId('mentor-show').click();
+  await expect(
+    page.locator('[data-testid="action-procedures"][data-mentor-highlight]'),
+  ).toHaveCount(1);
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
     e?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
     e?.runFor(30);
   });
-  await expect(page.getByTestId('mentor-checkpoint')).toContainText('Blutkulturen');
   await page.keyboard.press('p');
   await page.getByTestId('menu-end-session').click();
-  await expect(page.getByTestId('debrief-mentor')).toBeVisible();
-  await expect(page.getByTestId('mentor-decision-ss-volume')).toHaveAttribute('data-level', '3');
+  await expect(page.getByTestId('debrief-guided')).toContainText('Geführtes Training');
+  await expect(page.getByTestId('debrief-mentor')).toContainText('Geführtes Training');
+  await expect(page.getByTestId('mentor-decision-ss-volume')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('Oberarzt intermediate: on call — phone, topic, immediate advice, independence in the debrief', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?lang=de&debug&seed=4');
+  await page.getByTestId('module-challenges').click();
+  await page.getByTestId('difficulty-intermediate').click();
+  await page.getByTestId('entry-sepsis').click();
+  await page.getByTestId('start-button').click();
+  await expect(page.getByTestId('mentor-window')).toHaveCount(0);
+  await page.getByTestId('tool-hint').click();
+  await expect(page.getByTestId('mentor-ringing')).toBeVisible();
+  await page.getByTestId('mentor-topic-infection').click();
+  await expect(page.getByTestId('mentor-checkpoint')).toContainText('Blutkulturen');
+  await expect(page.getByTestId('mentor-level-2')).toBeVisible();
+  await page.getByTestId('mentor-ask-3').click();
+  await expect(page.getByTestId('mentor-level-3')).toContainText('Blutkulturen');
+  await page.screenshot({ path: 'test-results/mentor-phone.png' });
+  await page.getByTestId('mentor-other').click();
+  await page.getByTestId('mentor-topic-airway').click();
+  await expect(page.getByTestId('mentor-nothing')).toBeVisible();
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.dispatch({ type: 'SCENARIO_ACTION', id: 'cultures' }, 'user');
+    e?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system');
+    e?.runFor(40);
+  });
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-end-session').click();
+  await expect(page.getByTestId('debrief-mentor')).toContainText('2 Anruf');
+  await expect(page.getByTestId('mentor-decision-ss-cultures')).toHaveAttribute('data-level', '3');
+  expect(errors).toEqual([]);
+});
+
+test('Oberarzt expert: the learner is the Oberarzt — briefing says so, no help', async ({
+  page,
+}) => {
+  await page.goto('/?lang=de&debug&seed=4');
+  await page.getByTestId('module-challenges').click();
+  await page.getByTestId('difficulty-expert').click();
+  await page.getByTestId('entry-sepsis').click();
+  await expect(page.getByTestId('briefing-expert')).toContainText('Oberarzt');
+  await page.getByTestId('start-button').click();
+  await expect(page.getByTestId('tool-hint')).toHaveCount(0);
+  await expect(page.getByTestId('mentor-window')).toHaveCount(0);
 });

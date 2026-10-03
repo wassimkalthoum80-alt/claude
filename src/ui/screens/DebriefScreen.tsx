@@ -100,8 +100,11 @@ export function DebriefScreen({ data }: { data: DebriefData }) {
             <div className={styles.kicker}>{t('debrief.title')}</div>
             <h1 className={screen.moduleHeading}>{t(session.titleKey as I18nKey)}</h1>
             <div className={styles.meta}>
-              {t(`difficulty.${session.difficulty}`)} · {formatMmSs(data.durationS)}{' '}
-              {t('debrief.simTime')}
+              {t(`difficulty.${session.difficulty}`)}
+              {data.guided && (
+                <span data-testid="debrief-guided"> · {t('mentor.guided.label')}</span>
+              )}{' '}
+              · {formatMmSs(data.durationS)} {t('debrief.simTime')}
             </div>
             {session.unknown && (
               <div className={styles.meta} data-testid="debrief-revealed">
@@ -182,7 +185,11 @@ export function DebriefScreen({ data }: { data: DebriefData }) {
 
         {score.facts.airway && <AirwayDebrief airway={score.facts.airway} />}
         {score.independence && (
-          <MentorDebrief report={score.independence} difficulty={session.difficulty} />
+          <MentorDebrief
+            report={score.independence}
+            difficulty={session.difficulty}
+            guided={data.guided}
+          />
         )}
 
         <div className={styles.columns}>

@@ -131,11 +131,15 @@ seed) and opens the clean clinical workspace. Brief: [`docs/prompts/milestone-06
   each intervention with the measured change ("Ventilator RR 10 — MAP 53 → 84, HR 184 → 131, after 03:00");
   the trend view shows HR, arterial pressure (mean with systolic/diastolic band), SpO₂, EtCO₂ and peak airway
   pressure over the last 5 / 15 / 60 simulated minutes with your actions marked.
-- **Oberarzt (mentor, phase 1):** a senior colleague who says "du" and helps with the case's key decisions in four
-  levels (hint, focused question, concrete action, step by step) plus "Warum?". Beginner: speaks up unasked when
-  you are stuck (with a learning pause); intermediate: only on request ("Oberarzt rufen"), and independence counts
-  15 % of the overall score; expert: no help. Every help is logged and shown in the debrief (_Independence_).
-  Pilot cases: septic intubation, difficult airway, septic shock; other cases offer their hint ladder.
+- **Oberarzt — one role per difficulty:** _Beginner_ = **Geführtes Training**: the Oberarzt (who says "du")
+  walks you through the case in a window like the nurse's — he asks first, after a few seconds (or "Zeig mir, wie")
+  shows the step and the control it uses lights up, then says why it mattered. Full score, XP and progress, labelled
+  "Geführtes Training"; achievements for independent performance need an unguided session. _Intermediate_ = **on
+  call** (☎ OBERARZT): you phone, say what it is about (circulation, airway, infection, drugs, stuck) and get advice
+  at once; concrete help counts against independence (15 % of the overall score), except where calling is the right
+  move (failed intubation, CICO). _Expert_ = **you are the Oberarzt**: no help. Everything is logged and shown in the
+  debrief. Pilot cases: septic intubation, difficult airway, septic shock; other cases (and unknown cases, where the steps
+  would reveal the diagnosis) offer their hint ladder.
 - **Three polished Physiology Lab cases** (milestone 6b): _Healthy lungs — guided ventilation experiments_
   (four experiment cards: RR doubled, PEEP 15, VT 300, FiO₂ 21 % — question, change, measured result, why);
   _Severe asthma — dynamic hyperinflation_ (five patients, a different one on every restart; nurse, ventilator

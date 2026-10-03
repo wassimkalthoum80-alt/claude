@@ -85,6 +85,11 @@ export function BriefingOverlay() {
               : scenario.briefingKey) as I18nKey,
           )}
         </p>
+        {ui.session?.scored && ui.session.difficulty === 'expert' && (
+          <p className={styles.briefing} data-testid="briefing-expert">
+            {t('mentor.expertBriefing')}
+          </p>
+        )}
         <div className={styles.caseLabel}>{t('briefing.controls')}</div>
         <Shortcuts />
         <div className={styles.footer}>

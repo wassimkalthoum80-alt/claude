@@ -85,16 +85,21 @@ function updateMastery(p: ProgressProfile, topic: SkillTopic, value: number, at:
 function earned(p: ProgressProfile, last: SessionRecord | null): AchievementId[] {
   const out: AchievementId[] = [];
   if (p.sessions.length > 0) out.push('first-session');
-  if (p.sessions.some((s) => s.stars === 3)) out.push('three-stars');
+  // Guided training counts fully for XP and mastery; achievements of independent performance need an unguided
+  // session (owner decision, Oberarzt rework).
+  const own = p.sessions.filter((s) => !s.guided);
+  if (own.some((s) => s.stars === 3)) out.push('three-stars');
   if (
     last &&
+    !last.guided &&
     last.scores.safety === 100 &&
     last.stars >= 2 &&
     last.durationS >= 120 &&
     last.outcome !== 'arrest'
   )
     out.push('steady-hands');
-  if (p.sessions.some((s) => (s.scores.recognition ?? 0) >= 90)) out.push('fast-responder');
+  if (own.some((s) => (s.scores.recognition ?? 0) >= 90)) out.push('fast-responder');
+  if (p.sessions.some((s) => s.guided)) out.push('guided-training');
   if ((p.mastery.haemodynamics?.value ?? 0) >= 70 && (p.mastery.ventilation?.value ?? 0) >= 70)
     out.push('heart-lung');
   if (p.explored.length >= 5) out.push('explorer');
@@ -126,7 +131,13 @@ export interface SessionResult {
 export function recordSession(
   profile: ProgressProfile,
   session: SessionConfig,
-  meta: { variant: string | null; durationS: number; topics: readonly SkillTopic[] },
+  meta: {
+    variant: string | null;
+    durationS: number;
+    topics: readonly SkillTopic[];
+    /** the Oberarzt guided the session step by step (beginner tutorial) */
+    guided?: boolean;
+  },
   score: Pick<SessionScore, 'overall' | 'stars' | 'outcome' | 'scores'>,
   now: number,
 ): SessionResult {
@@ -164,6 +175,7 @@ export function recordSession(
     scores: score.scores,
     xp,
     topics: meta.topics,
+    ...(meta.guided ? { guided: true } : {}),
   };
   const p: ProgressProfile = {
     ...profile,

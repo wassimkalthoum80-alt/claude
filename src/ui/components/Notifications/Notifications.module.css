@@ -53,7 +53,8 @@
   color: var(--alarm-low);
 }
 
-.card {
+/* Dialogue windows above the tool row: the nurse's card, and the Oberarzt's guided-training window beneath it. */
+.dialogStack {
   position: absolute;
   left: 50%;
   bottom: 64px;
@@ -61,8 +62,40 @@
   /* above action panels and drawers: the nurse must be readable */
   z-index: 35;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.dialogStack > * {
+  pointer-events: auto;
+}
+
+/* An action panel (flyout) is open: dock beside it so the dialogue never covers the controls it talks about. */
+.dialogStack.besidePanel {
+  left: calc(
+    var(--edge) + clamp(170px, 13.6vw, 250px) + var(--gap) + min(430px, calc(100vw - 32px)) +
+      var(--gap)
+  );
+  transform: none;
+  align-items: flex-start;
+}
+
+.dialogStack.besidePanel > * {
+  width: min(420px, calc(100vw - 32px));
+}
+
+@media (max-width: 1100px) {
+  .dialogStack.besidePanel {
+    left: calc(var(--edge) + 60px + var(--gap) + min(430px, calc(100vw - 32px)) + var(--gap));
+  }
+}
+
+.card {
+  display: flex;
   gap: 12px;
-  width: min(460px, calc(100% - 32px));
+  width: min(460px, calc(100vw - 32px));
   padding: 12px 14px;
   border: 1px solid rgba(255, 196, 0, 0.55);
   border-radius: 8px;
@@ -176,10 +209,14 @@
   top: 92px;
 }
 
-:global(.mobileApp) .card {
+:global(.mobileApp) .dialogStack,
+:global(.mobileApp) .dialogStack.besidePanel {
   position: fixed;
   bottom: auto;
   top: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
 }
 
 :global(.mobileApp) .critical {
@@ -196,7 +233,7 @@
 @keyframes slide-up {
   from {
     opacity: 0;
-    transform: translate(-50%, 8px);
+    transform: translateY(8px);
   }
 }
 

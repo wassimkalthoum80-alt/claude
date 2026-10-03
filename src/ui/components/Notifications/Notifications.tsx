@@ -4,6 +4,7 @@ import type { DirectorMessage, MessageAction, SimulationState } from '../../../s
 import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi } from '../../hooks/UiContext';
 import { deepEqual, useEngineSelector } from '../../hooks/useEngineSelector';
+import { MentorWindow } from '../Mentor/Mentor';
 import { NursePortrait } from './NursePortrait';
 import { messageText } from './messageText';
 import styles from './Notifications.module.css';
@@ -31,7 +32,7 @@ const keyOf = (m: DirectorMessage) => `${m.id}@${m.t}`;
 export function Notifications() {
   const t = useT();
   const engine = useEngine();
-  const { setUi } = useUi();
+  const { ui, setUi } = useUi();
   const { messages, now, difficulty, cprActive } = useEngineSelector(select, deepEqual);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
   // A restart empties the message list: forget what was dismissed (ids and times repeat deterministically).
@@ -85,45 +86,51 @@ export function Notifications() {
         </div>
       )}
 
-      {important && (
-        <div
-          className={`${styles.card} ${important.source === 'nurse' ? styles.nurse : ''} ${
-            (important.urgency ?? 0) >= 3 ? styles.urgent : ''
-          }`}
-          role="dialog"
-          aria-live="assertive"
-          data-testid="nurse-card"
-        >
-          {important.source === 'nurse' ? (
-            <NursePortrait />
-          ) : (
-            <span className={styles.sourceBadge}>{t(`source.${important.source}` as I18nKey)}</span>
-          )}
-          <div className={styles.body}>
-            <div className={styles.speaker}>
-              {important.source === 'nurse'
-                ? t('nurse.name')
-                : t(`source.${important.source}` as I18nKey)}
-            </div>
-            <p className={styles.text}>“{text(important)}”</p>
-            <div className={styles.actions}>
-              {important.actions.map((a) => (
-                <button key={a} type="button" onClick={() => act(important, a)}>
-                  {t(`msgAction.${a}` as I18nKey)}
+      <div className={`${styles.dialogStack} ${ui.actionPanel ? styles.besidePanel : ''}`}>
+        {important && (
+          <div
+            className={`${styles.card} ${important.source === 'nurse' ? styles.nurse : ''} ${
+              (important.urgency ?? 0) >= 3 ? styles.urgent : ''
+            }`}
+            role="dialog"
+            aria-live="assertive"
+            data-testid="nurse-card"
+          >
+            {important.source === 'nurse' ? (
+              <NursePortrait />
+            ) : (
+              <span className={styles.sourceBadge}>
+                {t(`source.${important.source}` as I18nKey)}
+              </span>
+            )}
+            <div className={styles.body}>
+              <div className={styles.speaker}>
+                {important.source === 'nurse'
+                  ? t('nurse.name')
+                  : t(`source.${important.source}` as I18nKey)}
+              </div>
+              <p className={styles.text}>“{text(important)}”</p>
+              <div className={styles.actions}>
+                {important.actions.map((a) => (
+                  <button key={a} type="button" onClick={() => act(important, a)}>
+                    {t(`msgAction.${a}` as I18nKey)}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={styles.ok}
+                  onClick={() => dismiss(keyOf(important))}
+                  data-testid="nurse-ok"
+                >
+                  {t('msg.dismiss')}
                 </button>
-              ))}
-              <button
-                type="button"
-                className={styles.ok}
-                onClick={() => dismiss(keyOf(important))}
-                data-testid="nurse-ok"
-              >
-                {t('msg.dismiss')}
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        <MentorWindow />
+      </div>
 
       {critical && (
         <div className={styles.critical} role="alert" data-testid="critical-alert">

@@ -219,7 +219,8 @@ export function ProgressScreen() {
                     {t(h.titleKey as I18nKey)}
                     <small>
                       {' '}
-                      · {t(`difficulty.${h.difficulty}`)} · {formatMmSs(h.durationS)}
+                      · {t(`difficulty.${h.difficulty}`)}
+                      {h.guided ? ` · ${t('mentor.guided.label')}` : ''} · {formatMmSs(h.durationS)}
                     </small>
                   </span>
                   <Stars n={h.stars} size="sm" label={t('debrief.starsLabel', { n: h.stars })} />

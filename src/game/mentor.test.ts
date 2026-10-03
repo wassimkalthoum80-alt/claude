@@ -11,10 +11,14 @@ import {
   HELP_FACTOR,
   currentCheckpoint,
   independenceReport,
-  lastLearnerAction,
+  CALL_TOPICS,
+  GUIDE_SHOW_S,
+  callTarget,
+  guidedStep,
+  isGuided,
+  lastCompleted,
   mentorMode,
   mentorStatus,
-  proactiveOffer,
   withIndependence,
   type MentorPlan,
 } from './mentor';
@@ -52,11 +56,11 @@ const statusOf = (p: MentorPlan, log: LogEntry[], now: number, id: string) => {
 };
 
 describe('Oberarzt: modes', () => {
-  it('beginner proactive, intermediate on request, expert none; free practice on request', () => {
-    expect(mentorMode('beginner', true)).toBe('proactive');
-    expect(mentorMode('intermediate', true)).toBe('onRequest');
+  it('beginner guided, intermediate on call, expert none (the learner is the Oberarzt)', () => {
+    expect(mentorMode('beginner', true)).toBe('guided');
+    expect(mentorMode('intermediate', true)).toBe('onCall');
     expect(mentorMode('expert', true)).toBe('off');
-    expect(mentorMode(null, false)).toBe('onRequest');
+    expect(mentorMode(null, false)).toBe('onCall');
   });
 });
 
@@ -100,6 +104,18 @@ describe('Oberarzt: checkpoints', () => {
     expect(statusOf(AIRWAY, done, 101, 'da-cico').doneAt).toBe(100);
   });
 
+  it('a secured airway closes the rescue steps — not counted as decisions; an oesophageal tube does not', () => {
+    const failed = [evt(30, 'INTUBATION_FAILED')];
+    expect(currentCheckpoint(AIRWAY, mentorStatus(AIRWAY, failed, 35))?.id).toBe('da-limit');
+    const oeso = [...failed, evt(60, 'AIRWAY_PLACED', 'ett|oesophageal')];
+    expect(currentCheckpoint(AIRWAY, mentorStatus(AIRWAY, oeso, 65))?.id).toBe('da-limit');
+    const tube = [...failed, evt(60, 'AIRWAY_PLACED', 'ett|correct')];
+    expect(currentCheckpoint(AIRWAY, mentorStatus(AIRWAY, tube, 65))).toBeNull();
+    const r = independenceReport(AIRWAY, tube, 70);
+    expect(r.decisions).toEqual([]);
+    expect(r.open).toEqual([]);
+  });
+
   it('records the highest help level before the decision; help afterwards does not count', () => {
     const log = [
       help(20, 'ss-volume', 1),
@@ -113,39 +129,75 @@ describe('Oberarzt: checkpoints', () => {
     expect(st.lastHelpAt).toBe(30);
   });
 
-  it('unasked beginner cards count as help but not as requested', () => {
+  it('help shown unasked (guided window) counts as help but not as requested', () => {
     const st = statusOf(SHOCK, [help(20, 'ss-volume', 2, false)], 25, 'ss-volume');
     expect(st.helpLevel).toBe(2);
     expect(st.requestedLevel).toBe(0);
   });
 });
 
-describe('Oberarzt: proactive timing (beginner)', () => {
-  const cp = SHOCK.checkpoints[0];
-  if (!cp) throw new Error('plan');
-  it('speaks after the stall time, escalates per quiet interval, never beyond level 3 unasked', () => {
-    expect(proactiveOffer(cp, statusOf(SHOCK, [], 20, cp.id), 20, null)).toBeNull();
-    expect(proactiveOffer(cp, statusOf(SHOCK, [], 30, cp.id), 30, null)).toBe(1);
-    const l1 = [help(30, cp.id, 1, false)];
-    expect(proactiveOffer(cp, statusOf(SHOCK, l1, 50, cp.id), 50, null)).toBeNull();
-    expect(proactiveOffer(cp, statusOf(SHOCK, l1, 60, cp.id), 60, null)).toBe(2);
-    const l3 = [...l1, help(60, cp.id, 2, false), help(90, cp.id, 3, false)];
-    expect(proactiveOffer(cp, statusOf(SHOCK, l3, 500, cp.id), 500, null)).toBeNull();
+describe('Oberarzt: guided training (beginner)', () => {
+  it('asks first, the step is due after GUIDE_SHOW_S, shown once level 4 is logged', () => {
+    const at = (log: LogEntry[], now: number) => {
+      const st = guidedStep(SHOCK, log, now);
+      if (!st) throw new Error('no step');
+      return st;
+    };
+    expect(at([], 2).checkpoint.id).toBe('ss-volume');
+    expect(at([], 2).phase).toBe('ask');
+    // nothing is due before the question was asked; then GUIDE_SHOW_S of thinking time
+    expect(at([], 60).showDue).toBe(false);
+    const asked = [help(2, 'ss-volume', 2, false)];
+    expect(at(asked, 2 + GUIDE_SHOW_S - 1).showDue).toBe(false);
+    expect(at(asked, 2 + GUIDE_SHOW_S).showDue).toBe(true);
+    const shown = [help(4, 'ss-volume', 4)];
+    expect(at(shown, 5).phase).toBe('show');
+    expect(at(shown, 5).showDue).toBe(false);
+    // the next step follows once the decision is made; the finished one is remembered for its "why"
+    const done = [...shown, fluid(8)];
+    expect(at(done, 9).checkpoint.id).toBe('ss-cultures');
+    expect(lastCompleted(SHOCK, done, 9)?.id).toBe('ss-volume');
   });
 
-  it('activity resets the wait', () => {
-    const log = [action(25, 'cultures')];
-    const last = lastLearnerAction(log, 40);
-    expect(last).toBe(25);
-    expect(proactiveOffer(cp, statusOf(SHOCK, log, 40, cp.id), 40, last)).toBeNull();
-    expect(proactiveOffer(cp, statusOf(SHOCK, log, 55, cp.id), 55, last)).toBe(1);
-  });
-
-  it('an urgent checkpoint speaks at once', () => {
-    const cico = AIRWAY.checkpoints.find((c) => c.id === 'da-cico');
-    if (!cico) throw new Error('plan');
+  it('an urgent step is shown at once; nothing open before the first failure (intro)', () => {
+    expect(guidedStep(AIRWAY, [], 30)).toBeNull();
     const log = [evt(90, 'OXYGENATION_FAILED', 'mask|optimised')];
-    expect(proactiveOffer(cico, statusOf(AIRWAY, log, 90, 'da-cico'), 90, 89)).toBe(1);
+    const st = guidedStep(AIRWAY, log, 90);
+    expect(st?.checkpoint.id).toBe('da-cico');
+    expect(st?.showDue).toBe(true);
+  });
+
+  it('guided = beginner session of a case with a plan', () => {
+    expect(isGuided('beginner', true, SHOCK)).toBe(true);
+    expect(isGuided('beginner', true, null)).toBe(false);
+    expect(isGuided('intermediate', true, SHOCK)).toBe(false);
+  });
+});
+
+describe('Oberarzt: on call (intermediate)', () => {
+  it('routes a call by topic; "stuck" goes to the most pressing decision; nothing open → null', () => {
+    const st = mentorStatus(SHOCK, [], 10);
+    expect(callTarget(SHOCK, st, 'circulation')?.id).toBe('ss-volume');
+    expect(callTarget(SHOCK, st, 'infection')?.id).toBe('ss-cultures');
+    expect(callTarget(SHOCK, st, 'stuck')?.id).toBe('ss-volume');
+    expect(callTarget(SHOCK, st, 'airway')).toBeNull();
+    expect(callTarget(SHOCK, st, 'drugs')).toBeNull();
+  });
+
+  it('help where calling is indicated (failed intubation) does not lower independence; calls are counted', () => {
+    const log = [
+      evt(30, 'INTUBATION_FAILED'),
+      cmd(35, { type: 'MENTOR_CALL', topic: 'airway' }),
+      help(35, 'da-limit', 3),
+      cmd(40, { type: 'AIRWAY_CALL', call: 'failedIntubation' }),
+      help(45, 'da-rescue', 3),
+      cmd(50, { type: 'AIRWAY_INSERT', device: 'sga' }),
+    ];
+    const r = independenceReport(AIRWAY, log, 60);
+    expect(r.decisions.find((d) => d.id === 'da-limit')?.callIndicated).toBe(true);
+    expect(r.score).toBe(Math.round((100 * (1 + HELP_FACTOR[3])) / 2));
+    expect(r.assisted).toBe(1);
+    expect(r.calls).toBe(1);
   });
 });
 
@@ -234,6 +286,8 @@ describe('Oberarzt: engine and content', () => {
     const enKeys = en as Record<string, string>;
     const deKeys = de as Record<string, string>;
     for (const p of MENTOR_PLANS) {
+      expect(enKeys[p.introKey], p.introKey).toBeTruthy();
+      expect(deKeys[p.introKey], p.introKey).toBeTruthy();
       const seen = new Set<string>();
       for (const cp of p.checkpoints) {
         for (const k of [cp.titleKey, cp.whyKey, ...cp.levels]) {
@@ -242,6 +296,8 @@ describe('Oberarzt: engine and content', () => {
         }
         for (const dep of cp.after ?? []) expect(seen.has(dep), `${cp.id} after ${dep}`).toBe(true);
         expect(cp.done.length, cp.id).toBeGreaterThan(0);
+        expect(CALL_TOPICS).toContain(cp.topic);
+        expect(cp.highlight?.length ?? 0, `${cp.id} highlight`).toBeGreaterThan(0);
         seen.add(cp.id);
       }
     }
@@ -251,7 +307,7 @@ describe('Oberarzt: engine and content', () => {
     const deKeys = de as Record<string, string>;
     for (const p of MENTOR_PLANS)
       for (const cp of p.checkpoints)
-        for (const k of [...cp.levels, cp.whyKey]) {
+        for (const k of [...cp.levels, cp.whyKey, p.introKey]) {
           const text = deKeys[k] ?? '';
           expect(/\b(Sie|Ihnen|Ihr|Ihre)\b/.test(text), `${k}: ${text}`).toBe(false);
         }

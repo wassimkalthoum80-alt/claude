@@ -4,12 +4,16 @@ import type { LogMatch } from './scoringTypes';
 import type { Difficulty } from './types';
 
 /**
- * Oberarzt (senior mentor), phase 1: decision checkpoints per case, help in four levels and an independence score.
- * Pure functions over the event log — the mentor never changes the patient and never acts; every help it shows is
- * a logged `MENTOR_HELP` command (CLAUDE.md A1), so the debrief and replay read exactly what was shown.
+ * Oberarzt (senior colleague): one role per difficulty.
+ * - beginner — "Geführtes Training": a tutorial through the case, step by step (ask first, then show the step with
+ *   the control highlighted, then why). Full score and XP; achievements of independent performance excluded.
+ * - intermediate — on call: the learner phones, names what the call is about and gets immediate advice.
+ * - expert — the learner is the Oberarzt: no help.
  *
- * Levels: 1 hint (where to look), 2 focused question, 3 concrete action, 4 step-by-step guidance. Templates only
- * (no free text yet); the Oberarzt addresses the learner informally ("du").
+ * Pure functions over the event log — the Oberarzt never changes the patient and never acts. Everything shown is a
+ * logged command (`MENTOR_HELP`, `MENTOR_WHY`, `MENTOR_CALL`; CLAUDE.md A1), so debrief and replay read exactly what
+ * was shown. Help levels: 1 hint, 2 focused question, 3 concrete action, 4 step by step. Templates only; the
+ * Oberarzt says "du".
  */
 
 export type MentorLevel = 1 | 2 | 3 | 4;
@@ -26,46 +30,69 @@ export const HELP_FACTOR: Readonly<Record<0 | MentorLevel, number>> = {
 /** Intermediate sessions: weight of the independence score in the overall score (competence keeps the rest). */
 export const INDEPENDENCE_WEIGHT = 0.15;
 
-/** s (real time) — shortest interval between two unasked mentor cards in a beginner session */
-export const PROACTIVE_COOLDOWN_S = 45;
+/** s (sim time) — guided training: the step is shown (with the control highlighted) this long after the question */
+export const GUIDE_SHOW_S = 10;
 
-/** s (sim time) — default time a checkpoint stays open without progress before the beginner mentor speaks */
-export const DEFAULT_STALL_S = 30;
+/** What a call to the Oberarzt is about (the learner's short report). */
+export const CALL_TOPICS = ['circulation', 'airway', 'infection', 'drugs', 'stuck'] as const;
+export type CallTopic = (typeof CALL_TOPICS)[number];
 
-/** One decision of a case the mentor can help with. */
+/** One decision of a case the Oberarzt can guide or advise on. */
 export interface MentorCheckpoint {
   id: string;
-  /** i18n key: the decision in a few words (debrief list) */
+  /** i18n key: the decision in a few words (window title, debrief list) */
   titleKey: string;
+  /** what a call about this decision is about */
+  topic: Exclude<CallTopic, 'stuck'>;
   /** opens once all of these checkpoints are done */
   after?: readonly string[];
   /** opens once any of these occurred (undefined = open from the start) */
   opensOn?: readonly LogMatch[];
   /** done at the first occurrence of any of these */
   done: readonly LogMatch[];
-  /** cannot wait: comes before other open checkpoints, and the beginner mentor speaks at once */
+  /** no longer relevant once any of these occurred first (e.g. the airway was secured): closed, not a decision */
+  moot?: readonly LogMatch[];
+  /** cannot wait: comes before other open checkpoints */
   urgent?: boolean;
-  /** s — sim time open without progress before the beginner mentor offers level 1 (default DEFAULT_STALL_S) */
-  stallS?: number;
-  /** i18n keys of help levels 1–4 */
+  /**
+   * calling the senior is itself the right clinical action here (failed intubation, CICO): help on this decision
+   * never lowers independence
+   */
+  callIndicated?: boolean;
+  /** UI controls (data-testid) the guided step points at, in the order they are used */
+  highlight?: readonly string[];
+  /** i18n keys of help levels 1–4 (guided training asks with level 2 and shows level 4) */
   levels: readonly [string, string, string, string];
-  /** i18n key: why this decision matters (the "Warum?" answer; never scored) */
+  /** i18n key: why this decision matters (never scored) */
   whyKey: string;
 }
 
 /** The Oberarzt's checkpoints for one case (data, clinician-reviewed; src/content/mentor). */
 export interface MentorPlan {
   scenarioId: string;
+  /** i18n key: guided training — what to start with, shown until the first decision opens */
+  introKey: string;
+  /** UI controls (data-testid) the intro points at */
+  introHighlight?: readonly string[];
   checkpoints: readonly MentorCheckpoint[];
 }
 
-/** Help style by difficulty: proactive (beginner), on request (intermediate), none (expert). */
-export type MentorMode = 'proactive' | 'onRequest' | 'off';
+/** The Oberarzt's role by difficulty: guide (beginner), on call (intermediate), none (expert — the learner is it). */
+export type MentorMode = 'guided' | 'onCall' | 'off';
 
 export function mentorMode(difficulty: Difficulty | null, scored: boolean): MentorMode {
-  if (!scored) return 'onRequest';
+  if (!scored) return 'onCall';
   if (difficulty === 'expert') return 'off';
-  return difficulty === 'intermediate' ? 'onRequest' : 'proactive';
+  return difficulty === 'intermediate' ? 'onCall' : 'guided';
+}
+
+/** A beginner session of a case with a plan is guided training (labelled "Geführtes Training"). */
+export function isGuided(
+  difficulty: Difficulty,
+  scored: boolean,
+  plan: MentorPlan | null,
+): boolean {
+  return plan !== null && mentorMode(difficulty, scored) === 'guided';
 }
 
 export interface CheckpointStatus {
@@ -74,10 +101,14 @@ export interface CheckpointStatus {
   openedAt: number | null;
   /** s — sim time it was done (null = not yet) */
   doneAt: number | null;
+  /** s — sim time it became irrelevant before being done (null = still relevant) */
+  mootAt: number | null;
   /** highest help level shown before it was done (or so far), 0 = none */
   helpLevel: 0 | MentorLevel;
-  /** highest level the learner asked for (unasked beginner cards excluded), 0 = none */
+  /** highest level the learner asked for (help shown unasked excluded), 0 = none */
   requestedLevel: 0 | MentorLevel;
+  /** s — sim time help for it was first shown (guided training: the question was asked; null = never) */
+  firstHelpAt: number | null;
   /** s — sim time help for it was last shown (null = never) */
   lastHelpAt: number | null;
   /** the learner asked why */
@@ -100,6 +131,8 @@ export function mentorStatus(
   const out: CheckpointStatus[] = [];
   for (const cp of plan.checkpoints) {
     const done = firstMatch(past, cp.done);
+    const mootFirst = cp.moot ? firstMatch(past, cp.moot) : null;
+    const moot = mootFirst !== null && (done === null || mootFirst < done) ? mootFirst : null;
     doneAt.set(cp.id, done);
     let opened: number | null = 0;
     for (const dep of cp.after ?? []) {
@@ -116,6 +149,7 @@ export function mentorStatus(
     let requestedLevel: 0 | MentorLevel = 0;
     let whyAsked = false;
     let lastHelpAt: number | null = null;
+    let firstHelpAt: number | null = null;
     for (const e of past) {
       if (e.kind !== 'command') continue;
       const c = e.command;
@@ -123,6 +157,7 @@ export function mentorStatus(
       if (c.type !== 'MENTOR_HELP' || c.checkpoint !== cp.id) continue;
       if (done !== null && e.t > done) continue;
       lastHelpAt = e.t;
+      firstHelpAt ??= e.t;
       if (c.level > helpLevel) helpLevel = c.level;
       if (c.requested && c.level > requestedLevel) requestedLevel = c.level;
     }
@@ -130,8 +165,10 @@ export function mentorStatus(
       id: cp.id,
       openedAt: opened,
       doneAt: done,
+      mootAt: moot,
       helpLevel,
       requestedLevel,
+      firstHelpAt,
       lastHelpAt,
       whyAsked,
     });
@@ -139,74 +176,125 @@ export function mentorStatus(
   return out;
 }
 
-/** The checkpoint the mentor speaks about now: open, not done; urgent ones first, then in plan order. */
+function openCheckpoints(
+  plan: MentorPlan,
+  status: readonly CheckpointStatus[],
+): MentorCheckpoint[] {
+  return plan.checkpoints.filter((_cp, i) => {
+    const st = status[i];
+    return st !== undefined && st.openedAt !== null && st.doneAt === null && st.mootAt === null;
+  });
+}
+
+/** The checkpoint that matters now: open, not done; urgent ones first, then in plan order. */
 export function currentCheckpoint(
   plan: MentorPlan,
   status: readonly CheckpointStatus[],
 ): MentorCheckpoint | null {
-  const open = plan.checkpoints.filter((_cp, i) => {
-    const st = status[i];
-    return st !== undefined && st.openedAt !== null && st.doneAt === null;
-  });
+  const open = openCheckpoints(plan, status);
   return open.find((cp) => cp.urgent) ?? open[0] ?? null;
 }
 
-/** s — urgent checkpoints: interval between unasked escalations */
-const URGENT_STALL_S = 10;
+// ─── Beginner: guided training ───────────────────────────────────────────────────────────────────────────────────
+
+/** One step of the guided training as the window shows it. */
+export interface GuidedStep {
+  checkpoint: MentorCheckpoint;
+  status: CheckpointStatus;
+  /** ask = the Oberarzt's question (level 2); show = the step itself with the controls highlighted (level 4) */
+  phase: 'ask' | 'show';
+  /** the step's instruction is due (GUIDE_SHOW_S after its question was asked) but not shown yet */
+  showDue: boolean;
+}
+
+/** The step the guide is on now, or null when nothing is open. */
+export function guidedStep(
+  plan: MentorPlan,
+  log: readonly LogEntry[],
+  now: number,
+): GuidedStep | null {
+  const all = mentorStatus(plan, log, now);
+  const cp = currentCheckpoint(plan, all);
+  if (!cp) return null;
+  const st = all[plan.checkpoints.indexOf(cp)];
+  if (!st || st.openedAt === null) return null;
+  const phase = st.helpLevel >= 4 ? 'show' : 'ask';
+  return {
+    checkpoint: cp,
+    status: st,
+    phase,
+    // Counted from the question, not from the opening: steps open in parallel each get their thinking time.
+    showDue:
+      phase === 'ask' &&
+      (cp.urgent || (st.firstHelpAt !== null && now >= st.firstHelpAt + GUIDE_SHOW_S)),
+  };
+}
+
+/** The most recently completed step (its "why" stays in the window until the next step is shown). */
+export function lastCompleted(
+  plan: MentorPlan,
+  log: readonly LogEntry[],
+  now: number,
+): MentorCheckpoint | null {
+  const all = mentorStatus(plan, log, now);
+  let best: MentorCheckpoint | null = null;
+  let bestAt = -Infinity;
+  plan.checkpoints.forEach((cp, i) => {
+    const d = all[i]?.doneAt ?? null;
+    if (d !== null && d >= bestAt) {
+      best = cp;
+      bestAt = d;
+    }
+  });
+  return best;
+}
+
+// ─── Intermediate: on call ───────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Beginner mentor: the level it would offer unasked now, or null. It speaks when the current checkpoint has been
- * open — and the learner quiet — for the checkpoint's stall time (an urgent one at once), then escalates one level
- * per further quiet interval, up to 3: level 4 (step by step) is only ever given on request.
- *
- * @param lastActionAt s — sim time of the learner's last command (activity resets the wait)
+ * The decision a call is about: "stuck" = the most pressing open decision; another topic = the most pressing open
+ * decision of that topic, or null (nothing to decide there right now — the Oberarzt says so).
  */
-export function proactiveOffer(
-  cp: MentorCheckpoint,
-  st: CheckpointStatus,
-  now: number,
-  lastActionAt: number | null,
-): MentorLevel | null {
-  if (st.openedAt === null || st.doneAt !== null || st.helpLevel >= 3) return null;
-  const stall = cp.urgent ? URGENT_STALL_S : (cp.stallS ?? DEFAULT_STALL_S);
-  const due =
-    st.lastHelpAt === null && cp.urgent
-      ? st.openedAt
-      : Math.max(st.openedAt, st.lastHelpAt ?? -Infinity, lastActionAt ?? -Infinity) + stall;
-  return now >= due ? ((st.helpLevel + 1) as MentorLevel) : null;
+export function callTarget(
+  plan: MentorPlan,
+  status: readonly CheckpointStatus[],
+  topic: CallTopic,
+): MentorCheckpoint | null {
+  if (topic === 'stuck') return currentCheckpoint(plan, status);
+  const open = openCheckpoints(plan, status).filter((cp) => cp.topic === topic);
+  return open.find((cp) => cp.urgent) ?? open[0] ?? null;
 }
 
-/** s — sim time of the learner's last clinical command (mentor and time-control commands excluded), null if none. */
-export function lastLearnerAction(log: readonly LogEntry[], now: number): number | null {
-  for (let i = log.length - 1; i >= 0; i--) {
-    const e = log[i];
-    if (!e || e.t > now || e.kind !== 'command' || e.source !== 'user') continue;
-    if (IGNORED.has(e.command.type)) continue;
-    return e.t;
-  }
-  return null;
+/** Calls the learner made (sim time and topic). */
+export function mentorCalls(log: readonly LogEntry[]): { t: number; topic: string }[] {
+  const out: { t: number; topic: string }[] = [];
+  for (const e of log)
+    if (e.kind === 'command' && e.command.type === 'MENTOR_CALL')
+      out.push({ t: e.t, topic: e.command.topic });
+  return out;
 }
 
-const IGNORED = new Set<string>([
-  'MENTOR_HELP',
-  'MENTOR_WHY',
-  'REQUEST_HINT',
-  'SET_PAUSED',
-  'SET_TIME_SCALE',
-  'SET_AUTO_SPEED',
-  'ADVANCE_STOP',
-]);
+// ─── Debrief ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** What the debrief shows about the mentor's help. */
+/** What the debrief shows about the Oberarzt's help. */
 export interface IndependenceReport {
   /** 0–100 — mean independence factor over the decisions made (null = none made) */
   score: number | null;
   /** decisions made, with the help shown before each */
-  decisions: { id: string; titleKey: string; helpLevel: 0 | MentorLevel; afterS: number }[];
+  decisions: {
+    id: string;
+    titleKey: string;
+    helpLevel: 0 | MentorLevel;
+    afterS: number;
+    /** calling was the right clinical action (help here does not lower independence) */
+    callIndicated: boolean;
+  }[];
   /** decisions still open at the end */
   open: { id: string; titleKey: string; helpLevel: 0 | MentorLevel }[];
-  /** decisions made with concrete help (level 3 or 4) */
+  /** decisions made with concrete help (level 3 or 4) where calling was not itself indicated */
   assisted: number;
+  /** calls to the Oberarzt */
+  calls: number;
 }
 
 export function independenceReport(
@@ -219,7 +307,7 @@ export function independenceReport(
   const open: IndependenceReport['open'] = [];
   plan.checkpoints.forEach((cp, i) => {
     const st = status[i];
-    if (!st || st.openedAt === null) return;
+    if (!st || st.openedAt === null || st.mootAt !== null) return;
     if (st.doneAt === null)
       open.push({ id: cp.id, titleKey: cp.titleKey, helpLevel: st.helpLevel });
     else
@@ -228,15 +316,22 @@ export function independenceReport(
         titleKey: cp.titleKey,
         helpLevel: st.helpLevel,
         afterS: Math.round(Math.max(0, st.doneAt - st.openedAt)),
+        callIndicated: cp.callIndicated === true,
       });
   });
+  const factor = (d: IndependenceReport['decisions'][number]) =>
+    d.callIndicated ? 1 : HELP_FACTOR[d.helpLevel];
   const score =
     decisions.length === 0
       ? null
-      : Math.round(
-          (100 * decisions.reduce((a, d) => a + HELP_FACTOR[d.helpLevel], 0)) / decisions.length,
-        );
-  return { score, decisions, open, assisted: decisions.filter((d) => d.helpLevel >= 3).length };
+      : Math.round((100 * decisions.reduce((a, d) => a + factor(d), 0)) / decisions.length);
+  return {
+    score,
+    decisions,
+    open,
+    assisted: decisions.filter((d) => d.helpLevel >= 3 && !d.callIndicated).length,
+    calls: mentorCalls(log.filter((e) => e.t <= end)).length,
+  };
 }
 
 /** Intermediate sessions: overall = 0.85 × competence + 0.15 × independence (others: competence alone). */

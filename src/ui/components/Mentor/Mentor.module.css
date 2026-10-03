@@ -1,14 +1,20 @@
-/* Oberarzt (mentor): drawer view and the unasked card of beginner sessions. */
+/* Oberarzt: guided-training window (styled like the nurse's card), phone call drawer and hint fallback. */
 
-.view {
-  display: grid;
-  gap: 10px;
+.window {
+  display: flex;
+  gap: 12px;
+  width: min(460px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid rgba(25, 211, 255, 0.55);
+  border-radius: 8px;
+  background: rgba(10, 14, 19, 0.97);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  animation: mentor-slide 0.22s ease-out;
 }
 
-.head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.body {
+  flex: 1;
+  min-width: 0;
 }
 
 .portrait {
@@ -17,36 +23,67 @@
   border: 1px solid var(--panel-border);
 }
 
-.name {
-  font: 600 13px/1 var(--font-num);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text);
+.speakerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.tag {
+.speaker {
+  font: 600 11px/1 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--alarm-low);
+}
+
+.badge {
+  padding: 2px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  font: 500 10.5px/1.2 var(--font-ui);
+  color: var(--text-dim);
+}
+
+.collapse {
   margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
   font: 500 11px/1 var(--font-ui);
   color: var(--text-faint);
+  cursor: pointer;
 }
 
-.cpTitle {
-  margin: 0;
-  font: 600 14px/1.3 var(--font-ui);
+.stepTitle {
+  margin-top: 8px;
+  font: 600 12px/1.2 var(--font-ui);
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.text {
+  margin: 6px 0 8px;
+  font: 500 15px/1.4 var(--font-ui);
+  color: #fff;
+}
+
+.instruction {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--alarm-medium);
+  background: rgba(255, 214, 10, 0.06);
+  font: 500 14px/1.45 var(--font-ui);
   color: var(--text);
 }
 
-.levels {
-  margin: 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 6px;
-  font: 400 13.5px/1.45 var(--font-ui);
-  color: var(--text);
+.done {
+  margin: 6px 0 4px;
+  font: 400 12.5px/1.4 var(--font-ui);
+  color: var(--ecg, #3ddc84);
 }
 
 .why {
-  margin: 0;
+  margin: 0 0 8px;
   padding: 8px 10px;
   border-left: 2px solid var(--alarm-low);
   background: rgba(25, 211, 255, 0.05);
@@ -54,13 +91,25 @@
   color: var(--text-dim);
 }
 
-.actions {
+.indicated {
+  margin: 0;
+  font: 500 13.5px/1.4 var(--font-ui);
+  color: var(--ecg, #3ddc84);
+}
+
+.actions,
+.topics {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.ask,
+.topics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.primary,
 .askStrong,
 .ghost {
   min-height: 32px;
@@ -70,9 +119,9 @@
   cursor: pointer;
 }
 
-.ask {
+.primary {
   border: 1px solid var(--alarm-low);
-  background: rgba(25, 211, 255, 0.08);
+  background: rgba(25, 211, 255, 0.1);
   color: var(--alarm-low);
 }
 
@@ -92,6 +141,27 @@
   color: var(--text);
 }
 
+/* drawer views */
+.view {
+  display: grid;
+  gap: 10px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.levels {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font: 400 13.5px/1.45 var(--font-ui);
+  color: var(--text);
+}
+
 .dim {
   margin: 0;
   color: var(--text-dim);
@@ -104,28 +174,38 @@
   font-size: 12px;
 }
 
-.card {
-  /* over the patient scene, above the tool row — never over the action buttons or the devices */
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 64px;
-  z-index: 27;
-  width: min(380px, calc(100% - 32px));
+.phone {
   display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--panel-border-strong);
-  border-radius: 6px;
-  background: rgba(8, 12, 17, 0.97);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  justify-items: center;
+  gap: 10px;
+  padding: 24px 0;
 }
 
-:global(.mobileApp) .card {
-  position: fixed;
-  transform: none;
-  left: 8px;
-  right: 8px;
-  width: auto;
-  bottom: calc(108px + env(safe-area-inset-bottom));
+.ring {
+  font-size: 34px;
+  color: var(--alarm-low);
+  animation: mentor-ring 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes mentor-ring {
+  from {
+    transform: rotate(-14deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes mentor-slide {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring,
+  .window {
+    animation: none;
+  }
 }

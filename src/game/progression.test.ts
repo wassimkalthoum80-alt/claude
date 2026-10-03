@@ -147,3 +147,30 @@ describe('recommendations', () => {
     expect(r.untried).toEqual(expect.arrayContaining(['shock', 'resuscitation']));
   });
 });
+
+describe('guided training (Oberarzt, beginner)', () => {
+  it('counts fully (XP, best, history label) but grants no achievement of independent performance', () => {
+    const r = recordSession(
+      emptyProfile(),
+      session(1000),
+      { ...meta, guided: true },
+      score(95, 3, 100, 95),
+      1,
+    );
+    expect(r.xpGained).toBe(xpFor(score(95, 3, 100, 95), 'beginner', true));
+    expect(r.record.guided).toBe(true);
+    expect(r.newAchievements).toContain('guided-training');
+    expect(r.newAchievements).toContain('first-session');
+    expect(r.newAchievements).not.toContain('three-stars');
+    expect(r.newAchievements).not.toContain('steady-hands');
+    expect(r.newAchievements).not.toContain('fast-responder');
+    // the same result without guidance earns them
+    const own = recordSession(r.profile, session(2000), meta, score(95, 3, 100, 95), 2);
+    expect(own.newAchievements).toEqual(
+      expect.arrayContaining(['three-stars', 'steady-hands', 'fast-responder']),
+    );
+    // the flag survives storage
+    const back = parseProfile(JSON.parse(serializeProfile(own.profile)));
+    expect(back?.sessions[0]?.guided).toBe(true);
+  });
+});

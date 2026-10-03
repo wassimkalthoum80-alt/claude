@@ -6,7 +6,7 @@ import { DiagnosisView } from './DiagnosisView';
 import { diagnosisOptions } from './diagnosis';
 import { mentorPlanFor } from '../../../content/mentor/plans';
 import { mentorMode } from '../../../game/mentor';
-import { MentorCard, MentorView } from '../Mentor/Mentor';
+import { MentorFallback, PhoneView } from '../Mentor/Mentor';
 import { hintsAvailable } from './hints';
 import { TimelineView } from './TimelineView';
 import { ExperimentView } from './ExperimentView';
@@ -24,12 +24,13 @@ export function SessionTools() {
   const engine = useEngine();
   const { ui, setUi } = useUi();
   useEngineSelector(hintCount); // re-render when a hint is revealed
-  // The Oberarzt replaces the hint drawer: the case's checkpoints where the case has a plan, else its hint ladder.
-  const mentorOn =
-    mentorMode(ui.session?.difficulty ?? null, ui.session?.scored ?? false) !== 'off';
-  const showHints =
-    mentorOn &&
-    (mentorPlanFor(engine.scenario.id) !== null || hintsAvailable(engine.scenario, ui.session));
+  // The Oberarzt by role: on call (intermediate, free practice) behind a phone button; the guided training of a
+  // beginner runs in its own window (no button) — only a case without a plan offers its hint ladder; expert: none.
+  const mode = mentorMode(ui.session?.difficulty ?? null, ui.session?.scored ?? false);
+  const hasPlan = !ui.session?.unknown && mentorPlanFor(engine.scenario.id) !== null;
+  const hints = hintsAvailable(engine.scenario, ui.session);
+  const onCall = mode === 'onCall' && (hasPlan || hints);
+  const showHints = onCall || (mode === 'guided' && !hasPlan && hints);
   const toggle = (d: SessionDrawer) => setUi({ drawer: ui.drawer === d ? null : d });
 
   const tool = (d: SessionDrawer, label: string) => (
@@ -46,14 +47,13 @@ export function SessionTools() {
 
   return (
     <>
-      {showHints && ui.drawer !== 'hint' && <MentorCard />}
       <div className={styles.row}>
         {tool('timeline', t('tools.timeline'))}
         {tool('trends', t('tools.trends'))}
         {ui.session?.scored &&
           diagnosisOptions(engine.scenario.id) &&
           tool('diagnosis', t('dx.button'))}
-        {showHints && tool('hint', t('mentor.button'))}
+        {showHints && tool('hint', onCall ? t('mentor.callButton') : t('mentor.button'))}
         {(engine.scenario.experiments?.length ?? 0) > 0 && tool('experiments', t('exp.button'))}
       </div>
       {ui.drawer && (
@@ -64,7 +64,7 @@ export function SessionTools() {
                 {
                   timeline: t('tl.title'),
                   trends: t('trend.title'),
-                  hint: t('mentor.title'),
+                  hint: onCall ? t('mentor.phone.title') : t('mentor.title'),
                   experiments: t('exp.title'),
                   diagnosis: t('dx.title'),
                 }[ui.drawer]
@@ -82,7 +82,7 @@ export function SessionTools() {
           <div className={styles.content}>
             {ui.drawer === 'timeline' && <TimelineView />}
             {ui.drawer === 'trends' && <TrendView />}
-            {ui.drawer === 'hint' && <MentorView />}
+            {ui.drawer === 'hint' && (onCall ? <PhoneView /> : <MentorFallback />)}
             {ui.drawer === 'experiments' && <ExperimentView />}
             {ui.drawer === 'diagnosis' && <DiagnosisView />}
           </div>

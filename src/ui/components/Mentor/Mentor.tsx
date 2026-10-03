@@ -1,13 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
-import { PROACTIVE_COOLDOWN_S, proactiveOffer, type MentorLevel } from '../../../game/mentor';
+import {
+  CALL_TOPICS,
+  callTarget,
+  guidedStep,
+  lastCompleted,
+  type CallTopic,
+  type MentorLevel,
+} from '../../../game/mentor';
 import { useT } from '../../hooks/UiContext';
 import { HintView } from '../SessionTools/HintView';
-import { useMentor, type MentorView } from './useMentor';
+import { useHighlight, useMentor } from './useMentor';
 import styles from './Mentor.module.css';
 
+/** ms (real) — the "done — why" line of a finished step stays this long */
+const DONE_SHOW_MS = 12000;
+/** ms (real) — the phone rings this long before the Oberarzt answers (animation only, no clinical delay) */
+const RING_MS = 1200;
+
 /** Small portrait of the Oberarzt (white coat, stethoscope). Decorative. */
-export function MentorPortrait({ size = 40 }: { size?: number }) {
+export function MentorPortrait({ size = 44 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -51,188 +63,285 @@ export function MentorPortrait({ size = 40 }: { size?: number }) {
   );
 }
 
-/** The help texts shown so far for the current checkpoint (levels 1…n), plus the "why" answer when asked. */
-function HelpTexts({ m, showWhy }: { m: MentorView; showWhy: boolean }) {
-  const t = useT();
-  const cp = m.current;
-  const level = m.status?.helpLevel ?? 0;
-  if (!cp) return null;
-  return (
-    <>
-      {level > 0 && (
-        <ol className={styles.levels}>
-          {cp.levels.slice(0, level).map((k, i) => (
-            <li key={k} data-testid={`mentor-level-${i + 1}`}>
-              {t(k as I18nKey)}
-            </li>
-          ))}
-        </ol>
-      )}
-      {showWhy && (
-        <p className={styles.why} data-testid="mentor-why-text">
-          {t(cp.whyKey as I18nKey)}
-        </p>
-      )}
-    </>
-  );
-}
-
-/** Drawer content: call the Oberarzt on request (all modes except expert), one level at a time. */
-export function MentorView() {
+/**
+ * Beginner — "Geführtes Training": the Oberarzt walks the learner through the case in a window like the nurse's.
+ * Each step: he asks first (level 2); after GUIDE_SHOW_S, or on "Zeig mir, wie", he shows the step (level 4) and the
+ * controls it uses light up until the step is done; then a line on why it mattered.
+ */
+export function MentorWindow() {
   const t = useT();
   const m = useMentor();
   const [whyFor, setWhyFor] = useState<string | null>(null);
-  if (m.mode === 'off') return <p className={styles.dim}>{t('mentor.off')}</p>;
-  if (!m.plan)
-    return (
-      <div className={styles.view}>
-        <Header />
-        <p className={styles.dim}>{t('mentor.fallback')}</p>
-        <HintView />
-      </div>
-    );
-  const cp = m.current;
-  if (!cp)
-    return (
-      <div className={styles.view}>
-        <Header />
-        <p className={styles.dim} data-testid="mentor-idle">
-          {t('mentor.idle')}
-        </p>
-      </div>
-    );
-  const level = m.status?.helpLevel ?? 0;
-  const next = level < 4 ? ((level + 1) as MentorLevel) : null;
-  const showWhy = whyFor === cp.id;
+  const [collapsed, setCollapsed] = useState(false);
+  const [doneLine, setDoneLine] = useState<{ id: string; at: number } | null>(null);
+  const prevStep = useRef<string | null>(null);
+  const guided = m.mode === 'guided' && m.plan !== null;
+  const step = guided && m.plan ? guidedStep(m.plan, m.log, m.now) : null;
+  const finished = guided && m.plan ? lastCompleted(m.plan, m.log, m.now) : null;
+  const cp = step?.checkpoint ?? null;
+  const level = step?.status.helpLevel ?? 0;
+  const { help, paused } = m;
+
+  // Log what the window shows: the question when a step opens, the step itself when it is due.
+  useEffect(() => {
+    if (!cp || !step) return;
+    if (level < 2) help(cp.id, 2, false);
+    else if (step.showDue && !paused) help(cp.id, 4, false);
+  }, [cp, step, level, help, paused]);
+
+  // A finished step: keep "done — why" for a while.
+  const stepId = cp?.id ?? null;
+  useEffect(() => {
+    if (prevStep.current !== null && prevStep.current !== stepId && finished)
+      setDoneLine({ id: finished.id, at: performance.now() });
+    prevStep.current = stepId;
+  }, [stepId, finished]);
+  useEffect(() => {
+    if (!doneLine) return;
+    const left = DONE_SHOW_MS - (performance.now() - doneLine.at);
+    const timer = window.setTimeout(() => setDoneLine(null), Math.max(0, left));
+    return () => window.clearTimeout(timer);
+  }, [doneLine]);
+
+  const intro = guided && !cp && !finished;
+  const show = step?.phase === 'show';
+  useHighlight(
+    show && cp ? (cp.highlight ?? null) : intro ? (m.plan?.introHighlight ?? null) : null,
+  );
+  if (!guided || !m.plan || m.overlay) return null;
+  const doneCp = doneLine ? m.plan.checkpoints.find((c) => c.id === doneLine.id) : undefined;
+  if (!cp && !intro && !doneCp) return null;
+
   return (
-    <div className={styles.view} data-testid="mentor-view">
-      <Header />
-      <h3 className={styles.cpTitle} data-testid="mentor-checkpoint">
-        {t(cp.titleKey as I18nKey)}
-      </h3>
-      <HelpTexts m={m} showWhy={showWhy} />
-      <div className={styles.actions}>
-        {next !== null && (
+    <aside className={styles.window} aria-live="polite" data-testid="mentor-window">
+      <MentorPortrait />
+      <div className={styles.body}>
+        <div className={styles.speakerRow}>
+          <span className={styles.speaker}>{t('mentor.name')}</span>
+          <span className={styles.badge}>{t('mentor.guided.label')}</span>
           <button
             type="button"
-            className={next >= 3 ? styles.askStrong : styles.ask}
-            onClick={() => m.help(next, true)}
+            className={styles.collapse}
+            onClick={() => setCollapsed((c) => !c)}
+            aria-expanded={!collapsed}
+            data-testid="mentor-collapse"
+          >
+            {collapsed ? t('mentor.expand') : t('mentor.collapse')}
+          </button>
+        </div>
+        {!collapsed && (
+          <>
+            {doneCp && (
+              <p className={styles.done} data-testid="mentor-done">
+                ✓ {t(doneCp.titleKey as I18nKey)} — {t(doneCp.whyKey as I18nKey)}
+              </p>
+            )}
+            {intro && (
+              <p className={styles.text} data-testid="mentor-intro">
+                “{t(m.plan.introKey as I18nKey)}”
+              </p>
+            )}
+            {cp && (
+              <>
+                <div className={styles.stepTitle} data-testid="mentor-step">
+                  {t(cp.titleKey as I18nKey)}
+                </div>
+                <p className={styles.text} data-testid="mentor-question">
+                  “{t(cp.levels[1] as I18nKey)}”
+                </p>
+                {show && (
+                  <p className={styles.instruction} data-testid="mentor-instruction">
+                    {t(cp.levels[3] as I18nKey)}
+                  </p>
+                )}
+                {whyFor === cp.id && (
+                  <p className={styles.why} data-testid="mentor-why-text">
+                    {t(cp.whyKey as I18nKey)}
+                  </p>
+                )}
+                <div className={styles.actions}>
+                  {!show && (
+                    <button
+                      type="button"
+                      className={styles.primary}
+                      onClick={() => help(cp.id, 4, true)}
+                      data-testid="mentor-show"
+                    >
+                      {t('mentor.showMe')}
+                    </button>
+                  )}
+                  {whyFor !== cp.id && (
+                    <button
+                      type="button"
+                      className={styles.ghost}
+                      onClick={() => {
+                        setWhyFor(cp.id);
+                        m.why(cp.id);
+                      }}
+                      data-testid="mentor-why"
+                    >
+                      {t('mentor.ask.why')}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+type PhoneState = { phase: 'ringing' } | { phase: 'menu' } | { phase: 'answer'; topic: CallTopic };
+
+/**
+ * Intermediate — the Oberarzt on call: the learner phones, says what the call is about and gets advice at once
+ * (the ringing is animation only). The answer starts with a pointer (level 2); concrete advice (3) and being walked
+ * through (4) are asked for explicitly. Calling where it is clinically indicated never costs independence.
+ */
+export function PhoneView() {
+  const t = useT();
+  const m = useMentor();
+  const [state, setState] = useState<PhoneState>({ phase: 'ringing' });
+  const [whyFor, setWhyFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (state.phase !== 'ringing') return;
+    const timer = window.setTimeout(() => setState({ phase: 'menu' }), RING_MS);
+    return () => window.clearTimeout(timer);
+  }, [state.phase]);
+
+  if (!m.plan) return <MentorFallback />;
+  if (state.phase === 'ringing')
+    return (
+      <div className={styles.phone} data-testid="mentor-ringing">
+        <span className={styles.ring} aria-hidden="true">
+          ☎
+        </span>
+        <p className={styles.dim}>{t('mentor.phone.ringing')}</p>
+      </div>
+    );
+
+  const head = (
+    <div className={styles.head}>
+      <MentorPortrait size={40} />
+      <span className={styles.speaker}>{t('mentor.name')}</span>
+    </div>
+  );
+
+  if (state.phase === 'menu')
+    return (
+      <div className={styles.view} data-testid="mentor-phone">
+        {head}
+        <p className={styles.text}>“{t('mentor.phone.hello')}”</p>
+        <div className={styles.topics}>
+          {CALL_TOPICS.map((topic) => (
+            <button
+              key={topic}
+              type="button"
+              className={styles.ghost}
+              onClick={() => {
+                m.call(topic);
+                const target = m.plan ? callTarget(m.plan, m.status, topic) : null;
+                const st = target ? m.status.find((x) => x.id === target.id) : undefined;
+                if (target && (st?.helpLevel ?? 0) < 2) m.help(target.id, 2, true);
+                setState({ phase: 'answer', topic });
+              }}
+              data-testid={`mentor-topic-${topic}`}
+            >
+              {t(`mentor.topic.${topic}` as I18nKey)}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+
+  const target = callTarget(m.plan, m.status, state.topic);
+  const st = target ? m.status.find((x) => x.id === target.id) : undefined;
+  const level = st?.helpLevel ?? 0;
+  const next = level >= 2 && level < 4 ? ((level + 1) as MentorLevel) : null;
+  return (
+    <div className={styles.view} data-testid="mentor-answer">
+      {head}
+      {!target ? (
+        <p className={styles.text} data-testid="mentor-nothing">
+          “{t('mentor.phone.nothing')}”
+        </p>
+      ) : (
+        <>
+          {target.callIndicated && (
+            <p className={styles.indicated} data-testid="mentor-indicated">
+              “{t('mentor.phone.indicated')}”
+            </p>
+          )}
+          <div className={styles.stepTitle} data-testid="mentor-checkpoint">
+            {t(target.titleKey as I18nKey)}
+          </div>
+          <ol className={styles.levels} start={2}>
+            {target.levels.slice(1, Math.max(2, level)).map((k, i) => (
+              <li key={k} data-testid={`mentor-level-${i + 2}`}>
+                {t(k as I18nKey)}
+              </li>
+            ))}
+          </ol>
+          {whyFor === target.id && (
+            <p className={styles.why} data-testid="mentor-why-text">
+              {t(target.whyKey as I18nKey)}
+            </p>
+          )}
+        </>
+      )}
+      <div className={styles.actions}>
+        {target && next !== null && (
+          <button
+            type="button"
+            className={target.callIndicated ? styles.primary : styles.askStrong}
+            onClick={() => m.help(target.id, next, true)}
             data-testid={`mentor-ask-${next}`}
           >
             {t(`mentor.ask.${next}` as I18nKey)}
           </button>
         )}
-        {!showWhy && (
+        {target && whyFor !== target.id && (
           <button
             type="button"
             className={styles.ghost}
             onClick={() => {
-              setWhyFor(cp.id);
-              m.why();
+              setWhyFor(target.id);
+              m.why(target.id);
             }}
             data-testid="mentor-why"
           >
             {t('mentor.ask.why')}
           </button>
         )}
+        <button
+          type="button"
+          className={styles.ghost}
+          onClick={() => setState({ phase: 'menu' })}
+          data-testid="mentor-other"
+        >
+          {t('mentor.phone.other')}
+        </button>
       </div>
-      {next !== null && next >= 3 && <p className={styles.faint}>{t('mentor.recorded')}</p>}
+      {target && next !== null && next >= 3 && !target.callIndicated && (
+        <p className={styles.faint}>{t('mentor.recorded')}</p>
+      )}
     </div>
   );
 }
 
-function Header() {
+/** Cases without an Oberarzt plan: the case's hint ladder. */
+export function MentorFallback() {
   const t = useT();
   return (
-    <div className={styles.head}>
-      <MentorPortrait />
-      <span className={styles.name}>{t('mentor.name')}</span>
-    </div>
-  );
-}
-
-/**
- * Beginner sessions: the Oberarzt speaks up unasked when a decision has been open (and the learner quiet) for a
- * while — level 1 first, one more level per further quiet interval, up to 3 — at most once per 45 s of real time.
- */
-export function MentorCard() {
-  const t = useT();
-  const m = useMentor();
-  const [openFor, setOpenFor] = useState<string | null>(null);
-  const [whyFor, setWhyFor] = useState<string | null>(null);
-  const lastShown = useRef(-Infinity);
-  const cp = m.current;
-  const offer =
-    m.mode === 'proactive' && cp && m.status && !m.paused
-      ? proactiveOffer(cp, m.status, m.now, m.lastActionAt)
-      : null;
-  const { help } = m;
-
-  useEffect(() => {
-    if (offer === null || !cp) return;
-    const nowMs = performance.now();
-    if (nowMs - lastShown.current < PROACTIVE_COOLDOWN_S * 1000) return;
-    lastShown.current = nowMs;
-    help(offer, false);
-    setOpenFor(cp.id);
-  }, [offer, cp, help]);
-
-  if (m.mode !== 'proactive' || !cp || openFor !== cp.id) return null;
-  const level = m.status?.helpLevel ?? 0;
-  const next = level < 4 ? ((level + 1) as MentorLevel) : null;
-  const showWhy = whyFor === cp.id;
-  return (
-    <aside className={styles.card} role="status" data-testid="mentor-card">
+    <div className={styles.view}>
       <div className={styles.head}>
-        <MentorPortrait size={36} />
-        <span className={styles.name}>{t('mentor.name')}</span>
-        <span className={styles.tag}>{t('mentor.levelTag', { n: level })}</span>
+        <MentorPortrait size={40} />
+        <span className={styles.speaker}>{t('mentor.name')}</span>
       </div>
-      <h3 className={styles.cpTitle}>{t(cp.titleKey as I18nKey)}</h3>
-      <HelpTexts m={m} showWhy={showWhy} />
-      <div className={styles.actions}>
-        {next !== null && (
-          <button
-            type="button"
-            className={next >= 3 ? styles.askStrong : styles.ask}
-            onClick={() => help(next, true)}
-            data-testid="mentor-more"
-          >
-            {t('mentor.more')}
-          </button>
-        )}
-        {!showWhy && (
-          <button
-            type="button"
-            className={styles.ghost}
-            onClick={() => {
-              setWhyFor(cp.id);
-              m.why();
-            }}
-          >
-            {t('mentor.ask.why')}
-          </button>
-        )}
-        <button
-          type="button"
-          className={styles.ghost}
-          onClick={() => m.setPaused(!m.paused)}
-          data-testid="mentor-pause"
-        >
-          {m.paused ? t('mentor.resume') : t('mentor.pause')}
-        </button>
-        <button
-          type="button"
-          className={styles.ghost}
-          onClick={() => {
-            if (m.paused) m.setPaused(false);
-            setOpenFor(null);
-          }}
-          data-testid="mentor-dismiss"
-        >
-          {t('mentor.dismiss')}
-        </button>
-      </div>
-    </aside>
+      <p className={styles.dim}>{t('mentor.fallback')}</p>
+      <HintView />
+    </div>
   );
 }

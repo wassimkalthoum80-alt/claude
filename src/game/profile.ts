@@ -14,7 +14,13 @@ export const HISTORY_LIMIT = 100;
 export const MASTERY_HISTORY_LIMIT = 20;
 
 export type AchievementId =
-  'first-session' | 'three-stars' | 'steady-hands' | 'fast-responder' | 'heart-lung' | 'explorer';
+  | 'first-session'
+  | 'three-stars'
+  | 'steady-hands'
+  | 'fast-responder'
+  | 'heart-lung'
+  | 'explorer'
+  | 'guided-training';
 
 export const ACHIEVEMENTS: readonly AchievementId[] = [
   'first-session',
@@ -23,6 +29,7 @@ export const ACHIEVEMENTS: readonly AchievementId[] = [
   'fast-responder',
   'heart-lung',
   'explorer',
+  'guided-training',
 ];
 
 export interface SessionRecord {
@@ -47,6 +54,8 @@ export interface SessionRecord {
   /** XP earned */
   xp: number;
   topics: readonly SkillTopic[];
+  /** "Geführtes Training": the Oberarzt guided the learner step by step (beginner tutorial) */
+  guided?: boolean;
 }
 
 export interface MasteryEntry {

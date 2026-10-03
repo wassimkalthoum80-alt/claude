@@ -41,6 +41,7 @@ const COMMANDS = new Set<Command['type']>([
   'ORDER_TEST',
   'REQUEST_HINT',
   'MENTOR_HELP',
+  'MENTOR_CALL',
   'RHYTHM_CHECK_START',
   'DEFIB_CHARGE',
   'SET_RHYTHM',
@@ -115,6 +116,8 @@ export function commandDetail(c: Command): string {
       return `${c.checkpoint} L${c.level}`;
     case 'MENTOR_WHY':
       return c.checkpoint;
+    case 'MENTOR_CALL':
+      return c.topic;
     case 'SET_RESP_SUPPORT':
       return c.support;
     case 'AIRWAY_CHECKLIST':

@@ -1,41 +1,41 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { mentorPlanFor } from '../../../content/mentor/plans';
 import {
-  currentCheckpoint,
-  lastLearnerAction,
   mentorMode,
   mentorStatus,
+  type CallTopic,
   type CheckpointStatus,
-  type MentorCheckpoint,
   type MentorLevel,
   type MentorMode,
   type MentorPlan,
 } from '../../../game/mentor';
-import type { SimulationState } from '../../../sim';
+import type { LogEntry, SimulationState } from '../../../sim';
 import { useEngine } from '../../hooks/EngineContext';
 import { useUi } from '../../hooks/UiContext';
 import { useEngineSelector } from '../../hooks/useEngineSelector';
 
-export interface MentorView {
+export interface MentorContext {
   mode: MentorMode;
+  /** a modal overlay (briefing, pause menu) is open */
+  overlay: boolean;
   plan: MentorPlan | null;
-  current: MentorCheckpoint | null;
-  status: CheckpointStatus | null;
+  log: readonly LogEntry[];
+  status: CheckpointStatus[];
   /** s — sim time */
   now: number;
   paused: boolean;
-  lastActionAt: number | null;
-  /** show help of `level` for the current checkpoint (logged) */
-  help: (level: MentorLevel, requested: boolean) => void;
-  why: () => void;
-  setPaused: (paused: boolean) => void;
+  /** show help of `level` for a checkpoint (logged; unasked help is logged with source 'system') */
+  help: (checkpoint: string, level: MentorLevel, requested: boolean) => void;
+  why: (checkpoint: string) => void;
+  call: (topic: CallTopic) => void;
 }
 
 /**
- * The Oberarzt's view of the running session: reads the event log at ~1 Hz (and after every command) and dispatches
- * its help as logged commands. No simulation logic here — the checkpoint rules live in src/game/mentor.
+ * The Oberarzt's view of the running session: reads the event log about once per simulated second (and after every
+ * command) and dispatches what it shows as logged commands. No simulation logic here — the rules live in
+ * src/game/mentor.
  */
-export function useMentor(): MentorView {
+export function useMentor(): MentorContext {
   const engine = useEngine();
   const { ui } = useUi();
   // Re-render once per simulated second and whenever a command is logged (not at frame rate).
@@ -47,31 +47,53 @@ export function useMentor(): MentorView {
   useEngineSelector(tick);
   const s = engine.getSnapshot();
   const mode = mentorMode(ui.session?.difficulty ?? null, ui.session?.scored ?? false);
-  const plan = mode === 'off' ? null : mentorPlanFor(engine.scenario.id);
+  // An unknown case gets no plan: the steps would give the diagnosis away (it keeps its hint ladder).
+  const plan = mode === 'off' || ui.session?.unknown ? null : mentorPlanFor(engine.scenario.id);
   const log = engine.eventLog;
-  const all = plan ? mentorStatus(plan, log, s.time) : [];
-  const current = plan ? currentCheckpoint(plan, all) : null;
-  const status =
-    current && plan ? (all[plan.checkpoints.findIndex((c) => c.id === current.id)] ?? null) : null;
-  const id = current?.id ?? null;
   return {
     mode,
+    overlay: ui.briefingOpen || ui.menuOpen,
     plan,
-    current,
-    status,
+    log,
+    status: plan ? mentorStatus(plan, log, s.time) : [],
     now: s.time,
     paused: s.control.paused,
-    lastActionAt: lastLearnerAction(log, s.time),
-    help: (level, requested) => {
-      if (id)
-        engine.dispatch(
-          { type: 'MENTOR_HELP', checkpoint: id, level, requested },
-          requested ? 'user' : 'system',
-        );
-    },
-    why: () => {
-      if (id) engine.dispatch({ type: 'MENTOR_WHY', checkpoint: id }, 'user');
-    },
-    setPaused: (paused) => engine.dispatch({ type: 'SET_PAUSED', paused }, 'user'),
+    help: (checkpoint, level, requested) =>
+      engine.dispatch(
+        { type: 'MENTOR_HELP', checkpoint, level, requested },
+        requested ? 'user' : 'system',
+      ),
+    why: (checkpoint) => engine.dispatch({ type: 'MENTOR_WHY', checkpoint }, 'user'),
+    call: (topic) => engine.dispatch({ type: 'MENTOR_CALL', topic }, 'user'),
   };
+}
+
+/**
+ * Marks the controls of the current guided step (data-testid list) with `data-mentor-highlight`, re-checked a few
+ * times a second so controls inside panels that open later are marked too (and scrolled into view once); cleared
+ * when the list changes or empties.
+ */
+export function useHighlight(ids: readonly string[] | null): void {
+  const key = ids && ids.length > 0 ? ids.join('|') : '';
+  useEffect(() => {
+    if (!key) return;
+    const wanted = key.split('|');
+    const mark = () => {
+      for (const id of wanted)
+        document.querySelectorAll(`[data-testid="${CSS.escape(id)}"]`).forEach((el) => {
+          if (el.hasAttribute('data-mentor-highlight')) return;
+          el.setAttribute('data-mentor-highlight', '');
+          // A control inside a scrolled list (e.g. an infusion pump below the syringe pumps) is brought into view.
+          el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        });
+    };
+    mark();
+    const timer = window.setInterval(mark, 400);
+    return () => {
+      window.clearInterval(timer);
+      document
+        .querySelectorAll('[data-mentor-highlight]')
+        .forEach((el) => el.removeAttribute('data-mentor-highlight'));
+    };
+  }, [key]);
 }

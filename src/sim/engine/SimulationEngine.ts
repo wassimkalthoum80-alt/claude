@@ -1038,6 +1038,7 @@ export class SimulationEngine {
         break;
       case 'MENTOR_HELP':
       case 'MENTOR_WHY':
+      case 'MENTOR_CALL':
         // Teaching layer only: recorded in the event log, no effect on the patient (src/game/mentor reads it).
         break;
       case 'REQUEST_HINT': {
