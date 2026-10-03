@@ -883,6 +883,87 @@ export const de: Record<I18nKey, string> = {
     'Reoxygenieren (Maske), Lagerung, Medikamente und Spatel optimieren, dann erneut versuchen.',
   'intub.retry': 'Neuer Versuch',
   'intub.open': 'Intubation anzeigen',
+  'debrief.airway.title': 'Intubation',
+  'debrief.airway.summary': '{n} Versuch(e) · Einleitung: {drug} {dose} mg/kg',
+  'debrief.airway.crash':
+    'Intubation unter Reanimation — keine Medikamente oder Vorbereitung erwartet',
+  'debrief.airway.unstable': 'bei Einleitung kreislaufinstabil',
+  'debrief.airway.item.checklist': 'Checkliste vor der Intubation ({v}/5 vor der Einleitung)',
+  'debrief.airway.item.preoxygenation':
+    'Präoxygenierung: alveolärer O₂ {v} % bei Laryngoskopie (Ziel ≥ 80 %)',
+  'debrief.airway.item.drugs': 'Hypnotikum und Muskelrelaxans vor der Laryngoskopie',
+  'debrief.airway.item.awareness': 'Keine Relaxierung ohne ausreichende Hypnose (Awareness)',
+  'debrief.airway.item.dose': 'Einleitungsdosis an den instabilen Kreislauf angepasst ({v} mg/kg)',
+  'debrief.airway.item.firstPass': 'Erfolg im ersten Versuch ({v} Versuch(e))',
+  'debrief.airway.item.apnoea': 'Längste Laryngoskopie {v} s (≤ 60 s)',
+  'debrief.airway.item.spo2': 'Tiefste SpO₂ {v} % (≥ 90 % oder ≤ 5 unter dem Ausgangswert)',
+  'debrief.airway.item.map': 'Tiefster MAD nach der Einleitung {v} mmHg (≥ 55)',
+  'debrief.airway.item.oesophageal': 'Ösophageale Fehllage erkannt und entfernt ({v} s)',
+  'debrief.airway.item.connect': 'Beatmung {v} s nach dem Tubus angeschlossen (≤ 60 s)',
+  'debrief.airway.item.auscultation': 'Tubuslage auskultatorisch kontrolliert',
+  'debrief.airway.item.cuff': 'Cuffdruck {v} cmH₂O (20–30)',
+  'debrief.airway.item.position': 'Tubus tracheal, nicht endobronchial',
+  'debrief.airway.item.fixed': 'Tubus fixiert',
+  'debrief.airway.item.sedation': 'Sedierung nach der Intubation fortgeführt',
+  'fb.improve.airway.checklist':
+    'Vor der Einleitung die Checkliste durchgehen (Präoxygenierung, Monitoring, Absaugung, Plan B, Vasopressor) — {v}/5 wurden bestätigt.',
+  'fb.improve.airway.preoxygenation':
+    'Präoxygenieren, bis der alveoläre (endexspiratorische) O₂ über 80 % liegt — ca. 3 min dicht sitzende Maske, High-Flow oder NIV; es waren {v} %.',
+  'fb.improve.airway.drugs':
+    'Laryngoskopie ohne Hypnotikum und Relaxans: schlechte Bedingungen und Stressreaktion.',
+  'fb.improve.airway.awareness':
+    'Der Patient war relaxiert ohne ausreichende Hypnose — Awareness-Gefahr. Erst das Hypnotikum, dann das Relaxans.',
+  'fb.improve.airway.dose':
+    'Beim instabilen Patienten Propofol reduzieren oder meiden ({v} mg/kg gegeben): Ketamin oder reduzierte Dosis mit bereitem Vasopressor.',
+  'fb.improve.airway.firstPass':
+    '{v} Versuche: Lagerung, BURP, Medikamente und Gerät vor dem ersten Blick optimieren.',
+  'fb.improve.airway.apnoea':
+    'Eine Laryngoskopie dauerte {v} s: nach etwa 60 s abbrechen, reoxygenieren, neu planen.',
+  'fb.improve.airway.spo2':
+    'Die SpO₂ fiel um die Intubation auf {v} %: bessere Präoxygenierung, nasaler Sauerstoff während des Versuchs, kürzere Versuche und FiO₂ 100 % nach dem Tubus.',
+  'fb.improve.airway.map':
+    'Der MAD fiel nach der Einleitung auf {v} mmHg: Volumen und Vasopressor bereit, reduzierte Dosis und kreislaufschonendere Medikamente.',
+  'fb.improve.airway.oesophageal':
+    'Die ösophageale Fehllage wurde nicht rasch erkannt — keine Kapnografiekurve heißt: Tubus raus.',
+  'fb.improve.airway.connect':
+    'Die Beatmung wurde spät angeschlossen ({v} s): sofort anschließen und mit Kapnografie bestätigen.',
+  'fb.improve.airway.auscultation': 'Nach dem Tubus beide Lungen und das Epigastrium auskultieren.',
+  'fb.improve.airway.cuff':
+    'Cuffdruck am Ende {v} cmH₂O: mit dem Manometer 20–30 cmH₂O einstellen.',
+  'fb.improve.airway.position':
+    'Der Tubus lag am Ende endobronchial: Tiefe an der Zahnreihe prüfen und beidseits auskultieren.',
+  'fb.improve.airway.fixed': 'Den Tubus nach bestätigter Lage fixieren.',
+  'fb.improve.airway.sedation':
+    'Nach der Intubation lief keine Sedierung: Analgosedierung beginnen, bevor die Einleitungsmedikamente abklingen.',
+  'fb.improve.airway.etomidateSepsis':
+    'Etomidat bei Sepsis hemmt die Nebennierenrinde (relative Kontraindikation) — im Schock ist Ketamin eine Alternative.',
+  'fb.well.airway.firstPass': 'Im ersten Versuch intubiert, ohne Entsättigung.',
+  'fb.well.airway.steps': 'Intubation Schritt für Schritt durchgeführt ({pct} % der Schritte).',
+  'air.prep.title': 'Vor der Einleitung — Checkliste',
+  'air.prep.preoxygenation': 'Präoxygenierung läuft (≈ 3 min, hohe FiO₂)',
+  'air.prep.monitoring': 'Monitoring komplett (EKG, SpO₂, RR, Kapnografie)',
+  'air.prep.suction': 'Absaugung bereit und an',
+  'air.prep.plan': 'Plan B bereit (Maske, Larynxmaske, Videolaryngoskop)',
+  'air.prep.pressor': 'Volumen und Vasopressor bereit',
+  'scenario.septicIntubation.title': 'Atemnot und Hypotonie in der Notaufnahme',
+  'scenario.septicIntubation.briefing':
+    'Notaufnahme. Seit drei Tagen Pneumonie, jetzt trotz Sauerstoff zunehmend dyspnoisch und verwirrt; der Blutdruck fällt. Die Entscheidung ist gefallen: Der Patient muss intubiert werden — von Ihnen. Medikamente und eine Noradrenalin-Spritze (10 µg/mL, P4) liegen bereit; an INF2 hängt eine Vollelektrolytlösung.',
+  'scenario.septicIntubation.presentation':
+    'Fieber, Atemnot und Verwirrtheit unter Sauerstoff, niedriger Blutdruck — muss intubiert werden.',
+  'challenges.intubation.title': 'Intubation in der Notaufnahme',
+  'challenges.intubation.desc':
+    'Hypoxischer, hypotoner Patient, der einen Tubus braucht. Bei jedem Start ein anderer Patient.',
+  'hint.septicIntubation.title': 'Wie intubiere ich diesen Patienten sicher?',
+  'hint.septicIntubation.1':
+    'Vor jedem Medikament: Wie oxygenieren, überwachen und den Blutdruck halten Sie?',
+  'hint.septicIntubation.2':
+    'Eine einfache Maske ist keine Präoxygenierung: dicht sitzende Reservoirmaske, High-Flow oder NIV für etwa 3 Minuten.',
+  'hint.septicIntubation.3':
+    'Dieser Kreislauf hängt am Sympathikus: Eine volle Propofol-Dosis nimmt ihn weg. Ketamin (oder eine deutlich reduzierte Dosis), Volumen laufen lassen, Noradrenalin bereit.',
+  'hint.septicIntubation.4':
+    'Checkliste, Präoxygenierung, Ketamin 1–1,5 mg/kg + Rocuronium 1,2 mg/kg, 45–60 s warten, intubieren, Cuff 20–30, anschließen, mit Kapnografie und Auskultation bestätigen, fixieren — und die Sedierung starten.',
+  'learn.septicIntubation':
+    'Die Intubation eines septischen, hypoxischen Patienten ist zuerst ein Kreislauf- und Sauerstoffproblem, dann ein Atemwegsproblem: richtig präoxygenieren, Einleitungsmedikamente nach dem Kreislauf wählen und dosieren, Volumen und Vasopressor bereithalten und den Tubus bestätigen, bevor man ihm traut.',
   'intub.point.rightUpper': 'Thorax rechts oben',
   'intub.point.rightLower': 'Axilla rechts',
   'intub.point.leftUpper': 'Thorax links oben',

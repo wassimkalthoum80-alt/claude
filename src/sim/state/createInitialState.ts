@@ -177,6 +177,7 @@ export function createInitialState(
         tubePlacedAt: null,
         paralysedAwakeS: 0,
         prompts: [],
+        checklist: [],
       },
       conditions: {
         pericardialMl: 0,

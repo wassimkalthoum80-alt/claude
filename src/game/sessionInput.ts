@@ -29,6 +29,7 @@ export function scoringInputFrom(
     difficulty,
     circulation: s.patient.cardio.spontaneousCirculation,
     variant: s.scenario.variant,
+    weightKg: s.patient.demographics.weightKg,
     cpr: arrested
       ? {
           timeToFirstCompression: ttfc,

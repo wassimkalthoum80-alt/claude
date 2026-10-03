@@ -878,6 +878,87 @@ export const en = {
   'intub.failed': 'Reoxygenate (mask), optimise position, drugs and blade, then try again.',
   'intub.retry': 'New attempt',
   'intub.open': 'Show intubation',
+  'debrief.airway.title': 'Intubation',
+  'debrief.airway.summary': '{n} attempt(s) · induction: {drug} {dose} mg/kg',
+  'debrief.airway.crash': 'Intubation during cardiac arrest — no drugs or preparation expected',
+  'debrief.airway.unstable': 'haemodynamically unstable at induction',
+  'debrief.airway.item.checklist': 'Pre-intubation checklist ({v}/5 before induction)',
+  'debrief.airway.item.preoxygenation':
+    'Pre-oxygenation: alveolar O₂ {v} % at laryngoscopy (target ≥ 80 %)',
+  'debrief.airway.item.drugs': 'Hypnotic and neuromuscular blocker before laryngoscopy',
+  'debrief.airway.item.awareness': 'No paralysis without adequate hypnosis (awareness)',
+  'debrief.airway.item.dose': 'Induction dose adapted to the unstable circulation ({v} mg/kg)',
+  'debrief.airway.item.firstPass': 'First-pass success ({v} attempt(s))',
+  'debrief.airway.item.apnoea': 'Longest laryngoscopy {v} s (≤ 60 s)',
+  'debrief.airway.item.spo2': 'Lowest SpO₂ {v} % (≥ 90 % or ≤ 5 below the start)',
+  'debrief.airway.item.map': 'Lowest MAP after induction {v} mmHg (≥ 55)',
+  'debrief.airway.item.oesophageal': 'Oesophageal tube recognised and removed ({v} s)',
+  'debrief.airway.item.connect': 'Ventilation connected {v} s after the tube (≤ 60 s)',
+  'debrief.airway.item.auscultation': 'Tube position checked by auscultation',
+  'debrief.airway.item.cuff': 'Cuff pressure {v} cmH₂O (20–30)',
+  'debrief.airway.item.position': 'Tube tracheal, not endobronchial',
+  'debrief.airway.item.fixed': 'Tube secured',
+  'debrief.airway.item.sedation': 'Sedation continued after the intubation',
+  'fb.improve.airway.checklist':
+    'Run the pre-intubation checklist before induction (pre-oxygenation, monitoring, suction, plan B, vasopressor) — {v}/5 were confirmed.',
+  'fb.improve.airway.preoxygenation':
+    'Pre-oxygenate until the alveolar (end-tidal) O₂ is above 80 % — about 3 min on a tight mask, high-flow or NIV; it was {v} %.',
+  'fb.improve.airway.drugs':
+    'Laryngoscopy without hypnotic and relaxant gives poor conditions and a stress response.',
+  'fb.improve.airway.awareness':
+    'The patient was paralysed without adequate hypnosis — risk of awareness. Hypnotic first, then the relaxant.',
+  'fb.improve.airway.dose':
+    'In an unstable patient reduce or avoid propofol ({v} mg/kg given): ketamine, or a reduced dose with a vasopressor ready.',
+  'fb.improve.airway.firstPass':
+    '{v} attempts: optimise position, BURP, drugs and device before the first look.',
+  'fb.improve.airway.apnoea':
+    'A laryngoscopy lasted {v} s: stop after about 60 s, reoxygenate and re-plan.',
+  'fb.improve.airway.spo2':
+    'SpO₂ fell to {v} % around the intubation: better pre-oxygenation, nasal oxygen during the attempt, shorter attempts and FiO₂ 100 % once the tube is in.',
+  'fb.improve.airway.map':
+    'MAP fell to {v} mmHg after induction: fluid and a vasopressor ready, a reduced dose and haemodynamically gentler drugs.',
+  'fb.improve.airway.oesophageal':
+    'The oesophageal tube was not recognised promptly — no capnography curve means the tube comes out.',
+  'fb.improve.airway.connect':
+    'The ventilation was connected late ({v} s): connect at once and confirm with capnography.',
+  'fb.improve.airway.auscultation':
+    'Listen over both lungs and the epigastrium once the tube is in.',
+  'fb.improve.airway.cuff':
+    'Cuff pressure at the end {v} cmH₂O: aim for 20–30 cmH₂O with the manometer.',
+  'fb.improve.airway.position':
+    'The tube ended endobronchial: check the depth at the teeth and listen on both sides.',
+  'fb.improve.airway.fixed': 'Secure the tube once its position is confirmed.',
+  'fb.improve.airway.sedation':
+    'No sedation was running after the intubation: start analgesia/sedation before the induction drugs wear off.',
+  'fb.improve.airway.etomidateSepsis':
+    'Etomidate in sepsis suppresses the adrenal cortex (relative contraindication) — ketamine is an alternative in shock.',
+  'fb.well.airway.firstPass': 'Intubated at the first attempt without desaturation.',
+  'fb.well.airway.steps': 'Intubation carried out step by step ({pct} % of the steps).',
+  'air.prep.title': 'Before induction — checklist',
+  'air.prep.preoxygenation': 'Pre-oxygenation running (≈ 3 min, high FiO₂)',
+  'air.prep.monitoring': 'Monitoring complete (ECG, SpO₂, BP, capnography)',
+  'air.prep.suction': 'Suction ready and on',
+  'air.prep.plan': 'Plan B ready (mask, supraglottic airway, video laryngoscope)',
+  'air.prep.pressor': 'Fluid and vasopressor ready',
+  'scenario.septicIntubation.title': 'Breathless and hypotensive in the emergency department',
+  'scenario.septicIntubation.briefing':
+    'Emergency department. Pneumonia for three days, now increasingly breathless and confused despite oxygen; the blood pressure is falling. The decision has been made: the patient needs to be intubated, by you. Drugs and a noradrenaline syringe (10 µg/mL, P4) are ready; a crystalloid bag hangs on INF2.',
+  'scenario.septicIntubation.presentation':
+    'Febrile, breathless and confused on oxygen, low blood pressure — needs intubation.',
+  'challenges.intubation.title': 'Intubation in the emergency department',
+  'challenges.intubation.desc':
+    'Hypoxic, hypotensive patient who needs a tube. A different patient every time.',
+  'hint.septicIntubation.title': 'How do I intubate this patient safely?',
+  'hint.septicIntubation.1':
+    'Before any drug: how will you oxygenate, monitor, and keep the blood pressure up?',
+  'hint.septicIntubation.2':
+    'Simple mask is not pre-oxygenation: tight reservoir mask, high-flow or NIV for about 3 minutes.',
+  'hint.septicIntubation.3':
+    'This circulation depends on sympathetic tone: a full propofol dose will take it away. Ketamine (or a much reduced dose), fluid running, noradrenaline ready.',
+  'hint.septicIntubation.4':
+    'Checklist, pre-oxygenation, ketamine 1–1.5 mg/kg + rocuronium 1.2 mg/kg, wait 45–60 s, intubate, cuff 20–30, connect, confirm with capnography and auscultation, secure — and start sedation.',
+  'learn.septicIntubation':
+    'Intubating a septic, hypoxic patient is a haemodynamic and an oxygen problem before it is an airway problem: pre-oxygenate properly, choose and dose the induction drugs for the circulation, have fluid and a vasopressor ready, and confirm the tube before you trust it.',
   'intub.point.rightUpper': 'Right upper chest',
   'intub.point.rightLower': 'Right axilla',
   'intub.point.leftUpper': 'Left upper chest',

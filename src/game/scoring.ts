@@ -1,3 +1,4 @@
+import { airwayFacts } from './airwayAssessment';
 import { alsFacts, causeDoneAt, resusMarker } from './alsAssessment';
 import { assessDecisions } from './assessment';
 import type {
@@ -210,6 +211,10 @@ export function scoreSession(
     resus && arrestEvent && (sc.causeSteps || sc.adrenalineAsap)
       ? alsFacts(input.log, sc, r, arrestEvent.t)
       : null;
+  const airway = airwayFacts(input.log, input.vitals, r, input.end, input.weightKg ?? null);
+  /** the case trains the intubation and the learner did one: it enters treatment, safety and feedback */
+  const airwayScored = sc.airway !== undefined && airway !== null;
+  const airwayItem = (id: string) => airway?.items.find((i) => i.id === id)?.ok;
   // The first response to a problem started by a scenario event (e.g. a disconnection) that keeps the patient in
   // target prevented the deterioration. Not for problems present from the start: there the measured effect decides
   // (e.g. noradrenaline in hypovolaemia keeps the MAP but does not treat the cause).
@@ -338,6 +343,11 @@ export function scoreSession(
           ? r.alsSafety.inappropriateShock * als.inappropriateShocks +
             r.alsSafety.wrongSide * als.wrongSide +
             r.alsSafety.oesophageal * als.oesophagealUnrecognised
+          : 0) -
+        (airwayScored
+          ? (airwayItem('awareness') === false ? r.airway.safetyAwareness : 0) +
+            (airwayItem('oesophageal') === false && !als ? r.airway.safetyOesophageal : 0) +
+            r.airway.safetyExtraAttempt * Math.max(0, (airway?.attempts ?? 0) - 2)
           : 0),
     ),
   );
@@ -403,6 +413,12 @@ export function scoreSession(
       const fix = effective.find((d) => d.t >= first - 30);
       time = fix === undefined ? 0 : Math.round(band(Math.max(0, fix.t - first), r.time));
     }
+  }
+
+  if (airwayScored && airway) {
+    const w = r.airway.treatmentWeight;
+    treatment =
+      treatment === null ? airway.score : Math.round((1 - w) * treatment + w * airway.score);
   }
 
   const scores: Record<ScoreKey, number | null> = {
@@ -553,6 +569,27 @@ export function scoreSession(
     if (fixedAt === null) improve.unshift({ key: 'fb.improve.notFixed' });
     else well.push({ key: 'fb.well.fixed', vars: { s: Math.round(Math.max(0, fixedAt - onset)) } });
   }
+  if (airwayScored && airway) {
+    // Etomidate in sepsis: a teaching note (kept among the first three after the most important missed steps).
+    if (sc.airway?.sepsis && airway.hypnotic?.name.toLowerCase().startsWith('etomidat'))
+      improve.unshift({ key: 'fb.improve.airway.etomidateSepsis' });
+    const missed = airway.items.filter((i) => i.ok === false);
+    // Most consequential first: the order of AIRWAY_ITEMS follows the procedure; safety items lead.
+    const lead = ['oesophageal', 'awareness', 'spo2', 'map', 'dose', 'preoxygenation'];
+    missed.sort((a, b) => {
+      const ia = lead.indexOf(a.id);
+      const ib = lead.indexOf(b.id);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    for (const m of missed.slice(0, 2))
+      improve.unshift({
+        key: `fb.improve.airway.${m.id}`,
+        ...(m.value !== null ? { vars: { v: m.value } } : {}),
+      });
+    if (airwayItem('firstPass') === true && airwayItem('spo2') !== false)
+      well.unshift({ key: 'fb.well.airway.firstPass' });
+    if (airway.score >= 85) well.push({ key: 'fb.well.airway.steps', vars: { pct: airway.score } });
+  }
   if (well.length === 0 && outcome !== 'arrest') well.push({ key: 'fb.well.completed' });
 
   return {
@@ -578,6 +615,7 @@ export function scoreSession(
       hintsUsed,
       keyActionMissed,
       als,
+      airway,
       diagnosis: diagnosisFacts,
       fixedAfterS:
         fixSteps === null ? undefined : fixedAt === null ? null : Math.round(fixedAt - onset),

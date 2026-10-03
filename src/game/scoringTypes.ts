@@ -1,6 +1,7 @@
 import type { Difficulty } from './types';
 import type { HintUse, LogEntry } from '../sim';
 import type { Vitals, VitalSeries } from './vitals';
+import type { AirwayFacts } from './airwayAssessment';
 
 /**
  * Scoring and debrief types (milestone 6 § 10–11). Thresholds and weights are data (src/content/scoring),
@@ -150,6 +151,42 @@ export interface ScoringRules {
     /** s */
     oesophagealS: number;
   };
+  /** intubation by the learner (airway stage B) */
+  airway: {
+    /** checklist items confirmed before induction for the item to count (of 5) */
+    checklistItems: number;
+    /** 0..1 — alveolar O₂ fraction at the first asleep laryngoscopy (≈ end-tidal O₂) */
+    fao2Min: number;
+    /** mmHg / /min — at or beyond these at induction the patient counts as unstable */
+    unstableMap: number;
+    unstableHr: number;
+    /** mg/kg — largest propofol induction dose for an unstable patient */
+    propofolMaxUnstable: number;
+    /** s — longest laryngoscopy (blade in → tube or stop) */
+    apnoeaMaxS: number;
+    /** % — lowest SpO₂ from induction to 2 min after the tube (or a fall of at most `spo2DropMax` from induction) */
+    spo2Min: number;
+    /** percentage points */
+    spo2DropMax: number;
+    /** mmHg — lowest MAP within `mapWindowS` after induction */
+    mapMin: number;
+    /** s */
+    mapWindowS: number;
+    /** s — oesophageal tube removed within */
+    oesophagealS: number;
+    /** s — ventilation connected within this after placement */
+    connectMaxS: number;
+    /** cmH₂O — cuff pressure range at the end */
+    cuffCmH2O: readonly [number, number];
+    /** s — sedation after the tube is assessed only when the tube stayed this long */
+    sedationCheckS: number;
+    /** share of the airway score in the treatment score of an airway case (0..1) */
+    treatmentWeight: number;
+    /** safety points: possible awareness, unrecognised oesophageal tube, each attempt beyond the second */
+    safetyAwareness: number;
+    safetyOesophageal: number;
+    safetyExtraAttempt: number;
+  };
 }
 
 /** One entry of the event log a rule looks for (all given fields must match). */
@@ -202,6 +239,11 @@ export interface ScenarioScoring {
   diagnosisSet?: string;
   /** correct diagnosis (option id of the set) */
   diagnosis?: string;
+  /** the case trains an intubation: the airway assessment enters treatment and safety */
+  airway?: {
+    /** septic patient: etomidate earns a note on adrenal suppression (Medi Know: relative contraindication) */
+    sepsis?: boolean;
+  };
   /** per variant: its own diagnosis, fix (cause steps) and resuscitation rules, merged over the case's */
   variants?: Readonly<
     Record<
@@ -240,6 +282,8 @@ export interface ScoringInput {
   cpr: CprInput | null;
   /** patient variant of the case (selects per-variant scoring) */
   variant?: string | null;
+  /** kg — the patient's weight (doses in mg converted to mg/kg) */
+  weightKg?: number;
 }
 
 export type DecisionMark = 'effective' | 'questionable' | 'dangerous' | 'neutral' | 'unrated';
@@ -303,6 +347,8 @@ export interface SessionScore {
     keyActionMissed: boolean | null;
     /** resuscitation cases with an arrest: ALS facts (null otherwise) */
     als: AlsFacts | null;
+    /** the learner's intubation (null when none was attempted) */
+    airway: AirwayFacts | null;
     /** declared vs correct diagnosis (null when the case has no diagnosis set) */
     diagnosis: {
       expected: string;

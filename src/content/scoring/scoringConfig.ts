@@ -55,6 +55,29 @@ export const SCORING_DEFAULTS: ScoringRules = {
   adrenaline: { fullS: 180, zeroS: 420 },
   alsTreatment: { ccf: 0.4, cause: 0.4, adrenaline: 0.2 },
   alsSafety: { inappropriateShock: 20, wrongSide: 10, oesophageal: 25, oesophagealS: 60 },
+  // Intubation (Medi Know Anästhesie-Skript: pre-oxygenation until end-tidal O₂ > 80 %, ≈ 3 min; RSI checklist:
+  // monitoring, suction, alternative airway, fluid and a vasopressor ready; propofol relatively contraindicated in
+  // hypovolaemia, 1.0–2.5 mg/kg). Educational thresholds, not a validated instrument.
+  airway: {
+    checklistItems: 5,
+    fao2Min: 0.8,
+    unstableMap: 65,
+    unstableHr: 110,
+    propofolMaxUnstable: 1,
+    apnoeaMaxS: 60,
+    spo2Min: 90,
+    spo2DropMax: 5,
+    mapMin: 55,
+    mapWindowS: 600,
+    oesophagealS: 60,
+    connectMaxS: 60,
+    cuffCmH2O: [20, 30],
+    sedationCheckS: 240,
+    treatmentWeight: 0.5,
+    safetyAwareness: 15,
+    safetyOesophageal: 25,
+    safetyExtraAttempt: 5,
+  },
 };
 
 // ── Fixes used by several Skills exercises (log matches) ──
@@ -187,6 +210,23 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
     diagnosisSet: 'challenge',
     diagnosis: 'anaesthetic-hypotension',
     onsetCommands: ['PUMP_BOLUS'],
+  },
+  {
+    scenarioId: 'septic-intubation',
+    topics: ['airway', 'shock', 'pharmacology', 'patientSafety'],
+    learningKey: 'learn.septicIntubation',
+    problemAtStart: true,
+    airway: { sepsis: true },
+    // A planned intubation, not a deterioration to notice: the steps (treatment), the circulation and oxygenation
+    // (stabilisation) and safety carry the score; recognition and response time are not scored.
+    weights: {
+      recognition: 0,
+      time: 0,
+      treatment: 2.5,
+      stabilisation: 1.5,
+      safety: 1.5,
+      efficiency: 0.5,
+    },
   },
   // ── Skills Training: ventilation troubleshooting (diagnosis + fix per variant) ──
   {

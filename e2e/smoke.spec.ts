@@ -1146,3 +1146,63 @@ test('airway: induction drugs with readback, laryngoscopy attempt in the real-ti
   );
   expect(steps).toBeGreaterThanOrEqual(6);
 });
+
+test('airway stage B: septic intubation — checklist, RSI, steps, airway debrief', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug&seed=2');
+  await page.getByTestId('module-challenges').click();
+  await page.getByTestId('difficulty-beginner').click();
+  await page.getByTestId('entry-intubation').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() =>
+    window.__resusEngine?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system'),
+  );
+  // Preparation from the airway panel's checklist; high-flow pre-oxygenation.
+  await page.getByTestId('action-airway').click();
+  for (const item of ['preoxygenation', 'monitoring', 'suction', 'plan', 'pressor'])
+    await page.getByTestId(`airway-check-${item}`).check();
+  await page.screenshot({ path: 'test-results/airway-checklist.png' });
+  await page.evaluate(() => {
+    const e = window.__resusEngine;
+    e?.dispatch({ type: 'SET_RESP_SUPPORT', support: 'hfnc' }, 'user');
+    e?.dispatch({ type: 'SET_OXYGEN', device: 'hfnc', flowLMin: 60, hfncFio2: 100 }, 'user');
+    e?.runFor(180);
+    e?.dispatch(
+      { type: 'DRUG_PUSH', productId: 'ketamine-racemic', dose: 1.5, unit: 'mg/kg' },
+      'user',
+    );
+    e?.dispatch(
+      { type: 'DRUG_PUSH', productId: 'rocuronium-10', dose: 1.2, unit: 'mg/kg' },
+      'user',
+    );
+    e?.runFor(60);
+  });
+  await page.getByTestId('airway-ett').click();
+  await expect(page.getByTestId('intubation')).toBeVisible();
+  await page.evaluate(() => window.__resusEngine?.runFor(10));
+  await page.getByTestId('tube-pass').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(6));
+  const placed = await page.evaluate(
+    () => window.__resusEngine?.getSnapshot().patient.airway.device === 'ett',
+  );
+  if (placed) {
+    for (let i = 0; i < 4; i++) await page.getByTestId('cuff-plus2').click();
+    await page.getByTestId('airway-connect').click();
+    await page.getByTestId('listen-rightUpper').click();
+    await page.getByTestId('listen-leftUpper').click();
+    await page.getByTestId('tube-fix').click();
+  }
+  await page.evaluate(() => window.__resusEngine?.runFor(120));
+  await page.keyboard.press('p');
+  await page.getByTestId('menu-end-session').click();
+  const section = page.getByTestId('debrief-airway');
+  await expect(section).toBeVisible();
+  await expect(page.getByTestId('airway-item-checklist')).toHaveAttribute('data-ok', 'true');
+  await expect(page.getByTestId('airway-item-preoxygenation')).toHaveAttribute('data-ok', 'true');
+  await expect(page.getByTestId('airway-item-dose')).toHaveAttribute('data-ok', 'true');
+  await page.screenshot({ path: 'test-results/airway-debrief.png', fullPage: true });
+  expect(errors).toEqual([]);
+});

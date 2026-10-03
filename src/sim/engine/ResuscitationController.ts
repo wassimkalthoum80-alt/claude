@@ -25,6 +25,10 @@ import {
   updateConditions,
 } from '../physiology/obstruction';
 import { clamp } from '../physiology/shapes';
+import { OXYGEN } from '../physiology/parameters';
+
+/** s — paralysis without adequate hypnosis before possible awareness is logged */
+const AWARENESS_S = 30;
 import { applyStimulus } from '../brain/CerebralModel';
 import {
   attemptDurationS,
@@ -85,6 +89,7 @@ type ResusCommand = Extract<
       | 'TUBE_DEPTH'
       | 'TUBE_FIX'
       | 'AIRWAY_CONNECT'
+      | 'AIRWAY_CHECKLIST'
       | 'DRUG_PUSH'
       | 'AIRWAY_INSERT'
       | 'AIRWAY_REMOVE'
@@ -120,6 +125,7 @@ const RESUS_TYPES = new Set<Command['type']>([
   'TUBE_DEPTH',
   'TUBE_FIX',
   'AIRWAY_CONNECT',
+  'AIRWAY_CHECKLIST',
   'AIRWAY_REMOVE',
   'TUBE_WITHDRAW',
   'ASSESS',
@@ -385,6 +391,13 @@ export class ResuscitationController {
         if (air.device === 'none' || air.insertion || air.laryngoscopy) return;
         h.setCircuit(true);
         h.logEvent('AIRWAY_CONNECTED', t, air.device);
+        return;
+      }
+      case 'AIRWAY_CHECKLIST': {
+        const list = s.patient.airway.checklist;
+        const has = list.includes(c.item);
+        if (c.done && !has) list.push(c.item);
+        else if (!c.done && has) list.splice(list.indexOf(c.item), 1);
         return;
       }
     }
@@ -656,7 +669,7 @@ export class ResuscitationController {
 
   /**
    * The learner starts an intubation attempt: the airway device comes off (apnoea for asleep laryngoscopy — an
-   * oxygen device at the face stays, apnoeic oxygenation), the blade is a strong noxious stimulus, and the outcome is
+   * nasal cannula or high-flow oxygen stays on, a face mask comes off for the blade), the blade is a strong noxious stimulus, and the outcome is
    * decided at the end from the conditions then (drugs keep acting during the attempt).
    */
   private startLaryngoscopy(technique: IntubationTechnique): void {
@@ -687,7 +700,9 @@ export class ResuscitationController {
       phase: 'blade',
       burp: false,
     };
-    h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}`);
+    // Alveolar O2 fraction at the start (≈ end-tidal O2): how well the lungs were denitrogenated (pre-oxygenation).
+    const fao2 = s.patient.gas.pao2Alveolar / OXYGEN.dryBarometric;
+    h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}|fao2 ${fao2.toFixed(2)}`);
   }
 
   private finishLaryngoscopy(): void {
@@ -733,7 +748,8 @@ export class ResuscitationController {
 
   /**
    * SIM-ASSUMPTION: possible awareness under paralysis — neuromuscular block ≥ 80 % while the hypnotic depth is
-   * below 0.8 (responsive range) with a circulation; logged once after 15 s. Immobility never certifies
+   * below 0.8 (responsive range) with a circulation; logged once after 30 s (a simultaneous RSI push leaves a
+   * short gap while the hypnotic reaches the brain — that is not counted). Immobility never certifies
    * unconsciousness; the bedside shows no direct sign (tachycardia/hypertension only through the stress response).
    */
   private trackAwareness(dt: number): void {
@@ -747,7 +763,7 @@ export class ResuscitationController {
     if (!paralysedAwake) return;
     const before = air.paralysedAwakeS;
     air.paralysedAwakeS += dt;
-    if (before < 15 && air.paralysedAwakeS >= 15)
+    if (before < AWARENESS_S && air.paralysedAwakeS >= AWARENESS_S)
       h.logEvent('AWARENESS_RISK', h.state.time, `depth ${p.brain.hypnoticDepth.toFixed(2)}`);
   }
 

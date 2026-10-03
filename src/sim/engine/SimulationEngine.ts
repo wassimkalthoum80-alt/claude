@@ -138,6 +138,9 @@ const MAX_MESSAGES = 50;
  * - React reads immutable snapshots via `subscribe`/`getSnapshot` (useSyncExternalStore);
  *   canvases read `signals` directly.
  */
+/** Oxygen devices worn over the mouth (off during laryngoscopy). */
+const FACE_MASKS: ReadonlySet<string> = new Set(['simple-mask', 'reservoir-mask', 'venturi']);
+
 export class SimulationEngine {
   readonly guidelines: GuidelineSet;
   private scenarioDef: ScenarioDefinition;
@@ -1646,6 +1649,11 @@ export class SimulationEngine {
   private gasInputs(): GasExchangeInputs {
     const p = this.state.patient;
     const vent = this.state.devices.ventilator;
+    // SIM-ASSUMPTION: the blade is in the mouth during asleep laryngoscopy — a face mask (simple, reservoir, Venturi)
+    // cannot stay on; a nasal cannula or high-flow oxygen can (apnoeic oxygenation during the attempt).
+    const l = p.airway.laryngoscopy;
+    const maskOff =
+      l !== null && l.technique === 'asleep' && FACE_MASKS.has(this.state.devices.oxygen.support);
     return {
       cardiacOutput: p.cardio.cardiacOutput,
       alveolarVentilation: p.gas.alveolarVentilation,
@@ -1653,7 +1661,9 @@ export class SimulationEngine {
       // otherwise breathes room air.
       // An oesophageal tube delivers the gas to the stomach: the pharynx is open to room air (apnoeic inflow).
       fio2: vent.standby
-        ? this.state.devices.oxygen.inspiredO2 / 100
+        ? maskOff
+          ? 0.21
+          : this.state.devices.oxygen.inspiredO2 / 100
         : vent.circuitConnected &&
             !(p.airway.device === 'ett' && p.airway.position === 'oesophageal')
           ? vent.active.fio2 / 100

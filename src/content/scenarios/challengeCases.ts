@@ -169,4 +169,92 @@ export const inductionHypotension: ScenarioDefinition = {
   ],
 };
 
-export const CHALLENGE_CASES: readonly ScenarioDefinition[] = [septicShock, inductionHypotension];
+/**
+ * Intubation of a septic, hypoxic patient in the emergency department (airway stage B): pneumonia with a
+ * consolidation shunt, relative hypovolaemia and vasoplegia, awake and breathing hard on a simple mask. The
+ * circulation depends on sympathetic tone, so a full propofol dose collapses it; ketamine (or a much reduced dose)
+ * with fluid and noradrenaline ready keeps it. A simple mask does not pre-oxygenate (alveolar O₂ ≈ 40 %); a
+ * reservoir mask, high-flow or NIV does. The laryngoscopic grade is drawn from the session seed.
+ */
+export const septicIntubation: ScenarioDefinition = {
+  ...baselinePatient,
+  id: 'septic-intubation',
+  titleKey: 'scenario.septicIntubation.title',
+  briefingKey: 'scenario.septicIntubation.briefing',
+  presentationKey: 'scenario.septicIntubation.presentation',
+  seed: 7303,
+  patient: {
+    ...baselinePatient.patient,
+    ageYears: 72,
+    weightKg: 78,
+    heightCm: 176,
+    heartRate: 92,
+    airway: 'none',
+    airwayGrade: 'random',
+    factors: { temperatureC: 38.9 },
+  },
+  oxygen: { support: 'simple-mask', flowLMin: { 'simple-mask': 6 } },
+  conditions: { consolidationShunt: 0.28 },
+  fluid: {
+    bloodVolumeChangeMl: -600,
+    interstitialChangeMl: 600,
+    factors: { capillaryLeak: 0.4, vasoplegia: 0.4, lungLeak: 0.1 },
+  },
+  pumps: [
+    { id: 'P1', kind: 'syringe', productId: 'propofol-2', protocolId: 'maintenance' },
+    { id: 'P2', kind: 'syringe', productId: 'sufentanil-5', protocolId: 'maintenance' },
+    { id: 'P3', kind: 'syringe', productId: 'noradrenaline-100', protocolId: 'infusion' },
+    { id: 'P4', kind: 'syringe', productId: 'noradrenaline-10', protocolId: 'bolus' },
+    { id: 'P5', kind: 'syringe', productId: null },
+    {
+      id: 'INF1',
+      kind: 'volumetric',
+      productId: 'sterofundin-iso',
+      protocolId: 'maintenance',
+      rateMlH: 100,
+      running: true,
+    },
+    { id: 'INF2', kind: 'volumetric', productId: 'sterofundin-iso', protocolId: 'bolus' },
+  ],
+  timeline: [{ at: 0, command: { type: 'SET_RESP_DRIVE', drive: 'strong' } }],
+  objectives: [],
+  maxDurationS: 1500,
+  endAfterArrestS: 180,
+  variants: [
+    { id: 'classic' },
+    {
+      id: 'frail',
+      patient: {
+        sex: 'female',
+        ageYears: 84,
+        weightKg: 58,
+        heightCm: 158,
+        reserves: { cardiacReserve: 0.75 },
+      },
+      fluid: { bloodVolumeChangeMl: -500 },
+    },
+    {
+      id: 'dry',
+      patient: { ageYears: 61, weightKg: 92, heightCm: 183 },
+      fluid: { bloodVolumeChangeMl: -900, factors: { vasoplegia: 0.3 } },
+    },
+  ],
+  hints: [
+    {
+      id: 'septic-intubation',
+      titleKey: 'hint.septicIntubation.title',
+      levels: [
+        'hint.septicIntubation.1',
+        'hint.septicIntubation.2',
+        'hint.septicIntubation.3',
+        'hint.septicIntubation.4',
+      ],
+    },
+  ],
+};
+
+export const CHALLENGE_CASES: readonly ScenarioDefinition[] = [
+  septicShock,
+  inductionHypotension,
+  septicIntubation,
+];

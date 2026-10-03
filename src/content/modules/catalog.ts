@@ -187,7 +187,10 @@ export const MODULE_CATALOG: ModuleCatalog = [
       {
         id: 'anaesthesia',
         titleKey: 'challenges.anaesthesia.title',
-        entries: [review(available('induction', 'challenges.induction', 'induction-hypotension'))],
+        entries: [
+          review(available('induction', 'challenges.induction', 'induction-hypotension')),
+          review(available('intubation', 'challenges.intubation', 'septic-intubation')),
+        ],
       },
       {
         id: 'categories',
@@ -319,6 +322,7 @@ export const MODULE_CATALOG: ModuleCatalog = [
           scenarioEntry('rhythm-trainer', 'rhythmTrainer', 'rhythm-trainer'),
           scenarioEntry('septic-shock', 'septicShock', 'septic-shock'),
           scenarioEntry('induction-hypotension', 'inductionHypotension', 'induction-hypotension'),
+          scenarioEntry('septic-intubation', 'septicIntubation', 'septic-intubation'),
           ...FLUID_PRESETS.map(([id, key]) => scenarioEntry(id, key, id)),
         ],
       },

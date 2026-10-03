@@ -214,11 +214,13 @@ export type {
   MyocardialArrestState,
   AirwayState,
   AirwayPosition,
+  AirwayChecklistItem,
   PatientConditions,
   Side,
   ShockOutcome,
 } from './state/ResuscitationState';
 export { SHOCKABLE_RHYTHMS } from './state/PatientState';
+export { AIRWAY_CHECKLIST } from './state/ResuscitationState';
 export type { RhythmCheckAssessment, AssessmentKind, ProcedureKind } from './types/commands';
 export {
   DEFIB,

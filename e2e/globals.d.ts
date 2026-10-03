@@ -14,6 +14,7 @@ interface Window {
       patient: {
         cardio: { rhythm: string };
         conditions: { pneumothorax: { side: 'left' | 'right' } | null };
+        airway: { device: string; position: string };
       };
     };
   };

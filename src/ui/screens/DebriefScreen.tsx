@@ -12,6 +12,7 @@ import styles from './Progress.module.css';
 import screen from './Screens.module.css';
 import { tone } from './scoreTone';
 import { Stars } from './Stars';
+import { AirwayDebrief } from './AirwayDebrief';
 
 const isKey = (k: string): k is I18nKey => k in en;
 const MARK_ICON = { effective: '✓', questionable: '!', dangerous: '✕', neutral: '·', unrated: '·' };
@@ -177,6 +178,8 @@ export function DebriefScreen({ data }: { data: DebriefData }) {
             </dl>
           </section>
         )}
+
+        {score.facts.airway && <AirwayDebrief airway={score.facts.airway} />}
 
         <div className={styles.columns}>
           <section className={styles.block}>

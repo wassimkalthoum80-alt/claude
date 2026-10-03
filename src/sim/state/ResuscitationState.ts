@@ -83,6 +83,16 @@ export interface MyocardialArrestState {
 /** Where an airway device actually lies. */
 export type AirwayPosition = 'correct' | 'oesophageal' | 'endobronchial';
 
+/** Items of the pre-intubation checklist the team confirms (logged; the debrief reads them). */
+export const AIRWAY_CHECKLIST = [
+  'preoxygenation',
+  'monitoring',
+  'suction',
+  'plan',
+  'pressor',
+] as const;
+export type AirwayChecklistItem = (typeof AIRWAY_CHECKLIST)[number];
+
 export interface AirwayState {
   device: AirwayDevice;
   position: AirwayPosition;
@@ -138,6 +148,8 @@ export interface AirwayState {
   paralysedAwakeS: number;
   /** team prompts already given (ids with the placement time) */
   prompts: string[];
+  /** pre-intubation checklist items confirmed so far */
+  checklist: AirwayChecklistItem[];
 }
 
 export type Side = 'left' | 'right';

@@ -1,6 +1,11 @@
 import { useCallback, useState } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
-import { RESP_SUPPORTS, type RespSupport, type SimulationState } from '../../../sim';
+import {
+  AIRWAY_CHECKLIST,
+  RESP_SUPPORTS,
+  type RespSupport,
+  type SimulationState,
+} from '../../../sim';
 import {
   airwayView,
   auscultate,
@@ -50,6 +55,10 @@ export function AirwayPanel() {
     useCallback((s: Readonly<SimulationState>) => airwayView(s), []),
     deepEqual,
   );
+  const checklist = useEngineSelector(
+    useCallback((s: Readonly<SimulationState>) => s.patient.airway.checklist, []),
+    deepEqual,
+  );
   const [lungs, setLungs] = useState<Auscultation | null>(null);
   const [epi, setEpi] = useState<Auscultation['epigastric'] | null>(null);
   /** the support after removal — extubation names it; there is no implied return to room air */
@@ -91,6 +100,25 @@ export function AirwayPanel() {
       )}
       {v.distendedAbdomen && (
         <div className={`${styles.finding} ${styles.warn}`}>{t('air.distended')}</div>
+      )}
+
+      {v.device !== 'ett' && !busy && (
+        <div className={styles.section} data-testid="airway-checklist">
+          <div className={styles.sectionTitle}>{t('air.prep.title')}</div>
+          {AIRWAY_CHECKLIST.map((item) => (
+            <label key={item} className={styles.row} style={{ justifyContent: 'flex-start' }}>
+              <input
+                type="checkbox"
+                checked={checklist.includes(item)}
+                onChange={(e) =>
+                  user({ type: 'AIRWAY_CHECKLIST', item, done: e.currentTarget.checked })
+                }
+                data-testid={`airway-check-${item}`}
+              />
+              {t(`air.prep.${item}`)}
+            </label>
+          ))}
+        </div>
       )}
 
       <div className={styles.section}>

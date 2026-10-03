@@ -17,7 +17,12 @@ import type {
   TempProbe,
 } from '../state/MonitorState';
 import type { VentMode } from '../state/VentilatorState';
-import type { AirwayPosition, DefibMode, Side } from '../state/ResuscitationState';
+import type {
+  AirwayChecklistItem,
+  AirwayPosition,
+  DefibMode,
+  Side,
+} from '../state/ResuscitationState';
 import type { AirwayDevice } from '../state/PatientState';
 import type { GravitySpeed } from '../state/PharmacologyState';
 import type { OxygenDevice, RespSupport, VenturiAdapter } from '../state/OxygenState';
@@ -200,6 +205,8 @@ export type Command =
   | { type: 'TUBE_FIX' }
   /** connect the ventilation (ventilator circuit) to the airway device */
   | { type: 'AIRWAY_CONNECT' }
+  /** confirm (or un-confirm) an item of the pre-intubation checklist */
+  | { type: 'AIRWAY_CHECKLIST'; item: AirwayChecklistItem; done: boolean }
   /** remove the airway device; `then` = the support connected next (extubation names it; default room air) */
   | { type: 'AIRWAY_REMOVE'; then?: RespSupport }
   /** cm — pull the tracheal tube back (corrects an endobronchial position) */

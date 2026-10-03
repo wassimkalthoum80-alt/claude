@@ -542,6 +542,43 @@ export const HISTORIES: Record<string, PatientHistory> = {
       'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
     ),
   },
+  'septic-intubation': {
+    caseId: 'SIM-6003',
+    diagnosis: t(
+      'Community-acquired pneumonia right lower lobe with sepsis; hypoxaemic respiratory failure',
+      'Ambulant erworbene Pneumonie rechter Unterlappen mit Sepsis; hypoxämisches Lungenversagen',
+    ),
+    procedure: t(
+      'Emergency department resuscitation bay; tracheal intubation decided',
+      'Schockraum der Notaufnahme; Intubation beschlossen',
+    ),
+    asa: 'IV E',
+    allergies: [NKDA],
+    conditions: [
+      t('Arterial hypertension', 'Arterielle Hypertonie'),
+      t('COPD GOLD 2, ex-smoker', 'COPD GOLD 2, Ex-Raucher'),
+    ],
+    medications: [
+      t('Ramipril 5 mg daily', 'Ramipril 5 mg täglich'),
+      t('Tiotropium inhaler', 'Tiotropium inhalativ'),
+    ],
+    findings: [
+      t(
+        'Temperature 38.9 °C, respiratory rate > 30/min, confused',
+        'Temperatur 38,9 °C, Atemfrequenz > 30/min, verwirrt',
+      ),
+      t('Little oral intake for three days', 'Seit drei Tagen kaum getrunken'),
+      t('No previous anaesthetic problems documented', 'Keine dokumentierten Narkoseprobleme'),
+    ],
+    fasting: t(
+      'Last meal 6 h ago — not fasted (RSI)',
+      'Letzte Mahlzeit vor 6 h — nicht nüchtern (RSI)',
+    ),
+    notes: t(
+      'The patient and the course differ from session to session.',
+      'Patient und Verlauf sind von Sitzung zu Sitzung verschieden.',
+    ),
+  },
   'induction-hypotension': {
     caseId: 'SIM-6002',
     diagnosis: t('Femoral neck fracture', 'Schenkelhalsfraktur'),
