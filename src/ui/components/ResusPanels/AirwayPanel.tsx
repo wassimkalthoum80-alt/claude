@@ -8,7 +8,7 @@ import {
   type BreathSound,
 } from '../../adapters/resusViewModel';
 import { useEngine } from '../../hooks/EngineContext';
-import { useT } from '../../hooks/UiContext';
+import { useT, useUi } from '../../hooks/UiContext';
 import { deepEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import styles from './ResusPanels.module.css';
 
@@ -44,6 +44,7 @@ const SOUND_KEY: Record<BreathSound, I18nKey> = {
  */
 export function AirwayPanel() {
   const t = useT();
+  const { setUi } = useUi();
   const engine = useEngine();
   const v = useEngineSelector(
     useCallback((s: Readonly<SimulationState>) => airwayView(s), []),
@@ -162,6 +163,15 @@ export function AirwayPanel() {
             {v.lastAttempt.view !== null && <> · {t('air.view', { grade: v.lastAttempt.view })}</>}
             {' · '}
             {t('air.attempts', { n: v.attempts })}
+            <button
+              type="button"
+              className={styles.btn}
+              style={{ marginLeft: 8 }}
+              onClick={() => setUi({ intubationClosedFor: null })}
+              data-testid="intubation-open"
+            >
+              {t('intub.open')}
+            </button>
           </div>
         )}
         <div className={styles.grid2} style={{ marginTop: 6 }}>

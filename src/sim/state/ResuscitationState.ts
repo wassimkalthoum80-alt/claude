@@ -103,11 +103,24 @@ export interface AirwayState {
     technique: 'asleep' | 'awake';
     /** s */
     startedAt: number;
-    /** s — when the attempt ends (success or failure decided then) */
-    endsAt: number;
+    /**
+     * s — when the attempt ends by itself (a resisting patient, the awake technique, a tube being passed); null
+     * while the blade is in and the learner decides
+     */
+    endsAt: number | null;
     /** the patient fights the attempt (no intubating conditions) */
     resisted: boolean;
+    /** blade in (looking) or tube being passed */
+    phase: 'blade' | 'passing';
+    /** external laryngeal pressure (BURP) applied */
+    burp: boolean;
   } | null;
+  /** cm — tube depth at the teeth (tracheal tube) */
+  tubeDepthCm: number;
+  /** mL — air in the tube cuff */
+  cuffMl: number;
+  /** the tube is fixed (tape/holder) */
+  tubeFixed: boolean;
   /** laryngoscopy attempts so far */
   attempts: number;
   /** 0..1 — cumulative airway trauma (swelling, blood) from failed attempts */

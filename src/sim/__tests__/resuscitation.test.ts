@@ -340,12 +340,16 @@ describe('airway devices', () => {
     };
     const e = arrested();
     cmd(e, { type: 'AIRWAY_INSERT', device: 'ett', position: 'oesophageal' }, 'user');
-    e.runFor(25);
+    e.runFor(3);
+    cmd(e, { type: 'TUBE_PASS' }, 'user');
+    e.runFor(6);
     const placed = events(e, 'AIRWAY_PLACED')[0]?.detail;
     expect(placed).toMatch(/^ett\|/);
     const e2 = arrested();
     cmd(e2, { type: 'AIRWAY_INSERT', device: 'ett' }, 'user');
-    e2.runFor(25);
+    e2.runFor(3);
+    cmd(e2, { type: 'TUBE_PASS' }, 'user');
+    e2.runFor(6);
     expect(events(e2, 'AIRWAY_PLACED')[0]?.detail).toBe(placed);
   });
 

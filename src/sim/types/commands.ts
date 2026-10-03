@@ -188,6 +188,18 @@ export type Command =
     }
   /** stop the laryngoscopy attempt in progress (reoxygenate) */
   | { type: 'AIRWAY_ABORT' }
+  /** external laryngeal pressure during laryngoscopy (on/off) */
+  | { type: 'LARYNGOSCOPY_BURP'; on: boolean }
+  /** pass the tube through the glottis (asleep laryngoscopy with the blade in) */
+  | { type: 'TUBE_PASS' }
+  /** add (or remove, negative) air in the tube cuff, mL */
+  | { type: 'CUFF_INFLATE'; ml: number }
+  /** set the tube depth at the teeth, cm */
+  | { type: 'TUBE_DEPTH'; cm: number }
+  /** fix the tube (tape/holder) */
+  | { type: 'TUBE_FIX' }
+  /** connect the ventilation (ventilator circuit) to the airway device */
+  | { type: 'AIRWAY_CONNECT' }
   /** remove the airway device; `then` = the support connected next (extubation names it; default room air) */
   | { type: 'AIRWAY_REMOVE'; then?: RespSupport }
   /** cm — pull the tracheal tube back (corrects an endobronchial position) */
@@ -311,6 +323,10 @@ export type ClinicalEventType =
   /** an airway device is in place (detail: "device|position") */
   | 'AIRWAY_PLACED'
   | 'AIRWAY_REMOVED'
+  /** the ventilation was connected to the airway device by the learner */
+  | 'AIRWAY_CONNECTED'
+  /** a tube step: cuff, depth or fixation (detail: "cuff|22 cmH2O", "depth|23 cm|correct", "fixed|23 cm") */
+  | 'TUBE_STEP'
   /** laryngoscopy started (detail: "attempt n|technique") */
   | 'LARYNGOSCOPY_START'
   /** an intubation attempt ended without a tube (detail: "failed|resisted|aborted|view n") */

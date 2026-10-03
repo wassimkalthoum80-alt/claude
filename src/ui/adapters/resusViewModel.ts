@@ -371,7 +371,10 @@ export function airwayView(s: Readonly<SimulationState>): AirwayView {
     laryngoscopy: a.laryngoscopy
       ? {
           technique: a.laryngoscopy.technique,
-          leftS: Math.max(0, Math.ceil(a.laryngoscopy.endsAt - s.time)),
+          leftS:
+            a.laryngoscopy.endsAt === null
+              ? 0
+              : Math.max(0, Math.ceil(a.laryngoscopy.endsAt - s.time)),
           attempt: a.attempts,
           // the view appears once the blade is in and the patient tolerates it
           view:

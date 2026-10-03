@@ -23,6 +23,7 @@ import { PumpEditor } from './ui/components/Perfusors/PumpEditor';
 import { BisPanel } from './ui/components/Bis/BisPanel';
 import { BalancePanel } from './ui/components/Balance/BalancePanel';
 import { ActionFlyout } from './ui/components/ResusPanels/ActionFlyout';
+import { IntubationOverlay } from './ui/components/Intubation/IntubationOverlay';
 import { PatientBanner } from './ui/components/Patient/PatientBanner';
 import { PatientHistoryPanel } from './ui/components/Patient/PatientHistoryPanel';
 import { PatientScene } from './ui/components/PatientScene/PatientScene';
@@ -61,6 +62,7 @@ function SharedOverlays() {
       <PumpEditor />
       <BisPanel />
       <BalancePanel />
+      <IntubationOverlay />
       <BriefingOverlay />
       <PauseMenu />
       <RunSummaryCard />

@@ -1,3 +1,4 @@
+import { idealTubeDepth, TUBE } from '../interventions/laryngoscopy';
 import { criticalClosingPressure } from '../physiology/CardiovascularModel';
 import { CARDIO, HEART_LUNG_CALIBRATION, LUNG_PRESETS, OXYGEN } from '../physiology/parameters';
 import { TROPONIN_BASELINE_NG_L } from '../physiology/HeartLungModel';
@@ -166,6 +167,10 @@ export function createInitialState(
         cuffLeak: 0,
         grade: typeof p.airwayGrade === 'number' ? p.airwayGrade : 1,
         laryngoscopy: null,
+        // A tube at the start is placed, blocked and fixed at its ideal depth.
+        tubeDepthCm: idealTubeDepth(p.sex),
+        cuffMl: p.airway === 'ett' ? TUBE.blockedMl : 0,
+        tubeFixed: p.airway === 'ett',
         attempts: 0,
         trauma: 0,
         lastAttempt: null,

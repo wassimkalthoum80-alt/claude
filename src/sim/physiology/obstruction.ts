@@ -55,8 +55,13 @@ export function airwayLeak(airway: AirwayState, peakPressure: number): number {
     case 'sga':
       return clamp(0.025 * Math.max(0, peakPressure - 25), 0, 0.5);
     case 'ett':
-      // SIM-ASSUMPTION: an under-inflated cuff loses a fixed fraction of each tidal volume (set by the scenario).
-      return clamp(airway.cuffLeak, 0, 0.8);
+      // An under-inflated cuff loses part of each tidal volume: the cuff pressure (learner) or a fixed fraction
+      // set by the scenario (fault), whichever is larger.
+      return clamp(
+        Math.max(airway.cuffLeak, cuffLeakFraction(cuffPressure(airway.cuffMl))),
+        0,
+        0.8,
+      );
     default:
       return 0;
   }
@@ -138,4 +143,21 @@ export function updateConditions(
     p.tension = Math.max(0, p.tension - (p.tension * dt) / 10);
   }
   return failed;
+}
+
+/**
+ * SIM-ASSUMPTION: tracheal-tube cuff — 4.5 cmH₂O per mL above 2 mL (7 mL ≈ 22 cmH₂O); target 20–30 cmH₂O; below 20
+ * a leak of up to half the tidal volume (none at 20).
+ */
+export const CUFF = { deadMl: 2, cmH2OPerMl: 4.5, target: [20, 30] as const } as const;
+
+/** cmH₂O in the cuff for its air volume. */
+export function cuffPressure(cuffMl: number): number {
+  return Math.min(80, Math.max(0, CUFF.cmH2OPerMl * (cuffMl - CUFF.deadMl)));
+}
+
+/** 0..0.5 — fraction of each tidal volume lost around the cuff at this pressure. */
+export function cuffLeakFraction(pressureCmH2O: number): number {
+  const target = CUFF.target[0];
+  return pressureCmH2O >= target ? 0 : 0.5 * (1 - pressureCmH2O / target);
 }

@@ -50,6 +50,8 @@ export interface UiState {
   balanceOpen: boolean;
   /** ALS action panel shown next to the action bar (one at a time) */
   actionPanel: ActionPanelId | null;
+  /** s — placement time of the tube whose intubation view the learner closed (null = shown while relevant) */
+  intubationClosedFor: number | null;
   /** screen layout: automatic (phone layout on small screens), or forced desktop / phone */
   layout: LayoutPref;
   /** visible screen of the phone layout */
@@ -148,6 +150,7 @@ export const WORKSPACE_CLOSED = {
   bisOpen: false,
   balanceOpen: false,
   actionPanel: null,
+  intubationClosedFor: null,
   mobileTab: 'monitor',
   historyOpen: false,
   drawer: null,
@@ -187,6 +190,7 @@ function initialState(): UiState {
     bisOpen: false,
     balanceOpen: false,
     actionPanel: null,
+    intubationClosedFor: null,
     layout: 'auto',
     mobileTab: 'monitor',
     historyOpen: false,

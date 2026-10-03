@@ -1,6 +1,7 @@
 import type { SeededRng } from '../core/rng';
 import type { PatientState } from '../state/PatientState';
 import type { AirwayPosition } from '../state/ResuscitationState';
+export { cuffLeakFraction, cuffPressure, CUFF } from '../physiology/obstruction';
 
 /** Cormack–Lehane grade of the laryngoscopic view (1 = full glottis … 4 = no laryngeal structures). */
 export type CormackLehane = 1 | 2 | 3 | 4;
@@ -73,7 +74,8 @@ export function intubatingConditions(
   const block = p.pharmacology.effects.neuromuscularBlock;
   // A fully paralysed patient cannot fight the blade even when awake: the tube can be placed, but the patient may
   // be aware (logged separately) and the stress response shows on the monitor.
-  if (depth < L.toleratedDepth && block < L.relaxedBlock) return { tolerated: false, relaxation: 0 };
+  if (depth < L.toleratedDepth && block < L.relaxedBlock)
+    return { tolerated: false, relaxation: 0 };
   const relaxation = block >= L.relaxedBlock ? 1 : 0.45 + 0.5 * (block / L.relaxedBlock);
   return { tolerated: true, relaxation };
 }
@@ -107,4 +109,45 @@ export function drawTubePosition(grade: CormackLehane, rng: SeededRng): AirwayPo
   if (u < oes) return 'oesophageal';
   if (u < oes + LARYNGOSCOPY.endobronchial) return 'endobronchial';
   return 'correct';
+}
+
+// ─────────────── the interactive procedure: view, tube pass, cuff, depth ───────────────
+
+/**
+ * SIM-ASSUMPTION (interactive intubation): passing the tube takes 5 s; external laryngeal pressure (BURP) improves a
+ * grade-2 or -3 view by one grade; ideal tube depth at the teeth 21 cm (women) / 23 cm (men), more than 3.5 cm beyond
+ * it is endobronchial (right main bronchus); cuff pressure 4.5 cmH₂O per mL above 2 mL (7 mL ≈ 22 cmH₂O), target
+ * 20–30 cmH₂O, below 20 a leak of up to half the tidal volume (none at 20), above 30 a mucosal-perfusion warning.
+ */
+export const TUBE = {
+  passS: 5,
+  idealDepthCm: { female: 21, male: 23 } as const,
+  endobronchialBeyondCm: 3.5,
+  /** cm — where a drawn "too far" tube stops / a well-placed one */
+  tooFarCm: 5,
+  wellPlacedCm: 1,
+  cuffMaxMl: 12,
+  /** mL — a tube placed by the instructor/scenario is blocked */
+  blockedMl: 7,
+} as const;
+
+/** The view the learner sees: BURP improves grades 2 and 3 by one. */
+export function effectiveGrade(grade: CormackLehane, burp: boolean): CormackLehane {
+  if (!burp || grade === 1 || grade === 4) return grade;
+  return (grade - 1) as CormackLehane;
+}
+
+/** cm — ideal tube depth at the teeth. */
+export function idealTubeDepth(sex: 'female' | 'male'): number {
+  return TUBE.idealDepthCm[sex];
+}
+
+/** Tracheal or endobronchial from the depth (an oesophageal tube stays oesophageal). */
+export function positionForDepth(
+  depthCm: number,
+  sex: 'female' | 'male',
+  current: AirwayPosition,
+): AirwayPosition {
+  if (current === 'oesophageal') return 'oesophageal';
+  return depthCm > idealTubeDepth(sex) + TUBE.endobronchialBeyondCm ? 'endobronchial' : 'correct';
 }

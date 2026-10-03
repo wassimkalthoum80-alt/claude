@@ -33,6 +33,17 @@ const push = (
 ) => e.dispatch({ type: 'DRUG_PUSH', productId, dose, unit }, 'user');
 const intubate = (e: ReturnType<typeof createEngine>, technique: 'asleep' | 'awake' = 'asleep') =>
   e.dispatch({ type: 'AIRWAY_INSERT', device: 'ett', technique }, 'user');
+/** Blade in for a moment, then pass the tube (5 s). */
+const passTube = (e: ReturnType<typeof createEngine>) => {
+  e.runFor(3);
+  e.dispatch({ type: 'TUBE_PASS' }, 'user');
+  e.runFor(6);
+};
+/** The steps after the tube is in: cuff to ≈ 22 cmH₂O, ventilation connected. */
+const blockAndConnect = (e: ReturnType<typeof createEngine>) => {
+  e.dispatch({ type: 'CUFF_INFLATE', ml: 7 }, 'user');
+  e.dispatch({ type: 'AIRWAY_CONNECT' }, 'user');
+};
 
 describe('intubating conditions', () => {
   it('an awake, unprepared patient fights the blade: no tube, a stress response, some trauma', () => {
@@ -58,14 +69,27 @@ describe('intubating conditions', () => {
     e.runFor(60);
     intubate(e);
     e.runFor(5);
-    // during the attempt: no airway device, no breaths through a circuit
-    expect(e.getSnapshot().patient.airway.laryngoscopy).not.toBeNull();
+    // during the attempt: no airway device, no breaths through a circuit; the learner decides when to pass
+    expect(e.getSnapshot().patient.airway.laryngoscopy?.phase).toBe('blade');
     expect(e.getSnapshot().patient.airway.device).toBe('none');
     e.runFor(20);
-    const s = e.getSnapshot();
+    expect(e.getSnapshot().patient.airway.laryngoscopy).not.toBeNull();
+    passTube(e);
+    let s = e.getSnapshot();
     expect(s.patient.airway.device).toBe('ett');
     expect(s.patient.airway.lastAttempt?.outcome).toBe('placed');
     expect(s.patient.airway.lastAttempt?.view).toBe(1);
+    // a placed tube is not blocked, fixed or connected by itself
+    expect(s.patient.airway.cuffMl).toBe(0);
+    expect(s.patient.airway.tubeFixed).toBe(false);
+    expect(s.devices.ventilator.circuitConnected).toBe(false);
+    blockAndConnect(e);
+    e.dispatch({ type: 'TUBE_FIX' }, 'user');
+    e.runFor(30);
+    s = e.getSnapshot();
+    expect(s.devices.ventilator.circuitConnected).toBe(true);
+    expect(s.patient.airway.leakFraction).toBe(0);
+    expect(s.patient.airway.tubeFixed).toBe(true);
     expect(events(e, 'AWARENESS_RISK')).toHaveLength(0);
   });
 
@@ -100,7 +124,7 @@ describe('intubating conditions', () => {
     e.dispatch({ type: 'SET_RHYTHM', rhythm: 'vf' }, 'instructor');
     e.runFor(3);
     intubate(e);
-    e.runFor(25);
+    passTube(e);
     expect(e.getSnapshot().patient.airway.device).toBe('ett');
   });
 
@@ -126,7 +150,7 @@ describe('difficult airway, attempts and rescue', () => {
     push(e, 'rocuronium-10', 1.2);
     e.runFor(60);
     intubate(e);
-    e.runFor(65);
+    passTube(e);
     const after1 = e.getSnapshot().patient.airway;
     expect(after1.attempts).toBe(1);
     if (after1.lastAttempt?.outcome !== 'placed') {
@@ -219,7 +243,8 @@ describe('team prompts (they ask, never act)', () => {
     push(e, 'rocuronium-10', 1.2);
     e.runFor(60);
     intubate(e);
-    e.runFor(25);
+    passTube(e);
+    blockAndConnect(e);
   };
 
   it('a plan for failure at the first laryngoscopy; no CO₂ after the tube moved into the oesophagus', () => {
@@ -251,5 +276,59 @@ describe('team prompts (they ask, never act)', () => {
     withInfusion.dispatch({ type: 'PUMP_START', pumpId: 'P1' }, 'user');
     withInfusion.runFor(200);
     expect(messages(withInfusion)).not.toContain('airway.prompt.maintenance');
+  });
+});
+
+describe('the steps after the tube is in', () => {
+  const placed = () => {
+    const e = createEngine(awake(), 3);
+    e.runFor(30);
+    push(e, 'etomidate-2', 0.3);
+    push(e, 'rocuronium-10', 1.2);
+    e.runFor(60);
+    intubate(e);
+    passTube(e);
+    return e;
+  };
+
+  it('an unblocked cuff leaks; 7 mL (≈ 22 cmH₂O) seals', () => {
+    const e = placed();
+    e.dispatch({ type: 'AIRWAY_CONNECT' }, 'user');
+    e.runFor(20);
+    expect(e.getSnapshot().patient.airway.leakFraction).toBeGreaterThan(0.3);
+    e.dispatch({ type: 'CUFF_INFLATE', ml: 7 }, 'user');
+    e.runFor(20);
+    expect(e.getSnapshot().patient.airway.leakFraction).toBe(0);
+  });
+
+  it('a tube pushed too deep is endobronchial (from the depth); pulling back to the ideal depth corrects it', () => {
+    const e = placed();
+    const sex = e.getSnapshot().patient.demographics.sex;
+    const ideal = sex === 'female' ? 21 : 23;
+    e.dispatch({ type: 'TUBE_DEPTH', cm: ideal + 5 }, 'user');
+    expect(e.getSnapshot().patient.airway.position).toBe('endobronchial');
+    e.dispatch({ type: 'TUBE_DEPTH', cm: ideal }, 'user');
+    expect(e.getSnapshot().patient.airway.position).toBe('correct');
+  });
+
+  it('BURP improves a grade-3 view to grade 2', () => {
+    const e = createEngine(awake(3), 3);
+    e.runFor(30);
+    push(e, 'etomidate-2', 0.3);
+    push(e, 'rocuronium-10', 1.2);
+    e.runFor(60);
+    intubate(e);
+    e.runFor(2);
+    e.dispatch({ type: 'LARYNGOSCOPY_BURP', on: true }, 'user');
+    passTube(e);
+    expect(e.getSnapshot().patient.airway.lastAttempt?.view).toBe(2);
+  });
+
+  it('the nurse asks to connect an unconnected tube', () => {
+    const e = placed();
+    e.runFor(25);
+    expect(e.getSnapshot().director.messages.map((m) => m.textKey)).toContain(
+      'airway.prompt.connect',
+    );
   });
 });

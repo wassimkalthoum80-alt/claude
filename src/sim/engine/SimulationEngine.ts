@@ -1783,7 +1783,13 @@ export class SimulationEngine {
       );
     }
     const placed = air.tubePlacedAt;
+    if (placed !== null && air.device === 'ett' && !s.devices.ventilator.circuitConnected) {
+      if (t - placed >= 20)
+        say(`connect@${placed.toFixed(1)}`, 'airway.prompt.connect', 'important', {}, 3);
+    }
     if (placed !== null && air.device === 'ett' && s.devices.ventilator.circuitConnected) {
+      if (air.leakFraction > 0.15)
+        say(`cuff@${placed.toFixed(1)}`, 'airway.prompt.cuff', 'passive');
       const since = t - placed;
       const etco2 = s.devices.monitor.numerics.etco2;
       if (since >= 20 && since < 90 && (etco2 === null || etco2 < 5))

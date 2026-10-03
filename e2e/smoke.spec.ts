@@ -1104,9 +1104,45 @@ test('airway: induction drugs with readback, laryngoscopy attempt in the real-ti
   await page.getByTestId('induction-give').click();
   await page.evaluate(() => window.__resusEngine?.runFor(75));
   // Laryngoscopy is an attempt with a duration; the outcome follows (capnography confirms, never a banner).
+  // Paused from here: sim time (and the seeded draws) advance only by runFor, so the attempt is reproducible.
+  await page.evaluate(() =>
+    window.__resusEngine?.dispatch({ type: 'SET_PAUSED', paused: true }, 'system'),
+  );
   await page.getByTestId('action-airway').click();
   await page.getByTestId('airway-ett').click();
   await expect(page.getByTestId('laryngoscopy')).toContainText('Versuch 1');
-  await page.evaluate(() => window.__resusEngine?.runFor(70));
+  // The intubation, step by step: laryngoscopic view → pass the tube → cuff → ventilate → check → secure.
+  const card = page.getByTestId('intubation');
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId('laryngoscope-view')).toBeVisible();
+  await expect(page.getByTestId('intubation-step')).toHaveAttribute('data-step', 'blade');
+  await page.screenshot({ path: 'test-results/intubation-view.png' });
+  await page.getByTestId('tube-pass').click();
+  await expect(page.getByTestId('tube-passing')).toBeVisible();
+  await page.evaluate(() => window.__resusEngine?.runFor(6));
   await expect(page.getByTestId('airway-outcome')).toBeVisible();
+  await expect(page.getByTestId('intubation-step')).toHaveAttribute('data-step', 'cuff');
+  for (let i = 0; i < 4; i++) await page.getByTestId('cuff-plus2').click();
+  await expect(page.getByTestId('cuff-state')).toHaveAttribute('data-state', 'ok');
+  await page.getByTestId('airway-connect').click();
+  await expect(page.getByTestId('airway-connect')).toBeDisabled();
+  await page.evaluate(() => window.__resusEngine?.runFor(8));
+  await page.getByTestId('listen-rightUpper').click();
+  await page.getByTestId('listen-leftUpper').click();
+  await page.getByTestId('listen-epigastrium').click();
+  // Every point gives a finding (the seed decides where the tube went — the learner must listen).
+  await expect(page.getByTestId('chest')).toContainText(/Atemgeräusch|Blubbern/);
+  await expect(page.getByTestId('chest')).toContainText('still');
+  await page.getByTestId('tube-fix').click();
+  await expect(page.getByTestId('tube-tape')).toBeVisible();
+  await page.screenshot({ path: 'test-results/intubation-steps.png' });
+  await page.getByTestId('intubation-done').click();
+  await expect(card).toBeHidden();
+  const steps = await page.evaluate(
+    () =>
+      window.__resusEngine?.eventLog.filter(
+        (e) => e.kind === 'event' && /TUBE_STEP|AIRWAY_CONNECTED/.test(e.event ?? ''),
+      ).length ?? 0,
+  );
+  expect(steps).toBeGreaterThanOrEqual(6);
 });

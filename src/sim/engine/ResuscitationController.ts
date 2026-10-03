@@ -29,9 +29,14 @@ import { applyStimulus } from '../brain/CerebralModel';
 import {
   attemptDurationS,
   attemptSuccess,
+  cuffPressure,
   drawTubePosition,
+  effectiveGrade,
+  idealTubeDepth,
   intubatingConditions,
   LARYNGOSCOPY,
+  positionForDepth,
+  TUBE,
   type IntubationTechnique,
 } from '../interventions/laryngoscopy';
 import type { MoietyId } from '../state/PharmacologyState';
@@ -74,6 +79,12 @@ type ResusCommand = Extract<
       | 'DEFIB_SHOCK'
       | 'AED_ANALYSE'
       | 'AIRWAY_ABORT'
+      | 'LARYNGOSCOPY_BURP'
+      | 'TUBE_PASS'
+      | 'CUFF_INFLATE'
+      | 'TUBE_DEPTH'
+      | 'TUBE_FIX'
+      | 'AIRWAY_CONNECT'
       | 'DRUG_PUSH'
       | 'AIRWAY_INSERT'
       | 'AIRWAY_REMOVE'
@@ -103,6 +114,12 @@ const RESUS_TYPES = new Set<Command['type']>([
   'DRUG_PUSH',
   'AIRWAY_INSERT',
   'AIRWAY_ABORT',
+  'LARYNGOSCOPY_BURP',
+  'TUBE_PASS',
+  'CUFF_INFLATE',
+  'TUBE_DEPTH',
+  'TUBE_FIX',
+  'AIRWAY_CONNECT',
   'AIRWAY_REMOVE',
   'TUBE_WITHDRAW',
   'ASSESS',
@@ -283,6 +300,7 @@ export class ResuscitationController {
         if (air.device !== 'ett' || !Number.isFinite(c.cm) || c.cm <= 0) return;
         // SIM-ASSUMPTION: pulling back 1–3 cm brings an endobronchial tube into the trachea; an oesophageal tube
         // stays oesophageal (it must be removed and replaced).
+        air.tubeDepthCm = Math.max(14, air.tubeDepthCm - c.cm);
         if (air.position === 'endobronchial' && c.cm >= 1) air.position = 'correct';
         h.logEvent('PROCEDURE_DONE', t, `tubeWithdraw|${c.cm} cm|${air.position}`);
         return;
@@ -314,13 +332,61 @@ export class ResuscitationController {
       case 'SET_IV_ACCESS':
         s.patient.conditions.ivAccess = c.access;
         return;
-      case 'SET_AIRWAY_POSITION':
-        // Tube migration (e.g. into the right main bronchus after repositioning); tracheal tubes only.
-        if (s.patient.airway.device === 'ett') s.patient.airway.position = c.position;
+      case 'SET_AIRWAY_POSITION': {
+        // Tube migration (e.g. into the right main bronchus after repositioning); tracheal tubes only. The depth
+        // at the teeth follows, so the learner can see it.
+        const air = s.patient.airway;
+        if (air.device !== 'ett') return;
+        air.position = c.position;
+        const ideal = idealTubeDepth(s.patient.demographics.sex);
+        if (c.position === 'endobronchial') air.tubeDepthCm = ideal + TUBE.tooFarCm;
+        else if (c.position === 'correct') air.tubeDepthCm = ideal + TUBE.wellPlacedCm;
         return;
+      }
       case 'SET_CUFF_LEAK':
         if (Number.isFinite(c.fraction)) s.patient.airway.cuffLeak = clamp(c.fraction, 0, 0.8);
         return;
+      case 'LARYNGOSCOPY_BURP': {
+        const l = s.patient.airway.laryngoscopy;
+        if (l && l.technique === 'asleep') l.burp = c.on;
+        return;
+      }
+      case 'TUBE_PASS': {
+        const l = s.patient.airway.laryngoscopy;
+        if (!l || l.technique !== 'asleep' || l.resisted || l.phase !== 'blade') return;
+        l.phase = 'passing';
+        l.endsAt = t + TUBE.passS;
+        return;
+      }
+      case 'CUFF_INFLATE': {
+        const air = s.patient.airway;
+        if (air.device !== 'ett' || !Number.isFinite(c.ml)) return;
+        air.cuffMl = clamp(air.cuffMl + c.ml, 0, TUBE.cuffMaxMl);
+        h.logEvent('TUBE_STEP', t, `cuff|${Math.round(cuffPressure(air.cuffMl))} cmH2O`);
+        return;
+      }
+      case 'TUBE_DEPTH': {
+        const air = s.patient.airway;
+        if (air.device !== 'ett' || !Number.isFinite(c.cm)) return;
+        air.tubeDepthCm = clamp(Math.round(c.cm * 2) / 2, 14, 30);
+        air.position = positionForDepth(air.tubeDepthCm, s.patient.demographics.sex, air.position);
+        h.logEvent('TUBE_STEP', t, `depth|${air.tubeDepthCm} cm|${air.position}`);
+        return;
+      }
+      case 'TUBE_FIX': {
+        const air = s.patient.airway;
+        if (air.device !== 'ett') return;
+        air.tubeFixed = true;
+        h.logEvent('TUBE_STEP', t, `fixed|${air.tubeDepthCm} cm`);
+        return;
+      }
+      case 'AIRWAY_CONNECT': {
+        const air = s.patient.airway;
+        if (air.device === 'none' || air.insertion || air.laryngoscopy) return;
+        h.setCircuit(true);
+        h.logEvent('AIRWAY_CONNECTED', t, air.device);
+        return;
+      }
     }
   }
 
@@ -390,12 +456,20 @@ export class ResuscitationController {
 
     // Airway: laryngoscopy attempt, insertion, leak, gastric insufflation.
     const air = p.airway;
-    if (air.laryngoscopy && t >= air.laryngoscopy.endsAt) this.finishLaryngoscopy();
+    if (air.laryngoscopy?.endsAt != null && t >= air.laryngoscopy.endsAt) this.finishLaryngoscopy();
     this.trackAwareness(dt);
     if (air.insertion && t >= air.insertion.completesAt) {
       air.device = air.insertion.device;
       air.position = air.insertion.position;
       air.insertion = null;
+      // Instructor/scenario placements: blocked, fixed, at a depth that matches the position.
+      if (air.device === 'ett') {
+        const ideal = idealTubeDepth(s.patient.demographics.sex);
+        air.cuffMl = TUBE.blockedMl;
+        air.tubeFixed = true;
+        air.tubeDepthCm =
+          ideal + (air.position === 'endobronchial' ? TUBE.tooFarCm : TUBE.wellPlacedCm);
+      }
       h.setCircuit(true);
       h.logEvent('AIRWAY_PLACED', t, `${air.device}|${air.position}`);
     }
@@ -599,12 +673,19 @@ export class ResuscitationController {
     applyStimulus(s.patient.brain, 'laryngoscopy');
     const cond = intubatingConditions(s.patient, technique);
     const resisted = !cond.tolerated;
+    // The learner drives an asleep laryngoscopy (blade in → pass the tube); a resisting patient and the awake
+    // (flexible-scope) technique end by themselves.
     air.laryngoscopy = {
       technique,
       startedAt: t,
-      endsAt:
-        t + (resisted ? LARYNGOSCOPY.resistS : attemptDurationS(air.grade, air.trauma, technique)),
+      endsAt: resisted
+        ? t + LARYNGOSCOPY.resistS
+        : technique === 'awake'
+          ? t + attemptDurationS(air.grade, air.trauma, technique)
+          : null,
       resisted,
+      phase: 'blade',
+      burp: false,
     };
     h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}`);
   }
@@ -623,23 +704,30 @@ export class ResuscitationController {
       h.logEvent('INTUBATION_FAILED', t, 'resisted');
       return;
     }
+    const view = effectiveGrade(air.grade, l.burp);
     const cond = intubatingConditions(s.patient, l.technique);
-    const p = attemptSuccess(air.grade, cond, air.trauma, l.technique);
+    const p = attemptSuccess(view, cond, air.trauma, l.technique);
     if (!cond.tolerated || h.rng.next() >= p) {
       air.trauma = Math.min(1, air.trauma + LARYNGOSCOPY.traumaPerFailure);
-      air.lastAttempt = { outcome: cond.tolerated ? 'failed' : 'resisted', view: air.grade, at: t };
-      h.logEvent(
-        'INTUBATION_FAILED',
-        t,
-        `${cond.tolerated ? 'failed' : 'resisted'}|view ${air.grade}`,
-      );
+      air.lastAttempt = { outcome: cond.tolerated ? 'failed' : 'resisted', view, at: t };
+      h.logEvent('INTUBATION_FAILED', t, `${cond.tolerated ? 'failed' : 'resisted'}|view ${view}`);
       return;
     }
+    // The tube is in: not yet blocked, fixed or connected — those are the learner's next steps. Where it lies is
+    // found out with capnography and auscultation; a tube advanced too far shows at the teeth.
+    const drawn = drawTubePosition(view, h.rng);
+    const ideal = idealTubeDepth(s.patient.demographics.sex);
     air.device = 'ett';
-    air.position = drawTubePosition(air.grade, h.rng);
-    air.lastAttempt = { outcome: 'placed', view: air.grade, at: t };
+    air.tubeDepthCm = ideal + (drawn === 'endobronchial' ? TUBE.tooFarCm : TUBE.wellPlacedCm);
+    air.position =
+      drawn === 'oesophageal'
+        ? 'oesophageal'
+        : positionForDepth(air.tubeDepthCm, s.patient.demographics.sex, drawn);
+    air.cuffMl = 0;
+    air.tubeFixed = false;
+    air.lastAttempt = { outcome: 'placed', view, at: t };
     air.tubePlacedAt = t;
-    h.setCircuit(true);
+    h.setCircuit(false);
     h.logEvent('AIRWAY_PLACED', t, `ett|${air.position}`);
   }
 

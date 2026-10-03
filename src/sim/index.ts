@@ -234,7 +234,15 @@ export {
   AIRWAY_INSERTION_S,
   type RhythmClass,
 } from './interventions/resuscitation';
-export { tamponadeFilling, obstructiveFilling, lungCollapse } from './physiology/obstruction';
+export {
+  tamponadeFilling,
+  obstructiveFilling,
+  lungCollapse,
+  cuffPressure,
+  cuffLeakFraction,
+  CUFF,
+} from './physiology/obstruction';
+export { TUBE, effectiveGrade, idealTubeDepth } from './interventions/laryngoscopy';
 export type {
   AbgResult,
   DirectorCondition,
