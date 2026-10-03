@@ -13,6 +13,14 @@ const HR_BEATS = 5;
 const PPV_WINDOW_S = 15;
 /** beats averaged (median) for the ST measurement */
 const ST_BEATS = 8;
+/**
+ * s — time constant of the temperature probe reading towards core temperature.
+ * SIM-ASSUMPTION: a bladder or oesophageal probe follows core temperature with τ ≈ 60 s after it is placed (from
+ * room temperature, 24 °C); afterwards changes of core temperature show with the same lag.
+ */
+export const TEMP_PROBE_TAU_S = 60;
+/** °C — what a probe reads before it has warmed up */
+const ROOM_TEMP_C = 24;
 
 /**
  * Patient monitor: measures its numbers from the generated signals, like a real monitor.
@@ -33,8 +41,11 @@ export class MonitorDevice {
   private lastBreathTime = 0;
   private spo2History: { t: number; v: number }[] = [];
   private spo2Averaged = 99;
+  /** °C — probe reading (unrounded); null without a probe */
+  private probeC: number | null = null;
 
   reset(initial: MonitorNumerics, trueSpo2: number): void {
+    this.probeC = initial.temp;
     this.beats = [];
     this.ppvBeats = [];
     this.breathStartIndex = null;
@@ -70,13 +81,29 @@ export class MonitorDevice {
     this.breathStartIndex = co2.count;
   }
 
+  /** The probe warms to core temperature after it is placed and follows it with a lag (TEMP_PROBE_TAU_S). */
+  private trackTemperature(state: SimulationState, dt: number): void {
+    if (state.devices.monitor.tempProbe !== 'core') {
+      this.probeC = null;
+      return;
+    }
+    this.probeC = approach(
+      this.probeC ?? ROOM_TEMP_C,
+      state.patient.factors.temperatureC,
+      dt,
+      TEMP_PROBE_TAU_S,
+    );
+  }
+
   update(state: SimulationState, signals: SignalBank, dt: number): void {
     const mon = state.devices.monitor;
     if (state.time - this.lastBreathTime > 15) this.lastEtco2 = null;
     mon.numerics.etco2 = this.lastEtco2;
     this.trackOximeter(state, dt);
+    this.trackTemperature(state, dt);
     if (state.time - mon.lastRefresh < MONITOR_REFRESH_S - 1e-9) return;
     mon.lastRefresh = state.time;
+    mon.numerics.temp = this.probeC === null ? null : Math.round(this.probeC * 10) / 10;
 
     mon.numerics.hr = this.heartRate(state);
     mon.numerics.ppv = this.pulsePressureVariation(state, signals);

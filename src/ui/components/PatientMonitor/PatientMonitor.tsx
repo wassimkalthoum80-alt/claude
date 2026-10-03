@@ -83,6 +83,62 @@ function LimitStack({ high, low, className }: { high: string; low: string; class
 const flashClass = (p: 'high' | 'medium' | 'low' | null) =>
   p === 'high' ? 'flash-high' : p === 'medium' ? 'flash-medium' : '';
 
+/**
+ * Temperature: a numerics-only parameter (no waveform), shown as a slim strip like the numeric fields of real
+ * monitors. The probe can be connected or removed; the value opens its alarm limits.
+ */
+function TempStrip({
+  vm,
+  onOpenLimits,
+}: {
+  vm: ReturnType<typeof monitorViewModel>;
+  onOpenLimits: () => void;
+}) {
+  const t = useT();
+  const engine = useEngine();
+  const setProbe = (probe: 'core' | 'none') =>
+    engine.dispatch({ type: 'SET_TEMP_PROBE', probe }, 'user');
+  return (
+    <div className={styles.tempStrip} style={{ ['--ch' as string]: 'var(--temp)' }}>
+      <div className={styles.tempProbe}>
+        <span className={styles.waveLabel}>{t('monitor.temp')}</span>
+        {vm.tempProbe ? (
+          <>
+            <span className={styles.tempSite}>{t('monitor.tempProbe')}</span>
+            <button
+              type="button"
+              className={styles.tempButton}
+              onClick={() => setProbe('none')}
+              data-testid="temp-probe-remove"
+            >
+              {t('monitor.tempRemove')}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className={styles.tempButton}
+            onClick={() => setProbe('core')}
+            data-testid="temp-probe-connect"
+          >
+            {t('monitor.tempConnect')}
+          </button>
+        )}
+      </div>
+      <Tooltip id="temp" className={styles.tempNumeric} onActivate={onOpenLimits}>
+        <span
+          className={`num ${styles.tempValue} ${flashClass(vm.flash.temp)}`}
+          data-testid="temp-value"
+        >
+          {vm.tempProbe ? vm.temp || '--.-' : '---'}
+        </span>
+        <span className={styles.unitInline}>{t('monitor.tempUnit')}</span>
+        <LimitStack high={vm.limits.temp.high} low={vm.limits.temp.low} />
+      </Tooltip>
+    </div>
+  );
+}
+
 /** BIS numerics: index, SQI and EMG bars, BSV (with its window while filling) and the sensor status. */
 function BisNumericBlock({ vm }: { vm: ReturnType<typeof bisNumerics> }) {
   const t = useT();
@@ -261,6 +317,8 @@ export function PatientMonitor() {
         <span className={`num ${styles.bigValue} ${flashClass(vm.flash.etco2)}`}>{vm.etco2}</span>
         <span className={styles.unit}>mmHg</span>
       </MonitorRow>
+
+      <TempStrip vm={vm} onOpenLimits={open('temp')} />
 
       {bis.connected && (
         <MonitorRow

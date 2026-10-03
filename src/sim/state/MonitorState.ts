@@ -13,18 +13,23 @@ export type AlarmId =
   | 'ART_HIGH'
   | 'SPO2_HIGH'
   | 'ETCO2_LOW'
-  | 'ETCO2_HIGH';
+  | 'ETCO2_HIGH'
+  | 'TEMP_HIGH'
+  | 'TEMP_LOW';
 
 /** Parameters with adjustable alarm limits. */
 export type AlarmLimitParam =
-  'hr' | 'brady' | 'spo2' | 'desat' | 'artSys' | 'artMean' | 'etco2' | 'st';
+  'hr' | 'brady' | 'spo2' | 'desat' | 'artSys' | 'artMean' | 'etco2' | 'st' | 'temp';
 export type AlarmLimitBound = 'low' | 'high';
 
 /**
  * Monitor alarm limits (device settings). Units: hr, brady /min; spo2, desat %; artSys, artMean, etco2 mmHg;
- * st mm (± around 0). null = this parameter has no such bound (brady, desat: low only; st: high only).
+ * st mm (± around 0); temp °C. null = this parameter has no such bound (brady, desat: low only; st: high only).
  */
 export type AlarmLimits = Record<AlarmLimitParam, { low: number | null; high: number | null }>;
+
+/** Temperature probe: a core probe (bladder catheter or oesophageal) or none connected. */
+export type TempProbe = 'core' | 'none';
 
 /** ECG cable: 3 electrodes (RA, LA, LL → lead II) or 5 electrodes (+ RL/N and a chest electrode → V5). */
 export type EcgLeadSet = 3 | 5;
@@ -60,6 +65,8 @@ export interface MonitorNumerics {
   stV: number | null;
   /** arbitrary units — pleth pulse amplitude (1 ≈ healthy baseline) */
   perfusionIndex: number;
+  /** °C — probe temperature (0.1 °C); null without a probe */
+  temp: number | null;
 }
 
 export interface MonitorState {
@@ -71,4 +78,6 @@ export interface MonitorState {
   ecgLeads: EcgLeadSet;
   /** adjustable alarm limits (start at the defaults, changed only by logged commands) */
   alarmLimits: AlarmLimits;
+  /** temperature probe connected to the monitor */
+  tempProbe: TempProbe;
 }

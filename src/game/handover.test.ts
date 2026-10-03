@@ -53,7 +53,6 @@ function transfer(preset: RealtimePreset, w: InfectionEngine, seed = 4) {
 const { w, preset } = deteriorated();
 
 describe('handover calibration (ward values on the ICU monitor)', () => {
-
   it('the ward reports a deteriorated patient', () => {
     expect(preset.map < 65 || preset.spo2 < 90).toBe(true);
     expect(preset.lactate).toBeGreaterThan(2);

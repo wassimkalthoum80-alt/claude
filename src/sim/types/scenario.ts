@@ -2,7 +2,7 @@ import type { OxygenDevice, RespSupport, VenturiAdapter } from '../state/OxygenS
 import type { CprQualityPreset } from '../state/CPRState';
 import type { AirwayDevice, LungPreset, PhysiologyReserves, RhythmId } from '../state/PatientState';
 import type { VentSettings } from '../state/VentilatorState';
-import type { EcgLeadSet } from '../state/MonitorState';
+import type { EcgLeadSet, TempProbe } from '../state/MonitorState';
 import type { PatientFactors } from '../state/BrainState';
 import type { Command } from './commands';
 import type { FluidInit } from '../fluid/init';
@@ -90,8 +90,8 @@ export interface ScenarioDefinition {
    * steady state; the patient's baseline physiology is calibrated under them.
    */
   pumps?: ScenarioPump[];
-  /** monitor configuration at the start (default: 3-electrode ECG) */
-  monitor?: { ecgLeads: EcgLeadSet; bis?: boolean };
+  /** monitor configuration at the start (default: 3-electrode ECG, core temperature probe) */
+  monitor?: { ecgLeads: EcgLeadSet; bis?: boolean; tempProbe?: TempProbe };
   /** scripted commands, fired by the engine with source "scenario" */
   timeline: ScenarioEvent[];
   objectives: ScenarioObjective[];

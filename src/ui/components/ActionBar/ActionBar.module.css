@@ -2,7 +2,10 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  /* Short screens: every action stays reachable (scroll) instead of being cut off. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
   gap: clamp(3px, 0.45vh, 6px);
   padding: 8px;
   width: clamp(170px, 13.6vw, 250px);

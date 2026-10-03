@@ -17,6 +17,8 @@ const PRIORITY: Record<AlarmId, AlarmPriority> = {
   ST_DEVIATION: 'medium',
   ETCO2_LOW: 'medium',
   ETCO2_HIGH: 'medium',
+  TEMP_HIGH: 'medium',
+  TEMP_LOW: 'medium',
 };
 
 const RANK: Record<AlarmPriority, number> = { high: 0, medium: 1, low: 2 };
@@ -59,6 +61,8 @@ export class AlarmEngine {
     // EtCO2 is null when no breath reaches the sensor — that is APNEA/DISCONNECT, not EtCO2 LOW.
     if (below(n.etco2, lim.etco2.low)) active.add('ETCO2_LOW');
     if (above(n.etco2, lim.etco2.high)) active.add('ETCO2_HIGH');
+    if (above(n.temp, lim.temp.high)) active.add('TEMP_HIGH');
+    if (below(n.temp, lim.temp.low)) active.add('TEMP_LOW');
 
     // Below the desaturation / bradycardia limit, SpO2 LOW / HR LOW become high-priority alarms.
     const priorityOf = (id: AlarmId): AlarmPriority => {

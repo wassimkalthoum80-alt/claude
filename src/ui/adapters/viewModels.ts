@@ -22,6 +22,9 @@ export interface MonitorViewModel {
   etco2: string;
   /** pulse-pressure variation, '' when not measurable */
   ppv: string;
+  /** °C with one decimal; '' without a probe */
+  temp: string;
+  tempProbe: boolean;
   /** electrodes attached (3 → lead II only; 5 → lead II + V5) */
   ecgLeads: 3 | 5;
   /** ST deviation in mm with sign ("+0.4", "−1.2", "--") */
@@ -36,6 +39,7 @@ export interface MonitorViewModel {
     etco2: LimitPair;
     /** "±2.0" */
     st: string;
+    temp: LimitPair;
   };
   flash: {
     hr: AlarmPriority | null;
@@ -43,6 +47,7 @@ export interface MonitorViewModel {
     art: AlarmPriority | null;
     etco2: AlarmPriority | null;
     st: AlarmPriority | null;
+    temp: AlarmPriority | null;
   };
 }
 
@@ -58,6 +63,8 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
     artMean: formatNum(n.artMean, '--'),
     etco2: formatNum(n.etco2, '--'),
     ppv: n.ppv === null ? '' : String(n.ppv),
+    temp: n.temp === null ? '' : n.temp.toFixed(1),
+    tempProbe: s.devices.monitor.tempProbe === 'core',
     ecgLeads: s.devices.monitor.ecgLeads,
     stII: formatSt(n.stII),
     stV: formatSt(n.stV),
@@ -68,6 +75,10 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
       artMean: limitPair(lim.artMean),
       etco2: limitPair(lim.etco2),
       st: lim.st.high === null ? '' : `±${lim.st.high.toFixed(1)}`,
+      temp: {
+        high: lim.temp.high === null ? '' : lim.temp.high.toFixed(1),
+        low: lim.temp.low === null ? '' : lim.temp.low.toFixed(1),
+      },
     },
     flash: {
       hr: prio('VFIB', 'ASYSTOLE', 'HR_LOW', 'HR_HIGH'),
@@ -75,6 +86,7 @@ export function monitorViewModel(s: Readonly<SimulationState>): MonitorViewModel
       art: prio('ART_LOW', 'ART_HIGH'),
       etco2: prio('ETCO2_LOW', 'ETCO2_HIGH'),
       st: prio('ST_DEVIATION'),
+      temp: prio('TEMP_LOW', 'TEMP_HIGH'),
     },
   };
 }

@@ -274,3 +274,67 @@
   font-size: 0.8em;
   color: var(--text-dim);
 }
+
+/* Temperature: numerics-only strip under the waveform rows. */
+.tempStrip {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr clamp(112px, 8.8vw, 170px);
+  height: clamp(24px, 3vh, 34px);
+  border-top: 1px solid var(--divider);
+  color: var(--ch);
+}
+
+.tempProbe {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 96px;
+  border-right: 1px solid var(--divider);
+  font-size: 11px;
+}
+
+.tempProbe .waveLabel {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tempSite {
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+.tempButton {
+  padding: 1px 8px;
+  border: 1px solid var(--tile-border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.tempButton:hover {
+  color: var(--text);
+}
+
+.tempNumeric {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px 0 12px;
+  cursor: pointer;
+}
+
+.tempValue {
+  font-size: clamp(15px, 1.5vw, 22px);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tempNumeric .limits {
+  position: static;
+  margin-left: auto;
+  line-height: 1.05;
+}

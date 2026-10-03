@@ -23,6 +23,8 @@
   --spo2: #36c8ff;
   --art: #ff4040;
   --co2: #ffd23a;
+  /* Temperature: neutral white, like most monitors (no channel colour assigned by the colour convention) */
+  --temp: #e8eef4;
   /* Processed EEG */
   --eeg: #c7a4ff;
   --bsv: #ff9f43;

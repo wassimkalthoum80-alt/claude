@@ -199,10 +199,18 @@ export function createInitialState(
           stII: null,
           stV: null,
           perfusionIndex: perfusing ? 1 : 0,
+          temp:
+            (scenario.monitor?.tempProbe ?? 'core') === 'core'
+              ? Math.round(
+                  (scenario.patient.factors?.temperatureC ??
+                    defaultPatientFactors(p.ageYears).temperatureC) * 10,
+                ) / 10
+              : null,
         },
         alarms: [],
         lastRefresh: 0,
         ecgLeads: scenario.monitor?.ecgLeads ?? 3,
+        tempProbe: scenario.monitor?.tempProbe ?? 'core',
         alarmLimits: defaultAlarmLimits(),
       },
       bis: initialBisState(scenario.monitor?.bis ?? true),

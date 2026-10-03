@@ -23,6 +23,7 @@ export interface LimitSpec {
  * - artSys, artMean: ART LOW (high) / ART HIGH (medium) when systolic or mean is outside its limits
  * - etco2: EtCO2 LOW / HIGH (medium), only while breaths are detected
  * - st: ST deviation ±limit in either measured lead (medium)
+ * - temp: TEMP LOW / TEMP HIGH (medium), only with a probe connected; not changed by AutoLimits
  */
 export const ALARM_LIMIT_SPECS: Record<AlarmLimitParam, LimitSpec> = {
   hr: {
@@ -53,6 +54,11 @@ export const ALARM_LIMIT_SPECS: Record<AlarmLimitParam, LimitSpec> = {
     high: { min: 30, max: 80, step: 1, default: 45 },
   },
   st: { unit: 'mm', high: { min: 0.5, max: 5, step: 0.5, default: 2 } },
+  temp: {
+    unit: '°C',
+    low: { min: 30, max: 38, step: 0.1, default: 36 },
+    high: { min: 36, max: 42, step: 0.1, default: 39 },
+  },
 };
 
 export const ALARM_LIMIT_PARAMS = Object.keys(ALARM_LIMIT_SPECS) as AlarmLimitParam[];

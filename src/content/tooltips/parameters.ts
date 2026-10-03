@@ -22,7 +22,8 @@ export type TooltipId =
   | 'noFlow'
   | 'lowFlow'
   | 'st'
-  | 'bis';
+  | 'bis'
+  | 'temp';
 
 export interface Tooltip {
   title: string;
@@ -133,6 +134,11 @@ export const TOOLTIPS: Record<'en' | 'de', Record<TooltipId, Tooltip>> = {
         '≈ 40–60 is a common target during propofol anaesthesia — context-dependent; no guarantee of unconsciousness, analgesia or absence of recall. SQI = signal quality, EMG = muscle/high-frequency activity (dB), BSV = suppressed EEG in the last 63 s.',
       cpr: 'Low values in cardiac arrest reflect cerebral ischaemia, not anaesthetic depth.',
     },
+    temp: {
+      title: 'Core temperature (bladder or oesophageal probe)',
+      normal: '36.0–37.5 °C; fever ≥ 38.0 °C, hypothermia < 36.0 °C',
+      cpr: 'After return of circulation: avoid fever (> 37.7 °C) for at least 72 h (ERC post-resuscitation care).',
+    },
   },
   de: {
     hr: {
@@ -237,6 +243,11 @@ export const TOOLTIPS: Record<'en' | 'de', Record<TooltipId, Tooltip>> = {
       normal:
         '≈ 40–60 ist ein häufiger Zielbereich unter Propofol — kontextabhängig; keine Garantie für Bewusstlosigkeit, Analgesie oder fehlende Erinnerung. SQI = Signalqualität, EMG = Muskel-/Hochfrequenzaktivität (dB), BSV = supprimiertes EEG der letzten 63 s.',
       cpr: 'Niedrige Werte im Kreislaufstillstand spiegeln zerebrale Ischämie, nicht Narkosetiefe.',
+    },
+    temp: {
+      title: 'Kerntemperatur (Blasen- oder Ösophagussonde)',
+      normal: '36,0–37,5 °C; Fieber ≥ 38,0 °C, Hypothermie < 36,0 °C',
+      cpr: 'Nach Wiederkehr des Kreislaufs: Fieber (> 37,7 °C) mindestens 72 h vermeiden (ERC Postreanimationsbehandlung).',
     },
   },
 };

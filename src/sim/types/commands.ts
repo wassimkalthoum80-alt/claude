@@ -10,7 +10,12 @@ import type {
   RespiratoryDrive,
   RhythmId,
 } from '../state/PatientState';
-import type { AlarmLimitBound, AlarmLimitParam, EcgLeadSet } from '../state/MonitorState';
+import type {
+  AlarmLimitBound,
+  AlarmLimitParam,
+  EcgLeadSet,
+  TempProbe,
+} from '../state/MonitorState';
 import type { VentMode } from '../state/VentilatorState';
 import type { AirwayPosition, DefibMode, Side } from '../state/ResuscitationState';
 import type { AirwayDevice } from '../state/PatientState';
@@ -89,6 +94,8 @@ export type Command =
   | { type: 'SET_PATIENT_AGE'; ageYears: number }
   | { type: 'SET_ARREST_MODEL'; enabled: boolean }
   | { type: 'SET_ECG_LEADS'; leads: EcgLeadSet }
+  /** connect or remove the temperature probe */
+  | { type: 'SET_TEMP_PROBE'; probe: TempProbe }
   | { type: 'SET_ALARM_LIMIT'; param: AlarmLimitParam; bound: AlarmLimitBound; value: number }
   /** AutoLimits: set limits around the currently displayed values */
   | { type: 'ALARM_LIMITS_AUTO' }

@@ -917,6 +917,11 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await page.getByTestId('start-button').click();
   // The handover to the ward is offered only once the patient is stable enough for it (5 min observed).
   await expect(page.getByTestId('bridge-handover')).toHaveCount(0);
+  // Temperature monitoring: a core probe shows the course's temperature; it can be removed and reconnected.
+  await expect(page.getByTestId('temp-value')).toHaveText(/^3\d\.\d$/);
+  await page.getByTestId('temp-probe-remove').click();
+  await expect(page.getByTestId('temp-value')).toHaveText('---');
+  await page.getByTestId('temp-probe-connect').click();
   // The patient arrives as on the ward (room air); breathing / oxygen therapy follows the connected device: a simple
   // mask keeps the ventilator in standby.
   await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'room-air');

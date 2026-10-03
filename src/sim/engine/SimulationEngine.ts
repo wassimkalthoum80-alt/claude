@@ -858,6 +858,9 @@ export class SimulationEngine {
       case 'SET_ECG_LEADS':
         s.devices.monitor.ecgLeads = command.leads === 5 ? 5 : 3;
         break;
+      case 'SET_TEMP_PROBE':
+        s.devices.monitor.tempProbe = command.probe === 'core' ? 'core' : 'none';
+        break;
       case 'SET_ALARM_LIMIT': {
         const mon = s.devices.monitor;
         mon.alarmLimits = setAlarmLimit(

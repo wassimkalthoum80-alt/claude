@@ -24,6 +24,7 @@ const COLOR: Record<AlarmLimitParam, string> = {
   artMean: '--art',
   etco2: '--co2',
   st: '--ecg',
+  temp: '--temp',
 };
 
 const ALARMS: Record<AlarmLimitParam, AlarmId[]> = {
@@ -35,6 +36,7 @@ const ALARMS: Record<AlarmLimitParam, AlarmId[]> = {
   artMean: ['ART_LOW', 'ART_HIGH'],
   etco2: ['ETCO2_LOW', 'ETCO2_HIGH'],
   st: ['ST_DEVIATION'],
+  temp: ['TEMP_LOW', 'TEMP_HIGH'],
 };
 
 const num = (v: number | null) => (v === null ? '--' : String(v));
@@ -60,6 +62,7 @@ export function alarmLimitsViewModel(s: Readonly<SimulationState>): { rows: Alar
     artMean: num(n.artMean),
     etco2: num(n.etco2),
     st: formatSt(worstSt),
+    temp: n.temp === null ? '--' : n.temp.toFixed(1),
   };
   const critical = (id: AlarmId) => mon.alarms.some((a) => a.id === id && a.priority === 'high');
   return {

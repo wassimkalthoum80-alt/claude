@@ -152,7 +152,11 @@ describe('alarm limits view model', () => {
       'artMean',
       'etco2',
       'st',
+      'temp',
     ]);
+    // temperature: one decimal, as the probe shows it
+    expect(rows.find((r) => r.param === 'temp')?.now).toMatch(/^\d{2}\.\d$/);
+    expect(monitorViewModel(e.getSnapshot()).limits.temp).toEqual({ high: '39.0', low: '36.0' });
     const hr = rows.find((r) => r.param === 'hr');
     expect(hr?.low).toBe(60);
     expect(hr?.alarming).toBe(false);
