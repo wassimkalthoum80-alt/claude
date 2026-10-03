@@ -39,6 +39,11 @@ export function AirwayDebrief({ airway }: { airway: AirwayFacts }) {
           </li>
         ))}
       </ul>
+      {airway.notes?.map((n) => (
+        <p key={n} className={styles.dim} data-testid="airway-note">
+          ℹ {t(n as I18nKey)}
+        </p>
+      ))}
     </section>
   );
 }

@@ -122,7 +122,7 @@ describe('airway assessment (stage B)', () => {
     expect(s.improve.some((f) => f.key.startsWith('fb.improve.airway.'))).toBe(true);
   });
 
-  it('etomidate in sepsis earns the adrenal note; no laryngoscopy, no airway facts', () => {
+  it('etomidate in sepsis earns a neutral note; no laryngoscopy, no airway facts', () => {
     const e = make(4);
     e.runFor(30);
     user(e, { type: 'DRUG_PUSH', productId: 'etomidate-2', dose: 0.3, unit: 'mg/kg' });
@@ -130,7 +130,10 @@ describe('airway assessment (stage B)', () => {
     e.runFor(60);
     intubate(e);
     e.runFor(30);
-    expect(score(e).improve.map((f) => f.key)).toContain('fb.improve.airway.etomidateSepsis');
+    const sc = score(e);
+    // a teaching note, not a deduction
+    expect(sc.facts.airway?.notes).toContain('fb.note.airway.etomidateSepsis');
+    expect(sc.improve.map((f) => f.key)).not.toContain('fb.note.airway.etomidateSepsis');
     const idle = make(4);
     idle.runFor(60);
     expect(score(idle).facts.airway).toBeNull();
@@ -143,7 +146,7 @@ describe('airway assessment (stage B)', () => {
       expect(has(`debrief.airway.item.${id}`), id).toBe(true);
       expect(has(`fb.improve.airway.${id}`), id).toBe(true);
     }
-    for (const k of ['fb.improve.airway.etomidateSepsis', 'fb.well.airway.steps'])
+    for (const k of ['fb.note.airway.etomidateSepsis', 'fb.well.airway.steps'])
       expect(has(k), k).toBe(true);
   });
 });
@@ -179,10 +182,15 @@ describe('difficult airway (DAS) assessment', () => {
       attempt(e);
       user(e, { type: 'AIRWAY_CALL', call: 'help' });
       user(e, { type: 'AIRWAY_CALL', call: 'failedIntubation' });
+      // plan B fails, plan C (optimised mask) fails → CICO without waiting for a saturation threshold
       user(e, { type: 'AIRWAY_INSERT', device: 'sga' });
       user(e, { type: 'SET_VENT_SETTING', key: 'fio2', value: 100 });
-      for (let i = 0; i < 400 && e.getSnapshot().patient.gas.spo2 > 78; i++) e.runFor(1);
+      e.runFor(30);
+      user(e, { type: 'AIRWAY_INSERT', device: 'mask' });
+      user(e, { type: 'AIRWAY_MASK_ADJUNCT', on: true });
       e.runFor(25);
+      expect(e.getSnapshot().patient.airway.failedRescues).toEqual(['sga', 'mask']);
+      expect(e.getSnapshot().patient.airway.prompts).toContain('cico');
       user(e, { type: 'AIRWAY_CALL', call: 'cico' });
       user(e, { type: 'PROCEDURE', kind: 'cricothyroidotomy' });
       e.runFor(180);
@@ -205,6 +213,7 @@ describe('difficult airway (DAS) assessment', () => {
     expect(item(a, 'attemptLimit')).toBe(false);
     expect(item(a, 'declare')).toBe(false);
     expect(item(a, 'planB')).toBe(false);
-    expect(item(a, 'cico')).toBe(false);
+    // CICO is defined by failed rescue routes — none was tried, so the missing rescue (plan B) is what failed
+    expect(item(a, 'cico')).toBeNull();
   });
 });

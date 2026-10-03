@@ -168,18 +168,30 @@ describe('aspiration with a full stomach', () => {
     return a ? a.t : null;
   };
 
-  it('unprotected and unconscious, gastric contents are aspirated sooner or later; a blocked tube protects', () => {
-    const unprotected = [1, 2, 3, 4, 5].map((s) => firstAspiration(s, false));
-    expect(unprotected.filter((t) => t !== null).length).toBeGreaterThanOrEqual(2);
-    expect([1, 2, 3].map((s) => firstAspiration(s, true)).every((t) => t === null)).toBe(true);
-  });
+  it(
+    'unprotected and unconscious, gastric contents are aspirated sooner or later; a cuffed tube reduces it',
+    { timeout: 60000 },
+    () => {
+      const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+      const unprotected = seeds.map((s) => firstAspiration(s, false));
+      expect(unprotected.filter((t) => t !== null).length).toBeGreaterThanOrEqual(2);
+      // a correctly placed tube with an inflated cuff reduces, but does not abolish, the risk
+      const protectedRuns = seeds.map((s) => firstAspiration(s, true));
+      expect(protectedRuns.filter((t) => t !== null).length).toBeLessThan(
+        unprotected.filter((t) => t !== null).length,
+      );
+    },
+  );
 
   it('an aspiration adds consolidation shunt and the nurse reports it; suction finds gastric contents', () => {
     let e: Engine | null = null;
     for (let seed = 1; seed < 10 && !e; seed++) {
       const x = createEngine(fullStomach, seed);
       x.dispatch({ type: 'DRUG_PUSH', productId: 'propofol-1', dose: 2, unit: 'mg/kg' }, 'user');
-      x.dispatch({ type: 'DRUG_PUSH', productId: 'rocuronium-10', dose: 1.2, unit: 'mg/kg' }, 'user');
+      x.dispatch(
+        { type: 'DRUG_PUSH', productId: 'rocuronium-10', dose: 1.2, unit: 'mg/kg' },
+        'user',
+      );
       for (let i = 0; i < 20 && !x.getSnapshot().patient.airway.aspirated; i++) x.runFor(60);
       if (x.getSnapshot().patient.airway.aspirated) e = x;
     }

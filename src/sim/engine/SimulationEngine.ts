@@ -1819,17 +1819,18 @@ export class SimulationEngine {
       if (air.attempts >= 3) say('third', 'airway.prompt.third', 'critical', {}, 4);
     }
     if (air.aspirated) say('aspiration', 'airway.prompt.aspiration', 'critical', {}, 4);
+    // CICO (clinical review SA-AIR-01): failed intubation and both rescue routes failed (supraglottic airway and
+    // optimised face mask) — or one failed while the saturation falls; no fixed saturation-duration wait.
     const spo2Now = s.devices.monitor.numerics.spo2;
     const tracheal = air.device === 'ett' && air.position !== 'oesophageal';
-    const notVentilated =
+    const rescues = air.failedRescues.length;
+    if (
       !tracheal &&
       !air.insertion &&
-      (air.device === 'none' || air.leakFraction > 0.6 || !s.devices.ventilator.circuitConnected);
-    if (spo2Now !== null && spo2Now < 80 && notVentilated && air.attempts > 0) {
-      this.cicoSince ??= t;
-      if (t - this.cicoSince >= 20)
-        say('cico', 'airway.prompt.cico', 'critical', { spo2: spo2Now }, 4);
-    } else this.cicoSince = null;
+      air.attempts > 0 &&
+      (rescues >= 2 || (rescues === 1 && spo2Now !== null && spo2Now < 85))
+    )
+      say('cico', 'airway.prompt.cico', 'critical', { spo2: spo2Now ?? '--' }, 4);
     const placed = air.tubePlacedAt;
     if (placed !== null && air.device === 'ett' && !s.devices.ventilator.circuitConnected) {
       if (t - placed >= 20)
@@ -1840,7 +1841,9 @@ export class SimulationEngine {
         say(`cuff@${placed.toFixed(1)}`, 'airway.prompt.cuff', 'passive');
       const since = t - placed;
       const etco2 = s.devices.monitor.numerics.etco2;
-      if (since >= 20 && since < 90 && (etco2 === null || etco2 < 5))
+      // Clinical review SA-AIR-02: no trace = wrong place — reported after the first breaths, not after 20 s.
+      const breathing = air.connectedAt !== null ? t - air.connectedAt : since;
+      if (breathing >= 8 && since < 90 && (etco2 === null || etco2 < 5))
         say(`noco2@${placed.toFixed(1)}`, 'airway.prompt.noCo2', 'important', {}, 3);
       if (
         since >= 180 &&
@@ -1851,9 +1854,6 @@ export class SimulationEngine {
     }
     return out;
   }
-
-  /** s — since when the SpO₂ is below 80 % without ventilation after an intubation attempt (CICO prompt) */
-  private cicoSince: number | null = null;
 
   /** A hypnotic/sedative infusion is running (maintenance after induction). */
   private hypnoticInfusionRunning(): boolean {

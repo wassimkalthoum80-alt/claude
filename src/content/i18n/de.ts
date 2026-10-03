@@ -831,10 +831,13 @@ export const de: Record<I18nKey, string> = {
     'Ich sehe keine anhaltende CO₂-Kurve. Bitte Tubuslage und Ventilation sofort überprüfen.',
   'airway.prompt.maintenance':
     'Die Einleitungsmedikation wurde gegeben. Welche Analgesie und Sedierung soll weiterlaufen?',
-  'airway.prompt.second': 'Das war der zweite Fehlversuch. Wie ist der Plan — Larynxmaske, Maske, Hilfe holen?',
-  'airway.prompt.third': 'Dritter Fehlversuch. Erklären wir die Intubation für gescheitert und gehen zu Plan B?',
+  'airway.prompt.second':
+    'Das war der zweite Fehlversuch. Wie ist der Plan — Larynxmaske, Maske, Hilfe holen?',
+  'airway.prompt.third':
+    'Dritter Fehlversuch. Erklären wir die Intubation für gescheitert und gehen zu Plan B?',
   'airway.prompt.aspiration': 'Mageninhalt im Rachen — soll ich absaugen?',
-  'airway.prompt.cico': 'Sättigung {spo2} % und ich bekomme ihn nicht beatmet — cannot intubate, cannot oxygenate? Das Koniotomie-Set liegt bereit.',
+  'airway.prompt.cico':
+    'Sättigung {spo2} % und ich bekomme ihn nicht beatmet — cannot intubate, cannot oxygenate? Das Koniotomie-Set liegt bereit.',
   'air.intubate': 'Intubation (Laryngoskopie)',
   'air.intubateAwake': 'Wachintubation (topisch)',
   'air.attempt': 'Versuch {n}',
@@ -888,16 +891,24 @@ export const de: Record<I18nKey, string> = {
   'intub.retry': 'Neuer Versuch',
   'intub.open': 'Intubation anzeigen',
   'scenario.difficultAirway.title': 'Keine Sicht auf die Stimmbänder',
-  'scenario.difficultAirway.briefing': 'OP, elektive laparoskopische Cholezystektomie. Ihre Kollegin hat drei Minuten präoxygeniert und gerade Propofol und Rocuronium gegeben; die Patientin ist apnoisch. Sie übernehmen den Atemweg. Videolaryngoskop, Larynxmasken, Guedeltubus und ein Koniotomie-Set liegen im Saal; Sugammadex ist verfügbar.',
-  'scenario.difficultAirway.presentation': '46 J., BMI 40, gerade eingeleitet und apnoisch — Sie übernehmen den Atemweg.',
+  'scenario.difficultAirway.briefing':
+    'OP, elektive laparoskopische Cholezystektomie. Ihre Kollegin hat drei Minuten präoxygeniert und gerade Propofol und Rocuronium gegeben; die Patientin ist apnoisch. Sie übernehmen den Atemweg. Videolaryngoskop, Larynxmasken, Guedeltubus und ein Koniotomie-Set liegen im Saal; Sugammadex ist verfügbar.',
+  'scenario.difficultAirway.presentation':
+    '46 J., BMI 40, gerade eingeleitet und apnoisch — Sie übernehmen den Atemweg.',
   'challenges.difficultAirway.title': 'Keine Sicht auf die Stimmbänder',
-  'challenges.difficultAirway.desc': 'Unerwartet schwieriger Atemweg nach der Einleitung. Bei jedem Start ein anderer Ausweg.',
+  'challenges.difficultAirway.desc':
+    'Unerwartet schwieriger Atemweg nach der Einleitung. Bei jedem Start ein anderer Ausweg.',
   'hint.difficultAirway.title': 'Und jetzt — Sicht Grad 4',
-  'hint.difficultAirway.1': 'Versuche begrenzen: Lagerung, BURP, Videolaryngoskop optimieren — höchstens drei.',
-  'hint.difficultAirway.2': 'Gescheiterte Intubation erklären und Hilfe rufen. Ziel ist jetzt die Oxygenierung, nicht der Tubus.',
-  'hint.difficultAirway.3': 'Plan B: Larynxmaske. Plan C: Maske mit Guedeltubus und zwei Händen; wenn das geht, an Aufwachen denken (Sugammadex).',
-  'hint.difficultAirway.4': 'Nichts oxygeniert und die Sättigung fällt: CICO erklären und jetzt die Skalpell-Koniotomie durchführen.',
-  'learn.difficultAirway': 'Beim unerwartet schwierigen Atemweg zählt die Oxygenierung, nicht der Tubus: Versuche begrenzen, das Scheitern früh erklären, Larynxmaske, dann Maske — und wenn nichts oxygeniert, ohne Zögern den Atemweg über den Hals sichern.',
+  'hint.difficultAirway.1':
+    'Versuche begrenzen: Lagerung, BURP, Videolaryngoskop optimieren — höchstens drei.',
+  'hint.difficultAirway.2':
+    'Gescheiterte Intubation erklären und Hilfe rufen. Ziel ist jetzt die Oxygenierung, nicht der Tubus.',
+  'hint.difficultAirway.3':
+    'Plan B: Larynxmaske. Plan C: Maske mit Guedeltubus und zwei Händen; wenn das geht, an Aufwachen denken (Sugammadex).',
+  'hint.difficultAirway.4':
+    'Nichts oxygeniert und die Sättigung fällt: CICO erklären und jetzt die Skalpell-Koniotomie durchführen.',
+  'learn.difficultAirway':
+    'Beim unerwartet schwierigen Atemweg zählt die Oxygenierung, nicht der Tubus: Versuche begrenzen, das Scheitern früh erklären, Larynxmaske, dann Maske — und wenn nichts oxygeniert, ohne Zögern den Atemweg über den Hals sichern.',
   'air.video': 'Videolaryngoskop',
   'air.das.title': 'Schwieriger Atemweg (DAS)',
   'air.das.help': 'Hilfe rufen',
@@ -914,12 +925,17 @@ export const de: Record<I18nKey, string> = {
   'tl.k.ASPIRATION': 'Aspiration',
   'debrief.airway.item.attemptLimit': 'Höchstens drei Laryngoskopie-Versuche ({v})',
   'debrief.airway.item.declare': 'Gescheiterte Intubation erklärt (Teamruf)',
-  'debrief.airway.item.planB': 'Rettungsoxygenierung (Larynxmaske / Maske) {v} s nach dem ersten Fehlversuch',
+  'debrief.airway.item.planB':
+    'Rettungsoxygenierung (Larynxmaske / Maske) {v} s nach dem ersten Fehlversuch',
   'debrief.airway.item.cico': 'CICO → Tubus über den Hals in {v} s (≤ 120 s)',
-  'fb.improve.airway.attemptLimit': '{v} Laryngoskopie-Versuche: nach drei aufhören — jeder Versuch lässt den Atemweg schwellen und erschwert die Rettung.',
-  'fb.improve.airway.declare': 'Laut aussprechen: „Gescheiterte Intubation“ — dann wechselt das Team gemeinsam zum Rettungsplan.',
-  'fb.improve.airway.planB': 'Nach einem Fehlversuch zuerst oxygenieren: Larynxmaske (Plan B) oder Maske mit Guedeltubus und zwei Händen (Plan C).',
-  'fb.improve.airway.cico': 'Cannot intubate, cannot oxygenate: aussprechen und sofort die Skalpell-Koniotomie — jede Minute Hypoxie zählt.',
+  'fb.improve.airway.attemptLimit':
+    '{v} Laryngoskopie-Versuche: nach drei aufhören — jeder Versuch lässt den Atemweg schwellen und erschwert die Rettung.',
+  'fb.improve.airway.declare':
+    'Laut aussprechen: „Gescheiterte Intubation“ — dann wechselt das Team gemeinsam zum Rettungsplan.',
+  'fb.improve.airway.planB':
+    'Nach einem Fehlversuch zuerst oxygenieren: Larynxmaske (Plan B) oder Maske mit Guedeltubus und zwei Händen (Plan C).',
+  'fb.improve.airway.cico':
+    'Cannot intubate, cannot oxygenate: aussprechen und sofort die Skalpell-Koniotomie — jede Minute Hypoxie zählt.',
   'debrief.airway.title': 'Intubation',
   'debrief.airway.summary': '{n} Versuch(e) · Einleitung: {drug} {dose} mg/kg',
   'debrief.airway.crash':
@@ -972,8 +988,8 @@ export const de: Record<I18nKey, string> = {
   'fb.improve.airway.fixed': 'Den Tubus nach bestätigter Lage fixieren.',
   'fb.improve.airway.sedation':
     'Nach der Intubation lief keine Sedierung: Analgosedierung beginnen, bevor die Einleitungsmedikamente abklingen.',
-  'fb.improve.airway.etomidateSepsis':
-    'Etomidat bei Sepsis hemmt die Nebennierenrinde (relative Kontraindikation) — im Schock ist Ketamin eine Alternative.',
+  'fb.note.airway.etomidateSepsis':
+    'Etomidat verursacht häufig geringere Kreislaufveränderungen, kann aber insbesondere bei älteren Patienten und rascher Injektion eine Kreislaufdepression auslösen. Es hemmt die Nebennierenrinde; sein Platz bei Sepsis ist umstritten — Ketamin ist eine Alternative.',
   'fb.well.airway.firstPass': 'Im ersten Versuch intubiert, ohne Entsättigung.',
   'fb.well.airway.steps': 'Intubation Schritt für Schritt durchgeführt ({pct} % der Schritte).',
   'air.prep.title': 'Vor der Einleitung — Checkliste',
@@ -1115,6 +1131,12 @@ export const de: Record<I18nKey, string> = {
   'drugs.induction': 'Einleitung / Atemweg',
   'drugs.range': 'Produktbereich {min}–{max} {unit} (für diesen Patienten entscheiden)',
   'drugs.readback': '{name}: {total} {unit}, {ml} ml, intravenös',
+  'drugs.dosingWeight': 'Dosiergewicht {kg} kg ({basis}; tatsächlich {actual} kg)',
+  'drugs.basis.actual': 'tatsächliches Gewicht',
+  'drugs.basis.ideal': 'Idealgewicht',
+  'drugs.basis.lean': 'fettfreie Masse',
+  'drugs.basis.adjusted': 'adjustiertes Gewicht',
+  'drugs.basis.none': 'nicht gewichtsbezogen',
   'drugs.give': 'I.v. geben',
   'drugs.timers': 'Seit letzter Gabe',
   'drugs.ercNote':

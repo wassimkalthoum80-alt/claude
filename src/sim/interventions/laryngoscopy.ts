@@ -136,11 +136,7 @@ export const TUBE = {
  * tongue), then BURP improves a grade 2 or 3 by one more.
  * SIM-ASSUMPTION (airway stage C): one grade for the video laryngoscope (educational; real gains vary by blade).
  */
-export function effectiveGrade(
-  grade: CormackLehane,
-  burp: boolean,
-  video = false,
-): CormackLehane {
+export function effectiveGrade(grade: CormackLehane, burp: boolean, video = false): CormackLehane {
   const g = video && grade > 1 ? ((grade - 1) as CormackLehane) : grade;
   if (!burp || g === 1 || g === 4) return g;
   return (g - 1) as CormackLehane;

@@ -119,10 +119,10 @@ export const PD = {
   // phase-I block without fade (the TOF ratio follows the rocuronium part only).
   succinylcholine: { ce50: 1.5, gamma: 4, diaphragmFactor: 1.3 },
   // SIM-ASSUMPTION: etomidate — hypnotic Ce50 0.5 µg/mL (≈ 7× propofol potency, educational), respiratory
-  // depression Ce50 0.6 µg/mL (less than propofol at equi-hypnotic exposure); no direct cardiovascular depression
-  // in the model (Medi Know: keine Kardiodepression) — blood pressure can still fall when the sympathetic stress
-  // response ends with hypnosis.
-  etomidate: { hypnosisC50: 0.5, respC50: 0.6 },
+  // depression Ce50 0.6 µg/mL (less than propofol at equi-hypnotic exposure); no myocardial depression (Medi Know:
+  // keine Kardiodepression) but a modest arterial and venous dilation (clinical review SA-DRUG-04: hypotension
+  // possible, especially in older patients): up to 15 % SVR and 15 % venous tone, Ce50 0.6 µg/mL.
+  etomidate: { hypnosisC50: 0.5, respC50: 0.6, svrMax: 0.15, venousMax: 0.15, vascC50: 0.6 },
   // ng/mL. α: SVR and venous tone (stressed volume); β1 inotropy and chronotropy (net HR set by the reflexes).
   // SIM-ASSUMPTION (calibrated to healthy-volunteer data, see docs): MAP rises about linearly with dose over the
   // clinical range (≈ 100 mmHg per µg/kg/min awake, ≈ 220 under anaesthesia) — so the vascular effect must not
@@ -300,12 +300,15 @@ export function haemodynamics(
   const M = PD.midazolam;
   const X = PD.dexmedetomidine;
   const K = PD.ketamine;
+  const ET = PD.etomidate;
+  const etom = e.etomidate ?? 0;
   // Dexmedetomidine: central sympatholysis follows the effect site (slow); peripheral α2B vasoconstriction
   // follows the plasma concentration, so a rapid load gives transient hypertension.
   const svr =
     (1 - emax(mid, M.svrMax, M.c50)) *
     (1 - emax(dex, X.svrLowMax, X.svrLowC50) + X.svrHighMax * hill(dexPlasma, X.svrHighC50, 2)) *
     (1 - emax(p, P.svrMax, P.svrCe50)) *
+    (1 - emax(etom, ET.svrMax, ET.vascC50)) *
     (1 - emax(opioid, O.svrMax, O.bradyC50)) *
     (1 + N.svrMax * hill(alpha * na, N.ec50, N.svrHill)) *
     (1 -
@@ -319,6 +322,7 @@ export function haemodynamics(
   const venousTone =
     -emax(mid, M.venousMax, M.c50) -
     emax(p, P.venousMax, P.venousCe50) -
+    emax(etom, ET.venousMax, ET.vascC50) -
     emax(opioid, O.venousMax, O.bradyC50) +
     emax(alpha * na, N.venousMax, N.venousEc50) +
     emax(alpha * ad, A.venousMax, A.venousEc50) +

@@ -180,6 +180,10 @@ export interface AirwayState {
   calls: AirwayCall[];
   /** gastric contents were aspirated (once per session) */
   aspirated: boolean;
+  /** rescue devices that failed to ventilate (DAS: supraglottic airway; face mask counted when optimised) */
+  failedRescues: ('sga' | 'mask')[];
+  /** s — the ventilation was last connected to the learner's tube at this time (CO₂ check), null if not */
+  connectedAt: number | null;
 }
 
 export type Side = 'left' | 'right';

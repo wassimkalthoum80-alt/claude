@@ -54,7 +54,7 @@ export const SCORING_DEFAULTS: ScoringRules = {
   // Non-shockable rhythm: adrenaline "as soon as possible" (ERC 2025) — within 3 min full marks, none after 7 min.
   adrenaline: { fullS: 180, zeroS: 420 },
   alsTreatment: { ccf: 0.4, cause: 0.4, adrenaline: 0.2 },
-  alsSafety: { inappropriateShock: 20, wrongSide: 10, oesophageal: 25, oesophagealS: 60 },
+  alsSafety: { inappropriateShock: 20, wrongSide: 10, oesophageal: 25, oesophagealS: 30 },
   // Intubation (Medi Know Anästhesie-Skript: pre-oxygenation until end-tidal O₂ > 80 %, ≈ 3 min; RSI checklist:
   // monitoring, suction, alternative airway, fluid and a vasopressor ready; propofol relatively contraindicated in
   // hypovolaemia, 1.0–2.5 mg/kg). Educational thresholds, not a validated instrument.
@@ -63,23 +63,25 @@ export const SCORING_DEFAULTS: ScoringRules = {
     fao2Min: 0.8,
     unstableMap: 65,
     unstableHr: 110,
-    propofolMaxUnstable: 1,
+    // Reduced induction doses in shock (educational ceilings, CLINICAL REVIEW): propofol 1, ketamine 1.5,
+    // esketamine 0.75, etomidate 0.2 mg/kg (Medi Know ranges 1–2.5 / 1–2 / – / 0.15–0.3 mg/kg).
+    unstableMaxMgKg: { propofol: 1, ketamine: 1.5, esketamine: 0.75, etomidate: 0.2 },
     apnoeaMaxS: 60,
     spo2Min: 90,
     spo2DropMax: 5,
     mapMin: 55,
     mapWindowS: 600,
-    oesophagealS: 60,
-    connectMaxS: 60,
+    // No trace = wrong place: out within 30 s of the first breaths; ventilation connected within 30 s.
+    oesophagealS: 30,
+    connectMaxS: 30,
     cuffCmH2O: [20, 30],
     sedationCheckS: 240,
     // DAS 2015: at most three laryngoscopy attempts (+ one by an expert); declare the failure, oxygenate through
     // a supraglottic airway (plan B) or face mask (plan C); CICO → front-of-neck access without delay (plan D).
     maxAttempts: 3,
     planBMaxS: 180,
-    cicoSpo2: 80,
-    cicoSustainS: 20,
-    cicoMaxS: 120,
+    cicoSpo2: 85,
+    cicoMaxS: 60,
     treatmentWeight: 0.5,
     safetyAwareness: 15,
     safetyOesophageal: 25,
@@ -241,7 +243,14 @@ export const SCENARIO_SCORING: readonly ScenarioScoring[] = [
     learningKey: 'learn.difficultAirway',
     problemAtStart: true,
     airway: {},
-    weights: { recognition: 0, time: 0, treatment: 2.5, stabilisation: 1.5, safety: 1.5, efficiency: 0.5 },
+    weights: {
+      recognition: 0,
+      time: 0,
+      treatment: 2.5,
+      stabilisation: 1.5,
+      safety: 1.5,
+      efficiency: 0.5,
+    },
   },
   // ── Skills Training: ventilation troubleshooting (diagnosis + fix per variant) ──
   {

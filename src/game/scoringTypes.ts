@@ -160,8 +160,8 @@ export interface ScoringRules {
     /** mmHg / /min — at or beyond these at induction the patient counts as unstable */
     unstableMap: number;
     unstableHr: number;
-    /** mg/kg — largest propofol induction dose for an unstable patient */
-    propofolMaxUnstable: number;
+    /** mg/kg — largest induction dose per hypnotic (moiety) for an unstable patient */
+    unstableMaxMgKg: Readonly<Record<string, number>>;
     /** s — longest laryngoscopy (blade in → tube or stop) */
     apnoeaMaxS: number;
     /** % — lowest SpO₂ from induction to 2 min after the tube (or a fall of at most `spo2DropMax` from induction) */
@@ -184,10 +184,9 @@ export interface ScoringRules {
     maxAttempts: number;
     /** s — supraglottic airway or face mask after the first failed attempt within */
     planBMaxS: number;
-    /** % and s — SpO₂ below this for this long without a tracheal tube = can't intubate, can't oxygenate */
+    /** % — one failed rescue route and SpO₂ below this = can't intubate, can't oxygenate */
     cicoSpo2: number;
-    cicoSustainS: number;
-    /** s — CICO → tracheal tube (front of neck) within */
+    /** s — CICO → front-of-neck access started within */
     cicoMaxS: number;
     /** share of the airway score in the treatment score of an airway case (0..1) */
     treatmentWeight: number;

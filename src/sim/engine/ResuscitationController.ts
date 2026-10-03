@@ -17,6 +17,7 @@ import {
   REVERSIBLE_ROSC,
 } from '../interventions/resuscitation';
 import { getProduct } from '../pharmacology/formulary/products';
+import { pushDosingWeight } from '../pharmacology/pushDosing';
 import { doseToMl, type DoseUnit } from '../pharmacology/units';
 import {
   airwayLeak,
@@ -48,22 +49,30 @@ import type { SimulationState } from '../state/SimulationState';
 import type { ClinicalEventType, Command, CommandSource } from '../types/commands';
 import type { GuidelineSet } from '../types/guidelines';
 
-
 /**
  * SIM-ASSUMPTION (airway stage C): aspiration with a full stomach while airway reflexes are lost (hypnotic depth
  * ≥ 1 or neuromuscular block ≥ 80 %, with a circulation) and the airway is not protected by a blocked tracheal tube
  * (cuff ≥ 20 cmH₂O): hazard 1/2400 per s (≈ 2.5 % per unprotected minute), × (1 + insufflated gastric air / 300 mL);
+ * past a correctly placed tube with an inflated cuff 5 % of the base hazard (reduced, not abolished);
  * an aspiration adds 0.1 consolidation shunt (chemical pneumonitis), once per session.
  */
 const ASPIRATION_PER_S = 1 / 2400;
+/** volume loss beyond which a rescue device does not ventilate, and for how long (s) */
+const RESCUE_FAIL_LEAK = 0.6;
+const RESCUE_FAIL_S = 15;
 const ASPIRATION_GAS_ML = 300;
 const ASPIRATION_SHUNT = 0.1;
+/** residual aspiration hazard past a correctly placed tube with an inflated cuff (≥ 20 cmH₂O) */
+const ASPIRATION_CUFF_FACTOR = 0.05;
 
 /** s — scalpel cricothyroidotomy until the tube is in */
 const FONA_S = 45;
 
-/** s — paralysis without adequate hypnosis before possible awareness is logged */
-const AWARENESS_S = 30;
+/**
+ * s — cumulative paralysis without adequate hypnosis before possible awareness is logged (clinical review
+ * SA-DRUG-03): beyond the few seconds of onset overlap when hypnotic and relaxant are pushed together.
+ */
+const AWARENESS_S = 10;
 
 /** What the controller needs from the engine (the engine stays the only owner of the state). */
 export interface ResuscitationHost {
@@ -178,6 +187,12 @@ export class ResuscitationController {
   private syncPendingSince: number | null = null;
   private lastBreathCount = 0;
   private reliefAt: number | null = null;
+  /** s — rescue device not ventilating since; key of the insertion already logged; last device placement */
+  private rescueFailSince: number | null = null;
+  private rescueLogged: string | null = null;
+  private devicePlacedAt = 0;
+  /** s — onset of the current paralysed-and-awake episode */
+  private awakeOnset: number | null = null;
   private regurgitated = false;
 
   constructor(private readonly host: ResuscitationHost) {}
@@ -327,10 +342,11 @@ export class ResuscitationController {
       case 'TUBE_WITHDRAW': {
         const air = s.patient.airway;
         if (air.device !== 'ett' || !Number.isFinite(c.cm) || c.cm <= 0) return;
-        // SIM-ASSUMPTION: pulling back 1–3 cm brings an endobronchial tube into the trachea; an oesophageal tube
-        // stays oesophageal (it must be removed and replaced).
+        // SIM-ASSUMPTION: the tube lies tracheal once its depth at the teeth is within ideal + 3.5 cm; an
+        // oesophageal tube stays oesophageal (it must be removed and replaced).
+        // The position follows the depth at the teeth (clinical review SA-AIR-06), not the size of the step.
         air.tubeDepthCm = Math.max(14, air.tubeDepthCm - c.cm);
-        if (air.position === 'endobronchial' && c.cm >= 1) air.position = 'correct';
+        air.position = positionForDepth(air.tubeDepthCm, s.patient.demographics.sex, air.position);
         h.logEvent('PROCEDURE_DONE', t, `tubeWithdraw|${c.cm} cm|${air.position}`);
         return;
       }
@@ -413,6 +429,7 @@ export class ResuscitationController {
         const air = s.patient.airway;
         if (air.device === 'none' || air.insertion || air.laryngoscopy) return;
         h.setCircuit(true);
+        air.connectedAt = t;
         h.logEvent('AIRWAY_CONNECTED', t, air.device);
         return;
       }
@@ -423,6 +440,7 @@ export class ResuscitationController {
       }
       case 'AIRWAY_MASK_ADJUNCT':
         s.patient.airway.maskAdjunct = c.on;
+        this.rescueFailSince = null;
         return;
       case 'AIRWAY_CHECKLIST': {
         const list = s.patient.airway.checklist;
@@ -517,6 +535,7 @@ export class ResuscitationController {
           ideal + (air.position === 'endobronchial' ? TUBE.tooFarCm : TUBE.wellPlacedCm);
       }
       h.setCircuit(true);
+      this.devicePlacedAt = t;
       h.logEvent('AIRWAY_PLACED', t, `${air.device}|${air.position}${fona ? '|fona' : ''}`);
     }
     const connected = vent.circuitConnected && air.device !== 'none';
@@ -535,6 +554,7 @@ export class ResuscitationController {
       }
     }
     this.aspirationRisk(dt);
+    this.trackRescue(connected);
 
     // Reversible causes.
     if (updateConditions(p.conditions, connected, t, dt)) h.logEvent('NEEDLE_FAILED', t);
@@ -686,7 +706,11 @@ export class ResuscitationController {
     if (!Number.isFinite(dose) || dose <= 0) return reject('bolus-invalid');
     let ml: number;
     try {
-      ml = doseToMl({ value: dose, unit }, product.concentration, s.patient.demographics.weightKg);
+      ml = doseToMl(
+        { value: dose, unit },
+        product.concentration,
+        pushDosingWeight(productId, s.patient.demographics),
+      );
     } catch {
       return reject('unit-mismatch');
     }
@@ -706,6 +730,31 @@ export class ResuscitationController {
    * nasal cannula or high-flow oxygen stays on, a face mask comes off for the blade), the blade is a strong noxious stimulus, and the outcome is
    * decided at the end from the conditions then (drugs keep acting during the attempt).
    */
+  /**
+   * SIM-ASSUMPTION (clinical review SA-AIR-01): a face mask or supraglottic airway in place and connected that loses
+   * more than 60 % of the delivered volume for 15 s does not ventilate — logged once per insertion. A face mask
+   * counts as a failed rescue only when optimised (oral airway + two-handed technique). CICO = both failed.
+   */
+  private trackRescue(connected: boolean): void {
+    const h = this.host;
+    const t = h.state.time;
+    const air = h.state.patient.airway;
+    const rescue = connected && (air.device === 'mask' || air.device === 'sga');
+    if (!rescue || air.leakFraction <= RESCUE_FAIL_LEAK) {
+      this.rescueFailSince = null;
+      return;
+    }
+    this.rescueFailSince ??= t;
+    if (t - this.rescueFailSince < RESCUE_FAIL_S) return;
+    const device = air.device === 'sga' ? 'sga' : 'mask';
+    const optimised = device === 'sga' || air.maskAdjunct;
+    const key = `${device}|${optimised}@${this.devicePlacedAt}`;
+    if (this.rescueLogged === key) return;
+    this.rescueLogged = key;
+    if (optimised && !air.failedRescues.includes(device)) air.failedRescues.push(device);
+    h.logEvent('OXYGENATION_FAILED', t, `${device}|${optimised ? 'optimised' : 'basic'}`);
+  }
+
   /** Regurgitation and aspiration of gastric contents (full stomach, unprotected airway, reflexes lost). */
   private aspirationRisk(dt: number): void {
     const h = this.host;
@@ -719,11 +768,18 @@ export class ResuscitationController {
       air.position !== 'oesophageal' &&
       !air.insertion &&
       cuffPressure(air.cuffMl) >= CUFF.target[0];
-    if (!reflexesLost || protectedAirway) return;
-    const hazard = ASPIRATION_PER_S * (1 + air.gastricAirMl / ASPIRATION_GAS_ML) * dt;
+    if (!reflexesLost) return;
+    // A tracheal tube with an inflated cuff reduces, but does not abolish, aspiration (clinical review SA-AIR-06).
+    const hazard =
+      ASPIRATION_PER_S *
+      (protectedAirway ? ASPIRATION_CUFF_FACTOR : 1 + air.gastricAirMl / ASPIRATION_GAS_ML) *
+      dt;
     if (h.rng.next() >= hazard) return;
     air.aspirated = true;
-    p.conditions.consolidationShunt = Math.min(0.4, p.conditions.consolidationShunt + ASPIRATION_SHUNT);
+    p.conditions.consolidationShunt = Math.min(
+      0.4,
+      p.conditions.consolidationShunt + ASPIRATION_SHUNT,
+    );
     h.logEvent('ASPIRATION', h.state.time, `${Math.round(air.gastricAirMl)} mL gas`);
   }
 
@@ -759,7 +815,11 @@ export class ResuscitationController {
     // Alveolar O2 fraction at the start (≈ end-tidal O2): how well the lungs were denitrogenated (pre-oxygenation).
     const fao2 = s.patient.gas.pao2Alveolar / OXYGEN.dryBarometric;
     const blade = air.laryngoscopy.video ? '|video' : '';
-    h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}${blade}|fao2 ${fao2.toFixed(2)}`);
+    h.logEvent(
+      'LARYNGOSCOPY_START',
+      t,
+      `${air.attempts}|${technique}${blade}|fao2 ${fao2.toFixed(2)}`,
+    );
   }
 
   private finishLaryngoscopy(): void {
@@ -799,14 +859,15 @@ export class ResuscitationController {
     air.tubeFixed = false;
     air.lastAttempt = { outcome: 'placed', view, at: t };
     air.tubePlacedAt = t;
+    air.connectedAt = null;
     h.setCircuit(false);
     h.logEvent('AIRWAY_PLACED', t, `ett|${air.position}`);
   }
 
   /**
    * SIM-ASSUMPTION: possible awareness under paralysis — neuromuscular block ≥ 80 % while the hypnotic depth is
-   * below 0.8 (responsive range) with a circulation; logged once after 30 s (a simultaneous RSI push leaves a
-   * short gap while the hypnotic reaches the brain — that is not counted). Immobility never certifies
+   * below 0.8 (responsive range) with a circulation; counted from its onset and logged once at 10 s cumulative (the
+   * onset overlap of a simultaneous push stays below that). Immobility never certifies
    * unconsciousness; the bedside shows no direct sign (tachycardia/hypertension only through the stress response).
    */
   private trackAwareness(dt: number): void {
@@ -817,11 +878,21 @@ export class ResuscitationController {
       p.cardio.spontaneousCirculation &&
       p.pharmacology.effects.neuromuscularBlock >= 0.8 &&
       p.brain.hypnoticDepth < 0.8;
-    if (!paralysedAwake) return;
+    if (!paralysedAwake) {
+      this.awakeOnset = null;
+      return;
+    }
+    this.awakeOnset ??= h.state.time - dt;
     const before = air.paralysedAwakeS;
     air.paralysedAwakeS += dt;
+    // Logged once the exposure is beyond the onset overlap of a simultaneous push; the episode counts from its
+    // onset (detail), not from the moment of logging.
     if (before < AWARENESS_S && air.paralysedAwakeS >= AWARENESS_S)
-      h.logEvent('AWARENESS_RISK', h.state.time, `depth ${p.brain.hypnoticDepth.toFixed(2)}`);
+      h.logEvent(
+        'AWARENESS_RISK',
+        h.state.time,
+        `from ${this.awakeOnset.toFixed(1)}|depth ${p.brain.hypnoticDepth.toFixed(2)}`,
+      );
   }
 
   private procedure(kind: ProcedureArg, side?: Side): void {
@@ -878,7 +949,12 @@ export class ResuscitationController {
         const air = s.patient.airway;
         air.laryngoscopy = null;
         air.device = 'none';
-        air.insertion = { device: 'ett', position: 'correct', completesAt: t + FONA_S, frontOfNeck: true };
+        air.insertion = {
+          device: 'ett',
+          position: 'correct',
+          completesAt: t + FONA_S,
+          frontOfNeck: true,
+        };
         h.setCircuit(false);
         result = 'started';
         break;

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
-import type { SimulationState } from '../../../sim';
+import { pushDosingWeight, pushWeightBasis, type SimulationState } from '../../../sim';
 import { formatMmSs } from '../../adapters/format';
 import {
   drugTimers,
@@ -120,7 +120,7 @@ export function DrugsPanel() {
   );
 }
 
-const selectWeight = (s: Readonly<SimulationState>) => s.patient.demographics.weightKg;
+const selectDemographics = (s: Readonly<SimulationState>) => s.patient.demographics;
 
 /**
  * Induction and airway drugs (airway stage A): choose the drug, enter the dose per kg (prefilled from the product's
@@ -130,13 +130,16 @@ function InductionDrugs({ disabled }: { disabled: boolean }) {
   const t = useT();
   const engine = useEngine();
   const drugs = useMemo(() => inductionDrugs(), []);
-  const weightKg = useEngineSelector(selectWeight);
+  const demographics = useEngineSelector(selectDemographics);
   const [id, setId] = useState(drugs[0]?.productId ?? '');
   const drug = drugs.find((d) => d.productId === id) ?? drugs[0];
   const [dose, setDose] = useState<Record<string, number>>({});
   if (!drug) return null;
   const perKg = dose[drug.productId] ?? drug.typical;
-  const rb = pushReadback(drug, perKg, weightKg);
+  // The product's dosing weight (lean for propofol, ideal for rocuronium, actual for succinylcholine/sugammadex).
+  const dosingKg = pushDosingWeight(drug.productId, demographics);
+  const basis = pushWeightBasis(drug.productId);
+  const rb = pushReadback(drug, perKg, dosingKg);
   const unitLabel = drug.unit === 'mg/kg' ? 'mg/kg' : 'µg/kg';
   return (
     <div className={styles.section} data-testid="induction-drugs">
@@ -173,6 +176,13 @@ function InductionDrugs({ disabled }: { disabled: boolean }) {
       </div>
       <div className={styles.faint}>
         {t('drugs.range', { min: drug.min, max: drug.max ?? '–', unit: unitLabel })}
+      </div>
+      <div className={styles.faint} data-testid="induction-weight">
+        {t('drugs.dosingWeight', {
+          kg: Math.round(dosingKg),
+          basis: t(`drugs.basis.${basis}`),
+          actual: Math.round(demographics.weightKg),
+        })}
       </div>
       <div className={styles.finding} data-testid="induction-readback">
         {t('drugs.readback', {

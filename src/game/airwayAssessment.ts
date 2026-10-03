@@ -76,6 +76,8 @@ export interface AirwayFacts {
   /** final position of that tube (null: none, or removed) */
   finalPosition: 'correct' | 'endobronchial' | 'oesophageal' | null;
   items: AirwayItem[];
+  /** teaching notes without a score effect (i18n keys), e.g. etomidate in sepsis */
+  notes: string[];
   /** 0–100 — share of the applicable items met */
   score: number;
 }
@@ -254,20 +256,42 @@ export function airwayFacts(
             e.t > firstFailure && isEvent(e, 'AIRWAY_PLACED') && /^(sga|mask)\|/.test(detailOf(e)),
         );
   const securedAt = Math.min(oral?.t ?? Infinity, fona?.t ?? Infinity);
+  // CICO (clinical review SA-AIR-01): after a failed intubation both rescue routes failed (supraglottic airway and
+  // optimised face mask), or one failed and the saturation falls below `cicoSpo2` — no saturation-duration wait.
   let cicoAt: number | null = null;
-  if (firstFailure !== null && seriesLength(vitals) > 0) {
-    let run = 0;
-    for (let i = indexAt(vitals, firstFailure); i < seriesLength(vitals); i++) {
-      const t = vitals.t0 + i;
-      if (t >= securedAt) break;
-      const x = vitals.spo2[i];
-      run = x !== undefined && Number.isFinite(x) && x < A.cicoSpo2 ? run + 1 : 0;
-      if (run >= A.cicoSustainS) {
-        cicoAt = t - A.cicoSustainS;
+  if (firstFailure !== null) {
+    const failedRoutes = new Set<string>();
+    for (const e of log) {
+      if (e.t >= securedAt) break;
+      if (e.t < firstFailure || !isEvent(e, 'OXYGENATION_FAILED')) continue;
+      const [device, how] = detailOf(e).split('|');
+      if (how === 'optimised' && device) failedRoutes.add(device);
+      if (failedRoutes.size >= 2) {
+        cicoAt = e.t;
         break;
+      }
+      if (failedRoutes.size === 1 && cicoAt === null && seriesLength(vitals) > 0) {
+        for (let i = indexAt(vitals, e.t); i < seriesLength(vitals); i++) {
+          const t = vitals.t0 + i;
+          if (t >= securedAt) break;
+          const x = vitals.spo2[i];
+          if (x !== undefined && Number.isFinite(x) && x < A.cicoSpo2) {
+            cicoAt = t;
+            break;
+          }
+        }
       }
     }
   }
+  /** front-of-neck access started (the learner's decision; the tube follows 45 s later) */
+  const fonaStarted = log.find(
+    (e) =>
+      userCmd(e, 'PROCEDURE') &&
+      e.command.type === 'PROCEDURE' &&
+      e.command.kind === 'cricothyroidotomy' &&
+      (cicoAt === null || e.t >= cicoAt - 60),
+  );
+  const cicoAnswer = Math.min(fonaStarted?.t ?? Infinity, oral?.t ?? Infinity);
 
   const na = arrested;
   const items: AirwayItem[] = [
@@ -296,14 +320,12 @@ export function airwayFacts(
     },
     {
       id: 'dose',
+      // Clinical review SA-AIR-04: every hypnotic has a reduced-dose ceiling in an unstable patient — no drug name
+      // passes automatically; the circulation itself is assessed separately (lowest MAP).
       ok:
-        !unstable || !hyp?.p
+        !unstable || !hyp?.p || mgPerKg === null
           ? null
-          : hyp.p.moiety === 'propofol'
-            ? mgPerKg !== null && mgPerKg <= A.propofolMaxUnstable
-            : hyp.p.moiety === 'midazolam'
-              ? null
-              : true,
+          : mgPerKg <= (A.unstableMaxMgKg[hyp.p.moiety] ?? Infinity),
       value: mgPerKg === null ? null : Math.round(mgPerKg * 100) / 100,
     },
     { id: 'firstPass', ok: firstPass, value: starts.length },
@@ -312,8 +334,12 @@ export function airwayFacts(
     { id: 'map', ok: minMap === null ? null : minMap >= A.mapMin, value: minMap },
     {
       id: 'oesophageal',
-      ok: !oesophageal ? null : removedAt !== null && removedAt - (placedAt ?? 0) <= A.oesophagealS,
-      value: removedAt !== null && placedAt !== null ? Math.round(removedAt - placedAt) : null,
+      // From the first breaths through the tube (no trace = wrong place), not from the placement.
+      ok: !oesophageal
+        ? null
+        : removedAt !== null && removedAt - (connectedAt ?? removedAt) <= A.oesophagealS,
+      value:
+        removedAt !== null && connectedAt !== null ? Math.round(removedAt - connectedAt) : null,
     },
     {
       id: 'connect',
@@ -361,8 +387,11 @@ export function airwayFacts(
     },
     {
       id: 'cico',
-      ok: cicoAt === null ? null : Number.isFinite(securedAt) && securedAt - cicoAt <= A.cicoMaxS,
-      value: cicoAt !== null && Number.isFinite(securedAt) ? Math.round(securedAt - cicoAt) : null,
+      ok: cicoAt === null ? null : Number.isFinite(cicoAnswer) && cicoAnswer - cicoAt <= A.cicoMaxS,
+      value:
+        cicoAt !== null && Number.isFinite(cicoAnswer)
+          ? Math.round(Math.max(0, cicoAnswer - cicoAt))
+          : null,
     },
   );
   const applicable = items.filter((i) => i.ok !== null);
@@ -376,6 +405,7 @@ export function airwayFacts(
     placedAt,
     finalPosition: position,
     items,
+    notes: [],
     score: applicable.length === 0 ? 100 : Math.round((100 * met) / applicable.length),
   };
 }

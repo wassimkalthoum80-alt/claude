@@ -33,6 +33,7 @@ export {
 export { CPR_PRESETS, assessCprQuality } from './interventions/cprQuality';
 // Medications (phase A)
 export { FORMULARY, getProduct, searchFormulary } from './pharmacology/formulary/products';
+export { pushDosingWeight, pushWeightBasis } from './pharmacology/pushDosing';
 export {
   DRUG_CATEGORIES,
   type DrugCategory,

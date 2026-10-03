@@ -243,7 +243,7 @@ export function pkParams(
         2.5,
         15 * factors.hepaticFunction,
         40,
-        0.5,
+        1.2,
         d.weightKg,
         abw,
       );

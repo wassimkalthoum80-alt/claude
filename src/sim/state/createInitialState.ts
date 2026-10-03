@@ -185,6 +185,8 @@ export function createInitialState(
         frontOfNeck: false,
         calls: [],
         aspirated: false,
+        connectedAt: null,
+        failedRescues: [],
       },
       conditions: {
         pericardialMl: 0,

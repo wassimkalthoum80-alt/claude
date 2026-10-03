@@ -347,7 +347,8 @@ export function scoreSession(
         (airwayScored
           ? (airwayItem('awareness') === false ? r.airway.safetyAwareness : 0) +
             (airwayItem('oesophageal') === false && !als ? r.airway.safetyOesophageal : 0) +
-            r.airway.safetyExtraAttempt * Math.max(0, (airway?.attempts ?? 0) - 2)
+            r.airway.safetyExtraAttempt *
+              Math.max(0, (airway?.attempts ?? 0) - r.airway.maxAttempts)
           : 0),
     ),
   );
@@ -570,9 +571,9 @@ export function scoreSession(
     else well.push({ key: 'fb.well.fixed', vars: { s: Math.round(Math.max(0, fixedAt - onset)) } });
   }
   if (airwayScored && airway) {
-    // Etomidate in sepsis: a teaching note (kept among the first three after the most important missed steps).
+    // Etomidate in sepsis: a teaching note in the debrief, not a deduction (clinical review SA-DRUG-04).
     if (sc.airway?.sepsis && airway.hypnotic?.name.toLowerCase().startsWith('etomidat'))
-      improve.unshift({ key: 'fb.improve.airway.etomidateSepsis' });
+      airway.notes.push('fb.note.airway.etomidateSepsis');
     const missed = airway.items.filter((i) => i.ok === false);
     // Most consequential first: the order of AIRWAY_ITEMS follows the procedure; safety items lead.
     const lead = [

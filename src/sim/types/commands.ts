@@ -343,6 +343,8 @@ export type ClinicalEventType =
   | 'AIRWAY_CONNECTED'
   /** gastric contents regurgitated and aspirated (unprotected airway, full stomach) */
   | 'ASPIRATION'
+  /** a rescue device (face mask / supraglottic airway) in place does not ventilate (detail: device|optimised) */
+  | 'OXYGENATION_FAILED'
   /** a tube step: cuff, depth or fixation (detail: "cuff|22 cmH2O", "depth|23 cm|correct", "fixed|23 cm") */
   | 'TUBE_STEP'
   /** laryngoscopy started (detail: "attempt n|technique") */
