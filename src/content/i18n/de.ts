@@ -656,6 +656,8 @@ export const de: Record<I18nKey, string> = {
     'KDIGO-Urinkriterium Stadium 2 erfüllt: < 0,5 mL/kg/h über 12 h. Nur Einordnung — keine automatische Volumenempfehlung.',
   'bal.kdigo.stage3':
     'KDIGO-Urinkriterium Stadium 3 erfüllt: < 0,3 mL/kg/h über 24 h. Nur Einordnung — keine automatische Volumenempfehlung.',
+  'bal.kdigo.anuria':
+    'KDIGO-Urinkriterium Stadium 3: seit 12 h kein Urin (Anurie). Keine Urinableitung: Katheter, Schlauch und Harnverhalt prüfen — die Anurie ist erst bei sicherer Ableitung gesichert.',
   'bal.suctionTitle': 'SAUGER & SPÜLUNG',
   'bal.canister': 'Saugerinhalt',
   'bal.canisterIrrigation': 'davon Spülflüssigkeit',

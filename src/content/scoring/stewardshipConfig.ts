@@ -311,13 +311,24 @@ export const STEWARDSHIP_CONFIG: Readonly<Record<string, StewardshipConfig>> = {
         penalty: 6,
       },
       {
+        // urgent surgical/ICU assessment in fulminant colitis (IDSA/SHEA; clinical review SA-INF-06)
+        kind: 'procedure',
+        procedures: ['surgical-icu-review'],
+        from: { call: 'nurse.ileus' },
+        withinH: 4,
+        okKey: 'stw.chk.fulminantReview.ok',
+        key: 'stw.chk.fulminantReview.missed',
+        penalty: 8,
+      },
+      {
+        // imaging supports the assessment but is never a prerequisite for treatment
         kind: 'imaging',
         imaging: ['ct-abdomen'],
         from: { call: 'nurse.ileus' },
         withinH: 6,
         okKey: 'stw.chk.fulminantImaging.ok',
         key: 'stw.chk.fulminantImaging.missed',
-        penalty: 6,
+        penalty: 3,
       },
       {
         // contact precautions as soon as CDI is suspected
@@ -659,21 +670,22 @@ export const STEWARDSHIP_VARIANTS: Readonly<
       learningKey: 'stw.learn.obstruction',
       checks: [
         {
+          // the urgent pathway starts when sepsis needing source control is suspected (admission); imaging is a step
+          // on it and never resets the clock (clinical review SA-ABS-02)
           kind: 'imaging',
           imaging: ['sono-urinary', 'ct-abdomen'],
-          withinH: 12,
+          withinH: 4,
           okKey: 'stw.chk.renalImaging.ok',
           key: 'stw.chk.renalImaging.missed',
           penalty: 6,
         },
         {
-          // an infected obstructed system needs urgent decompression — escalating antibiotics does not replace it
+          // an infected obstructed system needs urgent decompression — escalating antibiotics does not replace it;
+          // requested within 6 h of the septic presentation (SSC: source control ideally within 6 h), counted from
+          // admission, not from the imaging finding; the urologist's own delay is not the learner's
           kind: 'procedure',
           procedures: ['urological-decompression'],
           adequateOnly: true,
-          from: {
-            finding: ['imaging.sono-urinary.hydronephrosis', 'imaging.ct-abdomen.obstruction'],
-          },
           withinH: 6,
           okKey: 'stw.chk.decompression.ok',
           key: 'stw.chk.decompression.missed',

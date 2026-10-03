@@ -1171,7 +1171,8 @@ export function scoreStewardship(input: StewardshipInput): StewardshipResult {
     (m) =>
       m.report.stage === 'test-result' &&
       (m.report.detailKey === 'micro.cdiff.rejected' ||
-        m.report.detailKey === 'micro.cdiff.repeat'),
+        m.report.detailKey === 'micro.cdiff.repeat' ||
+        m.report.detailKey === 'micro.cdiff.repeatNegative'),
   ).length;
   if (rejected) add('stw.rejectedTest', -w.rejectedTest * rejected, { n: rejected });
 

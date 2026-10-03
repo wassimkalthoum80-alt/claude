@@ -163,6 +163,7 @@ export class InfectionEngine {
   private dexamethasoneAtH: number | null = null;
   /** h — sample time of the last positive C. difficile test (repeat testing / test of cure is rejected) */
   private cdiffPositiveAtH: number | null = null;
+  private cdiffNegativeAtH: number | null = null;
   /** h of linezolid exposure after which platelets fall (seeded per patient) */
   private readonly linezolidFromH: number;
   /** per-patient marker responsiveness (seeded): PCT scale and fever response */
@@ -544,6 +545,7 @@ export class InfectionEngine {
     }
     if (procedure === 'endocarditis-team')
       effective = this.sites.some((x) => x.active && x.def.focus === 'valve');
+    if (procedure === 'surgical-icu-review') effective = this.cdi.active && this.cdiIleus();
     for (const m of this.mimics) {
       if (m.def.resolvedBy?.includes(procedure)) {
         m.treated = true;
@@ -618,6 +620,10 @@ export class InfectionEngine {
         positiveAtH: this.cdiffPositiveAtH,
         onPositive: () => {
           this.cdiffPositiveAtH = this.t;
+        },
+        negativeAtH: this.cdiffNegativeAtH,
+        onNegative: () => {
+          this.cdiffNegativeAtH = this.t;
         },
       },
       lib: this.library,
@@ -1131,6 +1137,7 @@ export class InfectionEngine {
       this.cdi.severity = 0;
       // the episode is over: a new symptomatic episode may be tested again
       this.cdiffPositiveAtH = null;
+      this.cdiffNegativeAtH = null;
       const pRec = c.recurrence[agent as keyof typeof c.recurrence] ?? c.recurrence.other;
       if (this.rng.next() < pRec * (ongoingDamage > 0.5 ? 1.5 : 1)) {
         this.cdi.recurrenceAtH =

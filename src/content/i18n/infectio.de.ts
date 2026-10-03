@@ -1181,13 +1181,20 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'proc.rehydration': 'Rehydratation (i.v. oder oral)',
   'proc.medication-review': 'Medikationsprüfung — delirogene Medikamente absetzen',
   'proc.endocarditis-team': 'Endokarditis-Team (Kardiologie, Herzchirurgie, Infektiologie)',
+  'proc.surgical-icu-review': 'Dringliche chirurgische und intensivmedizinische Beurteilung',
+  'stw.chk.fulminantReview.ok':
+    'Fulminante Kolitis: dringliche chirurgische und intensivmedizinische Beurteilung angefordert.',
+  'stw.chk.fulminantReview.missed':
+    'Fulminante Kolitis (Ileus): keine dringliche chirurgische und intensivmedizinische Beurteilung — Kolektomie früh erwägen; ohne Warten auf Bildgebung behandeln.',
   'lab.anc': 'Neutrophile (ANC)',
   'lab.vancomycinAuc24': 'Vancomycin-AUC₂₄ (Schätzung)',
   'specimen.legionella-pcr': 'Legionellen-PCR (Atemwegsmaterial)',
   'micro.cdiff.gdh-naat-positive-toxin-negative':
     'GDH/NAAT positiv, Toxin-Immunoassay negativ — Kolonisation oder CDI: klinische Entscheidung (ein negativer Toxintest schließt eine CDI nicht aus).',
   'micro.cdiff.repeat':
-    'Abgelehnt: Wiederholung innerhalb von 7 Tagen nach positivem Befund (keine Kontrolle auf Heilung).',
+    'Abgelehnt: keine routinemäßige Wiederholung innerhalb von 7 Tagen in derselben Durchfallepisode, unabhängig vom Vorbefund (keine Kontrolle auf Heilung).',
+  'micro.cdiff.repeatNegative':
+    'Nicht bearbeitet: eine Wiederholung innerhalb von 7 Tagen nach negativem Befund braucht neue Befunde (Verschlechterung, Ileus) — stattdessen den klinischen Verdacht neu bewerten.',
   'nurse.ileus': 'Bauch gebläht und gespannt, seit gestern kaum noch Stuhl.',
   'wd.pulmonaryEmbolism': 'Lungenarterienembolie',
   'wd.bloodstream': 'Blutstrominfektion ohne klaren Fokus',

@@ -1156,13 +1156,19 @@ export const infectioEn = {
   'proc.rehydration': 'Rehydration (i.v. or oral fluids)',
   'proc.medication-review': 'Medication review — stop deliriogenic drugs',
   'proc.endocarditis-team': 'Endocarditis team (cardiology, cardiac surgery, ID)',
+  'proc.surgical-icu-review': 'Urgent surgical and ICU assessment',
+  'stw.chk.fulminantReview.ok': 'Fulminant colitis: urgent surgical and ICU assessment requested.',
+  'stw.chk.fulminantReview.missed':
+    'Fulminant colitis (ileus): urgent surgical and ICU assessment was not requested — consider colectomy early; treat without waiting for imaging.',
   'lab.anc': 'Neutrophils (ANC)',
   'lab.vancomycinAuc24': 'Vancomycin AUC₂₄ (estimate)',
   'specimen.legionella-pcr': 'Legionella PCR (respiratory sample)',
   'micro.cdiff.gdh-naat-positive-toxin-negative':
     'GDH/NAAT positive, toxin immunoassay negative — colonisation or CDI: clinical decision (a negative toxin test does not exclude CDI).',
   'micro.cdiff.repeat':
-    'Rejected: repeat test within 7 days of a positive result (no test of cure).',
+    'Rejected: no routine repeat within 7 days in the same diarrhoeal episode, whatever the previous result (no test of cure).',
+  'micro.cdiff.repeatNegative':
+    'Not processed: a repeat within 7 days after a negative result needs new evidence (worsening, ileus) — the clinical suspicion is reassessed instead.',
   'nurse.ileus': 'Abdomen distended and tense, hardly any stool since yesterday.',
   'wd.pulmonaryEmbolism': 'Pulmonary embolism',
   'wd.bloodstream': 'Bloodstream infection without a clear focus',

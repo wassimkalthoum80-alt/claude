@@ -246,7 +246,9 @@ export type ProcedureId =
   /** multidisciplinary endocarditis team (cardiology, cardiac surgery, infectious diseases) */
   | 'endocarditis-team'
   /** therapeutic anticoagulation after bleeding-risk assessment (venous thromboembolism) */
-  | 'anticoagulation';
+  | 'anticoagulation'
+  /** urgent surgical and intensive-care assessment (fulminant C. difficile colitis, ileus/megacolon) */
+  | 'surgical-icu-review';
 
 export const PROCEDURES: readonly ProcedureId[] = [
   'remove-cvc',
@@ -263,6 +265,7 @@ export const PROCEDURES: readonly ProcedureId[] = [
   'medication-review',
   'endocarditis-team',
   'anticoagulation',
+  'surgical-icu-review',
 ];
 
 /** Procedures that act at once and are not source control (adjuncts, consults, supportive care). */
@@ -272,6 +275,7 @@ export const ADJUNCT_PROCEDURES: readonly ProcedureId[] = [
   'medication-review',
   'endocarditis-team',
   'anticoagulation',
+  'surgical-icu-review',
 ];
 
 export interface SourceControlAction {

@@ -656,6 +656,8 @@ export const en = {
     'KDIGO urine criterion stage 2 met: < 0.5 mL/kg/h for 12 h. Assessment only — no automatic fluid recommendation.',
   'bal.kdigo.stage3':
     'KDIGO urine criterion stage 3 met: < 0.3 mL/kg/h for 24 h. Assessment only — no automatic fluid recommendation.',
+  'bal.kdigo.anuria':
+    'KDIGO stage 3 urine criterion: no urine for 12 h (anuria). First check the catheter, tubing and for urinary retention — anuria is only confirmed once the collection is reliable.',
   'bal.suctionTitle': 'SUCTION & IRRIGATION',
   'bal.canister': 'Suction canister',
   'bal.canisterIrrigation': 'of which irrigation',

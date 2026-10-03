@@ -52,6 +52,10 @@ export interface SamplingInput {
     positiveAtH: number | null;
     /** records a positive result at this sample time */
     onPositive: () => void;
+    /** h — sample time of the last negative test in this episode (null: none) */
+    negativeAtH: number | null;
+    /** records a negative result at this sample time */
+    onNegative: () => void;
   };
   lib: InfectionLibrary;
   rng: SeededRng;
@@ -332,8 +336,9 @@ function culture(input: SamplingInput): ScheduledReport[] {
  * Two-step C. difficile algorithm (GDH or NAAT screen, then toxin immunoassay). SIM-ASSUMPTION: an active infection
  * is toxin-positive in 75 %; the rest — like toxigenic carriage — gives the discordant "GDH/NAAT positive, toxin
  * negative" result that needs clinical interpretation (a negative toxin assay does not exclude CDI). The lab rejects
- * formed stool (fewer than 3 unformed stools / 24 h) unless the request states ileus, and repeat tests within 7 days of
- * a positive result (no test of cure).
+ * formed stool (fewer than 3 unformed stools / 24 h) unless the request states ileus, and repeat tests within 7 days in
+ * the same diarrhoeal episode whatever the previous result (IDSA/SHEA; clinical review SA-INF-05) — after a negative
+ * result a repeat is accepted only with new evidence (ileus); no test of cure.
  */
 function cdiffTest(input: SamplingInput): ScheduledReport[] {
   const { now, specimenId, cdi, rng } = input;
@@ -347,6 +352,8 @@ function cdiffTest(input: SamplingInput): ScheduledReport[] {
   ];
   if (cdi.positiveAtH !== null && now - cdi.positiveAtH < COURSE.cdi.repeatRejectH)
     return result(false, 'micro.cdiff.repeat');
+  if (cdi.negativeAtH !== null && now - cdi.negativeAtH < COURSE.cdi.repeatRejectH && !cdi.ileus)
+    return result(false, 'micro.cdiff.repeatNegative');
   if (cdi.stoolsPer24h < 3 && !cdi.ileus) return result(false, 'micro.cdiff.rejected');
   if (cdi.active && rng.next() < COURSE.cdi.toxinPositive) {
     cdi.onPositive();
@@ -356,6 +363,7 @@ function cdiffTest(input: SamplingInput): ScheduledReport[] {
     cdi.onPositive();
     return result(true, 'micro.cdiff.gdh-naat-positive-toxin-negative');
   }
+  cdi.onNegative();
   return result(false, 'micro.cdiff.negative');
 }
 

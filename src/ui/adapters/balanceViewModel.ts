@@ -175,7 +175,7 @@ export interface KdigoHint {
 
 /**
  * KDIGO urine-output criterion over rolling windows (< 0.5 mL/kg/h for 6 h → stage 1, for 12 h → stage 2;
- * < 0.3 mL/kg/h for 24 h → stage 3). A teaching hint about a criterion — never a treatment recommendation
+ * < 0.3 mL/kg/h for 24 h or anuria for 12 h → stage 3). A teaching hint about a criterion — never a treatment recommendation
  * (in particular it never suggests fluid). Incomplete windows are named as such.
  */
 export function kdigoHint(
@@ -191,6 +191,9 @@ export function kdigoHint(
     return ledger.sum('urine', from, t + 60) / w / h;
   };
   if (t >= 24 * 3600 && rate(24) < 0.3) return { key: 'bal.kdigo.stage3', level: 'met' };
+  // Anuria for 12 h is stage 3 too (clinical review SA-REN-02) — named with the collection caveat.
+  if (t >= 12 * 3600 && ledger.sum('urine', t - 12 * 3600, t + 60) <= 0)
+    return { key: 'bal.kdigo.anuria', level: 'met' };
   if (t >= 12 * 3600 && rate(12) < 0.5) return { key: 'bal.kdigo.stage2', level: 'met' };
   if (t >= 6 * 3600 && rate(6) < 0.5) return { key: 'bal.kdigo.stage1', level: 'met' };
   if (t < 6 * 3600 && t >= 1800 && rate(6) < 0.5)

@@ -46,6 +46,14 @@ describe('balance view model', () => {
     // Simulates 7.2 h of case time.
   }, 120_000);
 
+  it('KDIGO hint: anuria for 12 h is stage 3, named with the collection caveat (review SA-REN-02)', () => {
+    const snap = { ...engine().getSnapshot(), time: 13 * 3600 };
+    const noUrine = { sum: () => 0 } as unknown as Parameters<typeof kdigoHint>[1];
+    expect(kdigoHint(snap, noUrine, 'actual').key).toBe('bal.kdigo.anuria');
+    const some = { sum: () => 5 } as unknown as Parameters<typeof kdigoHint>[1];
+    expect(kdigoHint(snap, some, 'actual').key).toBe('bal.kdigo.stage2');
+  });
+
   it('the teaching view shows the tracer of the last bolus', () => {
     const e = engine();
     e.dispatch({ type: 'PUMP_SET_PROTOCOL', pumpId: 'INF1', protocolId: 'bolus' }, 'user');
