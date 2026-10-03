@@ -107,6 +107,7 @@ export function bridgeScenario(
       ...meningitisActions,
     ],
     maxDurationS: 1800,
-    endAfterArrestS: 120,
+    // An arrest is resuscitated in the workstation (ERC: at least 20 min of ALS before stopping is considered).
+    endAfterArrestS: 1200,
   };
 }

@@ -321,3 +321,53 @@ export function arrivalSupport(support: CourseSupport | null | undefined): Oxyge
     ...(device === 'hfnc' ? { hfncFio2: support.fio2 } : {}),
   };
 }
+
+/**
+ * "Stable enough for the ward" — when the handover back to a normal ward is offered: spontaneous circulation without
+ * CPR, MAP ≥ 65 mmHg without a vasopressor, SaO₂ ≥ 90 % on room air or conventional oxygen (no tube, supraglottic
+ * airway, NIV or high-flow), each held over the last 5 min. An unstable patient stays in the workstation; the
+ * episode still returns to the course at its time limit (or after an unsuccessful resuscitation).
+ *
+ * SIM-ASSUMPTION: a simplified ward-transfer rule for teaching, not a validated discharge score.
+ */
+export const WARD_READY = {
+  /** mmHg */
+  mapMin: BRIDGE_MAP_TARGET,
+  /** % */
+  spo2Min: 90,
+  /** s — the criteria must hold this long */
+  heldS: BRIDGE_STABLE_S,
+} as const;
+
+const WARD_SUPPORTS: ReadonlySet<string> = new Set([
+  'room-air',
+  'nasal-cannula',
+  'simple-mask',
+  'reservoir-mask',
+  'venturi',
+]);
+
+export function wardReady(
+  samples: readonly BridgeSample[],
+  s: Readonly<SimulationState>,
+  start: EpisodeStart = { timeS: 0, deliveredMl: {} },
+): boolean {
+  if (!s.patient.cardio.spontaneousCirculation || s.interventions.cpr.active) return false;
+  if (s.patient.airway.device !== 'none' || !WARD_SUPPORTS.has(s.devices.oxygen.support))
+    return false;
+  // the criteria must have been watched for the whole window within this episode
+  if (s.time - start.timeS < WARD_READY.heldS - 1e-9) return false;
+  const from = s.time - WARD_READY.heldS;
+  const window = samples.filter((x) => x.t >= from - 1e-9 && x.t >= start.timeS - 1e-9);
+  if (window.length === 0) return false;
+  const ok = (x: { map: number; noradrenaline: number; spo2: number }) =>
+    x.map >= WARD_READY.mapMin && x.noradrenaline <= 0 && x.spo2 >= WARD_READY.spo2Min;
+  return (
+    window.every(ok) &&
+    ok({
+      map: s.patient.cardio.meanArterialPressure,
+      noradrenaline: noradrenalineRate(s),
+      spo2: s.patient.gas.spo2,
+    })
+  );
+}

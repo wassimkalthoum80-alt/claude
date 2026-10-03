@@ -18,6 +18,7 @@ const select = (s: Readonly<SimulationState>) => ({
   messages: s.director.messages,
   now: Math.floor(s.time / 5) * 5,
   difficulty: s.director.difficulty,
+  cprActive: s.interventions.cpr.active,
 });
 
 const keyOf = (m: DirectorMessage) => `${m.id}@${m.t}`;
@@ -31,7 +32,7 @@ export function Notifications() {
   const t = useT();
   const engine = useEngine();
   const { setUi } = useUi();
-  const { messages, now, difficulty } = useEngineSelector(select, deepEqual);
+  const { messages, now, difficulty, cprActive } = useEngineSelector(select, deepEqual);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
   // A restart empties the message list: forget what was dismissed (ids and times repeat deterministically).
   const [seen, setSeen] = useState(0);
@@ -42,7 +43,10 @@ export function Notifications() {
   const dismiss = useCallback((k: string) => setDismissed((d) => new Set(d).add(k)), []);
 
   const open = messages.filter((m) => !dismissed.has(keyOf(m)));
-  const critical = [...open].reverse().find((m) => m.priority === 'critical');
+  // An arrest alert has done its job once compressions run (started from the alert, the action bar or Space).
+  const critical = [...open]
+    .reverse()
+    .find((m) => m.priority === 'critical' && !(cprActive && m.actions.includes('start-cpr')));
   // The most urgent waiting card first (then the oldest), so a deterioration is never queued behind a trend.
   const important = open
     .filter((m) => m.priority === 'important' && now - m.t <= IMPORTANT_MAX_AGE_S)

@@ -515,7 +515,7 @@ for k,en,de in [
  ('bridge.label','Real-time episode of the ward case','Echtzeit-Episode des Stationsfalls'),
  ('bridge.kind.admission','Emergency department · real time','Notaufnahme · Echtzeit'),
  ('bridge.kind.shock','Shock · real time','Schock · Echtzeit'),
- ('bridge.hint','Stabilise, take cultures, give the antibiotic — then hand over to the ward.','Stabilisieren, Kulturen abnehmen, Antibiotikum geben — dann an die Station übergeben.'),
+ ('bridge.hint','Stable enough for the ward (5 min: MAP ≥ 65 mmHg without vasopressor, SpO₂ ≥ 90 %, no ventilation or high-flow).','Stabil genug für die Station (5 min: MAP ≥ 65 mmHg ohne Vasopressor, SpO₂ ≥ 90 %, keine Beatmung, kein High-Flow).'),
  ('bridge.handover','Hand over to the ward','An die Station übergeben'),
  ('bridge.startAdmission','Start in the emergency department (real time)','In der Notaufnahme beginnen (Echtzeit)'),
  ('bridge.startAdmission.note','You manage the first minutes at the monitor; the result is handed over to the ward course.','Sie versorgen die ersten Minuten am Monitor; das Ergebnis wird an den Stationsverlauf übergeben.'),

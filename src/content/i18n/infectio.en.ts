@@ -748,7 +748,8 @@ export const infectioEn = {
   'bridge.label': 'Real-time episode of the ward case',
   'bridge.kind.admission': 'Emergency department · real time',
   'bridge.kind.shock': 'Shock · real time',
-  'bridge.hint': 'Stabilise, take cultures, give the antibiotic — then hand over to the ward.',
+  'bridge.hint':
+    'Stable enough for the ward (5 min: MAP ≥ 65 mmHg without vasopressor, SpO₂ ≥ 90 %, no ventilation or high-flow).',
   'bridge.handover': 'Hand over to the ward',
   'bridge.startAdmission': 'Start in the emergency department (real time)',
   'bridge.startAdmission.note':

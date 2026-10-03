@@ -765,7 +765,7 @@ export const infectioDe: Record<keyof typeof infectioEn, string> = {
   'bridge.kind.admission': 'Notaufnahme · Echtzeit',
   'bridge.kind.shock': 'Schock · Echtzeit',
   'bridge.hint':
-    'Stabilisieren, Kulturen abnehmen, Antibiotikum geben — dann an die Station übergeben.',
+    'Stabil genug für die Station (5 min: MAP ≥ 65 mmHg ohne Vasopressor, SpO₂ ≥ 90 %, keine Beatmung, kein High-Flow).',
   'bridge.handover': 'An die Station übergeben',
   'bridge.startAdmission': 'In der Notaufnahme beginnen (Echtzeit)',
   'bridge.startAdmission.note':

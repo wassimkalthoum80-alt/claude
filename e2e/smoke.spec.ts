@@ -915,7 +915,8 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   // Course → real time: the workstation opens with the ED episode.
   await expect(page.getByTestId('briefing-text')).toContainText('Notaufnahme');
   await page.getByTestId('start-button').click();
-  await expect(page.getByTestId('bridge-handover')).toBeVisible();
+  // The handover to the ward is offered only once the patient is stable enough for it (5 min observed).
+  await expect(page.getByTestId('bridge-handover')).toHaveCount(0);
   // The patient arrives as on the ward (room air); breathing / oxygen therapy follows the connected device: a simple
   // mask keeps the ventilator in standby.
   await expect(page.getByTestId('resp-panel')).toHaveAttribute('data-support', 'room-air');
@@ -938,6 +939,7 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await page.getByTestId('case-action-antibiotics').click();
   await page.evaluate(() => window.__resusEngine?.runFor(240));
   if (shots) await page.screenshot({ path: `${shots}/ward-7-bridge.png` });
+  await expect(page.getByTestId('bridge-handover')).toBeVisible();
   await page.getByTestId('bridge-handover').click();
 
   // Real time → course: the handover names what happened and asks for the antibiotic.
@@ -1050,4 +1052,25 @@ test('infectiology: hospital campaign — next patient, hospital impact in the d
   await expect(page.getByTestId('campaign-last')).toBeVisible();
   if (shots) await page.screenshot({ path: `${shots}/campaign-1-dashboard.png`, fullPage: true });
   expect(errors).toEqual([]);
+});
+
+test('infectiology: arrest in the real-time episode — compressions start and the arrest alert closes', async ({
+  page,
+}) => {
+  await page.goto('/?lang=de&debug');
+  await page.getByTestId('module-infectio').click();
+  await page.getByTestId('entry-fever-rigors').click();
+  await page.getByTestId('ward-start-realtime').click();
+  await page.getByTestId('start-button').click();
+  await page.evaluate(() =>
+    window.__resusEngine?.dispatch({ type: 'SET_RHYTHM', rhythm: 'vf' }, 'instructor'),
+  );
+  await expect(page.getByTestId('critical-alert')).toBeVisible();
+  await page.getByTestId('cpr-button').click();
+  await expect(page.getByTestId('critical-alert')).toHaveCount(0);
+  const cpr = await page.evaluate(() => {
+    window.__resusEngine?.runFor(5);
+    return window.__resusEngine?.getSnapshot().interventions.cpr.totalCompressions ?? 0;
+  });
+  expect(cpr).toBeGreaterThan(5);
 });

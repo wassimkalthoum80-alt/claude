@@ -5,7 +5,14 @@ import { feverRigors } from '../content/infection/cases';
 import { INFECTION_LIBRARY } from '../content/infection/library';
 import { bridgeScenario } from '../content/scenarios/bridge';
 import { InfectionEngine, SimulationEngine, type RealtimePreset } from '../sim';
-import { arrivalSupport, continuationCommands, handoverTargets } from './bridge';
+import {
+  arrivalSupport,
+  BridgeRecorder,
+  continuationCommands,
+  episodeStart,
+  handoverTargets,
+  wardReady,
+} from './bridge';
 
 /**
  * Ward → workstation: a patient transferred because of SpO₂ < 90 % or MAP < 65 mmHg arrives with those values on the
@@ -43,8 +50,9 @@ function transfer(preset: RealtimePreset, w: InfectionEngine, seed = 4) {
   return { e, calibration };
 }
 
+const { w, preset } = deteriorated();
+
 describe('handover calibration (ward values on the ICU monitor)', () => {
-  const { w, preset } = deteriorated();
 
   it('the ward reports a deteriorated patient', () => {
     expect(preset.map < 65 || preset.spo2 < 90).toBe(true);
@@ -137,5 +145,102 @@ describe('arrival support', () => {
     expect(arrivalSupport({ ...base, respSupport: 'niv', o2FlowLMin: null })).toEqual({
       support: 'room-air',
     });
+  });
+});
+
+describe('handover offered only when stable enough for the ward', () => {
+  const admission = () => {
+    const w = new InfectionEngine({ caseDef: feverRigors, library: INFECTION_LIBRARY });
+    const preset = w.realtimePreset();
+    return { w, preset, ...transfer(preset, w) };
+  };
+  const run = (e: SimulationEngine, rec: BridgeRecorder, seconds: number) => {
+    for (let i = 0; i < seconds; i += 5) {
+      e.runFor(5);
+      rec.sample(e.getSnapshot());
+    }
+  };
+
+  it('a stable admission is offered the ward after 5 min of observation, not before', () => {
+    const { e } = admission();
+    const rec = new BridgeRecorder(episodeStart(e.getSnapshot()));
+    e.dispatch({ type: 'SET_RESP_SUPPORT', support: 'simple-mask' }, 'user');
+    run(e, rec, 120);
+    expect(wardReady(rec.samples, e.getSnapshot(), rec.start)).toBe(false);
+    run(e, rec, 200);
+    expect(wardReady(rec.samples, e.getSnapshot(), rec.start)).toBe(true);
+  });
+
+  it('not with a tube, on a vasopressor, in shock or during CPR', () => {
+    const intubated = admission().e;
+    let rec = new BridgeRecorder(episodeStart(intubated.getSnapshot()));
+    intubated.dispatch({ type: 'AIRWAY_INSERT', device: 'ett', position: 'correct' }, 'instructor');
+    run(intubated, rec, 320);
+    expect(wardReady(rec.samples, intubated.getSnapshot(), rec.start)).toBe(false);
+
+    const pressor = admission().e;
+    rec = new BridgeRecorder(episodeStart(pressor.getSnapshot()));
+    pressor.dispatch({ type: 'PUMP_SET_RATE', pumpId: 'P3', rateMlH: 2, confirm: true }, 'user');
+    pressor.dispatch({ type: 'PUMP_START', pumpId: 'P3' }, 'user');
+    run(pressor, rec, 320);
+    expect(wardReady(rec.samples, pressor.getSnapshot(), rec.start)).toBe(false);
+
+    const shocked = transfer(preset, w).e;
+    rec = new BridgeRecorder(episodeStart(shocked.getSnapshot()));
+    run(shocked, rec, 320);
+    expect(wardReady(rec.samples, shocked.getSnapshot(), rec.start)).toBe(false);
+    shocked.dispatch({ type: 'CPR_START' }, 'user');
+    expect(wardReady(rec.samples, shocked.getSnapshot(), rec.start)).toBe(false);
+  });
+});
+
+describe('resuscitation of the transferred septic patient', () => {
+  /** Run until the untreated patient arrests (low-flow PEA). */
+  const arrested = () => {
+    const { e } = transfer(preset, w);
+    for (let t = 0; t < 3600 && e.getSnapshot().patient.cardio.spontaneousCirculation; t += 10)
+      e.runFor(10);
+    expect(e.getSnapshot().patient.cardio.spontaneousCirculation).toBe(false);
+    return e;
+  };
+  const als = (
+    e: SimulationEngine,
+    steps: { o2?: boolean; adrenaline?: boolean; fluid?: boolean },
+  ) => {
+    e.dispatch({ type: 'CPR_START' }, 'user');
+    e.dispatch({ type: 'AIRWAY_INSERT', device: 'mask' }, 'user');
+    if (steps.o2) e.dispatch({ type: 'SET_VENT_SETTING', key: 'fio2', value: 100 }, 'user');
+    if (steps.fluid)
+      e.dispatch(
+        {
+          type: 'HANG_BAG',
+          productId: 'sterofundin-iso',
+          volumeMl: 1000,
+          rateMlH: 3000,
+          speed: 'fast',
+        },
+        'user',
+      );
+    for (let k = 0; k < 60; k++) {
+      if (steps.adrenaline && k % 24 === 0)
+        e.dispatch({ type: 'DRUG_PUSH', productId: 'adrenaline-100', dose: 1, unit: 'mg' }, 'user');
+      e.runFor(10);
+      if (e.getSnapshot().patient.cardio.spontaneousCirculation) return (k + 1) * 10;
+    }
+    return null;
+  };
+
+  it('ALS with oxygen, adrenaline and fluid restores the circulation; leaving one out does not', () => {
+    expect(als(arrested(), { o2: true, adrenaline: true, fluid: true })).not.toBeNull();
+    expect(als(arrested(), { o2: true, adrenaline: true })).toBeNull();
+    expect(als(arrested(), { adrenaline: true, fluid: true })).toBeNull();
+    expect(als(arrested(), { o2: true, fluid: true })).toBeNull();
+  });
+
+  it('the episode does not end two minutes into a resuscitation', () => {
+    const e = arrested();
+    e.dispatch({ type: 'CPR_START' }, 'user');
+    e.runFor(600);
+    expect(e.getSnapshot().scenario.ended).toBe(false);
   });
 });

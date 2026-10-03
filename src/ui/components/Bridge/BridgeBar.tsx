@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { wardReady } from '../../../game/bridge';
 import type { I18nKey } from '../../../content/i18n/en';
 import { useEngine } from '../../hooks/EngineContext';
 import { useSession } from '../../hooks/useSession';
@@ -8,7 +9,8 @@ import styles from './BridgeBar.module.css';
 
 /**
  * Real-time episode of a ward case: records it (sampled by sim time, not per frame) and offers the handover back to
- * the ward. Rendered only while a bridge is open; never re-renders per frame.
+ * the ward once the patient is stable enough for a normal ward (`wardReady`). Rendered only while a bridge is open;
+ * re-renders only when that readiness changes.
  */
 export function BridgeBar() {
   const { ui } = useUi();
@@ -21,11 +23,18 @@ function BridgeBarContent({ kind }: { kind: 'admission' | 'shock' }) {
   const engine = useEngine();
   const store = useWardStore();
   const { end } = useSession();
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     const rec = store.recorder();
     if (!rec) return;
-    return engine.subscribe(() => rec.sample(engine.getSnapshot()));
+    return engine.subscribe(() => {
+      const s = engine.getSnapshot();
+      rec.sample(s);
+      setReady(wardReady(rec.samples, s, rec.start));
+    });
   }, [engine, store]);
+  // Unstable, ventilated or on a vasopressor: no handover to the ward is offered.
+  if (!ready) return null;
   return (
     <div className={styles.bar} role="region" aria-label={t('bridge.label' as I18nKey)}>
       <span className={styles.tag}>{t(`bridge.kind.${kind}` as I18nKey)}</span>

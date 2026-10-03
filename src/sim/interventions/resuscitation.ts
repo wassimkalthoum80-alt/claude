@@ -81,7 +81,7 @@ export const REVERSIBLE_ROSC = {
   /** % arterial oxygen saturation */
   minSao2: 85,
   /** preload factor (1 = normal filling) */
-  minFilling: 0.75,
+  minFilling: 0.5,
   /** myocardial viability (see defibrillation.ts) */
   minViability: 0.35,
 } as const;
