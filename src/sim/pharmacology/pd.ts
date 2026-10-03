@@ -114,6 +114,15 @@ export const PD = {
   naloxoneKNgMl: 0.25,
   // SIM-ASSUMPTION: rocuronium block Ce50 1.0 µg/mL, Hill 4.5; diaphragm needs ≈ 1.7× the concentration.
   rocuronium: { ce50: 1.0, gamma: 4.5, diaphragmFactor: 1.7 },
+  // SIM-ASSUMPTION: succinylcholine (depolarising) block Ce50 1.5 µg/mL, Hill 4, diaphragm 1.3× — calibrated so
+  // 1 mg/kg gives intubating conditions within ≈ 60 s and four twitches again after ≈ 6–8 min (Medi Know);
+  // phase-I block without fade (the TOF ratio follows the rocuronium part only).
+  succinylcholine: { ce50: 1.5, gamma: 4, diaphragmFactor: 1.3 },
+  // SIM-ASSUMPTION: etomidate — hypnotic Ce50 0.5 µg/mL (≈ 7× propofol potency, educational), respiratory
+  // depression Ce50 0.6 µg/mL (less than propofol at equi-hypnotic exposure); no direct cardiovascular depression
+  // in the model (Medi Know: keine Kardiodepression) — blood pressure can still fall when the sympathetic stress
+  // response ends with hypnosis.
+  etomidate: { hypnosisC50: 0.5, respC50: 0.6 },
   // ng/mL. α: SVR and venous tone (stressed volume); β1 inotropy and chronotropy (net HR set by the reflexes).
   // SIM-ASSUMPTION (calibrated to healthy-volunteer data, see docs): MAP rises about linearly with dose over the
   // clinical range (≈ 100 mmHg per µg/kg/min awake, ≈ 220 under anaesthesia) — so the vascular effect must not
@@ -374,7 +383,7 @@ export function hypnoticPotency(
 
 /** Normalised hypnotic contributions (educational units) and the depths derived from them. */
 export interface HypnoticComponents {
-  /** propofol, midazolam, dexmedetomidine, ketamine (racemic-equivalent), opioid (sufentanil-equivalent) */
+  /** propofol (+ etomidate), midazolam, dexmedetomidine, ketamine (racemic-equivalent), opioid (sufentanil-eq.) */
   up: number;
   um: number;
   ux: number;
@@ -404,7 +413,10 @@ export function hypnoticComponents(
 ): HypnoticComponents {
   const k = hypnoticPotency(ageYears, factors);
   const M = PD.midazolam;
-  const up = ((e.propofol ?? 0) / PD.propofol.hypnosisCe50) * k;
+  // Etomidate acts on the GABA-A receptor like propofol and is counted in the same term.
+  const up =
+    ((e.propofol ?? 0) / PD.propofol.hypnosisCe50 + (e.etomidate ?? 0) / PD.etomidate.hypnosisC50) *
+    k;
   const um =
     ((e.midazolam ?? 0) / M.hypnosisC50) *
     k *
@@ -475,14 +487,20 @@ export function drugEffects(
   const up =
     rateWeighted(e.propofol ?? 0, fast.propofol ?? 0, P.fastWeight) / P.respCe50 +
     (e.midazolam ?? 0) / PD.midazolam.respC50 +
+    (e.etomidate ?? 0) / PD.etomidate.respC50 +
     PD.dexmedetomidine.respWeight * hc.ux;
   const { synergy, gamma } = PD.respInteraction;
   const respiratoryDrive = 1 / (1 + (uo + up + synergy * uo * up) ** gamma);
 
   const R = PD.rocuronium;
   const roc = e.rocuronium ?? 0;
-  const block = hill(roc, R.ce50, R.gamma);
+  const rocBlock = hill(roc, R.ce50, R.gamma);
+  const sux = PD.succinylcholine;
+  const suxBlock = hill(e.succinylcholine ?? 0, sux.ce50, sux.gamma);
+  // Independent fractions of the receptors blocked; the depolarising (phase-I) block shows no fade.
+  const block = 1 - (1 - rocBlock) * (1 - suxBlock);
   const tof = trainOfFour(block);
+  if (tof.ratio !== null && suxBlock > rocBlock) tof.ratio = trainOfFour(rocBlock).ratio;
 
   const ad = e.adrenaline ?? 0;
   const sal = e.salbutamol ?? 0;
@@ -531,7 +549,10 @@ export function drugEffects(
 /** Diaphragm block (breathing) — more resistant than the adductor pollicis. */
 export function diaphragmBlock(e: Exposures): number {
   const R = PD.rocuronium;
-  return hill(e.rocuronium ?? 0, R.ce50 * R.diaphragmFactor, R.gamma);
+  const S = PD.succinylcholine;
+  const roc = hill(e.rocuronium ?? 0, R.ce50 * R.diaphragmFactor, R.gamma);
+  const sux = hill(e.succinylcholine ?? 0, S.ce50 * S.diaphragmFactor, S.gamma);
+  return 1 - (1 - roc) * (1 - sux);
 }
 
 /**

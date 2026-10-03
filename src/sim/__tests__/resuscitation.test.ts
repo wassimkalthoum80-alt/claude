@@ -331,13 +331,21 @@ describe('airway devices', () => {
   });
 
   it('the user cannot force the tube position; the seeded RNG decides', () => {
-    const e = createEngine(undruggedPatient, 5);
+    // an unconscious patient in arrest: intubating conditions without drugs (laryngoscopy 20 s, grade 1)
+    const arrested = () => {
+      const e = createEngine(undruggedPatient, 5);
+      cmd(e, { type: 'SET_RHYTHM', rhythm: 'vf' }, 'instructor');
+      e.runFor(2);
+      return e;
+    };
+    const e = arrested();
     cmd(e, { type: 'AIRWAY_INSERT', device: 'ett', position: 'oesophageal' }, 'user');
-    e.runFor(16);
+    e.runFor(25);
     const placed = events(e, 'AIRWAY_PLACED')[0]?.detail;
-    const e2 = createEngine(undruggedPatient, 5);
+    expect(placed).toMatch(/^ett\|/);
+    const e2 = arrested();
     cmd(e2, { type: 'AIRWAY_INSERT', device: 'ett' }, 'user');
-    e2.runFor(16);
+    e2.runFor(25);
     expect(events(e2, 'AIRWAY_PLACED')[0]?.detail).toBe(placed);
   });
 

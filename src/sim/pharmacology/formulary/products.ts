@@ -239,6 +239,172 @@ export const EXECUTABLE: Product[] = [
     sources: ['smpcRemifentanil', 'minto1997'],
     review: 'unreviewed',
   },
+  // ───────────── Atemwegssicherung: Einleitung, Relaxierung, Antagonisierung ─────────────
+  {
+    id: 'etomidate-2',
+    genericName: 'Etomidat',
+    brandNames: ['Etomidat-Lipuro', 'Hypnomidate'],
+    aliases: ['etomidate', 'Etomidat 2 mg/mL'],
+    category: 'Hypnotika / Sedativa',
+    status: 'executable',
+    moiety: 'etomidate',
+    carrier: 'water',
+    formulationLabel: '2 mg/mL, 10 mL',
+    concentration: { value: 2, unit: 'mg' },
+    containerMl: 10,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'induction',
+        indication: 'Narkoseeinleitung (Bolus)',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 0.15, typical: 0.3, max: 0.3, unit: 'mg/kg' },
+          durationS: { min: 15, typical: 30 },
+        },
+        notes:
+          'Hypnosis without analgesia. Not for continuous infusion (adrenal suppression). Medi Know: avoid in sepsis/polytrauma where possible — the simulator never blocks it; the debrief names the consideration.',
+        sources: ['mediknowRelaxantien', 'smpcEtomidate'],
+      },
+    ],
+    reference: {
+      indications: [
+        'Induction of anaesthesia, especially with circulatory instability or cardiac risk',
+      ],
+      contraindications: ['Known hypersensitivity', 'Continuous infusion (adrenal suppression)'],
+      interactions: ['Opioids and benzodiazepines add hypnosis and respiratory depression'],
+      adverseEffects: [
+        'Adrenocortical suppression (11β-hydroxylase) — not modelled as a circulatory effect',
+        'Myoclonus (not a seizure, not a sign of awareness)',
+        'Pain on injection',
+        'Hypotension remains possible when the stress response ends',
+      ],
+      considerations: {},
+      onsetOffset: 'Onset 30–60 s; waking by redistribution after ≈ 4–8 min.',
+    },
+    model: {
+      kind: 'educational',
+      description:
+        'two-compartment model (V1 0.3 + V2 2.5 L/kg, CL 15, Q 60 mL/kg/min, ke0 1.2/min); GABA-A hypnosis counted with propofol (Ce50 0.5 µg/mL); no direct cardiovascular depression.',
+      population: 'Adult; illustrative only.',
+      uncertainty: 'Author calibration to textbook onset/duration.',
+    },
+    sources: ['mediknowRelaxantien', 'smpcEtomidate', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'succinylcholine-20',
+    genericName: 'Succinylcholin',
+    brandNames: ['Lysthenon 2 %'],
+    aliases: ['suxamethonium', 'Succinylcholin 20 mg/mL'],
+    category: 'Muskelrelaxanzien',
+    status: 'executable',
+    moiety: 'succinylcholine',
+    formulationLabel: '20 mg/mL, 5 mL',
+    concentration: { value: 20, unit: 'mg' },
+    containerMl: 5,
+    routes: ['IV', 'IM'],
+    protocols: [
+      {
+        id: 'rsi',
+        indication: 'Rapid sequence induction',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 1, typical: 1, max: 1.5, unit: 'mg/kg' },
+          durationS: { min: 5, typical: 5 },
+        },
+        notes:
+          'Depolarising block without hypnosis or analgesia: fasciculations, K⁺ rise. Not reversible by sugammadex.',
+        sources: ['mediknowRelaxantien', 'smpcSuccinylcholine'],
+      },
+    ],
+    reference: {
+      indications: ['Rapid sequence induction (fast onset, short duration)'],
+      contraindications: [
+        'Malignant hyperthermia susceptibility',
+        'Atypical/deficient plasma cholinesterase',
+        'Myopathies, denervation, prolonged immobility (> 48 h), burns (day 14–28): hyperkalaemia',
+        'Known hyperkalaemia (relative)',
+      ],
+      interactions: ['Cholinesterase inhibitors prolong the block'],
+      adverseEffects: [
+        'NO hypnosis and NO analgesia',
+        'Hyperkalaemia (≈ +0.5 mmol/L, far more after denervation/burns), arrhythmias, bradycardia',
+        'Malignant hyperthermia trigger (not modelled)',
+        'Raised intraocular and intracranial pressure',
+      ],
+      considerations: {},
+      onsetOffset: 'Onset 30–60 s; duration ≈ 6–8 min (5–10 min).',
+    },
+    model: {
+      kind: 'educational',
+      description:
+        'Concentration model (V 0.06 L/kg, t½ 1.5 min, ke0 1.2/min); depolarising block Ce50 1.5 µg/mL (Hill 4), no fade; K⁺ +0.5 mmol/L per 1 mg/kg (max +1).',
+      population: 'Adult with normal cholinesterase; illustrative only.',
+      uncertainty: 'Author calibration to textbook onset/duration.',
+    },
+    sources: ['mediknowRelaxantien', 'smpcSuccinylcholine', 'educational'],
+    review: 'unreviewed',
+  },
+  {
+    id: 'sugammadex-100',
+    genericName: 'Sugammadex',
+    brandNames: ['Bridion'],
+    aliases: ['sugammadex', 'Sugammadex 100 mg/mL'],
+    category: 'Antagonisten / Spezifische Notfalltherapie',
+    status: 'executable',
+    moiety: 'sugammadex',
+    formulationLabel: '100 mg/mL, 2 mL',
+    concentration: { value: 100, unit: 'mg' },
+    containerMl: 2,
+    routes: ['IV'],
+    protocols: [
+      {
+        id: 'reversal',
+        indication: 'Aufhebung einer Rocuronium-Blockade (2–4 mg/kg)',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 2, typical: 2, max: 4, unit: 'mg/kg' },
+          durationS: { min: 10, typical: 10 },
+        },
+        notes: 'Moderate block (T2 reappears): 2 mg/kg; deep block (1–2 PTC): 4 mg/kg.',
+        sources: ['mediknowRelaxantien', 'smpcSugammadex'],
+      },
+      {
+        id: 'immediate',
+        indication: 'Sofortige Aufhebung nach Intubationsdosis (16 mg/kg)',
+        route: 'IV',
+        weightBasis: 'actual',
+        bolus: {
+          dose: { min: 16, typical: 16, max: 16, unit: 'mg/kg' },
+          durationS: { min: 10, typical: 10 },
+        },
+        notes:
+          'Restores neuromuscular function only: not the hypnotic/opioid-suppressed breathing, not the oxygen stores, not a patent airway.',
+        sources: ['mediknowRelaxantien', 'smpcSugammadex'],
+      },
+    ],
+    reference: {
+      indications: ['Reversal of rocuronium/vecuronium block'],
+      contraindications: ['Known hypersensitivity'],
+      interactions: ['Does not reverse succinylcholine or benzylisoquinolines'],
+      adverseEffects: ['Rare: cough, flush, hypotension; anaphylaxis', 'Bradycardia (rare)'],
+      considerations: {},
+      onsetOffset: 'TOF ratio 0.9 within ≈ 2–5 min (dose- and depth-dependent).',
+    },
+    model: {
+      kind: 'educational',
+      description:
+        'Concentration model (V 0.15 L/kg, t½ 2 h); 1:1 molar encapsulation of rocuronium in plasma and extracellular space; rocuronium leaves the junction along the gradient (ke0 1/min) while free sugammadex is present.',
+      population: 'Adult; illustrative only.',
+      uncertainty: 'Author calibration.',
+    },
+    sources: ['mediknowRelaxantien', 'smpcSugammadex', 'educational'],
+    review: 'unreviewed',
+  },
   // ───────────── Muskelrelaxanzien ─────────────
   {
     id: 'rocuronium-10',
@@ -1576,19 +1742,11 @@ export const FLUID_PRODUCTS: Product[] = [
 ];
 
 export const REFERENCE_ONLY: Product[] = [
-  ref('etomidate', 'Etomidat', 'Hypnotika / Sedativa', ['Hypnomidate', 'Etomidat-Lipuro']),
   ref('thiopental', 'Thiopental', 'Hypnotika / Sedativa', ['Trapanal']),
   ref('fentanyl', 'Fentanyl', 'Opioidanalgetika', ['Fentanyl-Janssen']),
   ref('morphine', 'Morphin', 'Opioidanalgetika', ['MSI']),
   ref('piritramide', 'Piritramid', 'Opioidanalgetika', ['Dipidolor']),
   ref('clonidine', 'Clonidin', 'Alpha-2-Agonisten', ['Catapresan']),
-  ref(
-    'succinylcholine',
-    'Succinylcholin (Suxamethonium)',
-    'Muskelrelaxanzien',
-    ['Lysthenon'],
-    ['suxamethonium'],
-  ),
   ref('cisatracurium', 'Cisatracurium', 'Muskelrelaxanzien', ['Nimbex']),
   ref('akrinor', 'Cafedrin/Theodrenalin', 'Vasopressoren / Inotropika', ['Akrinor']),
   ref('phenylephrine', 'Phenylephrin', 'Vasopressoren / Inotropika', ['Biorphen']),
@@ -1681,7 +1839,6 @@ export const REFERENCE_ONLY: Product[] = [
     'Does not normalise INR immediately (hours) — phase C.',
   ),
   ref('protamine', 'Protamin', 'Gerinnung / Hämostase'),
-  ref('sugammadex', 'Sugammadex', 'Antagonisten / Spezifische Notfalltherapie', ['Bridion']),
   ref('neostigmine', 'Neostigmin', 'Antagonisten / Spezifische Notfalltherapie'),
   ref('flumazenil', 'Flumazenil', 'Antagonisten / Spezifische Notfalltherapie', ['Anexate']),
   ref(

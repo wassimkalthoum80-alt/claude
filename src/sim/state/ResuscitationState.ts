@@ -96,6 +96,35 @@ export interface AirwayState {
   exhaledCo2Fraction: number;
   /** 0..1 — fraction of each tidal volume lost around an under-inflated tracheal tube cuff (instructor/scenario) */
   cuffLeak: number;
+  /** 1–4 — Cormack–Lehane grade of this patient's laryngoscopic view (hidden until laryngoscopy) */
+  grade: 1 | 2 | 3 | 4;
+  /** a laryngoscopy/intubation attempt in progress (learner), null otherwise */
+  laryngoscopy: {
+    technique: 'asleep' | 'awake';
+    /** s */
+    startedAt: number;
+    /** s — when the attempt ends (success or failure decided then) */
+    endsAt: number;
+    /** the patient fights the attempt (no intubating conditions) */
+    resisted: boolean;
+  } | null;
+  /** laryngoscopy attempts so far */
+  attempts: number;
+  /** 0..1 — cumulative airway trauma (swelling, blood) from failed attempts */
+  trauma: number;
+  /** the last attempt's outcome and the view the learner saw (null: no view) */
+  lastAttempt: {
+    outcome: 'placed' | 'failed' | 'resisted' | 'aborted';
+    view: 1 | 2 | 3 | 4 | null;
+    /** s */
+    at: number;
+  } | null;
+  /** s — sim time the learner's last tube was placed (team prompts), null if none */
+  tubePlacedAt: number | null;
+  /** s — time with neuromuscular block ≥ 80 % while hypnosis is inadequate (possible awareness) */
+  paralysedAwakeS: number;
+  /** team prompts already given (ids with the placement time) */
+  prompts: string[];
 }
 
 export type Side = 'left' | 'right';

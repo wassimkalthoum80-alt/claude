@@ -17,10 +17,14 @@ export type MoietyId =
   | 'esketamine'
   | 'furosemide'
   | 'atropine'
-  | 'amiodarone';
+  | 'amiodarone'
+  | 'etomidate'
+  | 'succinylcholine'
+  | 'sugammadex';
 
 /**
- * Amounts are in the moiety's model unit: mg (propofol, rocuronium, midazolam, ketamine, furosemide, amiodarone), µg
+ * Amounts are in the moiety's model unit: mg (propofol, rocuronium, midazolam, ketamine, furosemide, amiodarone,
+ * etomidate, succinylcholine, sugammadex), µg
  * (opioids, catecholamines, dexmedetomidine, salbutamol, naloxone, atropine), IU (vasopressin), mmol (calcium). Cp and Ce are
  * concentrations in that unit per L (mg/L = µg/mL; µg/L = ng/mL; IU/L; mmol/L) for every moiety.
  */

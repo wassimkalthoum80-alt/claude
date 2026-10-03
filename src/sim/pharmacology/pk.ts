@@ -129,6 +129,12 @@ export const CONCENTRATION_MODELS = {
   // the rapid redistribution after an IV bolus (terminal t½ is weeks); ke0 0.2/min gives the onset in 2–5 min and
   // the maximum at ≈ 15 min (Medi Know Notfallmedikamente).
   amiodarone: { vLKg: 1, halfLifeMin: 60, ke0: 0.2 },
+  // SIM-ASSUMPTION: succinylcholine — rapid plasma-cholinesterase hydrolysis: V 0.06 L/kg, t½ 1.5 min, ke0 1.2/min
+  // (onset 30–60 s, duration 6–8 min after 1–1.5 mg/kg; Medi Know). Prolonged with cholinesterase deficiency (not set).
+  succinylcholine: { vLKg: 0.06, halfLifeMin: 1.5, ke0: 1.2 },
+  // SIM-ASSUMPTION: sugammadex — extracellular distribution V 0.15 L/kg, renal t½ 2 h; it binds rocuronium in the
+  // plasma and extracellular space (PharmacologyModel.encapsulate), ke0 irrelevant (no own effect).
+  sugammadex: { vLKg: 0.15, halfLifeMin: 120, ke0: 1 },
 } as const;
 
 /**
@@ -218,6 +224,18 @@ export function pkParams(
         d.weightKg,
         abw,
       );
+    // SIM-ASSUMPTION: etomidate — V1 0.3 + V2 2.5 L/kg, CL 15 mL/kg/min (hepatic and plasma esterases), Q 60;
+    // ke0 1.2/min: hypnosis within 30–60 s after 0.2–0.3 mg/kg, waking by redistribution after ≈ 4–8 min.
+    case 'etomidate':
+      return twoCompartmentEducational(
+        0.3,
+        2.5,
+        15 * factors.hepaticFunction,
+        60,
+        1.2,
+        d.weightKg,
+        abw,
+      );
     case 'ketamine':
     case 'esketamine':
       return twoCompartmentEducational(
@@ -256,7 +274,9 @@ export function pkParams(
     case 'naloxone':
     case 'calcium':
     case 'atropine':
-    case 'amiodarone': {
+    case 'amiodarone':
+    case 'succinylcholine':
+    case 'sugammadex': {
       const m = CONCENTRATION_MODELS[moiety];
       return concentrationModel(m.vLKg, m.halfLifeMin, m.ke0, abw);
     }

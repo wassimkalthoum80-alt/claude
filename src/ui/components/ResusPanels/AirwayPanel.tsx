@@ -15,8 +15,14 @@ import styles from './ResusPanels.module.css';
 const DEVICES = [
   { id: 'mask', key: 'air.mask' },
   { id: 'sga', key: 'air.sga' },
-  { id: 'ett', key: 'air.ett' },
 ] as const;
+
+const OUTCOME_KEY: Record<'placed' | 'failed' | 'resisted' | 'aborted', I18nKey> = {
+  placed: 'air.outcome.placed',
+  failed: 'air.outcome.failed',
+  resisted: 'air.outcome.resisted',
+  aborted: 'air.outcome.aborted',
+};
 
 const DEVICE_KEY: Record<string, I18nKey> = {
   none: 'air.none',
@@ -57,15 +63,16 @@ export function AirwayPanel() {
     user({ type: 'ASSESS', kind: 'epigastrium' });
     setEpi(auscultate(engine.getSnapshot()).epigastric);
   };
-  const busy = v.inserting !== null;
+  const busy = v.inserting !== null || v.laryngoscopy !== null;
+  const lar = v.laryngoscopy;
 
   return (
     <div>
       <div className={styles.row}>
         <span className={styles.dim}>{t('air.current')}</span>
         <b data-testid="airway-device">
-          {busy
-            ? `${t(DEVICE_KEY[v.inserting ?? 'none'] ?? 'air.none')} … ${v.insertLeftS} s`
+          {v.inserting !== null
+            ? `${t(DEVICE_KEY[v.inserting] ?? 'air.none')} … ${v.insertLeftS} s`
             : t(DEVICE_KEY[v.device] ?? 'air.none')}
         </b>
       </div>
@@ -104,7 +111,59 @@ export function AirwayPanel() {
               {t(d.key)}
             </button>
           ))}
+          <button
+            type="button"
+            className={`${styles.btn} ${v.device === 'ett' ? styles.btnOn : ''}`}
+            disabled={busy}
+            onClick={() => {
+              setLungs(null);
+              setEpi(null);
+              user({ type: 'AIRWAY_INSERT', device: 'ett', technique: 'asleep' });
+            }}
+            data-testid="airway-ett"
+          >
+            {t('air.intubate')}
+          </button>
         </div>
+        <button
+          type="button"
+          className={styles.btn}
+          style={{ marginTop: 6, width: '100%' }}
+          disabled={busy || v.device === 'ett'}
+          onClick={() => user({ type: 'AIRWAY_INSERT', device: 'ett', technique: 'awake' })}
+          data-testid="airway-ett-awake"
+        >
+          {t('air.intubateAwake')}
+        </button>
+        {lar && (
+          <div className={`${styles.finding} ${styles.warn}`} data-testid="laryngoscopy">
+            <b>{t('air.attempt', { n: lar.attempt })}</b> ·{' '}
+            {t(lar.technique === 'awake' ? 'air.attemptAwake' : 'air.attemptRunning', {
+              s: lar.leftS,
+            })}
+            {lar.view !== null && <> · {t('air.view', { grade: lar.view })}</>}
+            <button
+              type="button"
+              className={styles.btn}
+              style={{ marginLeft: 8 }}
+              onClick={() => user({ type: 'AIRWAY_ABORT' })}
+              data-testid="airway-abort"
+            >
+              {t('air.abort')}
+            </button>
+          </div>
+        )}
+        {!lar && v.lastAttempt && (
+          <div
+            className={`${styles.finding} ${v.lastAttempt.outcome === 'placed' ? '' : styles.warn}`}
+            data-testid="airway-outcome"
+          >
+            {t(OUTCOME_KEY[v.lastAttempt.outcome])}
+            {v.lastAttempt.view !== null && <> · {t('air.view', { grade: v.lastAttempt.view })}</>}
+            {' · '}
+            {t('air.attempts', { n: v.attempts })}
+          </div>
+        )}
         <div className={styles.grid2} style={{ marginTop: 6 }}>
           <button
             type="button"

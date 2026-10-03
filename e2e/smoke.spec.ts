@@ -1083,3 +1083,30 @@ test('infectiology: arrest in the real-time episode — compressions start and t
   });
   expect(cpr).toBeGreaterThan(5);
 });
+
+test('airway: induction drugs with readback, laryngoscopy attempt in the real-time episode', async ({
+  page,
+}) => {
+  await page.goto('/?lang=de&debug&seed=1');
+  await page.getByTestId('module-infectio').click();
+  await page.getByTestId('entry-fever-rigors').click();
+  await page.getByTestId('ward-start-realtime').click();
+  await page.getByTestId('start-button').click();
+  // Induction from the medications panel: dose per kg prefilled from the product, total dose and volume read back.
+  await page.getByTestId('action-drugs').click();
+  await page.getByTestId('induction-drug').selectOption('etomidate-2');
+  await expect(page.getByTestId('induction-readback')).toContainText(
+    /Etomidat: [\d.]+ mg, [\d.]+ ml, intravenös/,
+  );
+  await page.getByTestId('induction-give').click();
+  await page.getByTestId('induction-drug').selectOption('rocuronium-10');
+  await page.getByTestId('induction-dose').fill('1.2');
+  await page.getByTestId('induction-give').click();
+  await page.evaluate(() => window.__resusEngine?.runFor(75));
+  // Laryngoscopy is an attempt with a duration; the outcome follows (capnography confirms, never a banner).
+  await page.getByTestId('action-airway').click();
+  await page.getByTestId('airway-ett').click();
+  await expect(page.getByTestId('laryngoscopy')).toContainText('Versuch 1');
+  await page.evaluate(() => window.__resusEngine?.runFor(70));
+  await expect(page.getByTestId('airway-outcome')).toBeVisible();
+});

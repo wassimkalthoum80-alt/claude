@@ -1,8 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
 import type { SimulationState } from '../../../sim';
 import { formatMmSs } from '../../adapters/format';
-import { drugTimers, pushPresets, type PushPreset } from '../../adapters/resusViewModel';
+import {
+  drugTimers,
+  inductionDrugs,
+  pushPresets,
+  pushReadback,
+  type PushPreset,
+} from '../../adapters/resusViewModel';
 import { useEngine } from '../../hooks/EngineContext';
 import { useT, useUi } from '../../hooks/UiContext';
 import { deepEqual, useEngineSelector } from '../../hooks/useEngineSelector';
@@ -82,6 +88,8 @@ export function DrugsPanel() {
         ))}
       </div>
 
+      <InductionDrugs disabled={v.access === 'none'} />
+
       <div className={styles.section}>
         <div className={styles.sectionTitle}>{t('drugs.timers')}</div>
         {v.timers
@@ -108,6 +116,87 @@ export function DrugsPanel() {
         </div>
         <div className={styles.faint}>{t('drugs.shocksSoFar', { n: v.shocks })}</div>
       </div>
+    </div>
+  );
+}
+
+const selectWeight = (s: Readonly<SimulationState>) => s.patient.demographics.weightKg;
+
+/**
+ * Induction and airway drugs (airway stage A): choose the drug, enter the dose per kg (prefilled from the product's
+ * protocol — the learner decides, nothing is blocked), read back total dose and volume, then give it as an IV push.
+ */
+function InductionDrugs({ disabled }: { disabled: boolean }) {
+  const t = useT();
+  const engine = useEngine();
+  const drugs = useMemo(() => inductionDrugs(), []);
+  const weightKg = useEngineSelector(selectWeight);
+  const [id, setId] = useState(drugs[0]?.productId ?? '');
+  const drug = drugs.find((d) => d.productId === id) ?? drugs[0];
+  const [dose, setDose] = useState<Record<string, number>>({});
+  if (!drug) return null;
+  const perKg = dose[drug.productId] ?? drug.typical;
+  const rb = pushReadback(drug, perKg, weightKg);
+  const unitLabel = drug.unit === 'mg/kg' ? 'mg/kg' : 'µg/kg';
+  return (
+    <div className={styles.section} data-testid="induction-drugs">
+      <div className={styles.sectionTitle}>{t('drugs.induction')}</div>
+      <div className={styles.row}>
+        <select
+          value={drug.productId}
+          onChange={(e) => setId(e.currentTarget.value)}
+          aria-label={t('drugs.induction')}
+          data-testid="induction-drug"
+        >
+          {drugs.map((d) => (
+            <option key={d.productId} value={d.productId}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+        <label className={styles.dim}>
+          <input
+            type="number"
+            className="num"
+            style={{ width: 64 }}
+            min={0}
+            step={drug.unit === 'mg/kg' ? 0.05 : 0.05}
+            value={perKg}
+            onChange={(e) => {
+              const n = Number(e.currentTarget.value);
+              if (Number.isFinite(n) && n >= 0) setDose({ ...dose, [drug.productId]: n });
+            }}
+            data-testid="induction-dose"
+          />{' '}
+          {unitLabel}
+        </label>
+      </div>
+      <div className={styles.faint}>
+        {t('drugs.range', { min: drug.min, max: drug.max ?? '–', unit: unitLabel })}
+      </div>
+      <div className={styles.finding} data-testid="induction-readback">
+        {t('drugs.readback', {
+          name: drug.name,
+          total: rb.total,
+          unit: drug.amountUnit,
+          ml: rb.ml,
+        })}
+      </div>
+      <button
+        type="button"
+        className={styles.btn}
+        style={{ width: '100%' }}
+        disabled={disabled || perKg <= 0}
+        onClick={() =>
+          engine.dispatch(
+            { type: 'DRUG_PUSH', productId: drug.productId, dose: perKg, unit: drug.unit },
+            'user',
+          )
+        }
+        data-testid="induction-give"
+      >
+        {t('drugs.give')}
+      </button>
     </div>
   );
 }

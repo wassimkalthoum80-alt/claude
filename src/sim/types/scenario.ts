@@ -41,6 +41,11 @@ export interface PatientInit {
   /** mL */
   deadSpace: number;
   airway: AirwayDevice;
+  /**
+   * Cormack–Lehane grade of the laryngoscopic view (1–4), or 'random' (drawn from the session seed with the
+   * unselected adult distribution); default 1
+   */
+  airwayGrade?: 1 | 2 | 3 | 4 | 'random';
   /** frailty, drug sensitivity, temperature, organ function, EEG amplitude; defaults from age */
   factors?: Partial<PatientFactors>;
 }

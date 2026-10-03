@@ -179,7 +179,15 @@ export type Command =
   /** IV/IO push of a formulary product (dose in `unit`), followed by a 20 mL flush */
   | { type: 'DRUG_PUSH'; productId: string; dose: number; unit: DoseUnit }
   /** place an airway device; `position` (instructor/scenario only) forces where a tube ends up */
-  | { type: 'AIRWAY_INSERT'; device: Exclude<AirwayDevice, 'none'>; position?: AirwayPosition }
+  | {
+      type: 'AIRWAY_INSERT';
+      device: Exclude<AirwayDevice, 'none'>;
+      position?: AirwayPosition;
+      /** tracheal tube by the learner: asleep laryngoscopy (default) or awake topical intubation */
+      technique?: 'asleep' | 'awake';
+    }
+  /** stop the laryngoscopy attempt in progress (reoxygenate) */
+  | { type: 'AIRWAY_ABORT' }
   /** remove the airway device; `then` = the support connected next (extubation names it; default room air) */
   | { type: 'AIRWAY_REMOVE'; then?: RespSupport }
   /** cm — pull the tracheal tube back (corrects an endobronchial position) */
@@ -303,6 +311,12 @@ export type ClinicalEventType =
   /** an airway device is in place (detail: "device|position") */
   | 'AIRWAY_PLACED'
   | 'AIRWAY_REMOVED'
+  /** laryngoscopy started (detail: "attempt n|technique") */
+  | 'LARYNGOSCOPY_START'
+  /** an intubation attempt ended without a tube (detail: "failed|resisted|aborted|view n") */
+  | 'INTUBATION_FAILED'
+  /** neuromuscular block with inadequate hypnosis for ≥ 15 s (possible awareness under paralysis) */
+  | 'AWARENESS_RISK'
   /** respiratory support changed (detail: "from→to") — trend marker */
   | 'RESP_SUPPORT_CHANGED'
   /** gastric distension led to regurgitation (detail: mL of gastric air) */

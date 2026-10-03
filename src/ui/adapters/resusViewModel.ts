@@ -2,6 +2,7 @@ import type { I18nKey } from '../../content/i18n/en';
 import {
   chargeTimeS,
   classifyRhythm,
+  getProduct,
   pulseFinding,
   suggestedEnergy,
   type GuidelineSet,
@@ -266,6 +267,72 @@ export function drugTimers(s: Readonly<SimulationState>, g: GuidelineSet): DrugT
   });
 }
 
+// ─────────────────────────── induction / airway drugs ───────────────────────────
+
+/** Weight-based pushes of the airway episode, in this order. */
+const INDUCTION_PRODUCTS = [
+  'propofol-1',
+  'etomidate-2',
+  'ketamine-racemic',
+  'esketamine',
+  'sufentanil-5',
+  'rocuronium-10',
+  'succinylcholine-20',
+  'sugammadex-100',
+] as const;
+
+export interface InductionDrug {
+  productId: string;
+  name: string;
+  /** per-kg dose unit of the product's first bolus protocol */
+  unit: 'mg/kg' | 'microgram/kg';
+  typical: number;
+  min: number;
+  max: number | null;
+  /** per mL in the product's model unit (mg or µg) */
+  perMl: number;
+  amountUnit: 'mg' | 'µg';
+}
+
+/**
+ * The induction/airway drugs with the dose range of their first weight-based bolus protocol (product data —
+ * prefilled, never a universal standard dose; the learner decides).
+ */
+export function inductionDrugs(): InductionDrug[] {
+  const out: InductionDrug[] = [];
+  for (const id of INDUCTION_PRODUCTS) {
+    const p = getProduct(id);
+    const bolus = p?.protocols.find(
+      (x) => x.bolus && (x.bolus.dose.unit === 'mg/kg' || x.bolus.dose.unit === 'microgram/kg'),
+    )?.bolus;
+    if (!p || !bolus || !p.concentration) continue;
+    out.push({
+      productId: id,
+      name: p.genericName,
+      unit: bolus.dose.unit as InductionDrug['unit'],
+      typical: bolus.dose.typical,
+      min: bolus.dose.min,
+      max: bolus.dose.max ?? null,
+      perMl: p.concentration.value,
+      amountUnit: p.concentration.unit === 'microgram' ? 'µg' : 'mg',
+    });
+  }
+  return out;
+}
+
+/** Readback of a weight-based push: total dose and volume ("Rocuronium: 84 mg, 8.4 ml"). */
+export function pushReadback(
+  drug: InductionDrug,
+  dosePerKg: number,
+  weightKg: number,
+): { total: number; ml: number } {
+  const total = dosePerKg * weightKg;
+  return {
+    total: Math.round(total * 10) / 10,
+    ml: Math.round((total / drug.perMl) * 10) / 10,
+  };
+}
+
 // ─────────────────────────── airway & examination ───────────────────────────
 
 export interface AirwayView {
@@ -276,6 +343,19 @@ export interface AirwayView {
   leakPct: number;
   distendedAbdomen: boolean;
   etco2: number | null;
+  /** laryngoscopy in progress: seconds left, attempt number, the view once the larynx is seen (after 5 s) */
+  laryngoscopy: {
+    technique: 'asleep' | 'awake';
+    leftS: number;
+    attempt: number;
+    view: 1 | 2 | 3 | 4 | null;
+  } | null;
+  /** the last attempt's outcome and the view the learner saw */
+  lastAttempt: {
+    outcome: 'placed' | 'failed' | 'resisted' | 'aborted';
+    view: 1 | 2 | 3 | 4 | null;
+  } | null;
+  attempts: number;
 }
 
 export function airwayView(s: Readonly<SimulationState>): AirwayView {
@@ -288,6 +368,24 @@ export function airwayView(s: Readonly<SimulationState>): AirwayView {
     leakPct: Math.round(a.leakFraction * 100),
     distendedAbdomen: a.gastricAirMl > 800,
     etco2: s.devices.monitor.numerics.etco2,
+    laryngoscopy: a.laryngoscopy
+      ? {
+          technique: a.laryngoscopy.technique,
+          leftS: Math.max(0, Math.ceil(a.laryngoscopy.endsAt - s.time)),
+          attempt: a.attempts,
+          // the view appears once the blade is in and the patient tolerates it
+          view:
+            !a.laryngoscopy.resisted &&
+            a.laryngoscopy.technique === 'asleep' &&
+            s.time - a.laryngoscopy.startedAt >= 5
+              ? a.grade
+              : null,
+        }
+      : null,
+    lastAttempt: a.lastAttempt
+      ? { outcome: a.lastAttempt.outcome, view: a.lastAttempt.view }
+      : null,
+    attempts: a.attempts,
   };
 }
 

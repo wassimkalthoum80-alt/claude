@@ -23,6 +23,9 @@ const MOIETY: Record<MoietyId, { name: string; amount: string; conc: string }> =
   furosemide: { name: 'Furosemide', amount: 'mg', conc: 'µg/mL' },
   atropine: { name: 'Atropine', amount: 'µg', conc: 'ng/mL' },
   amiodarone: { name: 'Amiodarone', amount: 'mg', conc: 'µg/mL' },
+  etomidate: { name: 'Etomidate', amount: 'mg', conc: 'µg/mL' },
+  succinylcholine: { name: 'Succinylcholine', amount: 'mg', conc: 'µg/mL' },
+  sugammadex: { name: 'Sugammadex (free)', amount: 'mg', conc: 'µg/mL' },
 };
 
 const OPIOIDS: MoietyId[] = ['sufentanil', 'remifentanil'];

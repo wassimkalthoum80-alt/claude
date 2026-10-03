@@ -25,6 +25,15 @@ import {
   updateConditions,
 } from '../physiology/obstruction';
 import { clamp } from '../physiology/shapes';
+import { applyStimulus } from '../brain/CerebralModel';
+import {
+  attemptDurationS,
+  attemptSuccess,
+  drawTubePosition,
+  intubatingConditions,
+  LARYNGOSCOPY,
+  type IntubationTechnique,
+} from '../interventions/laryngoscopy';
 import type { MoietyId } from '../state/PharmacologyState';
 import type { RhythmId } from '../state/PatientState';
 import type { Side } from '../state/ResuscitationState';
@@ -64,6 +73,7 @@ type ResusCommand = Extract<
       | 'DEFIB_DISARM'
       | 'DEFIB_SHOCK'
       | 'AED_ANALYSE'
+      | 'AIRWAY_ABORT'
       | 'DRUG_PUSH'
       | 'AIRWAY_INSERT'
       | 'AIRWAY_REMOVE'
@@ -92,6 +102,7 @@ const RESUS_TYPES = new Set<Command['type']>([
   'AED_ANALYSE',
   'DRUG_PUSH',
   'AIRWAY_INSERT',
+  'AIRWAY_ABORT',
   'AIRWAY_REMOVE',
   'TUBE_WITHDRAW',
   'ASSESS',
@@ -231,7 +242,12 @@ export class ResuscitationController {
         return;
       case 'AIRWAY_INSERT': {
         const air = s.patient.airway;
-        if (air.insertion) return;
+        if (air.insertion || air.laryngoscopy) return;
+        // The learner's tracheal tube is a real attempt (airway stage A); instructor/scenario placements stay direct.
+        if (c.device === 'ett' && source !== 'instructor' && source !== 'scenario') {
+          this.startLaryngoscopy(c.technique ?? 'asleep');
+          return;
+        }
         const forced = source === 'instructor' || source === 'scenario' ? c.position : undefined;
         const position = forced ?? drawAirwayPosition(c.device, h.rng);
         air.device = 'none';
@@ -242,6 +258,14 @@ export class ResuscitationController {
           completesAt: t + AIRWAY_INSERTION_S[c.device],
         };
         h.setCircuit(false);
+        return;
+      }
+      case 'AIRWAY_ABORT': {
+        const air = s.patient.airway;
+        if (!air.laryngoscopy) return;
+        air.laryngoscopy = null;
+        air.lastAttempt = { outcome: 'aborted', view: air.grade, at: t };
+        h.logEvent('INTUBATION_FAILED', t, `aborted|view ${air.grade}`);
         return;
       }
       case 'AIRWAY_REMOVE': {
@@ -364,8 +388,10 @@ export class ResuscitationController {
       h.logEvent('VF_ONSET', t, 'vtDegeneration');
     }
 
-    // Airway: insertion, leak, gastric insufflation.
+    // Airway: laryngoscopy attempt, insertion, leak, gastric insufflation.
     const air = p.airway;
+    if (air.laryngoscopy && t >= air.laryngoscopy.endsAt) this.finishLaryngoscopy();
+    this.trackAwareness(dt);
     if (air.insertion && t >= air.insertion.completesAt) {
       air.device = air.insertion.device;
       air.position = air.insertion.position;
@@ -552,6 +578,89 @@ export class ResuscitationController {
     line.flushRemainingMl += PUSH_FLUSH_ML + ml;
     s.interventions.resus.drugs.push({ productId, dose, unit, t: s.time });
     h.logEvent('BOLUS_GIVEN', s.time, `push|${product.genericName}|${dose} ${unit}`);
+  }
+
+  /**
+   * The learner starts an intubation attempt: the airway device comes off (apnoea for asleep laryngoscopy — an
+   * oxygen device at the face stays, apnoeic oxygenation), the blade is a strong noxious stimulus, and the outcome is
+   * decided at the end from the conditions then (drugs keep acting during the attempt).
+   */
+  private startLaryngoscopy(technique: IntubationTechnique): void {
+    const h = this.host;
+    const s = h.state;
+    const t = s.time;
+    const air = s.patient.airway;
+    air.attempts += 1;
+    if (technique === 'asleep') {
+      air.device = 'none';
+      air.position = 'correct';
+      h.setCircuit(false);
+    }
+    applyStimulus(s.patient.brain, 'laryngoscopy');
+    const cond = intubatingConditions(s.patient, technique);
+    const resisted = !cond.tolerated;
+    air.laryngoscopy = {
+      technique,
+      startedAt: t,
+      endsAt:
+        t + (resisted ? LARYNGOSCOPY.resistS : attemptDurationS(air.grade, air.trauma, technique)),
+      resisted,
+    };
+    h.logEvent('LARYNGOSCOPY_START', t, `${air.attempts}|${technique}`);
+  }
+
+  private finishLaryngoscopy(): void {
+    const h = this.host;
+    const s = h.state;
+    const t = s.time;
+    const air = s.patient.airway;
+    const l = air.laryngoscopy;
+    if (!l) return;
+    air.laryngoscopy = null;
+    if (l.resisted) {
+      air.trauma = Math.min(1, air.trauma + LARYNGOSCOPY.traumaPerResisted);
+      air.lastAttempt = { outcome: 'resisted', view: null, at: t };
+      h.logEvent('INTUBATION_FAILED', t, 'resisted');
+      return;
+    }
+    const cond = intubatingConditions(s.patient, l.technique);
+    const p = attemptSuccess(air.grade, cond, air.trauma, l.technique);
+    if (!cond.tolerated || h.rng.next() >= p) {
+      air.trauma = Math.min(1, air.trauma + LARYNGOSCOPY.traumaPerFailure);
+      air.lastAttempt = { outcome: cond.tolerated ? 'failed' : 'resisted', view: air.grade, at: t };
+      h.logEvent(
+        'INTUBATION_FAILED',
+        t,
+        `${cond.tolerated ? 'failed' : 'resisted'}|view ${air.grade}`,
+      );
+      return;
+    }
+    air.device = 'ett';
+    air.position = drawTubePosition(air.grade, h.rng);
+    air.lastAttempt = { outcome: 'placed', view: air.grade, at: t };
+    air.tubePlacedAt = t;
+    h.setCircuit(true);
+    h.logEvent('AIRWAY_PLACED', t, `ett|${air.position}`);
+  }
+
+  /**
+   * SIM-ASSUMPTION: possible awareness under paralysis — neuromuscular block ≥ 80 % while the hypnotic depth is
+   * below 0.8 (responsive range) with a circulation; logged once after 15 s. Immobility never certifies
+   * unconsciousness; the bedside shows no direct sign (tachycardia/hypertension only through the stress response).
+   */
+  private trackAwareness(dt: number): void {
+    const h = this.host;
+    const p = h.state.patient;
+    const air = p.airway;
+    const paralysedAwake =
+      p.cardio.spontaneousCirculation &&
+      p.pharmacology.effects.neuromuscularBlock >= 0.8 &&
+      p.brain.hypnoticDepth < 0.8;
+    if (!paralysedAwake) return;
+    const before = air.paralysedAwakeS;
+    air.paralysedAwakeS += dt;
+    if (before < 15 && air.paralysedAwakeS >= 15)
+      h.logEvent('AWARENESS_RISK', h.state.time, `depth ${p.brain.hypnoticDepth.toFixed(2)}`);
   }
 
   private procedure(kind: ProcedureArg, side?: Side): void {

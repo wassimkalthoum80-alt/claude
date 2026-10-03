@@ -24,6 +24,11 @@ const EXPOSURE_SCALE: Partial<Record<MoietyId, number>> = { vasopressin: 1000 };
  * fluid model — so every delivered millilitre is counted exactly once.
  * Only this class writes `patient.pharmacology`; the heart–lung, respiratory and lung models read the effects. Displayed monitor numbers are never touched.
  */
+/** mg rocuronium bound per mg sugammadex (1:1 molar; molar masses ≈ 610 and 2178 g/mol). */
+export const SUGAMMADEX_BINDS_ROCURONIUM_MG_PER_MG = 610 / 2178;
+/** 1/min — rocuronium leaving the junction while free sugammadex keeps the plasma free of it */
+const SUGAMMADEX_JUNCTION_KE0 = 1;
+
 export class PharmacologyModel {
   private params = new Map<MoietyId, MammillaryParams>();
 
@@ -88,6 +93,7 @@ export class PharmacologyModel {
       k.received += amount;
       stepKinetics(k, this.paramsFor(patient, m), amount / dtMin, dtMin, flow);
     }
+    this.encapsulate(patient, dtMin);
     const w = patient.demographics.weightKg;
     ph.effects = drugEffects(
       this.exposures(patient),
@@ -100,6 +106,41 @@ export class PharmacologyModel {
       fastExposures(patient),
     );
     return step;
+  }
+
+  /**
+   * Sugammadex encapsulates rocuronium 1:1 (molar; 1 mg sugammadex ≈ 0.28 mg rocuronium) in the plasma and the
+   * extracellular space; the complex is inactive. While free sugammadex is left, rocuronium leaves the
+   * neuromuscular junction along the gradient (effect site → plasma, ke0 1/min).
+   * SIM-ASSUMPTION: instantaneous binding up to the capacity; educational reversal times (2–4 mg/kg: TOF ratio 0.9
+   * within ≈ 2–5 min at moderate block; 16 mg/kg: within ≈ 2 min after an intubating dose).
+   */
+  private encapsulate(patient: PatientState, dtMin: number): void {
+    const d = patient.pharmacology.drugs;
+    const roc = d.rocuronium;
+    const sug = d.sugammadex;
+    if (!roc || !sug || sug.a1 <= 1e-9) return;
+    const ratio = SUGAMMADEX_BINDS_ROCURONIUM_MG_PER_MG;
+    let capacity = sug.a1 * ratio;
+    const take = (have: number) => {
+      const bound = Math.min(have, capacity);
+      capacity -= bound;
+      return have - bound;
+    };
+    const before = capacity;
+    roc.a0 = take(roc.a0);
+    roc.a1 = take(roc.a1);
+    roc.a2 = take(roc.a2);
+    sug.a1 = Math.max(0, sug.a1 - (before - capacity) / ratio);
+    const p = this.paramsFor(patient, 'rocuronium');
+    roc.cp = roc.a1 / p.v1;
+    const ps = this.paramsFor(patient, 'sugammadex');
+    sug.cp = sug.a1 / ps.v1;
+    if (capacity > 0) {
+      const f = 1 - Math.exp(-SUGAMMADEX_JUNCTION_KE0 * dtMin);
+      roc.ce += (roc.cp - roc.ce) * f;
+      roc.cv += (roc.cp - roc.cv) * f;
+    }
   }
 
   /** Effect-site exposure of each moiety (concentrations; units: see pd.ts). */

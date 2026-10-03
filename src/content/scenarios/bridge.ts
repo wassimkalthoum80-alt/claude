@@ -69,6 +69,8 @@ export function bridgeScenario(
       // The awake patient breathes spontaneously without an airway device on the ward's support; the ventilator
       // stands by (no imposed breaths or pressure). Oxygen, HFOT and NIV are the learner's choices.
       airway: 'none',
+      // The laryngoscopic view of this patient comes from the session seed (airway stage A).
+      airwayGrade: 'random',
       factors: { temperatureC: preset.temperatureC },
     },
     oxygen: arrival,

@@ -1,6 +1,7 @@
 import { FixedStepClock } from '../core/Clock';
 import { MAX_ADVANCE_S, SUBSTEP_S, SUBSTEPS_PER_TICK, TICK_S } from '../core/constants';
 import { shiftInterstitialToPlasma } from '../fluid/init';
+import { drawGrade } from '../interventions/laryngoscopy';
 import { EventLog } from '../core/EventLog';
 import { SeededRng } from '../core/rng';
 import { AlarmEngine } from '../devices/AlarmEngine';
@@ -123,6 +124,8 @@ type Listener = () => void;
 
 /** XOR salt deriving the lab RNG stream from the session seed. */
 const LAB_SEED_SALT = 0x1ab5eed;
+/** XOR salt deriving the airway-grade draw from the session seed. */
+const AIRWAY_SEED_SALT = 0xa1e5ad;
 /** Director messages kept in the state (older ones remain in the event log). */
 const MAX_MESSAGES = 50;
 
@@ -780,6 +783,9 @@ export class SimulationEngine {
     this.observedCount = 0;
     this.slowDown = false;
     this.labRng = new SeededRng((seed ^ LAB_SEED_SALT) >>> 0);
+    // A patient with a random airway: the laryngoscopic grade comes from the session seed (own stream).
+    if (scenario.patient.airwayGrade === 'random')
+      this.state.patient.airway.grade = drawGrade(new SeededRng((seed ^ AIRWAY_SEED_SALT) >>> 0));
     this.log.clear();
     this.bank.reset();
     this.trendBank.reset();
@@ -1187,7 +1193,16 @@ export class SimulationEngine {
   private updatePharmacology(dt: number): void {
     const s = this.state;
     const wasRunning = s.devices.pumps.map((p) => p.remainingMl > 1e-9 && p.productId !== null);
+    const suxBefore = s.patient.pharmacology.drugs.succinylcholine?.received ?? 0;
     const delivery = this.pharmacology.update(s.patient, s.devices.pumps, s.devices.line, dt);
+    // SIM-ASSUMPTION: succinylcholine's depolarisation releases potassium: +0.5 mmol/L per 1 mg/kg reaching the
+    // circulation (≈ +0.5 for an RSI dose); far larger rises after denervation, burns or immobility are not modelled.
+    const suxGiven = (s.patient.pharmacology.drugs.succinylcholine?.received ?? 0) - suxBefore;
+    if (suxGiven > 0) {
+      const f = s.patient.fluid;
+      const ecfL = (f.plasmaMl + f.interstitialMl + f.lungInterstitialMl) / 1000;
+      f.ecfK += 0.5 * ecfL * (suxGiven / s.patient.demographics.weightKg);
+    }
     const vent = s.devices.ventilator;
     const deviceAirway = s.patient.airway.device !== 'none' && vent.circuitConnected;
     const fluid = this.fluidModel.update(
@@ -1720,6 +1735,86 @@ export class SimulationEngine {
   }
 
   /**
+   * Team prompts of the airway episode (stage A): a plan for failure at the first laryngoscopy, a failed or resisted
+   * attempt with the current saturation, no sustained CO₂ after a placed tube, and the maintenance question after
+   * an induction. Each once (per attempt or per placement); they ask, they never act.
+   */
+  private airwayPrompts(): DirectorMessage[] {
+    const s = this.state;
+    const air = s.patient.airway;
+    const t = s.time;
+    const out: DirectorMessage[] = [];
+    const say = (
+      id: string,
+      textKey: string,
+      priority: DirectorMessage['priority'],
+      vars: Record<string, string | number> = {},
+      urgency: 1 | 2 | 3 | 4 = 2,
+    ) => {
+      if (air.prompts.includes(id)) return;
+      air.prompts.push(id);
+      const ruleId = `airway:${id}`;
+      out.push(
+        this.director.systemMessage({
+          ruleId,
+          t,
+          source: 'nurse',
+          priority,
+          textKey,
+          vars,
+          actions: [],
+          urgency,
+        }),
+      );
+      this.logEvent('DIRECTOR_MESSAGE', t, ruleId);
+    };
+    const l = air.laryngoscopy;
+    if (l && l.technique === 'asleep' && air.attempts === 1)
+      say('plan', 'airway.prompt.plan', 'passive');
+    const last = air.lastAttempt;
+    if (last && (last.outcome === 'failed' || last.outcome === 'resisted') && t - last.at < 2) {
+      const spo2 = s.devices.monitor.numerics.spo2;
+      say(
+        `failed@${last.at.toFixed(1)}`,
+        last.outcome === 'resisted' ? 'airway.prompt.resisted' : 'airway.prompt.failed',
+        'important',
+        { spo2: spo2 === null ? '--' : spo2 },
+        3,
+      );
+    }
+    const placed = air.tubePlacedAt;
+    if (placed !== null && air.device === 'ett' && s.devices.ventilator.circuitConnected) {
+      const since = t - placed;
+      const etco2 = s.devices.monitor.numerics.etco2;
+      if (since >= 20 && since < 90 && (etco2 === null || etco2 < 5))
+        say(`noco2@${placed.toFixed(1)}`, 'airway.prompt.noCo2', 'important', {}, 3);
+      if (
+        since >= 180 &&
+        s.patient.cardio.spontaneousCirculation &&
+        !this.hypnoticInfusionRunning()
+      )
+        say(`maintenance@${placed.toFixed(1)}`, 'airway.prompt.maintenance', 'important');
+    }
+    return out;
+  }
+
+  /** A hypnotic/sedative infusion is running (maintenance after induction). */
+  private hypnoticInfusionRunning(): boolean {
+    const hypnotics = new Set([
+      'propofol',
+      'midazolam',
+      'dexmedetomidine',
+      'ketamine',
+      'esketamine',
+    ]);
+    return this.state.devices.pumps.some((p) => {
+      if (!p.running || p.rateMlH <= 0 || !p.productId) return false;
+      const moiety = getProduct(p.productId)?.moiety;
+      return moiety !== undefined && hypnotics.has(moiety);
+    });
+  }
+
+  /**
    * The nurse's clinical observation (milestone 6c): once per simulated second on the measured trends, plus the
    * arrest and return-of-circulation announcements. Observes only — never changes the patient.
    */
@@ -1744,6 +1839,7 @@ export class SimulationEngine {
       this.logEvent('DIRECTOR_MESSAGE', s.time, out[0]?.ruleId);
     }
     this.wasCirculating = circulating;
+    out.push(...this.airwayPrompts());
     if (this.bedside.count <= this.observedCount) return out;
     this.observedCount = this.bedside.count;
     const trends = this.bedside.channels;
