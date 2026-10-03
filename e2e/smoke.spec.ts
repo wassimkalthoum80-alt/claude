@@ -201,6 +201,43 @@ test('fluid balance: panel shows intake and urine; emptying the bag keeps the ba
   expect(errors).toEqual([]);
 });
 
+test('gravity infusion: hang a bag, it runs empty, the nurse asks — nothing is hung without an answer', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(e.message));
+  const shots = process.env.WARD_SHOTS;
+
+  await page.goto('/?autostart&debug&lang=de');
+  await page.getByTestId('bag-hang').click();
+  await expect(page.getByTestId('bag-dialog')).toBeVisible();
+  await page.getByRole('button', { name: '250 mL' }).click();
+  await page.getByTestId('bag-speed-fast').click();
+  await page.getByTestId('bag-order').click();
+  await expect(page.getByTestId('bag-dialog')).toBeHidden();
+  await expect(page.getByTestId('bag-BAG1')).toHaveAttribute('data-status', 'running');
+  await expect(page.getByTestId('scene-bags')).toBeVisible();
+  // 250 mL at 2000 mL/h: half after 3.75 min, empty after 7.5 min.
+  await page.evaluate(() => window.__resusEngine?.runFor(225));
+  await expect(page.getByTestId('bag-BAG1')).toContainText('Rest 125 mL');
+  if (shots) await page.screenshot({ path: `${shots}/bag-1-running.png` });
+  await page.evaluate(() => window.__resusEngine?.runFor(300));
+  await expect(page.getByTestId('bag-empty')).toBeVisible();
+  await expect(page.getByTestId('bag-empty')).toContainText(
+    'Soll ich einen weiteren 250-mL-Beutel',
+  );
+  await expect(page.getByTestId('bag-BAG2')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: `${shots}/bag-2-empty.png` });
+  await page.getByTestId('bag-repeat').click();
+  await expect(page.getByTestId('bag-empty')).toBeHidden();
+  await expect(page.getByTestId('bag-BAG2')).toHaveAttribute('data-status', 'running');
+  await expect(page.getByTestId('bag-BAG1')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test('ALS panels: rhythm check → shockable → defibrillator shock; ultrasound and airway findings', async ({
   page,
 }) => {
@@ -889,6 +926,7 @@ test('infectiology: real-time bridge — emergency department in real time, hand
   await page.getByTestId('resp-niv').click();
   await expect(page.getByTestId('resp-niv-interface')).toContainText('IPAP');
   await expect(page.getByTestId('mode-PSV')).toBeVisible();
+  await page.getByTestId('resp-change').click();
   await page.getByTestId('resp-simple-mask').click();
   await expect(page.getByTestId('mode-PSV')).toHaveCount(0);
   await page.getByTestId('action-procedures').click();

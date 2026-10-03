@@ -146,7 +146,7 @@ export function realtimeOutcome(
     actionsAtMin[x.detail] ??= Math.round((x.t / 60) * 10) / 10;
   }
   const fluidsMl = s.devices.pumps
-    .filter((p) => p.kind === 'volumetric')
+    .filter((p) => p.kind !== 'syringe')
     .reduce((sum, p) => sum + p.deliveredMl - (start.deliveredMl[p.id] ?? 0), 0);
   const injury = s.patient.fluid.renal.injury;
   // Persistent impairment only: brief preoxygenation or an isolated high FiO2 setting is not respiratory failure.

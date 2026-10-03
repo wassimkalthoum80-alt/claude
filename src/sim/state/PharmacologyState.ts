@@ -47,11 +47,31 @@ export interface DrugKinetics {
   received: number;
 }
 
-/** A syringe pump (Perfusor) or a volumetric pump (Infusomat) — device state. */
+/** Nominal speeds of a gravity infusion (game presets, not treatment recommendations). */
+export type GravitySpeed = 'slow' | 'medium' | 'fast' | 'custom';
+
+/** A bag hanging as a gravity infusion (no pump): what the bedside shows and the nurse asks about. */
+export interface GravityBagInfo {
+  speed: GravitySpeed;
+  /** s — sim time the bag was hung */
+  hungAt: number;
+  /** mmHg — MAP when it was hung (for the reassessment at the end) */
+  mapAtStart: number;
+  /** % — SpO₂ when it was hung (null without a reading) */
+  spo2AtStart: number | null;
+  /** s — sim time it ran empty (null while volume remains) */
+  emptyAt: number | null;
+  /** the learner's answer when it ran empty (null = still to decide) */
+  decision: 'repeat' | 'change' | 'none' | null;
+}
+
+/** A syringe pump (Perfusor), a volumetric pump (Infusomat) or a gravity-infusion bag — device state. */
 export interface PumpState {
-  /** stable slot id, e.g. "P1" or "INF1" */
+  /** stable slot id, e.g. "P1", "INF1" or "BAG1" */
   id: string;
-  kind: 'syringe' | 'volumetric';
+  kind: 'syringe' | 'volumetric' | 'gravity';
+  /** gravity infusion only */
+  gravity?: GravityBagInfo;
   /** loaded product (formulary id), null = empty */
   productId: string | null;
   /** protocol chosen for dose display/validation */

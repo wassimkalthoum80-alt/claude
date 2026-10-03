@@ -232,6 +232,7 @@ export function createInitialState(
       },
       oxygen: initialOxygenSupport(support, scenario.oxygen ?? {}),
       pumps: initialPumps(scenario),
+      bagSeq: 0,
       line: { extensionMl: 0.5, commonMl: 2, extension: {}, common: {}, flushRemainingMl: 0 },
       defib: initialDefibrillator(guidelineFirstShockJ, scenario.padsAttached ?? false),
     },

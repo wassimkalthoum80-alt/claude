@@ -61,10 +61,12 @@ export {
   type Validation,
   type ValidationCode,
 } from './pharmacology/validation';
-export { PUMP_MAX_RATE, LINE_DEFAULTS, lineAmount } from './pharmacology/delivery';
+export { GRAVITY_PRESETS, PUMP_MAX_RATE, LINE_DEFAULTS, lineAmount } from './pharmacology/delivery';
 export { PD } from './pharmacology/pd';
 export type {
   PumpState,
+  GravityBagInfo,
+  GravitySpeed,
   LineState,
   DrugEffects,
   DrugKinetics,

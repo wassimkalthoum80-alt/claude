@@ -28,6 +28,7 @@ import { PatientHistoryPanel } from './ui/components/Patient/PatientHistoryPanel
 import { PatientScene } from './ui/components/PatientScene/PatientScene';
 import { Timers } from './ui/components/Timers/Timers';
 import { Ventilator } from './ui/components/Ventilator/Ventilator';
+import { InfusionBags } from './ui/components/Infusions/InfusionBags';
 import {
   RespSupportPanel,
   WhenVentilatorInUse,
@@ -108,6 +109,7 @@ function DesktopWorkstation() {
             <Ventilator />
             <VentilatorControls />
           </WhenVentilatorInUse>
+          <InfusionBags />
           <PerfusorRack />
           <CprMetrics />
         </div>

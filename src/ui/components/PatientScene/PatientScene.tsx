@@ -3,7 +3,7 @@ import type { RespSupport, SimulationState } from '../../../sim';
 import { dynamicVisualState, staticVisualState } from '../../adapters/patientVisualState';
 import { useDisplay, useFrame } from '../../hooks/EngineContext';
 import { useUi } from '../../hooks/UiContext';
-import { shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
+import { deepEqual, shallowEqual, useEngineSelector } from '../../hooks/useEngineSelector';
 import { GloveHand, InterlockedHands } from './Glove';
 import { SceneDefs } from './SceneDefs';
 import styles from './PatientScene.module.css';
@@ -385,6 +385,9 @@ export function PatientScene() {
         {/* oxygen devices and the NIV mask (the patient breathes on their own; the ventilator stands by) */}
         <OxygenDevice support={vis.support} />
 
+        {/* gravity infusions on the pole beside the patient (fill level from the delivered volume) */}
+        <BagPole />
+
         {/* surgical cap */}
         <path d={CAP} fill="url(#capPleats)" />
         <path d={CAP} fill="url(#capShade)" />
@@ -569,6 +572,61 @@ function OxygenDevice({ support }: { support: RespSupport }) {
         <rect x="788" y="772" width="24" height="20" rx="3" fill="#3aa0e0" />
       )}
       {niv ? tubing(30, '#e3ebf0') : tubing(5, '#cfe6f2')}
+    </g>
+  );
+}
+
+const selectBags = (s: Readonly<SimulationState>) =>
+  s.devices.pumps
+    .filter((p) => p.kind === 'gravity')
+    .map((p) => ({
+      id: p.id,
+      fill: p.loadedMl > 0 ? Math.round((20 * p.remainingMl) / p.loadedMl) / 20 : 0,
+      running: p.running && p.remainingMl > 0,
+    }));
+
+/** Infusion pole with the hanging gravity bags; the line runs to the IV on the patient's right arm. */
+function BagPole() {
+  const bags = useEngineSelector(selectBags, deepEqual);
+  if (bags.length === 0) return null;
+  return (
+    <g data-testid="scene-bags">
+      <line x1="1100" y1="150" x2="1100" y2="520" stroke="#7c8a96" strokeWidth="6" />
+      <line x1="960" y1="160" x2="1110" y2="160" stroke="#7c8a96" strokeWidth="5" />
+      {bags.slice(0, 3).map((b, i) => {
+        const x = 1046 - i * 50;
+        const h = 96 * b.fill;
+        return (
+          <g key={b.id} data-bag={b.id} data-fill={b.fill}>
+            <rect
+              x={x}
+              y="140"
+              width="40"
+              height="104"
+              rx="9"
+              fill="rgba(210,230,245,0.25)"
+              stroke="#a9c1d2"
+              strokeWidth="2"
+            />
+            <rect
+              x={x + 4}
+              y={174 + (96 - h)}
+              width="32"
+              height={h}
+              rx="6"
+              fill="rgba(150,205,250,0.65)"
+            />
+            <rect x={x + 16} y="274" width="8" height="16" fill="#a9c1d2" />
+            <path
+              d={`M${x + 20} 290 C ${x + 20} 420, 1110 520, 1060 690`}
+              stroke="#cfdde6"
+              strokeWidth="2.5"
+              fill="none"
+              opacity={b.running ? 0.9 : 0.4}
+            />
+          </g>
+        );
+      })}
     </g>
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import type { I18nKey } from '../../../content/i18n/en';
 import {
   HFNC_FIO2,
@@ -37,6 +37,10 @@ export function RespSupportPanel() {
   const user = (c: Parameters<typeof engine.dispatch>[0]) => engine.dispatch(c, 'user');
   const choose = (support: RespSupport) => user({ type: 'SET_RESP_SUPPORT', support });
   const device: OxygenDevice | null = isOxygenDevice(v.support) ? v.support : null;
+  // With the ventilator in use its own screen needs the room: the support choice folds into the header.
+  const ventilating = v.support === 'niv' || v.support === 'invasive';
+  const [choosing, setChoosing] = useState(false);
+  const showOptions = !ventilating || choosing;
 
   return (
     <section
@@ -49,25 +53,41 @@ export function RespSupportPanel() {
         <span className={styles.title}>{t('resp.title')}</span>
         <span className={styles.current} data-testid="resp-current">
           {t(v.support === 'hfnc' ? 'resp.name.hfnc' : `resp.support.${v.support}`)}
+          {ventilating && (
+            <button
+              type="button"
+              className={styles.change}
+              onClick={() => setChoosing((c) => !c)}
+              aria-expanded={choosing}
+              data-testid="resp-change"
+            >
+              {t('resp.change')}
+            </button>
+          )}
         </span>
       </header>
-      <div className={styles.options} role="radiogroup" aria-label={t('resp.supports')}>
-        {v.options.map((o) => (
-          <button
-            key={o.id}
-            type="button"
-            role="radio"
-            aria-checked={v.support === o.id}
-            className={`${styles.option} ${v.support === o.id ? styles.optionOn : ''}`}
-            disabled={o.block !== null && v.support !== o.id}
-            title={o.block ? t(o.block) : undefined}
-            onClick={() => choose(o.id)}
-            data-testid={`resp-${o.id}`}
-          >
-            {t(`resp.support.${o.id}`)}
-          </button>
-        ))}
-      </div>
+      {showOptions && (
+        <div className={styles.options} role="radiogroup" aria-label={t('resp.supports')}>
+          {v.options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={v.support === o.id}
+              className={`${styles.option} ${v.support === o.id ? styles.optionOn : ''}`}
+              disabled={o.block !== null && v.support !== o.id}
+              title={o.block ? t(o.block) : undefined}
+              onClick={() => {
+                setChoosing(false);
+                choose(o.id);
+              }}
+              data-testid={`resp-${o.id}`}
+            >
+              {t(`resp.support.${o.id}`)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {v.support === 'room-air' && <p className={styles.note}>{t('resp.roomAir')}</p>}
 
@@ -165,7 +185,7 @@ export function RespSupportPanel() {
           {t('resp.nivInterface', v.niv)}
         </p>
       )}
-      {v.support === 'invasive' && (
+      {v.support === 'invasive' && choosing && (
         <p className={styles.note}>
           {t('resp.invasiveAirway', { airway: t(AIRWAY_KEY[v.airway] ?? 'air.none') })}
         </p>

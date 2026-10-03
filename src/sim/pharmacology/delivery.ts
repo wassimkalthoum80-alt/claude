@@ -2,7 +2,14 @@ import type { LineState, MoietyId, PumpState } from '../state/PharmacologyState'
 import type { CarrierSolution, Product } from './formulary/types';
 
 /** mL/h — hardware limits (typical syringe / volumetric pump). */
-export const PUMP_MAX_RATE = { syringe: 999, volumetric: 1200 } as const;
+export const PUMP_MAX_RATE = { syringe: 999, volumetric: 1200, gravity: 3000 } as const;
+
+/**
+ * mL/h — SIM-ASSUMPTION: nominal rates of a gravity infusion (game presets: slow 100, medium 500, fast 2000 mL/h).
+ * A real fully opened gravity infusion has no fixed rate (access, tubing and bag height matter): the rate is labelled
+ * nominal/estimated, and the engine delivers exactly this rate.
+ */
+export const GRAVITY_PRESETS = { slow: 100, medium: 500, fast: 2000 } as const;
 /** mL/h — manual push (bolus with duration 0) is delivered at this rate */
 export const PUSH_RATE_ML_H = 7200;
 /** mL/s — flush speed through the common line */

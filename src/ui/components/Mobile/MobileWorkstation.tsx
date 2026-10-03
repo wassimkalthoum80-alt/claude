@@ -34,6 +34,7 @@ import { ActionPanelBody } from '../ResusPanels/ActionFlyout';
 import { ACTION_TITLES } from '../ResusPanels/actionTitles';
 import { Timers } from '../Timers/Timers';
 import { Ventilator } from '../Ventilator/Ventilator';
+import { InfusionBags } from '../Infusions/InfusionBags';
 import { RespSupportPanel, WhenVentilatorInUse } from '../RespSupport/RespSupportPanel';
 import { VentilatorControls } from '../VentilatorControls/VentilatorControls';
 import styles from './MobileWorkstation.module.css';
@@ -163,6 +164,7 @@ export function MobileWorkstation() {
         )}
         {tab === 'pumps' && (
           <div className={styles.stack}>
+            <InfusionBags />
             <PerfusorRack />
             <button
               type="button"

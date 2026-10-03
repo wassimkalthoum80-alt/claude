@@ -37,6 +37,8 @@ import {
   type ReadonlyFluidLedger,
 } from '../fluid/ledger';
 import type { FluidFactors } from '../state/BodyFluidState';
+import { GRAVITY_PRESETS, PUMP_MAX_RATE } from '../pharmacology/delivery';
+import type { GravitySpeed } from '../state/PharmacologyState';
 import { PhysioTrends, type ReadonlyPhysioTrends } from '../devices/PhysioTrends';
 import type { PatientFactors } from '../state/BrainState';
 import {
@@ -788,6 +790,9 @@ export class SimulationEngine {
       case 'PUMP_STOP':
       case 'PUMP_BOLUS':
       case 'PUMP_ADD':
+      case 'HANG_BAG':
+      case 'BAG_DECISION':
+      case 'BAG_REMOVE':
       case 'LINE_FLUSH':
         this.applyPumpCommand(command, source);
         break;
@@ -1028,9 +1033,22 @@ export class SimulationEngine {
     if (fluid.measured) this.logMeasurement();
     if (fluid.drainFinished)
       this.logEvent('BALANCE_ACTION', s.time, `drain-${fluid.drainFinished}-done`);
+    let bagEmptied = false;
     s.devices.pumps.forEach((p, i) => {
-      if (wasRunning[i] && p.remainingMl <= 1e-9) this.logEvent('PUMP_EMPTY', s.time, p.id);
+      if (!wasRunning[i] || p.remainingMl > 1e-9) return;
+      this.logEvent('PUMP_EMPTY', s.time, p.id);
+      if (p.gravity && p.gravity.emptyAt === null) {
+        p.gravity.emptyAt = s.time;
+        this.logEvent('BAG_EMPTY', s.time, `${p.id}|${Math.round(p.deliveredMl)} mL`);
+        bagEmptied = true;
+      }
     });
+    // An empty bag is a decision for the learner: time stops (also Advance time and ×2/×5) until it is answered.
+    if (bagEmptied) {
+      if (s.control.advance) this.endAdvance('event');
+      this.clock.paused = true;
+      s.control.paused = true;
+    }
   }
 
   private chartUrineNow(): void {
@@ -1067,6 +1085,38 @@ export class SimulationEngine {
       reject(v);
       return false;
     };
+    if (command.type === 'HANG_BAG') return this.hangBag(command);
+    if (command.type === 'BAG_DECISION') {
+      const bag = pumps.find((p) => p.id === command.bagId && p.kind === 'gravity');
+      const g = bag?.gravity;
+      if (!bag || !g || g.emptyAt === null || g.decision !== null) {
+        this.logEvent('COMMAND_REJECTED', s.time, 'BAG_DECISION|no-decision-pending');
+        return;
+      }
+      g.decision = command.decision;
+      this.logEvent('BAG_DECIDED', s.time, `${bag.id}|${command.decision}`);
+      // The empty bag comes down either way; "repeat" hangs a new bag with its own id — nothing is inferred beyond it.
+      this.removeBag(bag.id);
+      if (command.decision === 'repeat' && bag.productId)
+        this.hangBag({
+          type: 'HANG_BAG',
+          productId: bag.productId,
+          volumeMl: bag.loadedMl,
+          rateMlH: bag.rateMlH,
+          speed: g.speed,
+        });
+      return;
+    }
+    if (command.type === 'BAG_REMOVE') {
+      const bag = pumps.find((p) => p.id === command.bagId && p.kind === 'gravity');
+      if (!bag) return reject({ errors: ['no-product'], warnings: [] });
+      if (bag.gravity && bag.gravity.emptyAt !== null && bag.gravity.decision === null) {
+        bag.gravity.decision = 'none';
+        this.logEvent('BAG_DECIDED', s.time, `${bag.id}|none`);
+      }
+      this.removeBag(bag.id);
+      return;
+    }
     if (command.type === 'PUMP_ADD') {
       const prefix = command.kind === 'syringe' ? 'P' : 'INF';
       let n = pumps.filter((p) => p.kind === command.kind).length + 1;
@@ -1141,6 +1191,20 @@ export class SimulationEngine {
         else reject({ errors: ['no-protocol'], warnings: [] });
         return;
       case 'PUMP_SET_RATE': {
+        if (pump.kind === 'gravity') {
+          // Changing the speed of a gravity bag keeps its volume; the nominal rate is the only limit.
+          const r = command.rateMlH;
+          if (!Number.isFinite(r) || r < 0 || r > PUMP_MAX_RATE.gravity)
+            return reject({ errors: ['rate-invalid'], warnings: [] });
+          this.logEvent(
+            'INFUSION_CHANGED',
+            s.time,
+            `${pump.id}|${product?.genericName ?? ''}|${pump.rateMlH}→${r} mL/h`,
+          );
+          pump.rateMlH = r;
+          if (pump.gravity) pump.gravity.speed = gravitySpeedOf(r);
+          return;
+        }
         const v = validateRate(
           pump,
           product,
@@ -1208,6 +1272,77 @@ export class SimulationEngine {
       default:
         return;
     }
+  }
+
+  /**
+   * Hang a fluid bag as a gravity infusion. It starts running at once at its nominal rate; delivery, balance and
+   * physiology all read the same pump state. An identical order at the same sim time (a double click) is refused.
+   */
+  private hangBag(command: Extract<Command, { type: 'HANG_BAG' }>): void {
+    const s = this.state;
+    const pumps = s.devices.pumps;
+    const reject = (why: string) => this.logEvent('COMMAND_REJECTED', s.time, `HANG_BAG|${why}`);
+    const product = getProduct(command.productId);
+    if (!product?.fluid) return reject('not-a-fluid');
+    const volume = command.volumeMl;
+    if (!Number.isFinite(volume) || volume <= 0 || volume > 1000) return reject('volume-invalid');
+    const rate = command.rateMlH;
+    if (!Number.isFinite(rate) || rate <= 0 || rate > PUMP_MAX_RATE.gravity)
+      return reject('rate-invalid');
+    const duplicate = pumps.some(
+      (p) =>
+        p.kind === 'gravity' &&
+        p.gravity?.hungAt === s.time &&
+        p.productId === product.id &&
+        p.loadedMl === volume &&
+        p.rateMlH === rate,
+    );
+    if (duplicate) return reject('duplicate');
+    if (command.replaces) {
+      const old = pumps.find((p) => p.id === command.replaces && p.kind === 'gravity');
+      if (old?.gravity && old.gravity.emptyAt !== null && old.gravity.decision === null) {
+        old.gravity.decision = 'change';
+        this.logEvent('BAG_DECIDED', s.time, `${old.id}|change`);
+        this.removeBag(old.id);
+      }
+    }
+    s.devices.bagSeq += 1;
+    const id = `BAG${s.devices.bagSeq}`;
+    pumps.push({
+      id,
+      kind: 'gravity',
+      productId: product.id,
+      protocolId: null,
+      loadedMl: volume,
+      remainingMl: volume,
+      rateMlH: rate,
+      running: true,
+      bolus: null,
+      deliveredMl: 0,
+      ordered: { value: rate, unit: 'mL/h' },
+      overridden: false,
+      gravity: {
+        speed: command.speed,
+        hungAt: s.time,
+        mapAtStart: Math.round(s.patient.cardio.meanArterialPressure),
+        spo2AtStart: s.devices.monitor.numerics.spo2,
+        emptyAt: null,
+        decision: null,
+      },
+    });
+    s.devices.balance.tracerPumpId = id;
+    this.fluidModel.startTracer(s.patient.fluid, `${id} ${product.genericName} ${volume} mL`);
+    this.logEvent('BAG_HUNG', s.time, `${id}|${product.genericName}|${volume} mL|${rate} mL/h`);
+  }
+
+  /** Take a bag down; a remainder is discarded, never counted as patient input. */
+  private removeBag(id: string): void {
+    const s = this.state;
+    const i = s.devices.pumps.findIndex((p) => p.id === id);
+    const bag = s.devices.pumps[i];
+    if (!bag) return;
+    s.devices.pumps.splice(i, 1);
+    this.logEvent('BAG_REMOVED', s.time, `${id}|${Math.round(bag.remainingMl)} mL`);
   }
 
   /**
@@ -1630,9 +1765,18 @@ type PumpCommand = Extract<
       | 'PUMP_STOP'
       | 'PUMP_BOLUS'
       | 'PUMP_ADD'
+      | 'HANG_BAG'
+      | 'BAG_DECISION'
+      | 'BAG_REMOVE'
       | 'LINE_FLUSH';
   }
 >;
+
+/** The named preset a rate matches (otherwise a custom rate). */
+function gravitySpeedOf(rateMlH: number): GravitySpeed {
+  for (const [k, v] of Object.entries(GRAVITY_PRESETS)) if (v === rateMlH) return k as GravitySpeed;
+  return 'custom';
+}
 
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {

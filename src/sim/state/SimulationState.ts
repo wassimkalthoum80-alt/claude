@@ -66,8 +66,10 @@ export interface SimulationState {
     ventilator: VentilatorState;
     /** respiratory support in use (room air, conventional oxygen, HFOT, NIV, invasive) and the oxygen devices */
     oxygen: OxygenSupportState;
-    /** syringe pumps (Perfusor) and volumetric pumps (Infusomat) */
+    /** syringe pumps (Perfusor), volumetric pumps (Infusomat) and gravity-infusion bags */
     pumps: PumpState[];
+    /** count of gravity bags hung so far (each bag gets its own id) */
+    bagSeq: number;
     /** IV line dead space contents */
     line: LineState;
     /** processed-EEG monitor ("Simulated BIS") */

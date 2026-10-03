@@ -14,6 +14,7 @@ import type { AlarmLimitBound, AlarmLimitParam, EcgLeadSet } from '../state/Moni
 import type { VentMode } from '../state/VentilatorState';
 import type { AirwayPosition, DefibMode, Side } from '../state/ResuscitationState';
 import type { AirwayDevice } from '../state/PatientState';
+import type { GravitySpeed } from '../state/PharmacologyState';
 import type { OxygenDevice, RespSupport, VenturiAdapter } from '../state/OxygenState';
 
 /** What the trainee concluded at the end of a rhythm check. */
@@ -121,6 +122,22 @@ export type Command =
       override?: boolean;
     }
   | { type: 'PUMP_ADD'; kind: 'syringe' | 'volumetric' }
+  /**
+   * hang a bag as a gravity infusion: fluid, bag volume (mL) and nominal rate (mL/h); `replaces` = the empty bag this
+   * one follows (the answer "change amount or rate" to the nurse)
+   */
+  | {
+      type: 'HANG_BAG';
+      productId: string;
+      volumeMl: number;
+      rateMlH: number;
+      speed: GravitySpeed;
+      replaces?: string;
+    }
+  /** answer to the nurse when a bag ran empty: another bag at the same rate, or no further infusion for now */
+  | { type: 'BAG_DECISION'; bagId: string; decision: 'repeat' | 'none' }
+  /** take a bag down; what is left is discarded (not given to the patient) */
+  | { type: 'BAG_REMOVE'; bagId: string }
   /** flush the common IV line with carrier (mL) */
   | { type: 'LINE_FLUSH'; volumeMl: number }
   /** instructor/scenario: processes that move or remove fluid (leak, bleeding, sequestration, ambient…) */
@@ -234,6 +251,14 @@ export type ClinicalEventType =
   | 'SOFT_LIMIT_CONFIRMED'
   /** a syringe/bag ran empty */
   | 'PUMP_EMPTY'
+  /** a gravity bag was hung (detail: "bagId|product|mL|mL/h") */
+  | 'BAG_HUNG'
+  /** a gravity bag ran empty (detail: "bagId|delivered mL") — the nurse asks; time pauses */
+  | 'BAG_EMPTY'
+  /** the learner answered the empty-bag question (detail: "bagId|repeat|change|none") */
+  | 'BAG_DECIDED'
+  /** a bag was taken down (detail: "bagId|discarded mL") — the remainder is not patient input */
+  | 'BAG_REMOVED'
   /** a bolus started (detail: "pumpId|drug|volume") — trend marker */
   | 'BOLUS_GIVEN'
   /** an infusion rate changed, started or stopped (detail: "pumpId|drug|rate") — trend marker */

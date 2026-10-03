@@ -66,7 +66,7 @@ export function validateLoad(pump: PumpState, product: Product | undefined): Val
   else if (product.status !== 'executable') v.errors.push('reference-only');
   else {
     const isFluid = product.fluid !== undefined;
-    if (isFluid !== (pump.kind === 'volumetric')) v.errors.push('wrong-pump');
+    if (isFluid !== (pump.kind !== 'syringe')) v.errors.push('wrong-pump');
     if (!product.routes.includes('IV')) v.errors.push('route');
   }
   return v;

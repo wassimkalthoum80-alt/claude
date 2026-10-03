@@ -96,7 +96,7 @@ export function pumpRow(pump: PumpState, s: Readonly<SimulationState>): PumpRow 
   const minutesLeft = pump.rateMlH > 0 ? (pump.remainingMl / pump.rateMlH) * 60 : Infinity;
   return {
     id: pump.id,
-    kind: pump.kind,
+    kind: pump.kind === 'syringe' ? 'syringe' : 'volumetric',
     empty: !product,
     name: product?.genericName ?? '',
     formulation: product?.formulationLabel ?? '',
@@ -127,7 +127,8 @@ export interface RackViewModel {
 export function rackViewModel(s: Readonly<SimulationState>): RackViewModel {
   const fx = s.patient.pharmacology.effects;
   return {
-    pumps: s.devices.pumps.map((p) => pumpRow(p, s)),
+    // Gravity bags are not pumps: they hang in the infusion list next to the patient.
+    pumps: s.devices.pumps.filter((p) => p.kind !== 'gravity').map((p) => pumpRow(p, s)),
     tof: fx.tofRatio !== null ? `${fx.tofCount}/4 · ${fx.tofRatio} %` : `${fx.tofCount}/4`,
     tofAlert: fx.tofRatio === null || fx.tofRatio < 90,
   };

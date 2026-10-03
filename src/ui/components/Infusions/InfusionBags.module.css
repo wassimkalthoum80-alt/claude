@@ -1,0 +1,244 @@
+.panel {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title {
+  font: 600 clamp(11px, 0.85vw, 14px) / 1.2 var(--font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.hang,
+.chip,
+.primary {
+  font: 500 clamp(10px, 0.74vw, 12.5px) / 1.15 var(--font-ui);
+  color: var(--text);
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  cursor: pointer;
+  min-height: 28px;
+}
+
+.chip:disabled,
+.primary:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.chipOn {
+  border-color: var(--vent-pressure);
+  background: rgba(74, 168, 255, 0.16);
+}
+
+.primary {
+  border-color: var(--vent-pressure);
+  background: rgba(74, 168, 255, 0.24);
+  color: var(--vent-value);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bag {
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+}
+
+.summary {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: none;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: 400 clamp(10.5px, 0.76vw, 13px) / 1.3 var(--font-ui);
+}
+
+.icon {
+  width: 16px;
+  height: 34px;
+}
+
+.drop {
+  animation: drip 1.2s linear infinite;
+}
+
+@keyframes drip {
+  from {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(5px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop {
+    animation: none;
+  }
+}
+
+.id {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  font: 600 clamp(10px, 0.7vw, 12px) / 1 var(--font-ui);
+}
+
+.st_running {
+  color: var(--good);
+}
+
+.st_paused {
+  color: var(--warn);
+}
+
+.st_empty {
+  color: var(--alarm-medium);
+}
+
+.controls {
+  padding: 4px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--divider);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+  font: 400 clamp(10px, 0.72vw, 12px) / 1.2 var(--font-ui);
+}
+
+.custom input,
+.field input,
+.field select {
+  width: 84px;
+  background: var(--panel-bg-solid);
+  color: var(--text);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 5px;
+}
+
+.field select {
+  width: 100%;
+}
+
+.hint {
+  margin: 0;
+  font: 400 clamp(9.5px, 0.66vw, 11.5px) / 1.3 var(--font-ui);
+  color: var(--text-dim);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 16px;
+}
+
+.dialog {
+  width: min(520px, 100%);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-panel);
+}
+
+.nurse {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dialogTitle {
+  margin: 0;
+  font: 600 15px / 1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 500 12px / 1.2 var(--font-ui);
+  color: var(--text-dim);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.question {
+  margin: 0 0 6px;
+  font: 500 15px / 1.35 var(--font-ui);
+  color: var(--text);
+}
+
+.facts {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font: 400 12.5px / 1.45 var(--font-ui);
+  color: var(--text-dim);
+}
+
+.withBags {
+  min-height: 72px;
+}

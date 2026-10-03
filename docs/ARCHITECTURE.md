@@ -365,6 +365,11 @@ UI (phase 2) ──► InfectionEngine.dispatch ──► course state (truth) �
   no alarms), where it detects the patient's own breaths from the lung flow; `devices/oxygenTherapy.ts` turns device,
   settings and that breathing pattern into the inspired FiO₂ the gas exchange uses. The UI panel
   `RespSupportPanel` follows the support; the ventilator screen and controls render only while it is in use.
+- **Gravity infusions (continuity part 3):** `HANG_BAG` adds a pump slot of kind `gravity` (`BAG1`, `BAG2`…) with
+  `gravity` metadata (speed, hung/empty time, MAP/SpO₂ at the start, the learner's answer). Delivery, the balance
+  ledger and the fluid model are the existing pump path. An empty bag logs `BAG_EMPTY` and pauses the clock;
+  `BAG_DECISION` (repeat / none), `HANG_BAG.replaces` (change) or `BAG_REMOVE` answer it. UI: `InfusionBags`
+  (list, order dialog, the nurse's question; `adapters/bagsViewModel.ts`) and the pole in `PatientScene`.
 - **Real-time bridge (phase 4; continuity 2026-10-03):** a case with `realtimeAdmission` (B1) can start in the
   emergency department, and any course shock (`view.shock`) offers "take over in real time". One patient, one clock:
   - `useSession.startBridge` dispatches `REALTIME_EPISODE_START` to the course (its clock is held; ward time commands
